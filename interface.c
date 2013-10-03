@@ -27,7 +27,7 @@ int commands_flags[] = {
   070,
   072,
 };
-  
+
 char *a = 0;
 char **user_list = &a;
 char **chat_list = &a;
@@ -36,7 +36,7 @@ int init_token (char **q) {
   char *r = *q;
   while (*r == ' ') { r ++; }
   if (!*r) { return 0; }
-  q = &r;
+  *q = r;
   return 1;
 }
 
@@ -44,7 +44,7 @@ char *get_token (char **q, int *l) {
   char *r = *q;
   while (*r == ' ') { r ++; }
   if (!*r) { 
-    q = &r; 
+    *q = r; 
     *l = 0;
     return 0;
   }
@@ -56,8 +56,9 @@ char *get_token (char **q, int *l) {
     } else {
       neg = 0;
     }
+    r++;
   }
-  q = &r;
+  *q = r;
   *l = r - s;
   return s;
 }
@@ -74,7 +75,7 @@ int get_complete_mode (void) {
   int n = 0;
   int flags = -1;
   while (*command) {
-    if ((int)strlen (*command) == l && !memcmp (r, *command, l)) {
+    if (!strncmp (r, *command, l)) {
       flags = commands_flags[n];
       break;
     }
@@ -95,12 +96,10 @@ int get_complete_mode (void) {
 
 int complete_string_list (char **list, int index, const char *text, int len, char **R) {
   index ++;
-  int cc = 0;
-  while (cc <= 1 && list[index] && strncmp (list[index], text, len)) {
+  while (list[index] && strncmp (list[index], text, len)) {
     index ++;
-    if (!list[index]) { index = 0; cc ++; }
   }
-  if (list[index] && cc <= 1) {
+  if (list[index]) {
     *R = strdup (list[index]);
     return index;
   } else {
@@ -110,7 +109,7 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
 }
 char *command_generator (const char *text, int state) {  
   static int len, index, mode;
-
+ 
   if (!state) {
     len = strlen (text);
     index = -1;

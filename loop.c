@@ -8,6 +8,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include <errno.h>
+
 #include "interface.h"
 extern char *default_username;
 extern char *auth_token;
@@ -16,7 +18,36 @@ void set_default_username (const char *s);
 
 
 int main_loop (void) {
-  assert (0);
+  fd_set inp, outp;
+  struct timeval tv;
+  while (1) {
+    FD_ZERO (&inp);
+    FD_ZERO (&outp);
+    FD_SET (0, &inp);
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+	  
+    int lfd = 0;
+
+    if (select (lfd + 1, &inp, &outp, NULL, &tv) < 0) {
+      if (errno == EINTR) {
+  		  /* resuming from interrupt, so not an error situation,
+	  	     this generally happens when you suspend your
+		       messenger with "C-z" and then "fg". This is allowed "
+		     */
+  		  rl_reset_line_state ();
+	  	  rl_forced_update_display ();
+		    continue;
+  		}
+	    perror ("select()");
+	    break;
+    }
+    
+    if (FD_ISSET (0, &inp)) {
+    	rl_callback_read_char ();
+    }
+  }
+  return 0;
 }
 
 int loop (void) {

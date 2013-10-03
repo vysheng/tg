@@ -10,7 +10,7 @@ EXE=telegram
 all: $(SRC) $(EXE)
 	
 $(EXE): $(OBJ) 
-	$(LD) $(LDFLAGS) $(OBJ) -o $@
+	$(LD) $(OBJ) $(LDFLAGS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
