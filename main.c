@@ -93,7 +93,7 @@ char *get_config_directory (void) {
 
   config_directory = (char *) calloc (length, sizeof (char));
   sprintf (config_directory, "%s/" CONFIG_DIRECTORY,
-	   get_home_directory ());
+     get_home_directory ());
 
   return config_directory;
 }
@@ -136,26 +136,26 @@ void running_for_first_time (void) {
   if (stat (config_filename, config_file_stat) != 0) {
     // config file missing, so touch it
     config_file_fd = open (config_filename, O_CREAT | O_RDWR, S_IRWXU);
-    if (config_file_fd == -1)	{
-  	  perror ("open[config_file]");
-	    exit (EXIT_FAILURE);
-  	}
+    if (config_file_fd == -1)  {
+      perror ("open[config_file]");
+      exit (EXIT_FAILURE);
+    }
     if (fchmod (config_file_fd, CONFIG_DIRECTORY_MODE) != 0) {
-  	  perror ("fchmod[" CONFIG_FILE "]");
-	    exit (EXIT_FAILURE);
-  	}
+      perror ("fchmod[" CONFIG_FILE "]");
+      exit (EXIT_FAILURE);
+    }
     if (write (config_file_fd, DEFAULT_CONFIG_CONTENTS, strlen (DEFAULT_CONFIG_CONTENTS)) <= 0) {
-  	  perror ("write[config_file]");
-	    exit (EXIT_FAILURE);
-  	}
+      perror ("write[config_file]");
+      exit (EXIT_FAILURE);
+    }
     close (config_file_fd);
     printf ("[%s] created\n", config_filename);
   
     /* create downloads directory */
     if (mkdir (downloads_directory, 0755) !=0) {
-	    perror ("creating download directory");
-	    exit (EXIT_FAILURE);
-  	}
+      perror ("creating download directory");
+      exit (EXIT_FAILURE);
+    }
   }
 
   set_setup_mode ();

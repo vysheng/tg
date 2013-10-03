@@ -115,11 +115,11 @@ char *command_generator (const char *text, int state) {
     index = -1;
      
     rl_line_buffer[rl_point] = '\0'; /* the effect should be such
-			* that the cursor position
-			* is at the end of line for
-		  * the auto completion regex
-			* above (note the $ at end)
-			*/
+      * that the cursor position
+      * is at the end of line for
+      * the auto completion regex
+      * above (note the $ at end)
+      */
 
     mode = get_complete_mode ();
   } else {
