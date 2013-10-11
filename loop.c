@@ -9,62 +9,212 @@
 #include <readline/history.h>
 
 #include <errno.h>
+#include <poll.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "interface.h"
+#include "net.h"
+#include "mtproto-client.h"
+#include "mtproto-common.h"
+#include "queries.h"
+#include "telegram.h"
+
 extern char *default_username;
 extern char *auth_token;
 void set_default_username (const char *s);
+int default_dc_num;
 
 
+void net_loop (int flags, int (*is_end)(void)) {
+  while (!is_end ()) {
+    struct pollfd fds[101];
+    int cc = 0;
+    if (flags & 1) {
+      fds[0].fd = 0;
+      fds[0].events = POLLIN;
+      cc ++;
+    }
 
-int main_loop (void) {
-  fd_set inp, outp;
-  struct timeval tv;
-  while (1) {
-    FD_ZERO (&inp);
-    FD_ZERO (&outp);
-    FD_SET (0, &inp);
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-    
-    int lfd = 0;
-
-    if (select (lfd + 1, &inp, &outp, NULL, &tv) < 0) {
-      if (errno == EINTR) {
-        /* resuming from interrupt, so not an error situation,
-           this generally happens when you suspend your
-           messenger with "C-z" and then "fg". This is allowed "
-         */
+    int x = connections_make_poll_array (fds + cc, 101 - cc) + cc;
+    double timer = next_timer_in ();
+    if (timer > 1000) { timer = 1000; }
+    if (poll (fds, x, timer) < 0) {
+      /* resuming from interrupt, so not an error situation,
+         this generally happens when you suspend your
+         messenger with "C-z" and then "fg". This is allowed "
+       */
+      if (flags & 1) {
         rl_reset_line_state ();
         rl_forced_update_display ();
-        continue;
       }
-      perror ("select()");
-      break;
+      work_timers ();
+      continue;
     }
-    
-    if (FD_ISSET (0, &inp)) {
+    work_timers ();
+    if ((flags & 1) && (fds[0].revents & POLLIN)) {
       rl_callback_read_char ();
     }
+    connections_poll_result (fds + cc, x - cc);
   }
+}
+
+int ret1 (void) { return 0; }
+
+int main_loop (void) {
+  net_loop (1, ret1);
   return 0;
 }
 
-int loop (void) {
-  size_t size = 0;
-  char *user = default_username;
 
-  if (!user && !auth_token) {
-    printf ("Telephone number (with '+' sign): ");         
-    if (getline (&user, &size, stdin) == -1) {
-      perror ("getline()");
-      exit (EXIT_FAILURE);
-    }
-    user[strlen (user) - 1] = '\0';      
-    set_default_username (user);
+struct dc *DC_list[MAX_DC_ID + 1];
+struct dc *DC_working;
+int dc_working_num;
+int auth_state;
+char *get_auth_key_filename (void);
+int zero[512];
+
+
+void write_dc (int auth_file_fd, struct dc *DC) {
+  assert (write (auth_file_fd, &DC->port, 4) == 4);
+  int l = strlen (DC->ip);
+  assert (write (auth_file_fd, &l, 4) == 4);
+  assert (write (auth_file_fd, DC->ip, l) == l);
+  if (DC->flags & 1) {
+    assert (write (auth_file_fd, &DC->auth_key_id, 8) == 8);
+    assert (write (auth_file_fd, DC->auth_key, 256) == 256);
+  } else {
+    assert (write (auth_file_fd, zero, 256 + 8) == 256 + 8);
   }
+ 
+  assert (write (auth_file_fd, &DC->server_salt, 8) == 8);
+}
+
+void write_auth_file (void) {
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
+  assert (auth_file_fd >= 0);
+  int x = DC_SERIALIZED_MAGIC;
+  assert (write (auth_file_fd, &x, 4) == 4);
+  x = MAX_DC_ID;
+  assert (write (auth_file_fd, &x, 4) == 4);
+  assert (write (auth_file_fd, &dc_working_num, 4) == 4);
+  assert (write (auth_file_fd, &auth_state, 4) == 4);
+  int i;
+  for (i = 0; i <= MAX_DC_ID; i++) {
+    if (DC_list[i]) {
+      x = 1;
+      assert (write (auth_file_fd, &x, 4) == 4);
+      write_dc (auth_file_fd, DC_list[i]);
+    } else {
+      x = 0;
+      assert (write (auth_file_fd, &x, 4) == 4);
+    }
+  }
+  close (auth_file_fd);
+}
+
+void read_dc (int auth_file_fd, int id) {
+  int port = 0;
+  assert (read (auth_file_fd, &port, 4) == 4);
+  int l = 0;
+  assert (read (auth_file_fd, &l, 4) == 4);
+  assert (l >= 0);
+  char *ip = malloc (l + 1);
+  assert (read (auth_file_fd, ip, l) == l);
+  ip[l] = 0;
+  struct dc *DC = alloc_dc (id, ip, port);
+  assert (read (auth_file_fd, &DC->auth_key_id, 8) == 8);
+  assert (read (auth_file_fd, &DC->auth_key, 256) == 256);
+  assert (read (auth_file_fd, &DC->server_salt, 8) == 8);
+  if (DC->auth_key_id) {
+    DC->flags |= 1;
+  }
+}
+
+void empty_auth_file (void) {
+  struct dc *DC = alloc_dc (1, strdup (TG_SERVER), 443);
+  assert (DC);
+  dc_working_num = 1;
+  write_auth_file ();
+}
+
+void read_auth_file (void) {
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
+  if (auth_file_fd < 0) {
+    empty_auth_file ();
+  }
+  assert (auth_file_fd >= 0);
+  int x;
+  if (read (auth_file_fd, &x, 4) < 4 || x != DC_SERIALIZED_MAGIC) {
+    close (auth_file_fd);
+    empty_auth_file ();
+    return;
+  }
+  assert (read (auth_file_fd, &x, 4) == 4);
+  assert (x >= 0 && x <= MAX_DC_ID);
+  assert (read (auth_file_fd, &dc_working_num, 4) == 4);
+  assert (read (auth_file_fd, &auth_state, 4) == 4);
+  int i;
+  for (i = 0; i <= x; i++) {
+    int y;
+    assert (read (auth_file_fd, &y, 4) == 4);
+    if (y) {
+      read_dc (auth_file_fd, i);
+    }
+  }
+  close (auth_file_fd);
+}
+
+int loop (void) {
+  on_start ();
+  read_auth_file ();
+  assert (DC_list[dc_working_num]);
+  DC_working = DC_list[dc_working_num];
+  if (!DC_working->auth_key_id) {
+    dc_authorize (DC_working);
+  } else {
+    dc_create_session (DC_working);
+  }
+  if (!auth_state) {
+    if (!default_username) {
+      size_t size = 0;
+      char *user = 0;
+
+      if (!user && !auth_token) {
+        printf ("Telephone number (with '+' sign): ");         
+        if (getline (&user, &size, stdin) == -1) {
+          perror ("getline()");
+          exit (EXIT_FAILURE);
+        }
+        user[strlen (user) - 1] = 0;      
+        set_default_username (user);
+      }
+    }
+    do_send_code (default_username);
+    char *code = 0;
+    size_t size = 0;
+    printf ("Code from sms: ");
+    while (1) {
+      if (getline (&code, &size, stdin) == -1) {
+        perror ("getline()");
+        exit (EXIT_FAILURE);
+      }
+      code[strlen (code) - 1] = 0;      
+      if (do_send_code_result (code) >= 0) {
+        break;
+      }
+      printf ("Invalid code. Try again: ");
+    }
+    auth_state = 1;
+  }
+
+  write_auth_file ();
   
   fflush (stdin);
+  fflush (stdout);
+  fflush (stderr);
 
   rl_callback_handler_install (get_default_prompt (), interpreter);
   rl_attempted_completion_function = (CPPFunction *) complete_text;

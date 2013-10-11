@@ -27,14 +27,18 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <fcntl.h>
+#include <execinfo.h>
+#include <signal.h>
 
 #include "loop.h"
+#include "mtproto-client.h"
 
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
 
 #define CONFIG_DIRECTORY ".telegram/"
 #define CONFIG_FILE CONFIG_DIRECTORY "config"
+#define AUTH_KEY_FILE CONFIG_DIRECTORY "auth"
 #define DOWNLOADS_DIRECTORY "downloads/"
 
 #define CONFIG_DIRECTORY_MODE 0700
@@ -72,6 +76,13 @@ void get_terminal_attributes (void) {
   old_lflag = term.c_lflag;
   old_vtime = term.c_cc[VTIME];
 }
+
+void set_terminal_attributes (void) {
+  if (tcsetattr (STDIN_FILENO, 0, &term) < 0) {
+    perror ("tcsetattr()");
+    exit (EXIT_FAILURE);
+  }
+}
 /* }}} */
 
 char *get_home_directory (void) {
@@ -105,6 +116,15 @@ char *get_config_filename (void) {
   config_filename = (char *) calloc (length, sizeof (char));
   sprintf (config_filename, "%s/" CONFIG_FILE, get_home_directory ());
   return config_filename;
+}
+
+char *get_auth_key_filename (void) {
+  char *auth_key_filename;
+  int length = strlen (get_home_directory ()) + strlen (AUTH_KEY_FILE) + 2;
+
+  auth_key_filename = (char *) calloc (length, sizeof (char));
+  sprintf (auth_key_filename, "%s/" AUTH_KEY_FILE, get_home_directory ());
+  return auth_key_filename;
 }
 
 char *get_downloads_directory (void)
@@ -149,6 +169,11 @@ void running_for_first_time (void) {
       exit (EXIT_FAILURE);
     }
     close (config_file_fd);
+    int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
+    int x = -1;
+    assert (write (auth_file_fd, &x, 4) == 4);
+    close (auth_file_fd);
+
     printf ("[%s] created\n", config_filename);
   
     /* create downloads directory */
@@ -170,12 +195,25 @@ void usage (void) {
   exit (1);
 }
 
+extern char *rsa_public_key_name;
+extern int verbosity;
+extern int default_dc_num;
+
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:h")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
+      break;
+    case 'k':
+      rsa_public_key_name = strdup (optarg);
+      break;
+    case 'v':
+      verbosity ++;
+      break;
+    case 'n':
+      default_dc_num = atoi (optarg);
       break;
     case 'h':
     default:
@@ -185,7 +223,23 @@ void args_parse (int argc, char **argv) {
   }
 }
 
+void print_backtrace (void) {
+  void *buffer[255];
+  const int calls = backtrace (buffer, sizeof (buffer) / sizeof (void *));
+  backtrace_symbols_fd (buffer, calls, 1);
+  exit(EXIT_FAILURE);
+}
+
+void sig_handler (int signum) {
+  set_terminal_attributes ();
+  printf ("signal %d received\n", signum);
+  print_backtrace ();
+}
+
+
 int main (int argc, char **argv) {
+  signal (SIGSEGV, sig_handler);
+  signal (SIGABRT, sig_handler);
   running_for_first_time ();
 
   get_terminal_attributes ();

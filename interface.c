@@ -4,10 +4,11 @@
 
 #include <assert.h>
 #include <stdio.h>
-
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include "include.h"
+#include "queries.h"
 char *default_prompt = ">";
 
 char *get_default_prompt (void) {
@@ -21,11 +22,13 @@ char *complete_none (const char *text UU, int state UU) {
 char *commands[] = {
   "help",
   "msg",
+  "contact_list",
   0 };
 
 int commands_flags[] = {
   070,
   072,
+  00,
 };
 
 char *a = 0;
@@ -151,5 +154,27 @@ char **complete_text (char *text, int start UU, int end UU) {
 }
 
 void interpreter (char *line UU) {
-  assert (0);
+  if (!memcmp (line, "contact_list", 12)) {
+    do_update_contact_list ();
+  }
+}
+
+void rprintf (const char *format, ...) {
+
+  int saved_point = rl_point;
+  char *saved_line = rl_copy_text(0, rl_end);
+  rl_save_prompt();
+  rl_replace_line("", 0);
+  rl_redisplay();
+
+  va_list ap;
+  va_start (ap, format);
+  vfprintf (stdout, format, ap);
+  va_end (ap);
+
+  rl_restore_prompt();
+  rl_replace_line(saved_line, 0);
+  rl_point = saved_point;
+  rl_redisplay();
+  free(saved_line);
 }
