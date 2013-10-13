@@ -363,7 +363,7 @@ struct query_methods sign_in_methods  = {
 
 int do_send_code_result (const char *code) {
   clear_packet ();
-  out_int (CODE_sign_in);
+  out_int (CODE_auth_sign_in);
   out_string (suser);
   out_string (phone_code_hash);
   out_string (code);

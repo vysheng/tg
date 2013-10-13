@@ -101,6 +101,38 @@ void fetch_user (struct user *U) {
   }
 }
 
+void fetch_chat (struct chat *C) {
+  memset (C, 0, sizeof (*C));
+  unsigned x = fetch_int ();
+  assert (x == CODE_chat_empty || x == CODE_chat || x == CODE_chat_forbidden);
+  C->id = fetch_int ();
+  if (x == CODE_chat_empty) {
+    C->flags = 1;
+    return;
+  }
+  if (x == CODE_chat_forbidden) {
+    C->flags |= 8;
+  }
+  C->title = fetch_str_dup ();
+  C->print_title = strdup (C->title);
+  char *s = C->print_title;
+  while (*s) {
+    if (*s == ' ') { *s = '_'; }
+    s ++;
+  }
+  if (x == CODE_chat) {
+    unsigned y = fetch_int ();
+    if (y == CODE_chat_photo_empty) {
+      C->photo_small.dc = -2;
+      C->photo_big.dc = -2;
+    } else {
+      assert (y == CODE_chat_photo);
+      fetch_file_location (&C->photo_small);
+      fetch_file_location (&C->photo_big);
+    }
+  }
+ 
+}
 
 #define user_cmp(a,b) ((a)->id - (b)->id)
 

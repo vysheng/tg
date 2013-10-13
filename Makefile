@@ -16,3 +16,5 @@ $(EXE): $(OBJ)
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
+clean:
+	rm *.o telegram || true

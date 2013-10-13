@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "interface.h"
+#include "constants.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
 #define CODE_resPQ			0x05162463
@@ -22,18 +23,11 @@
 #define CODE_dh_gen_retry		0x46dc1fb9
 #define CODE_dh_gen_fail		0xa69dae02 
 
-/* generic data structures */
-#define CODE_vector_long		0xc734a64e
-#define CODE_vector_int			0xa03855ae
-#define CODE_vector_Object		0xa351ae8e
-#define	CODE_vector			0x1cb5c415
-
 /* service messages */
 #define CODE_rpc_result			0xf35c6d01
 #define CODE_rpc_error			0x2144ca19
 #define CODE_msg_container		0x73f1f8dc
 #define CODE_msg_copy			0xe06046b2
-#define CODE_http_wait			0x9299359f
 #define CODE_msgs_ack			0x62d6b459
 #define CODE_bad_msg_notification	0xa7eff811
 #define	CODE_bad_server_salt		0xedab447b
@@ -59,95 +53,6 @@
 #define	CODE_msg_detailed_info		0x276d3ec6
 #define	CODE_msg_new_detailed_info	0x809db6df
 #define CODE_ping_delay_disconnect	0xf3427b8c
-
-/* sample rpc query/response structures */
-#define	CODE_getUser			0xb0f732d5
-#define	CODE_getUsers			0x2d84d5f5
-#define CODE_user			0xd23c81a3
-#define CODE_no_user			0xc67599d1
-
-#define	CODE_msgs_random		0x12345678
-#define	CODE_random_msg			0x87654321
-
-#define RPC_INVOKE_REQ			0x2374df3d
-#define RPC_INVOKE_KPHP_REQ		0x99a37fda
-#define RPC_REQ_RUNNING			0x346d5efa
-#define RPC_REQ_ERROR			0x7ae432f5
-#define RPC_REQ_RESULT			0x63aeda4e
-#define	RPC_READY			0x6a34cac7
-#define	RPC_STOP_READY			0x59d86654
-#define	RPC_SEND_SESSION_MSG		0x1ed5a3cc
-#define RPC_RESPONSE_INDIRECT		0x2194f56e
-
-/* RPC for workers */
-#define CODE_send_session_msg		0x81bb412c
-#define CODE_sendMsgOk			0x29841ee2
-#define CODE_sendMsgNoSession		0x2b2b9e78
-#define CODE_sendMsgFailed		0x4b0cbd57
-#define CODE_get_auth_sessions		0x611f7845
-#define CODE_authKeyNone		0x8a8bc1f3
-#define CODE_authKeySessions		0x6b7f026c
-#define	CODE_add_session_box		0xe707e295
-#define	CODE_set_session_box		0x193d4231
-#define	CODE_replace_session_box	0xcb101b49
-#define	CODE_replace_session_box_cas	0xb2bbfa78
-#define	CODE_delete_session_box		0x01b78d81
-#define	CODE_delete_session_box_cas	0xb3fdc3c5
-#define	CODE_session_box_no_session	0x43f46c33
-#define	CODE_session_box_created	0xe1dd5d40
-#define	CODE_session_box_replaced	0xbd9cb6b2
-#define	CODE_session_box_deleted	0xaf8fd05e
-#define	CODE_session_box_not_found	0xb3560a7f
-#define	CODE_session_box_found		0x560fe356
-#define	CODE_session_box_changed	0x014b31b8
-#define	CODE_get_session_box		0x8793a924
-#define	CODE_get_session_box_cond	0x7888fab6
-#define	CODE_session_box_session_absent	0x9e234062
-#define	CODE_session_box_absent		0xa1a106eb
-#define	CODE_session_box		0x7956cd97
-#define	CODE_session_box_large		0xb568d189
-#define	CODE_get_sessions_activity	0x059dc5f6
-#define	CODE_sessions_activities	0x60ce5b1d
-#define	CODE_get_session_activity	0x96dbac11
-#define	CODE_session_activity		0xe175e8e0
-
-/* RPC for front/proxy */
-#define	RPC_FRONT		0x27a456f3
-#define	RPC_FRONT_ACK		0x624abd23
-#define	RPC_FRONT_ERR		0x71dda175
-#define	RPC_PROXY_REQ		0x36cef1ee
-#define	RPC_PROXY_ANS		0x4403da0d
-#define	RPC_CLOSE_CONN		0x1fcf425d
-#define	RPC_CLOSE_EXT		0x5eb634a2
-#define	RPC_SIMPLE_ACK		0x3bac409b
-
-
-
-#define CODE_auth_send_code 0xd16ff372
-#define CODE_auth_sent_code 0x2215bcbd
-#define CODE_help_get_config 0xc4f9186b
-#define CODE_config 0x232d5905
-#define CODE_dc_option 0x2ec2a43c
-#define CODE_bool_false 0xbc799737
-#define CODE_bool_true 0x997275b5
-#define CODE_user_self 0x720535ec
-#define CODE_auth_authorization 0xf6b673a4
-#define CODE_user_profile_photo_empty 0x4f11bae1
-#define CODE_user_profile_photo 0x990d1493
-#define CODE_user_status_empty 0x9d05049
-#define CODE_user_status_online 0xedb93949
-#define CODE_user_status_offline 0x8c703f
-#define CODE_sign_in 0xbcd51581
-#define CODE_file_location 0x53d69076
-#define CODE_file_location_unavailable 0x7c596b46
-#define CODE_contacts_get_contacts 0x22c6aa08
-#define CODE_contacts_contacts 0x6f8b8cb2
-#define CODE_contact 0xf911c994
-#define CODE_user_empty 0x200250ba
-#define CODE_user_contact 0xf2fb8319
-#define CODE_user_request 0x22e8ceb0
-#define CODE_user_foreign 0x5214c89d
-#define CODE_user_deleted 0xb29ad7cc
 #define CODE_gzip_packed 0x3072cfa1
 
 

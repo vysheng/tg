@@ -27,6 +27,18 @@ struct user {
   struct user_status status;
 };
 
+struct chat {
+  int id;
+  int flags;
+  char *title;
+  char *print_title;
+  int user_num;
+  int date;
+  int version;
+  struct file_location photo_big;
+  struct file_location photo_small;
+};
+
 void fetch_file_location (struct file_location *loc);
 void fetch_user (struct user *U);
 struct user *fetch_alloc_user (void);
