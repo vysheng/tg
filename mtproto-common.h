@@ -7,6 +7,7 @@
 #include <openssl/aes.h>
 #include <stdio.h>
 
+#include "interface.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
 #define CODE_resPQ			0x05162463
@@ -409,8 +410,6 @@ int pad_aes_encrypt (char *from, int from_len, char *to, int size);
 int pad_aes_decrypt (char *from, int from_len, char *to, int size);
 
 static inline void hexdump_in (void) {
-  int *ptr = in_ptr;
-  while (ptr < in_end) { fprintf (stderr, " %08x", *(ptr ++)); }
-  fprintf (stderr, "\n");
+  hexdump (in_ptr, in_end);
 }
 #endif

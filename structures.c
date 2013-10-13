@@ -1,6 +1,8 @@
 #include <assert.h>
 #include "structures.h"
 #include "mtproto-common.h"
+#include "telegram.h"
+#include "tree.h"
 
 void fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
@@ -48,6 +50,25 @@ void fetch_user (struct user *U) {
   }
   U->first_name = fetch_str_dup ();
   U->last_name = fetch_str_dup ();
+  if (!strlen (U->first_name)) {
+    if (!strlen (U->last_name)) {
+      U->print_name = strdup ("none");
+    } else {
+      U->print_name = strdup (U->last_name);
+    }
+  } else {
+    if (!strlen (U->last_name)) {
+      U->print_name = strdup (U->first_name);
+    } else {
+      U->print_name = malloc (strlen (U->first_name) + strlen (U->last_name) + 2);
+      sprintf (U->print_name, "%s_%s", U->first_name, U->last_name);
+    }
+  }
+  char *s = U->print_name;
+  while (*s) {
+    if (*s == ' ') { *s = '_'; }
+    s++;
+  }
   if (x == CODE_user_deleted) {
     U->flags = 2;
     return;
@@ -78,4 +99,47 @@ void fetch_user (struct user *U) {
   if (x == CODE_user_contact) {
     U->flags |= 16;
   }
+}
+
+
+#define user_cmp(a,b) ((a)->id - (b)->id)
+
+DEFINE_TREE(user,struct user *,user_cmp,0)
+struct tree_user *user_tree;
+
+int user_num;
+struct user *Users[MAX_USER_NUM];
+int users_allocated;
+
+struct user *fetch_alloc_user (void) {
+  struct user *U = malloc (sizeof (*U));
+  fetch_user (U);
+  users_allocated ++;
+  struct user *U1 = tree_lookup_user (user_tree, U);
+  if (U1) {
+    free_user (U1);
+    memcpy (U1, U, sizeof (*U));
+    free (U);
+    users_allocated --;
+    return U1;
+  } else {
+    user_tree = tree_insert_user (user_tree, U, lrand48 ());
+    Users[user_num ++] = U;
+    return U;
+  }
+}
+
+void free_user (struct user *U) {
+  if (U->first_name) { free (U->first_name); }
+  if (U->last_name) { free (U->last_name); }
+  if (U->print_name) { free (U->print_name); }
+  if (U->phone) { free (U->phone); }
+}
+
+int print_stat (char *s, int len) {
+  return snprintf (s, len, 
+    "user_num\t%d\n"
+    "users_allocated\t%d\n",
+    user_num,
+    users_allocated);
 }

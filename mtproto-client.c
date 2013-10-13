@@ -22,6 +22,7 @@
 #include "include.h"
 #include "queries.h"
 #include "loop.h"
+#include "interface.h"
 
 #define sha1 SHA1
 
@@ -89,13 +90,13 @@ static int rsa_load_public_key (const char *public_key_name) {
   pubKey = NULL;
   FILE *f = fopen (public_key_name, "r");
   if (f == NULL) {
-    fprintf (stderr, "Couldn't open public key file: %s\n", public_key_name);
+    logprintf ( "Couldn't open public key file: %s\n", public_key_name);
     return -1;
   }
   pubKey = PEM_read_RSAPublicKey (f, NULL, NULL, NULL);
   fclose (f);
   if (pubKey == NULL) {
-    fprintf (stderr, "PEM_read_RSAPublicKey returns NULL.\n");
+    logprintf ( "PEM_read_RSAPublicKey returns NULL.\n");
     return -1;
   }
 
@@ -205,7 +206,7 @@ unsigned p1, p2;
 int process_respq_answer (struct connection *c, char *packet, int len) {
   int i;
   if (verbosity) {
-    fprintf (stderr, "process_respq_answer(), len=%d\n", len);
+    logprintf ( "process_respq_answer(), len=%d\n", len);
   }
   assert (len >= 76);
   assert (!*(long long *) packet);
@@ -227,7 +228,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   p1 = 0, p2 = 0;
 
   if (verbosity >= 2) {
-    fprintf (stderr, "%lld received\n", what);
+    logprintf ( "%lld received\n", what);
   }
 
   int it = 0;
@@ -275,7 +276,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   
 
   if (verbosity) {
-    fprintf (stderr, "p1 = %d, p2 = %d, %d iterations\n", p1, p2, it);
+    logprintf ( "p1 = %d, p2 = %d, %d iterations\n", p1, p2, it);
   }
 
   /// ++p1; ///
@@ -286,12 +287,12 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   long long *fingerprints = (long long *) (from + 8);
   for (i = 0; i < fingerprints_num; i++) {
     if (fingerprints[i] == pk_fingerprint) {
-      //fprintf (stderr, "found our public key at position %d\n", i);
+      //logprintf ( "found our public key at position %d\n", i);
       break;
     }
   }
   if (i == fingerprints_num) {
-    fprintf (stderr, "fatal: don't have any matching keys (%016llx expected)\n", pk_fingerprint);
+    logprintf ( "fatal: don't have any matching keys (%016llx expected)\n", pk_fingerprint);
     exit (2);
   }
   // create inner part (P_Q_inner_data)
@@ -378,10 +379,10 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
 
 int process_dh_answer (struct connection *c, char *packet, int len) {
   if (verbosity) {
-    fprintf (stderr, "process_dh_answer(), len=%d\n", len);
+    logprintf ( "process_dh_answer(), len=%d\n", len);
   }
   if (len < 116) {
-    fprintf (stderr, "%u * %u = %llu", p1, p2, what);
+    logprintf ( "%u * %u = %llu", p1, p2, what);
   }
   assert (len >= 116);
   assert (!*(long long *) packet);
@@ -418,7 +419,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
 
   GET_DC(c)->server_time_delta = server_time - time (0);
   GET_DC(c)->server_time_udelta = server_time - get_utime (CLOCK_MONOTONIC);
-  //fprintf (stderr, "server time is %d, delta = %d\n", server_time, server_time_delta);
+  //logprintf ( "server time is %d, delta = %d\n", server_time, server_time_delta);
 
   // Build set_client_DH_params answer
   clear_packet ();
@@ -474,7 +475,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
 
 int process_auth_complete (struct connection *c UU, char *packet, int len) {
   if (verbosity) {
-    fprintf (stderr, "process_dh_answer(), len=%d\n", len);
+    logprintf ( "process_dh_answer(), len=%d\n", len);
   }
   assert (len == 72);
   assert (!*(long long *) packet);
@@ -493,7 +494,7 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   assert (!memcmp (packet + 56, sha1_buffer + 4, 16));
   GET_DC(c)->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
   if (verbosity >= 3) {
-    fprintf (stderr, "auth_key_id=%016llx\n", GET_DC(c)->auth_key_id);
+    logprintf ( "auth_key_id=%016llx\n", GET_DC(c)->auth_key_id);
   }
   //kprintf ("OK\n");
 
@@ -503,7 +504,7 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   c_state = st_authorized;
   //return 1;
   if (verbosity) {
-    fprintf (stderr, "Auth success\n");
+    logprintf ( "Auth success\n");
   }
   auth_success ++;
   GET_DC(c)->flags |= 1;
@@ -568,7 +569,7 @@ int aes_encrypt_message (struct dc *DC, struct encrypted_message *enc) {
   sha1 ((unsigned char *) &enc->server_salt, enc_len, sha1_buffer);
   //printf ("enc_len is %d\n", enc_len);
   if (verbosity >= 2) {
-    fprintf (stderr, "sending message with sha1 %08x\n", *(int *)sha1_buffer);
+    logprintf ( "sending message with sha1 %08x\n", *(int *)sha1_buffer);
   }
   memcpy (enc->msg_key, sha1_buffer + 4, 16);
   init_aes_auth (DC->auth_key, enc->msg_key, AES_ENCRYPT);
@@ -612,7 +613,7 @@ int auth_work_start (struct connection *c UU) {
 void rpc_execute_answer (struct connection *c, long long msg_id UU);
 void work_container (struct connection *c, long long msg_id UU) {
   if (verbosity) {
-    fprintf (stderr, "work_container: msg_id = %lld\n", msg_id);
+    logprintf ( "work_container: msg_id = %lld\n", msg_id);
   }
   assert (fetch_int () == CODE_msg_container);
   int n = fetch_int ();
@@ -632,7 +633,7 @@ void work_container (struct connection *c, long long msg_id UU) {
 
 void work_new_session_created (struct connection *c, long long msg_id UU) {
   if (verbosity) {
-    fprintf (stderr, "work_new_session_created: msg_id = %lld\n", msg_id);
+    logprintf ( "work_new_session_created: msg_id = %lld\n", msg_id);
   }
   assert (fetch_int () == (int)CODE_new_session_created);
   fetch_long (); // first message id
@@ -643,7 +644,7 @@ void work_new_session_created (struct connection *c, long long msg_id UU) {
 
 void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
   if (verbosity) {
-    fprintf (stderr, "work_msgs_ack: msg_id = %lld\n", msg_id);
+    logprintf ( "work_msgs_ack: msg_id = %lld\n", msg_id);
   }
   assert (fetch_int () == CODE_msgs_ack);
   assert (fetch_int () == CODE_vector);
@@ -657,7 +658,7 @@ void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
 
 void work_rpc_result (struct connection *c UU, long long msg_id UU) {
   if (verbosity) {
-    fprintf (stderr, "work_rpc_result: msg_id = %lld\n", msg_id);
+    logprintf ( "work_rpc_result: msg_id = %lld\n", msg_id);
   }
   assert (fetch_int () == (int)CODE_rpc_result);
   long long id = fetch_long ();
@@ -685,7 +686,7 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     work_rpc_result (c, msg_id);
     return;
   }
-  fprintf (stderr, "Unknown message: \n");
+  logprintf ( "Unknown message: \n");
   hexdump_in ();
 }
 
@@ -693,7 +694,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   const int MINSZ = offsetof (struct encrypted_message, message);
   const int UNENCSZ = offsetof (struct encrypted_message, server_salt);
   if (verbosity) {
-    fprintf (stderr, "process_rpc_message(), len=%d\n", len);  
+    logprintf ( "process_rpc_message(), len=%d\n", len);  
   }
   assert (len >= MINSZ && (len & 15) == (UNENCSZ & 15));
   struct dc *DC = GET_DC(c);
@@ -717,7 +718,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);
   //assert (enc->msg_id > server_last_msg_id && (enc->msg_id & 3) == 1);
   if (verbosity >= 2) {
-    fprintf (stderr, "received mesage id %016llx\n", enc->msg_id);
+    logprintf ( "received mesage id %016llx\n", enc->msg_id);
   }
   server_last_msg_id = enc->msg_id;
 
@@ -727,7 +728,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   assert (l >= (MINSZ - UNENCSZ) + 8);
   //assert (enc->message[0] == CODE_rpc_result && *(long long *)(enc->message + 1) == client_last_msg_id);
   if (verbosity >= 2) {
-    fprintf (stderr, "OK, message is good!\n");
+    logprintf ( "OK, message is good!\n");
   }
   ++good_messages;
   
@@ -745,11 +746,11 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
 
 int rpc_execute (struct connection *c, int op, int len) {
   if (verbosity) {
-    fprintf (stderr, "outbound rpc connection #%d : received rpc answer %d with %d content bytes\n", c->fd, op, len);
+    logprintf ( "outbound rpc connection #%d : received rpc answer %d with %d content bytes\n", c->fd, op, len);
   }
 
   if (len >= MAX_RESPONSE_SIZE/* - 12*/ || len < 0/*12*/) {
-    fprintf (stderr, "answer too long (%d bytes), skipping\n", len);
+    logprintf ( "answer too long (%d bytes), skipping\n", len);
     return 0;
   }
 
@@ -758,7 +759,7 @@ int rpc_execute (struct connection *c, int op, int len) {
   assert (read_in (c, Response, Response_len) == Response_len);
   Response[Response_len] = 0;
   if (verbosity >= 2) {
-    fprintf (stderr, "have %d Response bytes\n", Response_len);
+    logprintf ( "have %d Response bytes\n", Response_len);
   }
 
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
@@ -782,7 +783,7 @@ int rpc_execute (struct connection *c, int op, int len) {
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
     return 0;
   default:
-    fprintf (stderr, "fatal: cannot receive answer in state %d\n", c_state);
+    logprintf ( "fatal: cannot receive answer in state %d\n", c_state);
     exit (2);
   }
  
@@ -792,14 +793,14 @@ int rpc_execute (struct connection *c, int op, int len) {
 
 int tc_close (struct connection *c, int who) {
   if (verbosity) {
-    fprintf (stderr, "outbound http connection #%d : closing by %d\n", c->fd, who);
+    logprintf ( "outbound http connection #%d : closing by %d\n", c->fd, who);
   }
   return 0;
 }
 
 int tc_becomes_ready (struct connection *c) {
   if (verbosity) {
-    fprintf (stderr, "outbound connection #%d becomes ready\n", c->fd);
+    logprintf ( "outbound connection #%d becomes ready\n", c->fd);
   }
   char byte = 0xef;
   assert (write_out (c, &byte, 1) == 1);
@@ -816,7 +817,7 @@ int tc_becomes_ready (struct connection *c) {
     auth_work_start (c);
     break;
   default:
-    fprintf (stderr, "c_state = %d\n", c_state);
+    logprintf ( "c_state = %d\n", c_state);
     assert (0);
   }
   return 0;
@@ -842,7 +843,7 @@ void on_start (void) {
     exit (1);
   }
   if (verbosity) {
-    fprintf (stderr, "public key '%s' loaded successfully\n", rsa_public_key_name);
+    logprintf ( "public key '%s' loaded successfully\n", rsa_public_key_name);
   }
   pk_fingerprint = compute_rsa_key_fingerprint (pubKey);
 }
@@ -858,7 +859,7 @@ void dc_authorize (struct dc *DC) {
     dc_create_session (DC);
   }
   if (verbosity) {
-    fprintf (stderr, "Starting authorization for DC #%d: %s:%d\n", DC->id, DC->ip, DC->port);
+    logprintf ( "Starting authorization for DC #%d: %s:%d\n", DC->id, DC->ip, DC->port);
   }
   net_loop (0, auth_ok);
 }

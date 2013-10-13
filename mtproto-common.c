@@ -16,6 +16,7 @@
 #include <openssl/sha.h>
 
 #include "mtproto-common.h"
+#include "interface.h"
 
 long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
@@ -28,7 +29,7 @@ int get_random_bytes (void *buf, int n) {
     r = read (h, buf, n);
     if (r > 0) {
       if (verbosity >= 3) {
-        fprintf (stderr, "added %d bytes of real entropy to secure random numbers seed\n", r);
+        logprintf ( "added %d bytes of real entropy to secure random numbers seed\n", r);
       }
     }
     close (h);
@@ -71,14 +72,14 @@ void prng_seed (const char *password_filename, int password_length) {
   if (password_filename) {
     int fd = open (password_filename, O_RDONLY);
     if (fd < 0) {
-      fprintf (stderr, "Warning: fail to open password file - \"%s\", %m.\n", password_filename);
+      logprintf ( "Warning: fail to open password file - \"%s\", %m.\n", password_filename);
     } else {
       int l = read (fd, a + s, password_length);
       if (l < 0) {
-        fprintf (stderr, "Warning: fail to read password file - \"%s\", %m.\n", password_filename);
+        logprintf ( "Warning: fail to read password file - \"%s\", %m.\n", password_filename);
       } else {
         if (verbosity > 0) {
-          fprintf (stderr, "read %d bytes from password file.\n", l);
+          logprintf ( "read %d bytes from password file.\n", l);
         }
         s += l;
       }

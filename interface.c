@@ -9,6 +9,10 @@
 #include <string.h>
 #include "include.h"
 #include "queries.h"
+
+#include "interface.h"
+#include "telegram.h"
+#include "structures.h"
 char *default_prompt = ">";
 
 char *get_default_prompt (void) {
@@ -23,16 +27,18 @@ char *commands[] = {
   "help",
   "msg",
   "contact_list",
+  "stats",
   0 };
 
 int commands_flags[] = {
   070,
   072,
-  00,
+  07,
+  07,
 };
 
 char *a = 0;
-char **user_list = &a;
+char *user_list[MAX_USER_NUM + 1];
 char **chat_list = &a;
 
 int init_token (char **q) {
@@ -91,9 +97,24 @@ int get_complete_mode (void) {
   int s = 0;
   while (1) {
     get_token (&q, &l);
-    if (!*q) { return flags & 7; }
+    if (!*q) { return flags ? flags & 7 : 7; }
     s ++;
     if (s <= 4) { flags >>= 3; }
+  }
+}
+
+extern int user_num;
+extern struct user *Users[];
+int complete_user_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < user_num && (!Users[index]->print_name || strncmp (Users[index]->print_name, text, len))) {
+    index ++;
+  }
+  if (index < user_num) {
+    *R = strdup (Users[index]->print_name);
+    return index;
+  } else {
+    return -1;
   }
 }
 
@@ -137,7 +158,7 @@ char *command_generator (const char *text, int state) {
     index = complete_string_list (commands, index, text, len, &R);
     return R;
   case 1:
-    index = complete_string_list (user_list, index, text, len, &R);
+    index = complete_user_list (index, text, len, &R);
     return R;
   case 2:
     index = complete_string_list (chat_list, index, text, len, &R);
@@ -154,27 +175,90 @@ char **complete_text (char *text, int start UU, int end UU) {
 }
 
 void interpreter (char *line UU) {
+  if (line && *line) {
+    add_history (line);
+  }
   if (!memcmp (line, "contact_list", 12)) {
     do_update_contact_list ();
+  } else if (!memcmp (line, "stats", 5)) {
+    static char stat_buf[1 << 15];
+    print_stat (stat_buf, (1 << 15) - 1);
+    printf ("%s\n", stat_buf);
   }
 }
 
+int readline_active;
 void rprintf (const char *format, ...) {
-
-  int saved_point = rl_point;
-  char *saved_line = rl_copy_text(0, rl_end);
-  rl_save_prompt();
-  rl_replace_line("", 0);
-  rl_redisplay();
+  int saved_point = 0;
+  char *saved_line = 0;
+  if (readline_active) {
+    saved_point = rl_point;
+    saved_line = rl_copy_text(0, rl_end);
+    rl_save_prompt();
+    rl_replace_line("", 0);
+    rl_redisplay();
+  }
 
   va_list ap;
   va_start (ap, format);
   vfprintf (stdout, format, ap);
   va_end (ap);
 
-  rl_restore_prompt();
-  rl_replace_line(saved_line, 0);
-  rl_point = saved_point;
-  rl_redisplay();
-  free(saved_line);
+  if (readline_active) {
+    rl_restore_prompt();
+    rl_replace_line(saved_line, 0);
+    rl_point = saved_point;
+    rl_redisplay();
+    free(saved_line);
+  }
+}
+
+void hexdump (int *in_ptr, int *in_end) {
+  int saved_point = 0;
+  char *saved_line = 0;
+  if (readline_active) {
+    saved_point = rl_point;
+    saved_line = rl_copy_text(0, rl_end);
+    rl_save_prompt();
+    rl_replace_line("", 0);
+    rl_redisplay();
+  }
+  int *ptr = in_ptr;
+  while (ptr < in_end) { fprintf (stdout, " %08x", *(ptr ++)); }
+  fprintf (stdout, "\n");
+  
+  if (readline_active) {
+    rl_restore_prompt();
+    rl_replace_line(saved_line, 0);
+    rl_point = saved_point;
+    rl_redisplay();
+    free(saved_line);
+  }
+}
+
+void logprintf (const char *format, ...) {
+  int saved_point = 0;
+  char *saved_line = 0;
+  if (readline_active) {
+    saved_point = rl_point;
+    saved_line = rl_copy_text(0, rl_end);
+    rl_save_prompt();
+    rl_replace_line("", 0);
+    rl_redisplay();
+  }
+  
+  printf (COLOR_GREY " *** ");
+  va_list ap;
+  va_start (ap, format);
+  vfprintf (stdout, format, ap);
+  va_end (ap);
+  printf (COLOR_NORMAL);
+
+  if (readline_active) {
+    rl_restore_prompt();
+    rl_replace_line(saved_line, 0);
+    rl_point = saved_point;
+    rl_redisplay();
+    free(saved_line);
+  }
 }

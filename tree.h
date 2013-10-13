@@ -51,7 +51,12 @@ struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYP
     } else {\
       int c = X_CMP (x, T->x);\
       assert (c);\
-      return tree_insert_ ## X_NAME (c < 0 ? T->left : T->right, x, y);\
+      if (c < 0) { \
+        T->left = tree_insert_ ## X_NAME (T->left, x, y);\
+      } else { \
+        T->right = tree_insert_ ## X_NAME (T->right, x, y);\
+      } \
+      return T; \
     }\
   }\
 }\
@@ -94,6 +99,13 @@ X_TYPE tree_lookup_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
     T = (c < 0 ? T->left : T->right);\
   }\
   return T ? T->x : X_UNSET;\
+}\
+\
+void tree_act_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE)) {\
+  if (!T) { return; } \
+  tree_act_ ## X_NAME (T->left, act); \
+  act (T->x); \
+  tree_act_ ## X_NAME (T->right, act); \
 }\
 \
 int tree_count_ ## X_NAME (struct tree_ ## X_NAME *T) { \

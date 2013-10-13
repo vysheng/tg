@@ -6,6 +6,7 @@ LD=cc
 SRC=main.c loop.c interface.c net.c mtproto-common.c mtproto-client.c queries.c structures.c
 OBJ=$(SRC:.c=.o)
 EXE=telegram
+HDRS=include.h  interface.h  loop.h  mtproto-client.h  mtproto-common.h  net.h  queries.h  structures.h  telegram.h  tree.h
 
 all: $(SRC) $(EXE)
 	

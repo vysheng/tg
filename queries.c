@@ -43,7 +43,7 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
     dc_create_session (DC);
   }
   if (verbosity) {
-    fprintf (stderr, "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
+    logprintf ( "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
   }
   struct query *q = malloc (sizeof (*q));
   q->data_len = ints;
@@ -51,11 +51,11 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   memcpy (q->data, data, 4 * ints);
   q->msg_id = encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
   if (verbosity) {
-    fprintf (stderr, "Msg_id is %lld\n", q->msg_id);
+    logprintf ( "Msg_id is %lld\n", q->msg_id);
   }
   q->methods = methods;
   if (queries_tree) {
-    fprintf (stderr, "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
+    logprintf ( "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
   }
   queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
 
@@ -77,12 +77,12 @@ void query_error (long long id) {
   int error_len = prefetch_strlen ();
   char *error = fetch_str (error_len);
   if (verbosity) {
-    fprintf (stderr, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
+    logprintf ( "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
   }
   struct query *q = query_get (id);
   if (!q) {
     if (verbosity) {
-      fprintf (stderr, "No such query\n");
+      logprintf ( "No such query\n");
     }
   } else {
     remove_event_timer (&q->ev);
@@ -100,10 +100,10 @@ static int packed_buffer[MAX_PACKED_SIZE / 4];
 
 void query_result (long long id UU) {
   if (verbosity) {
-    fprintf (stderr, "result for query #%lld\n", id);
+    logprintf ( "result for query #%lld\n", id);
   }
   if (verbosity  >= 4) {
-    fprintf (stderr, "result: ");
+    logprintf ( "result: ");
     hexdump_in ();
   }
   int op = prefetch_int ();
@@ -124,8 +124,8 @@ void query_result (long long id UU) {
 
     int err = inflate (&strm, Z_FINISH);
     if (verbosity) {
-      fprintf (stderr, "inflate error = %d\n", err);
-      fprintf (stderr, "inflated %d bytes\n", (int)strm.total_out);
+      logprintf ( "inflate error = %d\n", err);
+      logprintf ( "inflated %d bytes\n", (int)strm.total_out);
     }
     end = in_ptr;
     eend = in_end;
@@ -133,14 +133,14 @@ void query_result (long long id UU) {
     in_ptr = packed_buffer;
     in_end = in_ptr + strm.total_out / 4;
     if (verbosity >= 4) {
-      fprintf (stderr, "Unzipped data: ");
+      logprintf ( "Unzipped data: ");
       hexdump_in ();
     }
   }
   struct query *q = query_get (id);
   if (!q) {
     if (verbosity) {
-      fprintf (stderr, "No such query\n");
+      logprintf ( "No such query\n");
     }
   } else {
     remove_event_timer (&q->ev);
@@ -162,16 +162,18 @@ DEFINE_TREE (timer, struct event_timer *, event_timer_cmp, 0)
 struct tree_timer *timer_tree;
 
 void insert_event_timer (struct event_timer *ev) {
-  return;
-  fprintf (stderr, "INSERT: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
+  if (verbosity > 2) {
+    logprintf ( "INSERT: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
+  }
   tree_check_timer (timer_tree);
   timer_tree = tree_insert_timer (timer_tree, ev, lrand48 ());
   tree_check_timer (timer_tree);
 }
 
 void remove_event_timer (struct event_timer *ev) {
-  return;
-  fprintf (stderr, "REMOVE: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
+  if (verbosity > 2) {
+    logprintf ( "REMOVE: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
+  }
   tree_check_timer (timer_tree);
   timer_tree = tree_delete_timer (timer_tree, ev);
   tree_check_timer (timer_tree);
@@ -207,7 +209,7 @@ int help_get_config_on_answer (struct query *q UU) {
   assert (test_mode == CODE_bool_false);
   int this_dc = fetch_int ();
   if (verbosity) {
-    fprintf (stderr, "this_dc = %d\n", this_dc);
+    logprintf ( "this_dc = %d\n", this_dc);
   }
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -222,7 +224,7 @@ int help_get_config_on_answer (struct query *q UU) {
     char *ip = fetch_str (l2);
     int port = fetch_int ();
     if (verbosity) {
-      fprintf (stderr, "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
+      logprintf ( "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
     }
     if (!DC_list[id]) {
       alloc_dc (id, strndup (ip, l2), port);
@@ -230,7 +232,7 @@ int help_get_config_on_answer (struct query *q UU) {
   }
   max_chat_size = fetch_int ();
   if (verbosity >= 2) {
-    fprintf (stderr, "chat_size = %d\n", max_chat_size);
+    logprintf ( "chat_size = %d\n", max_chat_size);
   }
   return 0;
 }
@@ -259,7 +261,7 @@ int send_code_on_error (struct query *q UU, int error_code, int l, char *error) 
     int i = error[s] - '0';
     want_dc_num = i;
   } else {
-    fprintf (stderr, "error_code = %d, error = %.*s\n", error_code, l, error);
+    logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
     assert (0);
   }
   return 0;
@@ -343,13 +345,13 @@ int sign_in_on_answer (struct query *q UU) {
   fetch_user (&User);
   sign_in_ok = 1;
   if (verbosity) {
-    fprintf (stderr, "authorized successfully: name = '%s %s', phone = '%s', expires = %d\n", User.first_name, User.last_name, User.phone, (int)(expires - get_double_time ()));
+    logprintf ( "authorized successfully: name = '%s %s', phone = '%s', expires = %d\n", User.first_name, User.last_name, User.phone, (int)(expires - get_double_time ()));
   }
   return 0;
 }
 
 int sign_in_on_error (struct query *q UU, int error_code, int l, char *error) {
-  fprintf (stderr, "error_code = %d, error = %.*s\n", error_code, l, error);
+  logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
   sign_in_ok = -1;
   return 0;
 }
@@ -371,11 +373,13 @@ int do_send_code_result (const char *code) {
   return sign_in_ok;
 }
 
+extern char *user_list[];
+
 int get_contacts_on_answer (struct query *q UU) {
+  int i;
   assert (fetch_int () == (int)CODE_contacts_contacts);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
-  int i; 
   for (i = 0; i < n; i++) {
     assert (fetch_int () == (int)CODE_contact);
     fetch_int (); // id
@@ -384,9 +388,8 @@ int get_contacts_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    struct user User;
-    fetch_user (&User);
-    rprintf ("User: id = %d, first_name = %s, last_name = %s\n", User.id, User.first_name, User.last_name);
+    struct user *U = fetch_alloc_user ();
+    rprintf ("User #%d: " COLOR_RED "%s %s" COLOR_NORMAL " (" COLOR_GREEN "%s" COLOR_NORMAL ")\n", U->id, U->first_name, U->last_name, U->print_name);
   }
   return 0;
 }

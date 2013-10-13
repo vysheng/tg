@@ -167,6 +167,7 @@ void read_auth_file (void) {
   close (auth_file_fd);
 }
 
+int readline_active;
 int loop (void) {
   on_start ();
   read_auth_file ();
@@ -216,6 +217,7 @@ int loop (void) {
   fflush (stdout);
   fflush (stderr);
 
+  readline_active = 1;
   rl_callback_handler_install (get_default_prompt (), interpreter);
   rl_attempted_completion_function = (CPPFunction *) complete_text;
   rl_completion_entry_function = complete_none;

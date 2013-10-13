@@ -17,6 +17,7 @@
 #include "mtproto-client.h"
 #include "mtproto-common.h"
 #include "tree.h"
+#include "interface.h"
 
 DEFINE_TREE(int,int,int_cmp,0)
 
@@ -156,7 +157,7 @@ struct connection *create_connection (const char *host, int port, struct session
 
   if (connect (fd, (struct sockaddr *) &addr, sizeof (addr)) == -1) {
     if (errno != EINPROGRESS) {
-      fprintf (stderr, "Can not connect to %s:%d %m\n", host, port);
+      logprintf ( "Can not connect to %s:%d %m\n", host, port);
       close (fd);
       free (c);
       return 0;
@@ -183,7 +184,7 @@ struct connection *create_connection (const char *host, int port, struct session
   assert (!Connections[fd]);
   Connections[fd] = c;
   if (verbosity) {
-    fprintf (stderr, "connect to %s:%d successful\n", host, port);
+    logprintf ( "connect to %s:%d successful\n", host, port);
   }
   if (c->methods->ready) {
     c->methods->ready (c);
@@ -211,7 +212,7 @@ void fail_connection (struct connection *c) {
 
 void try_write (struct connection *c) {
   if (verbosity) {
-    fprintf (stderr, "try write: fd = %d\n", c->fd);
+    logprintf ( "try write: fd = %d\n", c->fd);
   }
   int x = 0;
   while (c->out_head) {
@@ -238,12 +239,12 @@ void try_write (struct connection *c) {
     }
   }
   if (verbosity) {
-    fprintf (stderr, "Sent %d bytes to %d\n", x, c->fd);
+    logprintf ( "Sent %d bytes to %d\n", x, c->fd);
   }
   c->out_bytes -= x;
 }
 
-void hexdump (struct connection_buffer *b) {
+void hexdump_buf (struct connection_buffer *b) {
   int pos = 0;
   int rem = 8;
   while (b) { 
@@ -270,7 +271,7 @@ void hexdump (struct connection_buffer *b) {
 void try_rpc_read (struct connection *c) {
   assert (c->in_head);
   if (verbosity >= 4) {
-    hexdump (c->in_head);
+    hexdump_buf (c->in_head);
   }
 
   while (1) {
@@ -307,7 +308,7 @@ void try_rpc_read (struct connection *c) {
 
 void try_read (struct connection *c) {
   if (verbosity) {
-    fprintf (stderr, "try read: fd = %d\n", c->fd);
+    logprintf ( "try read: fd = %d\n", c->fd);
   }
   if (!c->in_tail) {
     c->in_head = c->in_tail = new_connection_buffer (1 << 20);
@@ -334,7 +335,7 @@ void try_read (struct connection *c) {
     }
   }
   if (verbosity) {
-    fprintf (stderr, "Received %d bytes from %d\n", x, c->fd);
+    logprintf ( "Received %d bytes from %d\n", x, c->fd);
   }
   c->in_bytes += x;
   if (x) {
@@ -356,15 +357,15 @@ int connections_make_poll_array (struct pollfd *fds, int max) {
     fds ++;
     max --;
   }
-  if (verbosity >= 3) {
-    fprintf (stderr, "%d connections in poll\n", _max - max);
+  if (verbosity >= 10) {
+    logprintf ( "%d connections in poll\n", _max - max);
   }
   return _max - max;
 }
 
 void connections_poll_result (struct pollfd *fds, int max) {
-  if (verbosity >= 2) {
-    fprintf (stderr, "connections_poll_result: max = %d\n", max);
+  if (verbosity >= 10) {
+    logprintf ( "connections_poll_result: max = %d\n", max);
   }
   int i;
   for (i = 0; i < max; i++) {
@@ -374,7 +375,7 @@ void connections_poll_result (struct pollfd *fds, int max) {
     }
     if (fds[i].revents & (POLLHUP | POLLERR | POLLRDHUP)) {
       if (verbosity) {
-        fprintf (stderr, "fail connection\n");
+        logprintf ( "fail connection\n");
       }
       fail_connection (c);
     } else if (fds[i].revents & POLLOUT) {
