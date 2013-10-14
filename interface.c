@@ -104,14 +104,28 @@ int get_complete_mode (void) {
 }
 
 extern int user_num;
-extern struct user *Users[];
+extern int chat_num;
+extern union user_chat *Peers[];
 int complete_user_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < user_num && (!Users[index]->print_name || strncmp (Users[index]->print_name, text, len))) {
+  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
     index ++;
   }
-  if (index < user_num) {
-    *R = strdup (Users[index]->print_name);
+  if (index < user_num + chat_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
+}
+
+int complete_user_chat_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+    index ++;
+  }
+  if (index < user_num + chat_num) {
+    *R = strdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -161,7 +175,7 @@ char *command_generator (const char *text, int state) {
     index = complete_user_list (index, text, len, &R);
     return R;
   case 2:
-    index = complete_string_list (chat_list, index, text, len, &R);
+    index = complete_user_chat_list (index, text, len, &R);
     return R;
   case 3:
     return rl_filename_completion_function(text,state);

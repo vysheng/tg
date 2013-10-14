@@ -270,7 +270,10 @@ static inline char *fetch_str (int len) {
 
 static inline char *fetch_str_dup (void) {
   int l = prefetch_strlen ();
-  return strndup (fetch_str (l), l);
+  char *s = malloc (l + 1);
+  memcpy (s, fetch_str (l), l);
+  s[l] = 0;
+  return s;
 }
 
 static __inline__ unsigned long long rdtsc(void) {
@@ -297,6 +300,17 @@ static inline long long fetch_long (void) {
   long long r = *(long long *)in_ptr;
   in_ptr += 2;
   return r;
+}
+
+static inline double fetch_double (void) {
+  double r = *(double *)in_ptr;
+  in_ptr += 2;
+  return r;
+}
+
+static inline void fetch_ints (void *data, int count) {
+  memcpy (data, in_ptr, 4 * count);
+  in_ptr += count;
 }
 
 int get_random_bytes (void *buf, int n);

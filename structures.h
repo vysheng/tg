@@ -17,33 +17,137 @@ struct user_status {
 struct user {
   int id;
   int flags;
+  char *print_name;
+  struct file_location photo_big;
+  struct file_location photo_small;
   char *first_name;
   char *last_name;
   char *phone;
-  char *print_name;
   long long access_hash;
-  struct file_location photo_big;
-  struct file_location photo_small;
   struct user_status status;
 };
 
 struct chat {
   int id;
   int flags;
-  char *title;
   char *print_title;
+  struct file_location photo_big;
+  struct file_location photo_small;
+  char *title;
   int user_num;
   int date;
   int version;
-  struct file_location photo_big;
-  struct file_location photo_small;
+};
+
+union user_chat {
+  struct {
+    int id;
+    int flags;
+    char *print_name;
+    struct file_location photo_big;
+    struct file_location photo_small;
+  };
+  struct user user;
+  struct chat chat;
+};
+
+struct photo_size {
+  char *type;
+  struct file_location loc;
+  int w;
+  int h;
+  int size;
+  char *data;
+};
+
+struct geo {
+  double longitude;
+  double latitude;
+};
+
+struct photo {
+  long long id;
+  long long access_hash;
+  int user_id;
+  int date;
+  char *caption;
+  struct geo geo;
+  int sizes_num;
+  struct photo_size *sizes;
+};
+
+struct video {
+  long long id;
+  long long access_hash;
+  int user_id;
+  int date;
+  char *caption;
+  int duration;
+  int size;
+  struct photo_size thumb;
+  int dc_id;
+  int w;
+  int h;
+};
+
+struct message_action {
+  int type;
+  union {
+    struct {
+      char *title;
+      int user_num;
+      int *users;
+    };
+    char *new_title;
+    struct photo photo;
+    int user;
+  };
+};
+
+struct message_media {
+  int type;
+  union {
+    struct photo photo;
+    struct video video;
+    struct geo geo;
+    struct {
+      char *phone;
+      char *first_name;
+      char *last_name;
+      int user_id;
+    };
+    void *data;
+  };
+};
+
+struct message {
+  struct message *next_use, *prev_use;
+  int id;
+  int flags;
+  int fwd_from_id;
+  int fwd_date;
+  int from_id;
+  int to_id;
+  int out;
+  int unread;
+  int date;
+  int service;
+  union {
+    struct message_action action;
+    struct {
+      char *message;
+      struct message_media media;
+    };
+  };
 };
 
 void fetch_file_location (struct file_location *loc);
 void fetch_user (struct user *U);
 struct user *fetch_alloc_user (void);
+struct chat *fetch_alloc_chat (void);
 
 void free_user (struct user *U);
+void free_chat (struct chat *U);
 
 int print_stat (char *s, int len);
 #endif
