@@ -142,12 +142,19 @@ struct message {
 };
 
 void fetch_file_location (struct file_location *loc);
+void fetch_user_status (struct user_status *S);
 void fetch_user (struct user *U);
 struct user *fetch_alloc_user (void);
 struct chat *fetch_alloc_chat (void);
+struct message *fetch_alloc_message (void);
+struct message *fetch_alloc_message_short (void);
+struct message *fetch_alloc_message_short_chat (void);
 
 void free_user (struct user *U);
 void free_chat (struct chat *U);
 
 int print_stat (char *s, int len);
+union user_chat *user_chat_get (int id);
+struct message *message_get (int id);
+void update_message_id (struct message *M, int id);
 #endif

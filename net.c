@@ -391,6 +391,7 @@ void connections_poll_result (struct pollfd *fds, int max) {
 
 int send_all_acks (struct session *S) {
   clear_packet ();
+  out_int (CODE_msgs_ack);
   out_int (tree_count_int (S->ack_tree));
   while (S->ack_tree) {
     int x = tree_get_min_int (S->ack_tree); 

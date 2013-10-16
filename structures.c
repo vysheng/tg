@@ -4,6 +4,8 @@
 #include "telegram.h"
 #include "tree.h"
 
+int verbosity;
+
 void fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
   if (x == CODE_file_location_unavailable) {
@@ -234,6 +236,28 @@ void fetch_message_action (struct message_action *M) {
   }
 }
 
+void fetch_message_short (struct message *M) {
+  memset (M, 0, sizeof (*M));
+  M->id = fetch_int ();
+  M->from_id = fetch_int ();
+  M->message = fetch_str_dup ();
+  fetch_int (); // pts
+  M->date = fetch_int ();
+  fetch_int (); // seq
+}
+
+void fetch_message_short_chat (struct message *M) {
+  memset (M, 0, sizeof (*M));
+  M->id = fetch_int ();
+  M->from_id = fetch_int ();
+  M->to_id = fetch_int ();
+  M->message = fetch_str_dup ();
+  fetch_int (); // pts
+  M->date = fetch_int ();
+  fetch_int (); // seq
+}
+
+
 void fetch_message_media (struct message_media *M) {
   memset (M, 0, sizeof (*M));
   M->type = fetch_int ();
@@ -442,6 +466,49 @@ struct message *fetch_alloc_message (void) {
   }
 }
 
+struct message *fetch_alloc_message_short (void) {
+  struct message *M = malloc (sizeof (*M));
+  fetch_message_short (M);
+  struct message *M1 = tree_lookup_message (message_tree, M);
+  messages_allocated ++;
+  if (M1) {
+    message_del_use (M1);
+    free_message (M1);
+    memcpy (M1, M, sizeof (*M));
+    free (M);
+    message_add_use (M1);
+    messages_allocated --;
+    return M1;
+  } else {
+    message_add_use (M);
+    message_tree = tree_insert_message (message_tree, M, lrand48 ());
+    return M;
+  }
+}
+
+struct message *fetch_alloc_message_short_chat (void) {
+  struct message *M = malloc (sizeof (*M));
+  fetch_message_short_chat (M);
+  if (verbosity >= 2) {
+    logprintf ("Read message with id %d\n", M->id);
+  }
+  struct message *M1 = tree_lookup_message (message_tree, M);
+  messages_allocated ++;
+  if (M1) {
+    message_del_use (M1);
+    free_message (M1);
+    memcpy (M1, M, sizeof (*M));
+    free (M);
+    message_add_use (M1);
+    messages_allocated --;
+    return M1;
+  } else {
+    message_add_use (M);
+    message_tree = tree_insert_message (message_tree, M, lrand48 ());
+    return M;
+  }
+}
+
 struct chat *fetch_alloc_chat (void) {
   union user_chat *U = malloc (sizeof (*U));
   fetch_chat (&U->chat);
@@ -474,4 +541,22 @@ int print_stat (char *s, int len) {
     chats_allocated,
     messages_allocated
     );
+}
+
+union user_chat *user_chat_get (int id) {
+  union user_chat U;
+  U.id = id;
+  return tree_lookup_peer (peer_tree, &U);
+}
+
+struct message *message_get (int id) {
+  struct message M;
+  M.id = id;
+  return tree_lookup_message (message_tree, &M);
+}
+
+void update_message_id (struct message *M, int id) {
+  message_tree = tree_delete_message (message_tree, M);
+  M->id = id;
+  message_tree = tree_insert_message (message_tree, M, lrand48 ());
 }

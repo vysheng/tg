@@ -46,6 +46,7 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
     logprintf ( "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
   }
   struct query *q = malloc (sizeof (*q));
+  memset (q, 0, sizeof (*q));
   q->data_len = ints;
   q->data = malloc (4 * ints);
   memcpy (q->data, data, 4 * ints);
@@ -68,7 +69,10 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
 
 void query_ack (long long id) {
   struct query *q = query_get (id);
-  if (q) { q->flags |= QUERY_ACK_RECEIVED; }
+  if (q) { 
+    remove_event_timer (&q->ev);
+    q->flags |= QUERY_ACK_RECEIVED; 
+  }
 }
 
 void query_error (long long id) {
@@ -85,7 +89,9 @@ void query_error (long long id) {
       logprintf ( "No such query\n");
     }
   } else {
-    remove_event_timer (&q->ev);
+    if (!(q->flags & QUERY_ACK_RECEIVED)) {
+      remove_event_timer (&q->ev);
+    }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_error) {
       q->methods->on_error (q, error_code, error_len, error);
@@ -143,7 +149,9 @@ void query_result (long long id UU) {
       logprintf ( "No such query\n");
     }
   } else {
-    remove_event_timer (&q->ev);
+    if (!(q->flags & QUERY_ACK_RECEIVED)) {
+      remove_event_timer (&q->ev);
+    }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_answer) {
       q->methods->on_answer (q);
@@ -191,6 +199,10 @@ void work_timers (void) {
     assert (ev);
     if (ev->timeout > t) { break; }
     remove_event_timer (ev);
+    assert (ev->alarm);
+    if (verbosity) {
+      logprintf ("Alarm\n");
+    }
     ev->alarm (ev->self);
   }
 }
@@ -404,4 +416,49 @@ void do_update_contact_list (void) {
   out_int (CODE_contacts_get_contacts);
   out_string ("");
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods);
+}
+
+
+int msg_send_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_messages_sent_message);
+  int uid = fetch_int (); // uid
+  int date = fetch_int (); // date
+  int ptr = fetch_int (); // ptr
+  int seq = fetch_int (); // seq
+  logprintf ("Sent: uid = %d, date = %d, ptr = %d, seq = %d\n", uid, date, ptr, seq);
+  return 0;
+}
+
+struct query_methods msg_send_methods = {
+  .on_answer = msg_send_on_answer
+};
+
+int out_message_num;
+void do_send_message (union user_chat *U, const char *msg) {
+  if (!out_message_num) {
+    out_message_num = lrand48 ();
+  }
+  clear_packet ();
+  out_int (CODE_messages_send_message);
+  if (U->id < 0) {
+    out_int (CODE_input_peer_chat);
+    out_int (-U->id);
+  } else {
+    if (U->user.access_hash) {
+      out_int (CODE_input_peer_foreign);
+      out_int (U->id);
+      out_long (U->user.access_hash);
+    } else {
+      out_int (CODE_input_peer_contact);
+      out_int (U->id);
+    }
+  }
+  out_string (msg);
+  out_long (out_message_num ++);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods);
+  if (U->id < 0) {
+    rprintf (COLOR_RED "%s" COLOR_GREEN " <<< " COLOR_NORMAL "%s\n", U->chat.title, msg);
+  } else {
+    rprintf (COLOR_RED "%s %s" COLOR_GREEN " <<< " COLOR_NORMAL "%s\n", U->user.first_name, U->user.last_name, msg);
+  }
 }

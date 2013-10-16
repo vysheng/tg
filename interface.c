@@ -198,6 +198,18 @@ void interpreter (char *line UU) {
     static char stat_buf[1 << 15];
     print_stat (stat_buf, (1 << 15) - 1);
     printf ("%s\n", stat_buf);
+  } else if (!memcmp (line, "msg ", 4)) {
+    char *q = line + 4;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
+      index ++;
+    }
+    while (*q && (*q == ' ' || *q == '\t')) { q ++; }
+    if (*q && index < user_num + chat_num) {
+      do_send_message (Peers[index], q);
+    }
   }
 }
 
@@ -274,5 +286,16 @@ void logprintf (const char *format, ...) {
     rl_point = saved_point;
     rl_redisplay();
     free(saved_line);
+  }
+}
+
+void print_message (struct message *M) {
+  union user_chat *U = user_chat_get (M->from_id);
+  if (!M->service) {
+    if (U && U->id > 0) {
+      rprintf (COLOR_RED "%s %s " COLOR_GREEN " >>> " COLOR_NORMAL " %s\n", U->user.first_name, U->user.last_name, M->message);
+    } else {
+      rprintf (COLOR_RED "User #%d " COLOR_GREEN " >>> " COLOR_NORMAL " %s\n", M->from_id, M->message);
+    }
   }
 }

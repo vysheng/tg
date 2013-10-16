@@ -23,6 +23,7 @@
 #include "queries.h"
 #include "loop.h"
 #include "interface.h"
+#include "structures.h"
 
 #define sha1 SHA1
 
@@ -611,6 +612,181 @@ int auth_work_start (struct connection *c UU) {
 }
 
 void rpc_execute_answer (struct connection *c, long long msg_id UU);
+
+void work_update (struct connection *c UU, long long msg_id UU) {
+  unsigned op = fetch_int ();
+  switch (op) {
+  case CODE_update_new_message:
+    {
+      struct message *M = fetch_alloc_message ();
+      print_message (M);
+      break;
+    };
+  case CODE_update_message_i_d:
+    {
+      int id = fetch_int (); // id
+      int new = fetch_long (); // random_id
+      struct message *M = message_get (new);
+      update_message_id (M, id);
+    }
+    break;
+  case CODE_update_read_messages:
+    {
+      assert (fetch_int () == (int)CODE_vector);
+      int n = fetch_int ();
+      int i;
+      for (i = 0; i < n; i++) {
+        int id = fetch_int ();
+        struct message *M = message_get (id);
+        if (M) {
+          M->unread = 0;
+        }
+      }
+      fetch_int (); //pts
+    }
+    break;
+  case CODE_update_user_typing:
+    {
+      int id = fetch_int ();
+      union user_chat *U = user_chat_get (id);
+      if (U) {
+        rprintf (COLOR_YELLOW "User " COLOR_RED "%s %s" COLOR_YELLOW " is typing....\n" COLOR_NORMAL, U->user.first_name, U->user.last_name);
+      }
+    }
+    break;
+  case CODE_update_chat_user_typing:
+    {
+      int chat_id = fetch_int ();
+      int id = fetch_int ();
+      union user_chat *C = user_chat_get (-chat_id);
+      union user_chat *U = user_chat_get (id);
+      if (U && C) {
+        rprintf (COLOR_YELLOW "User " COLOR_RED "%s %s" COLOR_YELLOW " is typing in chat %s....\n" COLOR_NORMAL, U->user.first_name, U->user.last_name, C->chat.title);
+      }
+    }
+    break;
+  case CODE_update_user_status:
+    {
+      int user_id = fetch_int ();
+      union user_chat *U = user_chat_get (user_id);
+      if (U) {
+        fetch_user_status (&U->user.status);
+        rprintf (COLOR_YELLOW "User " COLOR_RED "%s %s" COLOR_YELLOW " is now %s\n" COLOR_NORMAL, U->user.first_name, U->user.last_name, (U->user.status.online > 0) ? "online" : "offline");
+      } else {
+        struct user_status t;
+        fetch_user_status (&t);
+      }
+    }
+    break;
+  case CODE_update_user_name:
+    {
+      int user_id = fetch_int ();
+      union user_chat *UC = user_chat_get (user_id);
+      if (UC) {
+        struct user *U = &UC->user;
+        if (U->first_name) { free (U->first_name); }
+        if (U->last_name) { free (U->first_name); }
+        if (U->print_name) { free (U->first_name); }
+        U->first_name = fetch_str_dup ();
+        U->last_name = fetch_str_dup ();
+        if (!strlen (U->first_name)) {
+          if (!strlen (U->last_name)) {
+            U->print_name = strdup ("none");
+          } else {
+            U->print_name = strdup (U->last_name);
+          }
+        } else {
+          if (!strlen (U->last_name)) {
+            U->print_name = strdup (U->first_name);
+          } else {
+            U->print_name = malloc (strlen (U->first_name) + strlen (U->last_name) + 2);
+            sprintf (U->print_name, "%s_%s", U->first_name, U->last_name);
+          }
+        }
+      } else {
+        int l;
+        l = prefetch_strlen ();
+        fetch_str (l);
+        l = prefetch_strlen ();
+        fetch_str (l);
+        l = prefetch_strlen ();
+        fetch_str (l);
+      }
+    }
+    break;
+  case CODE_update_user_photo:
+    {
+      int user_id = fetch_int ();
+      union user_chat *UC = user_chat_get (user_id);
+      if (UC) {
+        struct user *U = &UC->user;
+        unsigned y = fetch_int ();
+        if (y == CODE_user_profile_photo_empty) {
+          U->photo_big.dc = -2;
+          U->photo_small.dc = -2;
+        } else {
+          assert (y == CODE_user_profile_photo);
+          fetch_file_location (&U->photo_small);
+          fetch_file_location (&U->photo_big);
+        }
+      } else {
+        struct file_location t;
+        unsigned y = fetch_int ();
+        if (y == CODE_user_profile_photo_empty) {
+        } else {
+          assert (y == CODE_user_profile_photo);
+          fetch_file_location (&t);
+          fetch_file_location (&t);
+        }
+      }
+    }
+    break;
+  default:
+    logprintf ("Unknown update type %08x\n", op);
+  }
+}
+
+void work_update_short (struct connection *c, long long msg_id) {
+  assert (fetch_int () == CODE_update_short);
+  work_update (c, msg_id);
+  fetch_int (); // date
+}
+
+void work_updates (struct connection *c, long long msg_id) {
+  assert (fetch_int () == CODE_updates);
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  int i;
+  for (i = 0; i < n; i++) {
+    work_update (c, msg_id);
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_user ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_chat ();
+  }
+  fetch_int (); // date
+  fetch_int (); // seq
+  
+}
+
+void work_update_short_message (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == (int)CODE_update_short_message);
+  struct message *M = fetch_alloc_message_short ();  
+  print_message (M);
+}
+
+void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == CODE_update_short_chat_message);
+  struct message *M = fetch_alloc_message_short_chat ();  
+  print_message (M);
+}
+
 void work_container (struct connection *c, long long msg_id UU) {
   if (verbosity) {
     logprintf ( "work_container: msg_id = %lld\n", msg_id);
@@ -671,6 +847,9 @@ void work_rpc_result (struct connection *c UU, long long msg_id UU) {
 }
 
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
+  if (verbosity >= 5) {
+    hexdump_in ();
+  }
   int op = prefetch_int ();
   switch (op) {
   case CODE_msg_container:
@@ -684,6 +863,18 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     return;
   case CODE_rpc_result:
     work_rpc_result (c, msg_id);
+    return;
+  case CODE_update_short:
+    work_update_short (c, msg_id);
+    return;
+  case CODE_updates:
+    work_updates (c, msg_id);
+    return;
+  case CODE_update_short_message:
+    work_update_short_message (c, msg_id);
+    return;
+  case CODE_update_short_chat_message:
+    work_update_short_chat_message (c, msg_id);
     return;
   }
   logprintf ( "Unknown message: \n");

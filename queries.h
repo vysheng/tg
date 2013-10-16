@@ -44,4 +44,6 @@ int do_send_code_result (const char *code);
 double get_double_time (void);
 
 void do_update_contact_list (void);
+union user_chat;
+void do_send_message (union user_chat *U, const char *msg);
 #endif

@@ -255,8 +255,12 @@ static inline int prefetch_strlen (void) {
   }
 }
 
-
+extern int verbosity;
 static inline char *fetch_str (int len) {
+  assert (len >= 0);
+  if (verbosity > 6) {
+    logprintf ("fetch_string: len = %d\n", len);
+  }
   if (len < 254) {
     char *str = (char *) in_ptr + 1;
     in_ptr += 1 + (len >> 2);
@@ -289,6 +293,9 @@ static inline long have_prefetch_ints (void) {
 int fetch_bignum (BIGNUM *x);
 
 static inline int fetch_int (void) {
+  if (verbosity > 6) {
+    logprintf ("fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
+  }
   return *(in_ptr ++);
 }
 
