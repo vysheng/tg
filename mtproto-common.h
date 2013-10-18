@@ -299,6 +299,14 @@ static inline int fetch_int (void) {
   return *(in_ptr ++);
 }
 
+static inline int fetch_bool (void) {
+  if (verbosity > 6) {
+    logprintf ("fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
+  }
+  assert (*(in_ptr) == (int)CODE_bool_true || *(in_ptr) == (int)CODE_bool_false);
+  return *(in_ptr ++) == (int)CODE_bool_true;
+}
+
 static inline int prefetch_int (void) {
   return *(in_ptr);
 }

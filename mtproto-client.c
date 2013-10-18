@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <poll.h>
+#include <zlib.h>
 
 #include "net.h"
 #include "include.h"
@@ -619,6 +620,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_new_message:
     {
       struct message *M = fetch_alloc_message ();
+      fetch_int (); //pts
       print_message (M);
       break;
     };
@@ -846,6 +848,45 @@ void work_rpc_result (struct connection *c UU, long long msg_id UU) {
   }
 }
 
+#define MAX_PACKED_SIZE (1 << 20)
+void work_packed (struct connection *c, long long msg_id) {
+  assert (fetch_int () == CODE_gzip_packed);
+  static int in_gzip;
+  static int buf[MAX_PACKED_SIZE >> 2];
+  assert (!in_gzip);
+  in_gzip = 1;
+    
+  int l = prefetch_strlen ();
+  char *s = fetch_str (l);
+  size_t dl = MAX_PACKED_SIZE;
+
+  z_stream strm = {0};
+  assert (inflateInit2 (&strm, 16 + MAX_WBITS) == Z_OK);
+  strm.avail_in = l;
+  strm.next_in = (void *)s;
+  strm.avail_out = MAX_PACKED_SIZE;
+  strm.next_out = (void *)buf;
+
+  int err = inflate (&strm, Z_FINISH);
+  if (verbosity) {
+    logprintf ( "inflate error = %d\n", err);
+    logprintf ( "inflated %d bytes\n", (int)strm.total_out);
+  }
+  int *end = in_ptr;
+  int *eend = in_end;
+  assert (dl % 4 == 0);
+  in_ptr = buf;
+  in_end = in_ptr + strm.total_out / 4;
+  if (verbosity >= 4) {
+    logprintf ( "Unzipped data: ");
+    hexdump_in ();
+  }
+  rpc_execute_answer (c, msg_id);
+  in_ptr = end;
+  in_end = eend;
+  in_gzip = 0;
+}
+
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   if (verbosity >= 5) {
     hexdump_in ();
@@ -875,6 +916,9 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     return;
   case CODE_update_short_chat_message:
     work_update_short_chat_message (c, msg_id);
+    return;
+  case CODE_gzip_packed:
+    work_packed (c, msg_id);
     return;
   }
   logprintf ( "Unknown message: \n");

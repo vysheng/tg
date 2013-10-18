@@ -149,6 +149,7 @@ struct chat *fetch_alloc_chat (void);
 struct message *fetch_alloc_message (void);
 struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
+int fetch_peer_id (void);
 
 void free_user (struct user *U);
 void free_chat (struct chat *U);

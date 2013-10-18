@@ -6,6 +6,7 @@
 #define COLOR_GREEN "\033[32;1m"
 #define COLOR_GREY "\033[37;1m"
 #define COLOR_YELLOW "\033[33;1m"
+#define COLOR_BLUE "\033[34;1m"
 
 
 char *get_default_prompt (void);

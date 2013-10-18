@@ -46,4 +46,6 @@ double get_double_time (void);
 void do_update_contact_list (void);
 union user_chat;
 void do_send_message (union user_chat *U, const char *msg);
+void do_get_history (union user_chat *U, int limit);
+void do_get_dialog_list (void);
 #endif

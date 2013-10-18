@@ -13,6 +13,8 @@
 #include "interface.h"
 #include "telegram.h"
 #include "structures.h"
+
+#include "mtproto-common.h"
 char *default_prompt = ">";
 
 char *get_default_prompt (void) {
@@ -28,12 +30,16 @@ char *commands[] = {
   "msg",
   "contact_list",
   "stats",
+  "history",
+  "dialog_list",
   0 };
 
 int commands_flags[] = {
   070,
   072,
   07,
+  07,
+  072,
   07,
 };
 
@@ -194,6 +200,8 @@ void interpreter (char *line UU) {
   }
   if (!memcmp (line, "contact_list", 12)) {
     do_update_contact_list ();
+  } else if (!memcmp (line, "dialog_list", 11)) {
+    do_get_dialog_list ();
   } else if (!memcmp (line, "stats", 5)) {
     static char stat_buf[1 << 15];
     print_stat (stat_buf, (1 << 15) - 1);
@@ -203,12 +211,31 @@ void interpreter (char *line UU) {
     int len;
     char *text = get_token (&q, &len);
     int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
       index ++;
     }
     while (*q && (*q == ' ' || *q == '\t')) { q ++; }
     if (*q && index < user_num + chat_num) {
       do_send_message (Peers[index], q);
+    }
+  } else if (!memcmp (line, "history", 7)) {
+    char *q = line + 7;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
+      index ++;
+    }
+    if (index < user_num + chat_num) {
+      char *text = get_token (&q, &len);
+      int limit = 40;
+      if (text) {
+        limit = atoi (text);
+        if (limit <= 0 || limit >= 1000000) {
+          limit = 40;
+        }
+      }
+      do_get_history (Peers[index], limit);
     }
   }
 }
@@ -289,13 +316,58 @@ void logprintf (const char *format, ...) {
   }
 }
 
+const char *message_media_type_str (struct message_media *M) {
+  static char buf[1000];
+  switch (M->type) {
+    case CODE_message_media_empty:
+      return "";
+    case CODE_message_media_photo:
+      return "[photo]";
+    case CODE_message_media_video:
+      return "[video]";
+    case CODE_message_media_geo:
+      sprintf (buf, "[geo] %.6lf:%.6lf", M->geo.latitude, M->geo.longitude);
+      return buf;
+    case CODE_message_media_contact:
+      snprintf (buf, 999, "[contact] " COLOR_RED "%s %s" COLOR_NORMAL " %s", M->first_name, M->last_name, M->phone);
+      return buf;
+    case CODE_message_media_unsupported:
+      return "[unsupported]";
+    default:
+      assert (0);
+      return "";
+
+  }
+}
+
 void print_message (struct message *M) {
-  union user_chat *U = user_chat_get (M->from_id);
-  if (!M->service) {
-    if (U && U->id > 0) {
-      rprintf (COLOR_RED "%s %s " COLOR_GREEN " >>> " COLOR_NORMAL " %s\n", U->user.first_name, U->user.last_name, M->message);
+  if (M->service) {
+    rprintf ("Service message\n");
+    return;
+  }
+  if (M->to_id >= 0) {
+    if (M->out) {
+      union user_chat *U = user_chat_get (M->to_id);
+      assert (M->from_id >= 0);
+      if (U) {
+        rprintf (COLOR_RED "%s %s" COLOR_GREEN " <<< %s %s" COLOR_NORMAL "\n", U->user.first_name, U->user.last_name, M->message, message_media_type_str (&M->media));
+      } else {
+        rprintf (COLOR_RED "User #%d" COLOR_GREEN " <<< %s %s" COLOR_NORMAL "\n", M->from_id, M->message, message_media_type_str (&M->media));
+      }
     } else {
-      rprintf (COLOR_RED "User #%d " COLOR_GREEN " >>> " COLOR_NORMAL " %s\n", M->from_id, M->message);
+      union user_chat *U = user_chat_get (M->from_id);
+      assert (M->from_id >= 0);
+      if (U) {
+        rprintf (COLOR_RED "%s %s" COLOR_BLUE " >>> %s %s" COLOR_NORMAL "\n", U->user.first_name, U->user.last_name, M->message, message_media_type_str (&M->media));
+      } else {
+        rprintf (COLOR_RED "User #%d" COLOR_BLUE " >>> %s %s" COLOR_NORMAL "\n", M->from_id, M->message, message_media_type_str (&M->media));
+      }
+    }
+  } else {
+    rprintf ("Message to chat %d\n", -M->to_id);
+    union user_chat *C = user_chat_get (M->to_id);
+    if (C) {
+      rprintf ("Chat %s\n", C->chat.title);
     }
   }
 }

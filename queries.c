@@ -33,6 +33,8 @@ struct query *query_get (long long id) {
 
 int alarm_query (struct query *q) {
   assert (q);
+  q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
+  insert_event_timer (&q->ev);
   return 0;
 }
 
@@ -69,7 +71,7 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
 
 void query_ack (long long id) {
   struct query *q = query_get (id);
-  if (q) { 
+  if (q && !(q->flags & QUERY_ACK_RECEIVED)) { 
     remove_event_timer (&q->ev);
     q->flags |= QUERY_ACK_RECEIVED; 
   }
@@ -461,4 +463,109 @@ void do_send_message (union user_chat *U, const char *msg) {
   } else {
     rprintf (COLOR_RED "%s %s" COLOR_GREEN " <<< " COLOR_NORMAL "%s\n", U->user.first_name, U->user.last_name, msg);
   }
+}
+
+int get_history_on_answer (struct query *q UU) {
+  static struct message *ML[10000];
+  int i;
+  int x = fetch_int ();
+  if (x == (int)CODE_messages_messages_slice) {
+    fetch_int ();
+    rprintf ("...\n");
+  } else {
+    assert (x == (int)CODE_messages_messages);
+  }
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    struct message *M = fetch_alloc_message ();
+    if (i <= 9999) {
+      ML[i] = M;
+    }
+  }
+  if (n > 10000) { n = 10000; }
+  for (i = n - 1; i >= 0; i--) {
+    print_message (ML[i]);
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_chat ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_user ();
+  }
+  return 0;
+}
+
+struct query_methods get_history_methods = {
+  .on_answer = get_history_on_answer,
+};
+
+
+void do_get_history (union user_chat *U, int limit) {
+  clear_packet ();
+  out_int (CODE_messages_get_history);
+  if (U->id < 0) {
+    out_int (CODE_input_peer_chat);
+    out_int (-U->id);
+  } else {
+    if (U->user.access_hash) {
+      out_int (CODE_input_peer_foreign);
+      out_int (U->id);
+      out_long (U->user.access_hash);
+    } else {
+      out_int (CODE_input_peer_contact);
+      out_int (U->id);
+    }
+  }
+  out_int (0);
+  out_int (0);
+  out_int (limit);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods);
+}
+
+int get_dialogs_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_messages_dialogs);
+  assert (fetch_int () == CODE_vector);
+  int n, i;
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    assert (fetch_int () == CODE_dialog);
+    fetch_peer_id ();
+    fetch_int ();
+    fetch_int ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_message ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_chat ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_user ();
+  }
+  return 0;
+}
+
+struct query_methods get_dialogs_methods = {
+  .on_answer = get_dialogs_on_answer,
+};
+
+
+void do_get_dialog_list (void) {
+  clear_packet ();
+  out_int (CODE_messages_get_dialogs);
+  out_int (0);
+  out_int (0);
+  out_int (1000);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods);
 }

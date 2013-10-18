@@ -148,6 +148,7 @@ void fetch_chat (struct chat *C) {
 }
 
 void fetch_photo_size (struct photo_size *S) {
+  memset (S, 0, sizeof (*S));
   unsigned x = fetch_int ();
   assert (x == CODE_photo_size || x == CODE_photo_cached_size);
   S->type = fetch_str_dup ();
@@ -162,9 +163,15 @@ void fetch_photo_size (struct photo_size *S) {
 }
 
 void fetch_geo (struct geo *G) {
-  assert (fetch_int () == CODE_geo_point);
-  G->longitude = fetch_double ();
-  G->latitude = fetch_double ();
+  unsigned x = fetch_int ();
+  if (x == CODE_geo_point) {
+    G->longitude = fetch_double ();
+    G->latitude = fetch_double ();
+  } else {
+    assert (x == CODE_geo_point_empty);
+    G->longitude = 0;
+    G->latitude = 0;
+  }
 }
 
 void fetch_photo (struct photo *P) {
@@ -244,17 +251,19 @@ void fetch_message_short (struct message *M) {
   fetch_int (); // pts
   M->date = fetch_int ();
   fetch_int (); // seq
+  M->media.type = CODE_message_media_empty;
 }
 
 void fetch_message_short_chat (struct message *M) {
   memset (M, 0, sizeof (*M));
   M->id = fetch_int ();
   M->from_id = fetch_int ();
-  M->to_id = fetch_int ();
+  M->to_id = -fetch_int ();
   M->message = fetch_str_dup ();
   fetch_int (); // pts
   M->date = fetch_int ();
   fetch_int (); // seq
+  M->media.type = CODE_message_media_empty;
 }
 
 
@@ -283,7 +292,18 @@ void fetch_message_media (struct message_media *M) {
     M->data = fetch_str_dup ();
     break;
   default:
+    logprintf ("type = 0x%08x\n", M->type);
     assert (0);
+  }
+}
+
+int fetch_peer_id (void) {
+  unsigned x =fetch_int ();
+  if (x == CODE_peer_user) {
+    return fetch_int ();
+  } else {
+    assert (CODE_peer_chat);
+    return -fetch_int ();
   }
 }
 
@@ -301,9 +321,9 @@ void fetch_message (struct message *M) {
     M->fwd_date = fetch_int ();
   }
   M->from_id = fetch_int ();
-  M->to_id = fetch_int ();
-  M->out = (fetch_int () == (int)CODE_bool_true);
-  M->unread = (fetch_int () == (int)CODE_bool_true);
+  M->to_id = fetch_peer_id ();
+  M->out = fetch_bool ();
+  M->unread = fetch_bool ();
   M->date = fetch_int ();
   if (x == CODE_message_service) {
     M->service = 1;
@@ -360,21 +380,27 @@ void free_user (struct user *U) {
 
 void free_photo_size (struct photo_size *S) {
   free (S->type);
-  free (S->data);
+  if (S->data) {
+    free (S->data);
+  }
 }
 
 void free_photo (struct photo *P) {
-  free (P->caption);
-  int i;
-  for (i = 0; i < P->sizes_num; i++) {
-    free_photo_size (&P->sizes[i]);
+  if (!P->access_hash) { return; }
+  if (P->caption) { free (P->caption); }
+  if (P->sizes) {
+    int i;
+    for (i = 0; i < P->sizes_num; i++) {
+      free_photo_size (&P->sizes[i]);
+    }
+    free (P->sizes);
   }
-  free (P->sizes);
 }
 
 void free_video (struct video *V) {
+  if (!V->access_hash) { return; }
   free (V->caption);
-  free (&V->thumb);
+  free_photo_size (&V->thumb);
 }
 
 void free_message_media (struct message_media *M) {
