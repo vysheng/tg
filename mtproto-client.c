@@ -949,7 +949,12 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
     DC->server_salt = enc->server_salt;
     write_auth_file ();
   }
+  
   int this_server_time = enc->msg_id >> 32LL;
+  if (!DC->server_time_delta) {
+    DC->server_time_delta = this_server_time - time (0);
+    DC->server_time_udelta = this_server_time - get_utime (CLOCK_MONOTONIC);
+  }
   double st = get_server_time (DC);
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);
   //assert (enc->msg_id > server_last_msg_id && (enc->msg_id & 3) == 1);
