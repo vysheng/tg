@@ -267,6 +267,32 @@ void rprintf (const char *format, ...) {
   }
 }
 
+int saved_point;
+char *saved_line;
+int prompt_was;
+void print_start (void) {
+  assert (!prompt_was);
+  if (readline_active) {
+    saved_point = rl_point;
+    saved_line = rl_copy_text(0, rl_end);
+    rl_save_prompt();
+    rl_replace_line("", 0);
+    rl_redisplay();
+  }
+  prompt_was = 1;
+}
+void print_end (void) {
+  assert (prompt_was);
+  if (readline_active) {
+    rl_restore_prompt();
+    rl_replace_line(saved_line, 0);
+    rl_point = saved_point;
+    rl_redisplay();
+    free(saved_line);
+  }
+  prompt_was = 0;
+}
+
 void hexdump (int *in_ptr, int *in_end) {
   int saved_point = 0;
   char *saved_line = 0;
@@ -341,34 +367,138 @@ const char *message_media_type_str (struct message_media *M) {
   }
 }
 
+int color_stack_pos;
+const char *color_stack[10];
+
+void push_color (const char *color) {
+  assert (color_stack_pos < 10);
+  color_stack[color_stack_pos ++] = color;
+  printf ("%s", color);
+}
+
+void pop_color (void) {
+  assert (color_stack_pos > 0);
+  color_stack_pos --;
+  if (color_stack_pos >= 1) {
+    printf ("%s", color_stack[color_stack_pos] - 1);
+  } else {
+    printf ("%s", COLOR_NORMAL);
+  }
+}
+
+void print_media (struct message_media *M) {
+  switch (M->type) {
+    case CODE_message_media_empty:
+      return;
+    case CODE_message_media_photo:
+      printf ("[photo]");
+      return;
+    case CODE_message_media_video:
+      printf ("[video]");
+      return;
+    case CODE_message_media_geo:
+      printf ("[geo] ");
+      printf ("%.6lf:%.6lf",  M->geo.latitude, M->geo.longitude);
+      return;
+    case CODE_message_media_contact:
+      printf ("[contact] ");
+      push_color (COLOR_RED);
+      printf ("%s %s ", M->first_name, M->last_name);
+      pop_color ();
+      printf ("%s", M->phone);
+      return;
+    case CODE_message_media_unsupported:
+      printf ("[unsupported]");
+      return;
+    default:
+      assert (0);
+  }
+}
+
+void print_user_name (int id, union user_chat *U) {
+  push_color (COLOR_RED);
+  if (!U) {
+    printf ("user#%d", id);
+  } else if (!U->user.first_name) {
+    printf ("%s", U->user.last_name);
+  } else if (!U->user.last_name) {
+    printf ("%s", U->user.first_name);
+  } else {
+    printf ("%s %s", U->user.first_name, U->user.last_name); 
+  }
+  pop_color ();
+}
+
+void print_chat_name (int id, union user_chat *C) {
+  push_color (COLOR_MAGENTA);
+  if (!C) {
+    printf ("chat#%d", -id);
+  } else {
+    printf ("%s", C->chat.title);
+  }
+  pop_color ();
+}
+
+static char *monthes[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+void print_date (long t) {
+  struct tm *tm = localtime (&t);
+  if (time (0) - t < 12 * 60 * 60) {
+    printf ("[%02d:%02d] ", tm->tm_hour, tm->tm_min);
+  } else {
+    printf ("[%02d %s]", tm->tm_mday, monthes[tm->tm_mon]);
+  }
+}
+
+int our_id;
 void print_message (struct message *M) {
   if (M->service) {
     rprintf ("Service message\n");
     return;
   }
+
+
+  print_start ();
   if (M->to_id >= 0) {
     if (M->out) {
-      union user_chat *U = user_chat_get (M->to_id);
-      assert (M->from_id >= 0);
-      if (U) {
-        rprintf (COLOR_RED "%s %s" COLOR_GREEN " <<< %s %s" COLOR_NORMAL "\n", U->user.first_name, U->user.last_name, M->message, message_media_type_str (&M->media));
-      } else {
-        rprintf (COLOR_RED "User #%d" COLOR_GREEN " <<< %s %s" COLOR_NORMAL "\n", M->from_id, M->message, message_media_type_str (&M->media));
-      }
+      push_color (COLOR_GREEN);
+      print_date (M->date);
+      pop_color ();
+      printf (" ");
+      print_user_name (M->to_id, user_chat_get (M->to_id));
+      push_color (COLOR_GREEN);
+      printf (" <<< ");
     } else {
-      union user_chat *U = user_chat_get (M->from_id);
-      assert (M->from_id >= 0);
-      if (U) {
-        rprintf (COLOR_RED "%s %s" COLOR_BLUE " >>> %s %s" COLOR_NORMAL "\n", U->user.first_name, U->user.last_name, M->message, message_media_type_str (&M->media));
-      } else {
-        rprintf (COLOR_RED "User #%d" COLOR_BLUE " >>> %s %s" COLOR_NORMAL "\n", M->from_id, M->message, message_media_type_str (&M->media));
-      }
+      push_color (COLOR_BLUE);
+      print_date (M->date);
+      pop_color ();
+      printf (" ");
+      print_user_name (M->from_id, user_chat_get (M->from_id));
+      push_color (COLOR_BLUE);
+      printf (" >>> ");
     }
   } else {
-    rprintf ("Message to chat %d\n", -M->to_id);
-    union user_chat *C = user_chat_get (M->to_id);
-    if (C) {
-      rprintf ("Chat %s\n", C->chat.title);
+    push_color (COLOR_MAGENTA);
+    print_date (M->date);
+    pop_color ();
+    printf (" ");
+    print_chat_name (M->to_id, user_chat_get (M->to_id));
+    printf (" ");
+    print_user_name (M->from_id, user_chat_get (M->from_id));
+    if (M->from_id == our_id) {
+      push_color (COLOR_GREEN);
+    } else {
+      push_color (COLOR_BLUE);
     }
+    printf (" >>> ");
   }
+  if (M->message && strlen (M->message)) {
+    printf ("%s", M->message);
+  }
+  if (M->media.type != CODE_message_media_empty) {
+    print_media (&M->media);
+  }
+  pop_color ();
+  assert (!color_stack_pos);
+  printf ("\n");
+  print_end();
 }

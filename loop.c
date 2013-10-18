@@ -92,6 +92,7 @@ void write_dc (int auth_file_fd, struct dc *DC) {
   assert (write (auth_file_fd, &DC->server_salt, 8) == 8);
 }
 
+int our_id;
 void write_auth_file (void) {
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
   assert (auth_file_fd >= 0);
@@ -112,6 +113,7 @@ void write_auth_file (void) {
       assert (write (auth_file_fd, &x, 4) == 4);
     }
   }
+  assert (write (auth_file_fd, &our_id, 4) == 4);
   close (auth_file_fd);
 }
 
@@ -163,6 +165,10 @@ void read_auth_file (void) {
     if (y) {
       read_dc (auth_file_fd, i);
     }
+  }
+  int l = read (auth_file_fd, &our_id, 4);
+  if (l < 4) {
+    assert (!l);
   }
   close (auth_file_fd);
 }

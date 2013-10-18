@@ -158,4 +158,5 @@ int print_stat (char *s, int len);
 union user_chat *user_chat_get (int id);
 struct message *message_get (int id);
 void update_message_id (struct message *M, int id);
+void message_insert (struct message *M);
 #endif

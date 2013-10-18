@@ -3,7 +3,7 @@
 #include "mtproto-common.h"
 #include "telegram.h"
 #include "tree.h"
-
+#include "loop.h"
 int verbosity;
 
 void fetch_file_location (struct file_location *loc) {
@@ -41,6 +41,7 @@ void fetch_user_status (struct user_status *S) {
   }
 }
 
+int our_id;
 void fetch_user (struct user *U) {
   memset (U, 0, sizeof (*U));
   unsigned x = fetch_int ();
@@ -49,6 +50,13 @@ void fetch_user (struct user *U) {
   if (x == CODE_user_empty) {
     U->flags = 1;
     return;
+  }
+  if (x == CODE_user_self) {
+    assert (!our_id || (our_id == U->id));
+    if (!our_id) {
+      our_id = U->id;
+      write_auth_file ();
+    }
   }
   U->first_name = fetch_str_dup ();
   U->last_name = fetch_str_dup ();
@@ -584,5 +592,10 @@ struct message *message_get (int id) {
 void update_message_id (struct message *M, int id) {
   message_tree = tree_delete_message (message_tree, M);
   M->id = id;
+  message_tree = tree_insert_message (message_tree, M, lrand48 ());
+}
+
+void message_insert (struct message *M) {
+  message_add_use (M);
   message_tree = tree_insert_message (message_tree, M, lrand48 ());
 }

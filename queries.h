@@ -24,10 +24,11 @@ struct query {
   void *data;
   struct query_methods *methods;
   struct event_timer ev;
+  void *extra;
 };
 
 
-struct query *send_query (struct dc *DC, int len, void *data, struct query_methods *methods);
+struct query *send_query (struct dc *DC, int len, void *data, struct query_methods *methods, void *extra);
 void query_ack (long long id);
 void query_error (long long id);
 void query_result (long long id);

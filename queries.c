@@ -38,7 +38,7 @@ int alarm_query (struct query *q) {
   return 0;
 }
 
-struct query *send_query (struct dc *DC, int ints, void *data, struct query_methods *methods) {
+struct query *send_query (struct dc *DC, int ints, void *data, struct query_methods *methods, void *extra) {
   assert (DC);
   assert (DC->auth_key_id);
   if (!DC->sessions[0]) {
@@ -66,6 +66,8 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   q->ev.self = (void *)q;
   insert_event_timer (&q->ev);
+
+  q->extra = extra;
   return q;
 }
 
@@ -307,7 +309,7 @@ void do_send_code (const char *user) {
   out_int (TG_APP_ID);
   out_string (TG_APP_HASH);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
   net_loop (0, code_is_sent);
   if (want_dc_num == -1) { return; }
 
@@ -323,7 +325,7 @@ void do_send_code (const char *user) {
   } else {
     clear_packet ();
     out_int (CODE_help_get_config);
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods);
+    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0);
     net_loop (0, config_got);
     DC_working = DC_list[want_dc_num];
     if (!DC_working->auth_key_id) {
@@ -342,7 +344,7 @@ void do_send_code (const char *user) {
   out_int (TG_APP_ID);
   out_string (TG_APP_HASH);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
   net_loop (0, code_is_sent);
   assert (want_dc_num == -1);
 }
@@ -382,7 +384,7 @@ int do_send_code_result (const char *code) {
   out_string (suser);
   out_string (phone_code_hash);
   out_string (code);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0);
   sign_in_ok = 0;
   net_loop (0, sign_in_is_ok);
   return sign_in_ok;
@@ -418,17 +420,20 @@ void do_update_contact_list (void) {
   clear_packet ();
   out_int (CODE_contacts_get_contacts);
   out_string ("");
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods, 0);
 }
 
 
 int msg_send_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_sent_message);
-  int uid = fetch_int (); // uid
+  int id = fetch_int (); // id
   int date = fetch_int (); // date
   int ptr = fetch_int (); // ptr
   int seq = fetch_int (); // seq
-  logprintf ("Sent: uid = %d, date = %d, ptr = %d, seq = %d\n", uid, date, ptr, seq);
+  struct message *M = q->extra;
+  M->id = id;
+  message_insert (M);
+  logprintf ("Sent: id = %d, date = %d, ptr = %d, seq = %d\n", id, date, ptr, seq);
   return 0;
 }
 
@@ -437,12 +442,17 @@ struct query_methods msg_send_methods = {
 };
 
 int out_message_num;
+int our_id;
 void do_send_message (union user_chat *U, const char *msg) {
   if (!out_message_num) {
-    out_message_num = lrand48 ();
+    out_message_num = -lrand48 ();
   }
   clear_packet ();
   out_int (CODE_messages_send_message);
+  struct message *M = malloc (sizeof (*M));
+  memset (M, 0, sizeof (*M));
+  M->from_id = our_id;
+  M->to_id = U->id;
   if (U->id < 0) {
     out_int (CODE_input_peer_chat);
     out_int (-U->id);
@@ -456,14 +466,15 @@ void do_send_message (union user_chat *U, const char *msg) {
       out_int (U->id);
     }
   }
+  M->message = strdup (msg);
+  M->out = 1;
+  M->media.type = CODE_message_media_empty;
+  M->id = out_message_num;
+  M->date = time (0);
   out_string (msg);
-  out_long (out_message_num ++);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods);
-  if (U->id < 0) {
-    rprintf (COLOR_RED "%s" COLOR_GREEN " <<< " COLOR_NORMAL "%s\n", U->chat.title, msg);
-  } else {
-    rprintf (COLOR_RED "%s %s" COLOR_GREEN " <<< " COLOR_NORMAL "%s\n", U->user.first_name, U->user.last_name, msg);
-  }
+  out_long ((--out_message_num) - (1ll << 32));
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
+  print_message (M);
 }
 
 int get_history_on_answer (struct query *q UU) {
@@ -525,7 +536,7 @@ void do_get_history (union user_chat *U, int limit) {
   out_int (0);
   out_int (0);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, 0);
 }
 
 int get_dialogs_on_answer (struct query *q UU) {
@@ -568,5 +579,5 @@ void do_get_dialog_list (void) {
   out_int (0);
   out_int (0);
   out_int (1000);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
 }
