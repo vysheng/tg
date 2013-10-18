@@ -1,12 +1,13 @@
 #define _GNU_SOURCE 
-#include <readline/readline.h>
-#include <readline/history.h>
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <readline/readline.h>
+#include <readline/history.h>
+
 #include "include.h"
 #include "queries.h"
 

@@ -123,7 +123,8 @@ void query_result (long long id UU) {
     char *s = fetch_str (l);
     size_t dl = MAX_PACKED_SIZE;
 
-    z_stream strm = {0};
+    z_stream strm;
+    memset (&strm, 0, sizeof (strm));
     assert (inflateInit2 (&strm, 16 + MAX_WBITS) == Z_OK);
     strm.avail_in = l;
     strm.next_in = (void *)s;
