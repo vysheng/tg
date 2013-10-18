@@ -223,7 +223,7 @@ void interpreter (char *line UU) {
     int len;
     char *text = get_token (&q, &len);
     int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
       index ++;
     }
     if (index < user_num + chat_num) {
