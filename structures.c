@@ -414,6 +414,7 @@ void free_video (struct video *V) {
 void free_message_media (struct message_media *M) {
   switch (M->type) {
   case CODE_message_media_empty:
+  case CODE_message_media_geo:
     return;
   case CODE_message_media_photo:
     free_photo (&M->photo);
@@ -430,6 +431,7 @@ void free_message_media (struct message_media *M) {
     free (M->data);
     return;
   default:
+    logprintf ("%08x\n", M->type);
     assert (0);
   }
 }
