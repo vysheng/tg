@@ -158,15 +158,17 @@ void fetch_chat (struct chat *C) {
 void fetch_photo_size (struct photo_size *S) {
   memset (S, 0, sizeof (*S));
   unsigned x = fetch_int ();
-  assert (x == CODE_photo_size || x == CODE_photo_cached_size);
+  assert (x == CODE_photo_size || x == CODE_photo_cached_size || x == CODE_photo_size_empty);
   S->type = fetch_str_dup ();
-  fetch_file_location (&S->loc);
-  S->w = fetch_int ();
-  S->h = fetch_int ();
-  if (x == CODE_photo_size) {
-    S->size = fetch_int ();
-  } else {
-    S->data = fetch_str_dup ();
+  if (x != CODE_photo_size_empty) {
+    fetch_file_location (&S->loc);
+    S->w = fetch_int ();
+    S->h = fetch_int ();
+    if (x == CODE_photo_size) {
+      S->size = fetch_int ();
+    } else {
+      S->data = fetch_str_dup ();
+    }
   }
 }
 

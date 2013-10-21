@@ -665,7 +665,9 @@ void send_part (struct send_file *f) {
     assert (x > 0);
     out_cstring (buf, x);
     f->offset += x;
-    logprintf ("offset=%lld size=%lld\n", f->offset, f->size);
+    if (verbosity >= 2) {
+      logprintf ("offset=%lld size=%lld\n", f->offset, f->size);
+    }
     if (f->offset == f->size) {
       close (f->fd);
       f->fd = -1;
@@ -675,7 +677,7 @@ void send_part (struct send_file *f) {
     clear_packet ();
     out_int (CODE_messages_send_media);
     out_peer_id (f->to_id);
-    assert (f->media_type == CODE_input_media_uploaded_photo);
+    assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video);
     out_int (f->media_type);
     out_int (CODE_input_file);
     out_long (f->id);
@@ -684,6 +686,11 @@ void send_part (struct send_file *f) {
     while (s >= f->file_name && *s != '/') { s --;}
     out_string (s + 1);
     out_string ("");
+    if (f->media_type == CODE_input_media_uploaded_video) {
+      out_int (100);
+      out_int (100);
+      out_int (100);
+    }
     out_long (-lrand48 () * (1ll << 32) - lrand48 ());
     send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
     free (f->file_name);

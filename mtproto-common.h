@@ -280,6 +280,10 @@ static inline char *fetch_str_dup (void) {
   return s;
 }
 
+static inline void fetch_skip (int n) {
+  in_ptr += n;
+}
+
 static __inline__ unsigned long long rdtsc(void) {
   unsigned hi, lo;
   __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));

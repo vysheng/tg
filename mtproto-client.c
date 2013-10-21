@@ -782,6 +782,104 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       }
     }
     break;
+  case CODE_update_restore_messages:
+    {
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("Restored %d messages\n", n);
+      pop_color ();
+      print_end ();
+      fetch_skip (n);
+      fetch_int (); // pts
+    }
+    break;
+  case CODE_update_chat_participants:
+    {
+      assert (fetch_int () == CODE_chat_participants);
+      int chat_id = fetch_int ();
+      fetch_int (); // admin_id
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      fetch_skip (n * 4);
+      fetch_int (); // version
+      union user_chat *C = user_chat_get (-chat_id);
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("Chat ");
+      print_chat_name (-chat_id, C);
+      printf (" changed list: now %d members\n", n);
+      pop_color ();
+      print_end ();
+    }
+    break;
+  case CODE_update_contact_registered:
+    {
+      int user_id = fetch_int ();
+      union user_chat *U = user_chat_get (user_id);
+      fetch_int (); // date
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("User ");
+      print_user_name (user_id, U);
+      printf (" registered\n");
+      pop_color ();
+      print_end ();
+    }
+    break;
+  case CODE_update_contact_link:
+    {
+      int user_id = fetch_int ();
+      union user_chat *U = user_chat_get (user_id);
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("Updated link with user ");
+      print_user_name (user_id, U);
+      printf ("\n");
+      pop_color ();
+      print_end ();
+      unsigned t = fetch_int ();
+      assert (t == CODE_contacts_my_link_empty || t == CODE_contacts_my_link_requested || t == CODE_contacts_my_link_contact);
+      if (t == CODE_contacts_my_link_requested) {
+        fetch_bool (); // has_phone
+      }
+      t = fetch_int ();
+      assert (t == CODE_contacts_foreign_link_unknown || t == CODE_contacts_foreign_link_requested || t == CODE_contacts_foreign_link_mutual);
+      if (t == CODE_contacts_foreign_link_requested) {
+        fetch_bool (); // has_phone
+      }
+    }
+    break;
+  case CODE_update_activation:
+    {
+      int user_id = fetch_int ();
+      union user_chat *U = user_chat_get (user_id);
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("User ");
+      print_user_name (user_id, U);
+      printf (" activated\n");
+      pop_color ();
+      print_end ();
+    }
+    break;
+  case CODE_update_new_authorization:
+    {
+      fetch_long (); // auth_key_id
+      fetch_int (); // date
+      char *s = fetch_str_dup ();
+      char *location = fetch_str_dup ();
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("New autorization: device='%s' location='%s'\n",
+        s, location);
+      pop_color ();
+      print_end ();
+      free (s);
+      free (location);
+    }
+    break;
   default:
     logprintf ("Unknown update type %08x\n", op);
   }

@@ -239,6 +239,22 @@ void interpreter (char *line UU) {
         Peers[index]->id, strndup (f, len));
       }
     }
+  } else if (!memcmp (line, "send_video", 10)) {
+    char *q = line + 10;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+      index ++;
+    }
+    if (index < user_num + chat_num) {
+      int len = 0;
+      char *f = get_token (&q, &len);
+      if (len > 0) {
+        do_send_photo (CODE_input_media_uploaded_video, 
+        Peers[index]->id, strndup (f, len));
+      }
+    }
   } else if (!memcmp (line, "history", 7)) {
     char *q = line + 7;
     int len;
@@ -474,9 +490,54 @@ void print_date (long t) {
 }
 
 int our_id;
+
+void print_service_message (struct message *M) {
+  print_start ();
+  push_color (COLOR_GREY);
+
+  print_date (M->date);
+  printf (" ");
+  print_chat_name (M->to_id, user_chat_get (M->to_id));
+  printf (" ");
+  print_user_name (M->from_id, user_chat_get (M->from_id));
+ 
+  switch (M->action.type) {
+  case CODE_message_action_empty:
+    printf ("\n");
+    break;
+  case CODE_message_action_chat_create:
+    printf (" created chat %s. %d users\n", M->action.title, M->action.user_num);
+    break;
+  case CODE_message_action_chat_edit_title:
+    printf (" changed title to %s\n", 
+      M->action.new_title);
+    break;
+  case CODE_message_action_chat_edit_photo:
+    printf (" changed photo\n");
+    break;
+  case CODE_message_action_chat_delete_photo:
+    printf (" deleted photo\n");
+    break;
+  case CODE_message_action_chat_add_user:
+    printf (" added user ");
+    print_user_name (M->action.user, user_chat_get (M->action.user));
+    printf ("\n");
+    break;
+  case CODE_message_action_chat_delete_user:
+    printf (" deleted user ");
+    print_user_name (M->action.user, user_chat_get (M->action.user));
+    printf ("\n");
+    break;
+  default:
+    assert (0);
+  }
+  pop_color ();
+  print_end ();
+}
+
 void print_message (struct message *M) {
   if (M->service) {
-    rprintf ("Service message\n");
+    print_service_message (M);
     return;
   }
 
