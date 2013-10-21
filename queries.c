@@ -461,6 +461,7 @@ void do_send_message (union user_chat *U, const char *msg) {
   memset (M, 0, sizeof (*M));
   M->from_id = our_id;
   M->to_id = U->id;
+  M->unread = 1;
   if (U->id < 0) {
     out_int (CODE_input_peer_chat);
     out_int (-U->id);
