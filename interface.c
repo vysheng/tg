@@ -33,6 +33,8 @@ char *commands[] = {
   "stats",
   "history",
   "dialog_list",
+  "send_photo",
+  "send_video",
   0 };
 
 int commands_flags[] = {
@@ -42,6 +44,8 @@ int commands_flags[] = {
   07,
   072,
   07,
+  0732,
+  0732,
 };
 
 char *a = 0;
@@ -219,6 +223,22 @@ void interpreter (char *line UU) {
     if (*q && index < user_num + chat_num) {
       do_send_message (Peers[index], q);
     }
+  } else if (!memcmp (line, "send_photo", 10)) {
+    char *q = line + 10;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+      index ++;
+    }
+    if (index < user_num + chat_num) {
+      int len = 0;
+      char *f = get_token (&q, &len);
+      if (len > 0) {
+        do_send_photo (CODE_input_media_uploaded_photo, 
+        Peers[index]->id, strndup (f, len));
+      }
+    }
   } else if (!memcmp (line, "history", 7)) {
     char *q = line + 7;
     int len;
@@ -380,7 +400,7 @@ void pop_color (void) {
   assert (color_stack_pos > 0);
   color_stack_pos --;
   if (color_stack_pos >= 1) {
-    printf ("%s", color_stack[color_stack_pos] - 1);
+    printf ("%s", color_stack[color_stack_pos - 1]);
   } else {
     printf ("%s", COLOR_NORMAL);
   }
@@ -391,7 +411,11 @@ void print_media (struct message_media *M) {
     case CODE_message_media_empty:
       return;
     case CODE_message_media_photo:
-      printf ("[photo]");
+      if (M->photo.caption && strlen (M->photo.caption)) {
+        printf ("[photo %s]", M->photo.caption);
+      } else {
+        printf ("[photo]");
+      }
       return;
     case CODE_message_media_video:
       printf ("[video]");
@@ -466,7 +490,11 @@ void print_message (struct message *M) {
       printf (" ");
       print_user_name (M->to_id, user_chat_get (M->to_id));
       push_color (COLOR_GREEN);
-      printf (" <<< ");
+      if (M->unread) {
+        printf (" <<< ");
+      } else {
+        printf (" ««« ");
+      }
     } else {
       push_color (COLOR_BLUE);
       print_date (M->date);
@@ -474,7 +502,11 @@ void print_message (struct message *M) {
       printf (" ");
       print_user_name (M->from_id, user_chat_get (M->from_id));
       push_color (COLOR_BLUE);
-      printf (" >>> ");
+      if (M->unread) {
+        printf (" >>> ");
+      } else {
+        printf (" »»» ");
+      }
     }
   } else {
     push_color (COLOR_MAGENTA);
@@ -489,7 +521,11 @@ void print_message (struct message *M) {
     } else {
       push_color (COLOR_BLUE);
     }
-    printf (" >>> ");
+    if (M->unread) {
+      printf (" >>> ");
+    } else {
+      printf (" »»» ");
+    }
   }
   if (M->message && strlen (M->message)) {
     printf ("%s", M->message);

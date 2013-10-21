@@ -22,4 +22,11 @@ void hexdump (int *in_ptr, int *in_end);
 
 struct message;
 void print_message (struct message *M);
+void print_chat_name (int id, union user_chat *C);
+void print_user_name (int id, union user_chat *U);
+//void print_media (struct message_media *M);
+void pop_color (void);
+void push_color (const char *color);
+void print_start (void);
+void print_end (void);
 #endif

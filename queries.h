@@ -24,6 +24,7 @@ struct query {
   void *data;
   struct query_methods *methods;
   struct event_timer ev;
+  struct dc *DC;
   void *extra;
 };
 
@@ -49,4 +50,6 @@ union user_chat;
 void do_send_message (union user_chat *U, const char *msg);
 void do_get_history (union user_chat *U, int limit);
 void do_get_dialog_list (void);
+void do_send_photo (int type, int to_id, char *file_name);
+
 #endif

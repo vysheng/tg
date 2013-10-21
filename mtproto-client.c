@@ -645,15 +645,24 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         }
       }
       fetch_int (); //pts
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("%d messages marked as read\n", n);
+      pop_color ();
+      print_end ();
     }
     break;
   case CODE_update_user_typing:
     {
       int id = fetch_int ();
       union user_chat *U = user_chat_get (id);
-      if (U) {
-        rprintf (COLOR_YELLOW "User " COLOR_RED "%s %s" COLOR_YELLOW " is typing....\n" COLOR_NORMAL, U->user.first_name, U->user.last_name);
-      }
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("User ");
+      print_user_name (id, U);
+      printf (" is typing....\n");
+      pop_color ();
+      print_end ();
     }
     break;
   case CODE_update_chat_user_typing:
@@ -662,9 +671,15 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       int id = fetch_int ();
       union user_chat *C = user_chat_get (-chat_id);
       union user_chat *U = user_chat_get (id);
-      if (U && C) {
-        rprintf (COLOR_YELLOW "User " COLOR_RED "%s %s" COLOR_YELLOW " is typing in chat %s....\n" COLOR_NORMAL, U->user.first_name, U->user.last_name, C->chat.title);
-      }
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("User ");
+      print_user_name (id, U);
+      printf (" is typing in chat ");
+      print_chat_name (-chat_id, C);
+      printf ("....\n");
+      pop_color ();
+      print_end ();
     }
     break;
   case CODE_update_user_status:
@@ -673,7 +688,14 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       union user_chat *U = user_chat_get (user_id);
       if (U) {
         fetch_user_status (&U->user.status);
-        rprintf (COLOR_YELLOW "User " COLOR_RED "%s %s" COLOR_YELLOW " is now %s\n" COLOR_NORMAL, U->user.first_name, U->user.last_name, (U->user.status.online > 0) ? "online" : "offline");
+        print_start ();
+        push_color (COLOR_YELLOW);
+        printf ("User ");
+        print_user_name (user_id, U);
+        printf (" is now ");
+        printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
+        pop_color ();
+        print_end ();
       } else {
         struct user_status t;
         fetch_user_status (&t);
@@ -686,11 +708,20 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       union user_chat *UC = user_chat_get (user_id);
       if (UC) {
         struct user *U = &UC->user;
+        print_start ();
+        push_color (COLOR_YELLOW);
+        printf ("User ");
+        print_user_name (user_id, UC);
         if (U->first_name) { free (U->first_name); }
-        if (U->last_name) { free (U->first_name); }
-        if (U->print_name) { free (U->first_name); }
+        if (U->last_name) { free (U->last_name); }
+        if (U->print_name) { free (U->print_name); }
         U->first_name = fetch_str_dup ();
         U->last_name = fetch_str_dup ();
+        printf (" changed name to ");
+        print_user_name (user_id, UC);
+        printf ("\n");
+        pop_color ();
+        print_end ();
         if (!strlen (U->first_name)) {
           if (!strlen (U->last_name)) {
             U->print_name = strdup ("none");
@@ -722,6 +753,14 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       union user_chat *UC = user_chat_get (user_id);
       if (UC) {
         struct user *U = &UC->user;
+        
+        print_start ();
+        push_color (COLOR_YELLOW);
+        printf ("User ");
+        print_user_name (user_id, UC);
+        printf (" updated profile photo\n");
+        pop_color ();
+        print_end ();
         unsigned y = fetch_int ();
         if (y == CODE_user_profile_photo_empty) {
           U->photo_big.dc = -2;

@@ -1,7 +1,12 @@
+#define _FILE_OFFSET_BITS 64
 #include <string.h>
 #include <memory.h>
 #include <stdlib.h>
 #include <zlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "include.h"
 #include "mtproto-client.h"
@@ -57,8 +62,11 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
     logprintf ( "Msg_id is %lld\n", q->msg_id);
   }
   q->methods = methods;
+  q->DC = DC;
   if (queries_tree) {
-    logprintf ( "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
+    if (verbosity >= 2) {
+      logprintf ( "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
+    }
   }
   queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
 
@@ -580,4 +588,137 @@ void do_get_dialog_list (void) {
   out_int (0);
   out_int (1000);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
+}
+
+struct send_file {
+  int fd;
+  long long size;
+  long long offset;
+  int part_num;
+  int part_size;
+  long long id;
+  int to_id;
+  int media_type;
+  char *file_name;
+};
+
+void out_peer_id (int id) {
+  union user_chat *U = user_chat_get (id);
+  if (id < 0) {
+    out_int (CODE_input_peer_chat);
+    out_int (-id);
+  } else {
+    if (U && U->user.access_hash) {
+      out_int (CODE_input_peer_foreign);
+      out_int (id);
+      out_long (U->user.access_hash);
+    } else {
+      out_int (CODE_input_peer_contact);
+      out_int (id);
+    }
+  }
+}
+
+void send_part (struct send_file *f);
+int send_file_part_on_answer (struct query *q) {
+  assert (fetch_int () == (int)CODE_bool_true);
+  send_part (q->extra);
+  return 0;
+}
+
+int send_file_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_messages_stated_message);
+  struct message *M = fetch_alloc_message ();
+  assert (fetch_int () == CODE_vector);
+  int n, i;
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_chat ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_user ();
+  }
+  fetch_int (); // pts
+  fetch_int (); // seq
+  print_message (M);
+  return 0;
+}
+
+struct query_methods send_file_part_methods = {
+  .on_answer = send_file_part_on_answer
+};
+
+struct query_methods send_file_methods = {
+  .on_answer = send_file_on_answer
+};
+
+void send_part (struct send_file *f) {
+  if (f->fd >= 0) {
+    clear_packet ();
+    out_int (CODE_upload_save_file_part);
+    out_long (f->id);
+    out_int (f->part_num ++);
+    static char buf[512 << 10];
+    int x = read (f->fd, buf, f->part_size);
+    assert (x > 0);
+    out_cstring (buf, x);
+    f->offset += x;
+    logprintf ("offset=%lld size=%lld\n", f->offset, f->size);
+    if (f->offset == f->size) {
+      close (f->fd);
+      f->fd = -1;
+    }
+    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
+  } else {
+    clear_packet ();
+    out_int (CODE_messages_send_media);
+    out_peer_id (f->to_id);
+    assert (f->media_type == CODE_input_media_uploaded_photo);
+    out_int (f->media_type);
+    out_int (CODE_input_file);
+    out_long (f->id);
+    out_int (f->part_num);
+    char *s = f->file_name + strlen (f->file_name);
+    while (s >= f->file_name && *s != '/') { s --;}
+    out_string (s + 1);
+    out_string ("");
+    out_long (-lrand48 () * (1ll << 32) - lrand48 ());
+    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
+    free (f->file_name);
+    free (f);
+  }
+}
+
+void do_send_photo (int type, int to_id, char *file_name) {
+  int fd = open (file_name, O_RDONLY);
+  if (fd < 0) {
+    rprintf ("No such file '%s'\n", file_name);
+    return;
+  }
+  struct stat buf;
+  fstat (fd, &buf);
+  long long size = buf.st_size;
+  if (size <= 0) {
+    rprintf ("File has zero length\n");
+    close (fd);
+    return;
+  }
+  struct send_file *f = malloc (sizeof (*f));
+  f->fd = fd;
+  f->size = size;
+  f->offset = 0;
+  f->part_num = 0;
+  f->part_size = (size / 1000 + 0x3ff) & ~0x3ff;
+  f->id = lrand48 () * (1ll << 32) + lrand48 ();
+  f->to_id = to_id;
+  f->media_type = type;
+  f->file_name = file_name;
+  if (f->part_size > (512 << 10)) {
+    close (fd);
+    rprintf ("Too big file. Maximal supported size is %d", (512 << 10) * 1000);
+    return;
+  }
+  send_part (f);
 }
