@@ -486,6 +486,26 @@ void do_send_message (union user_chat *U, const char *msg) {
   print_message (M);
 }
 
+void do_send_text (union user_chat *U, char *file_name) {
+  int fd = open (file_name, O_RDONLY);
+  if (fd < 0) {
+    rprintf ("No such file '%s'\n", file_name);
+    free (file_name);
+    return;
+  }
+  static char buf[(1 << 20) + 1];
+  int x = read (fd, buf, (1 << 20) + 1);
+  if (x == (1 << 20) + 1) {
+    rprintf ("Too big file '%s'\n", file_name);
+    free (file_name);
+    close (fd);
+  } else {
+    do_send_message (U, buf);
+    free (file_name);
+    close (fd);
+  }
+}
+
 int get_history_on_answer (struct query *q UU) {
   static struct message *ML[10000];
   int i;

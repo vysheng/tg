@@ -35,6 +35,7 @@ char *commands[] = {
   "dialog_list",
   "send_photo",
   "send_video",
+  "send_text",
   0 };
 
 int commands_flags[] = {
@@ -44,6 +45,7 @@ int commands_flags[] = {
   07,
   072,
   07,
+  0732,
   0732,
   0732,
 };
@@ -253,6 +255,21 @@ void interpreter (char *line UU) {
       if (len > 0) {
         do_send_photo (CODE_input_media_uploaded_video, 
         Peers[index]->id, strndup (f, len));
+      }
+    }
+  } else if (!memcmp (line, "send_text", 9)) {
+    char *q = line + 10;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+      index ++;
+    }
+    if (index < user_num + chat_num) {
+      int len = 0;
+      char *f = get_token (&q, &len);
+      if (len > 0) {
+        do_send_text (Peers[index], strndup (f, len));
       }
     }
   } else if (!memcmp (line, "history", 7)) {
