@@ -107,6 +107,8 @@ void query_error (long long id) {
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_error) {
       q->methods->on_error (q, error_code, error_len, error);
+    } else {
+      logprintf ( "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
     }
     free (q->data);
     free (q);
@@ -451,7 +453,7 @@ struct query_methods msg_send_methods = {
 
 int out_message_num;
 int our_id;
-void do_send_message (union user_chat *U, const char *msg) {
+void do_send_message (union user_chat *U, const char *msg, int len) {
   if (!out_message_num) {
     out_message_num = -lrand48 ();
   }
@@ -475,12 +477,15 @@ void do_send_message (union user_chat *U, const char *msg) {
       out_int (U->id);
     }
   }
-  M->message = strdup (msg);
+  M->message = malloc (len + 1);
+  memcpy (M->message, msg, len);
+  M->message[len] = 0;
+  M->message_len = len;
   M->out = 1;
   M->media.type = CODE_message_media_empty;
   M->id = out_message_num;
   M->date = time (0);
-  out_string (msg);
+  out_cstring (msg, len);
   out_long ((--out_message_num) - (1ll << 32));
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
   print_message (M);
@@ -495,12 +500,14 @@ void do_send_text (union user_chat *U, char *file_name) {
   }
   static char buf[(1 << 20) + 1];
   int x = read (fd, buf, (1 << 20) + 1);
+  assert (x >= 0);
   if (x == (1 << 20) + 1) {
     rprintf ("Too big file '%s'\n", file_name);
     free (file_name);
     close (fd);
   } else {
-    do_send_message (U, buf);
+    buf[x] = 0;
+    do_send_message (U, buf, x);
     free (file_name);
     close (fd);
   }
@@ -738,7 +745,7 @@ void do_send_photo (int type, int to_id, char *file_name) {
   f->size = size;
   f->offset = 0;
   f->part_num = 0;
-  f->part_size = (size / 1000 + 0x3ff) & ~0x3ff;
+  f->part_size = ((size + 999) / 1000 + 0x3ff) & ~0x3ff;
   f->id = lrand48 () * (1ll << 32) + lrand48 ();
   f->to_id = to_id;
   f->media_type = type;

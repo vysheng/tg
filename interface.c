@@ -223,7 +223,7 @@ void interpreter (char *line UU) {
     }
     while (*q && (*q == ' ' || *q == '\t')) { q ++; }
     if (*q && index < user_num + chat_num) {
-      do_send_message (Peers[index], q);
+      do_send_message (Peers[index], q, strlen (q));
     }
   } else if (!memcmp (line, "send_photo", 10)) {
     char *q = line + 10;

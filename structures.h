@@ -136,6 +136,7 @@ struct message {
     struct message_action action;
     struct {
       char *message;
+      int message_len;
       struct message_media media;
     };
   };
