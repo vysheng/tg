@@ -56,6 +56,9 @@ struct query *query_get (long long id) {
 
 int alarm_query (struct query *q) {
   assert (q);
+  if (verbosity) {
+    logprintf ("Alarm query %lld\n", q->msg_id);
+  }
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   insert_event_timer (&q->ev);
   return 0;
@@ -541,6 +544,39 @@ void do_send_text (union user_chat *U, char *file_name) {
   }
 }
 
+int mark_read_on_receive (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_messages_affected_history);
+  fetch_int (); // pts
+  fetch_int (); // seq
+  fetch_int (); // offset
+  return 0;
+}
+
+struct query_methods mark_read_methods = {
+  .on_answer = mark_read_on_receive
+};
+
+void do_messages_mark_read (union user_chat *U, int max_id) {
+  clear_packet ();
+  out_int (CODE_messages_read_history);
+  if (U->id < 0) {
+    out_int (CODE_input_peer_chat);
+    out_int (-U->id);
+  } else {
+    if (U->user.access_hash) {
+      out_int (CODE_input_peer_foreign);
+      out_int (U->id);
+      out_long (U->user.access_hash);
+    } else {
+      out_int (CODE_input_peer_contact);
+      out_int (U->id);
+    }
+  }
+  out_int (max_id);
+  out_int (0);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0);
+}
+
 int get_history_on_answer (struct query *q UU) {
   static struct message *ML[10000];
   int i;
@@ -560,6 +596,7 @@ int get_history_on_answer (struct query *q UU) {
     }
   }
   if (n > 10000) { n = 10000; }
+  int sn = n;
   for (i = n - 1; i >= 0; i--) {
     print_message (ML[i]);
   }
@@ -572,6 +609,9 @@ int get_history_on_answer (struct query *q UU) {
   n = fetch_int ();
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
+  }
+  if (sn > 0) {
+    do_messages_mark_read (q->extra, ML[0]->id);
   }
   return 0;
 }
@@ -600,7 +640,7 @@ void do_get_history (union user_chat *U, int limit) {
   out_int (0);
   out_int (0);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, 0);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, U);
 }
 
 int get_dialogs_on_answer (struct query *q UU) {

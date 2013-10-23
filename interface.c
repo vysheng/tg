@@ -454,7 +454,7 @@ const char *message_media_type_str (struct message_media *M) {
     case CODE_message_media_video:
       return "[video]";
     case CODE_message_media_geo:
-      sprintf (buf, "[geo] %.6lf:%.6lf", M->geo.latitude, M->geo.longitude);
+      sprintf (buf, "[geo] https://maps.google.com/maps?ll=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
       return buf;
     case CODE_message_media_contact:
       snprintf (buf, 999, "[contact] " COLOR_RED "%s %s" COLOR_NORMAL " %s", M->first_name, M->last_name, M->phone);
@@ -502,8 +502,7 @@ void print_media (struct message_media *M) {
       printf ("[video]");
       return;
     case CODE_message_media_geo:
-      printf ("[geo] ");
-      printf ("%.6lf:%.6lf",  M->geo.latitude, M->geo.longitude);
+      printf ("[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
       return;
     case CODE_message_media_contact:
       printf ("[contact] ");

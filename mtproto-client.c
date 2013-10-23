@@ -1153,6 +1153,9 @@ int rpc_execute (struct connection *c, int op, int len) {
 
   int Response_len = len;
 
+  if (verbosity >= 2) {
+    logprintf ("Response_len = %d\n", Response_len);
+  }
   assert (read_in (c, Response, Response_len) == Response_len);
   Response[Response_len] = 0;
   if (verbosity >= 2) {

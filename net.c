@@ -298,12 +298,12 @@ void try_rpc_read (struct connection *c) {
     unsigned t = 0;
     assert (read_in_lookup (c, &len, 1) == 1);
     if (len >= 1 && len <= 0x7e) {
-      if (c->in_bytes < (int)(4 * len)) { return; }
+      if (c->in_bytes < (int)(1 + 4 * len)) { return; }
     } else {
       if (c->in_bytes < 4) { return; }
       assert (read_in_lookup (c, &len, 4) == 4);
       len = (len >> 8);
-      if (c->in_bytes < (int)(4 * len)) { return; }
+      if (c->in_bytes < (int)(4 + 4 * len)) { return; }
       len = 0x7f;
     }
 
