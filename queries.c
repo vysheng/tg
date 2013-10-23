@@ -416,7 +416,17 @@ int get_contacts_on_answer (struct query *q UU) {
   n = fetch_int ();
   for (i = 0; i < n; i++) {
     struct user *U = fetch_alloc_user ();
-    rprintf ("User #%d: " COLOR_RED "%s %s" COLOR_NORMAL " (" COLOR_GREEN "%s" COLOR_NORMAL ")\n", U->id, U->first_name, U->last_name, U->print_name);
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("User #%d: ", U->id);
+    print_user_name (U->id, (union user_chat *)U);
+    push_color (COLOR_GREEN);
+    printf (" (");
+    printf ("%s", U->print_name);
+    printf (")\n");
+    pop_color ();
+    pop_color ();
+    print_end ();
   }
   return 0;
 }
@@ -781,4 +791,84 @@ void do_send_photo (int type, int to_id, char *file_name) {
     return;
   }
   send_part (f);
+}
+
+int chat_info_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_messages_chat_full);
+
+  assert (fetch_int () == (int)CODE_chat_full);
+  int id = fetch_int (); // id
+
+  assert (fetch_int () == (int)CODE_chat_participants);
+  assert (id == fetch_int ()); // id
+
+  int admin_id = fetch_int ();
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  assert (n <= 100);
+  int i;
+  static int a[300];
+  for (i = 0; i < n; i ++) {
+    assert (fetch_int () == (int)CODE_chat_participant);
+    a[3 * i + 0] = fetch_int ();
+    a[3 * i + 1] = fetch_int ();
+    a[3 * i + 2] = fetch_int ();
+  }
+  fetch_int (); // version
+
+  print_start ();
+  push_color (COLOR_YELLOW);
+  printf ("Chat ");
+  print_chat_name (-id, user_chat_get (-id));
+  printf (" members:\n");
+  for (i = 0; i < n; i++) {
+    printf ("\t\t");
+    print_user_name (a[3 * i], user_chat_get (a[3 * i]));
+    if (a[3 * i] == admin_id) {
+      printf (" admin");
+    }
+    printf ("\n");
+  }
+  pop_color ();
+  print_end ();
+  return 0;
+}
+
+struct query_methods chat_info_methods = {
+  .on_answer = chat_info_on_answer
+};
+
+void do_get_chat_info (union user_chat *chat) {
+  clear_packet ();
+  out_int (CODE_messages_get_full_chat);
+  out_int (-chat->id);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
+}
+
+int user_list_info_silent_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  int i;
+  for (i = 0; i < n; i++) {
+    fetch_alloc_user ();
+  }
+  return 0;
+}
+
+struct query_methods user_list_info_silent_methods = {
+  .on_answer = user_list_info_silent_on_answer
+};
+
+void do_get_user_list_info_silent (int num, int *list) {
+  clear_packet ();
+  out_int (CODE_users_get_users);
+  out_int (CODE_vector);
+  out_int (num);
+  int i;
+  for (i = 0; i < num; i++) {
+    out_int (CODE_input_user_contact);
+    out_int (list[i]);
+    //out_long (0);
+  }
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
 }
