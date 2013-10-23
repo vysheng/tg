@@ -1,7 +1,8 @@
 #ifndef __INTERFACE_H__
 #define __INTERFACE_H__
 
-#define COLOR_RED "\033[31;1m"
+#define COLOR_RED "\033[0;31m"
+#define COLOR_REDB "\033[1;31m"
 #define COLOR_NORMAL "\033[0m"
 #define COLOR_GREEN "\033[32;1m"
 #define COLOR_GREY "\033[37;1m"

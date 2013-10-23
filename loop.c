@@ -27,6 +27,8 @@ extern char *auth_token;
 void set_default_username (const char *s);
 int default_dc_num;
 
+extern int unknown_user_list_pos;
+extern int unknown_user_list[];
 
 void net_loop (int flags, int (*is_end)(void)) {
   while (!is_end ()) {
@@ -58,6 +60,10 @@ void net_loop (int flags, int (*is_end)(void)) {
       rl_callback_read_char ();
     }
     connections_poll_result (fds + cc, x - cc);
+    if (unknown_user_list_pos) {
+      do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
+      unknown_user_list_pos = 0;
+    }
   }
 }
 

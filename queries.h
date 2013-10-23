@@ -52,5 +52,7 @@ void do_send_text (union user_chat *U, char *file);
 void do_get_history (union user_chat *U, int limit);
 void do_get_dialog_list (void);
 void do_send_photo (int type, int to_id, char *file_name);
+void do_get_chat_info (union user_chat *chat);
+void do_get_user_list_info_silent (int num, int *list);
 
 #endif

@@ -37,6 +37,7 @@ struct chat {
   int user_num;
   int date;
   int version;
+  int admin_id;
 };
 
 union user_chat {

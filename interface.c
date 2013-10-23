@@ -36,6 +36,7 @@ char *commands[] = {
   "send_photo",
   "send_video",
   "send_text",
+  "chat_info",
   0 };
 
 int commands_flags[] = {
@@ -48,6 +49,7 @@ int commands_flags[] = {
   0732,
   0732,
   0732,
+  074,
 };
 
 char *a = 0;
@@ -132,6 +134,19 @@ int complete_user_list (int index, const char *text, int len, char **R) {
   }
 }
 
+int complete_chat_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id > 0)) {
+    index ++;
+  }
+  if (index < user_num + chat_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
+}
+
 int complete_user_chat_list (int index, const char *text, int len, char **R) {
   index ++;
   while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
@@ -192,6 +207,9 @@ char *command_generator (const char *text, int state) {
     return R;
   case 3:
     return rl_filename_completion_function(text,state);
+  case 4:
+    index = complete_chat_list (index, text, len, &R);
+    return R;
   default:
     return 0;
   }
@@ -271,6 +289,17 @@ void interpreter (char *line UU) {
       if (len > 0) {
         do_send_text (Peers[index], strndup (f, len));
       }
+    }
+  } else if (!memcmp (line, "chat_info", 9)) {
+    char *q = line + 10;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+      index ++;
+    }
+    if (index < user_num + chat_num && Peers[index]->id < 0) {
+      do_get_chat_info (Peers[index]);
     }
   } else if (!memcmp (line, "history", 7)) {
     char *q = line + 7;
@@ -472,16 +501,38 @@ void print_media (struct message_media *M) {
   }
 }
 
+int unknown_user_list_pos;
+int unknown_user_list[1000];
+
 void print_user_name (int id, union user_chat *U) {
   push_color (COLOR_RED);
   if (!U) {
     printf ("user#%d", id);
-  } else if (!U->user.first_name) {
-    printf ("%s", U->user.last_name);
-  } else if (!U->user.last_name) {
-    printf ("%s", U->user.first_name);
+    int i;
+    for (i = 0; i < unknown_user_list_pos; i++) {
+      if (unknown_user_list[i] == id) {
+        id = 0;
+        break;
+      }
+    }
+    if (id) {
+      assert (unknown_user_list_pos < 1000);
+      unknown_user_list[unknown_user_list_pos ++] = id;
+    }
   } else {
-    printf ("%s %s", U->user.first_name, U->user.last_name); 
+    if (U->flags & 20) {
+      push_color (COLOR_REDB);
+    }
+    if (!U->user.first_name) {
+      printf ("%s", U->user.last_name);
+    } else if (!U->user.last_name) {
+      printf ("%s", U->user.first_name);
+    } else {
+      printf ("%s %s", U->user.first_name, U->user.last_name); 
+    }
+    if (U->flags & 20) {
+      pop_color ();
+    }
   }
   pop_color ();
 }
