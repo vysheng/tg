@@ -25,7 +25,7 @@ struct dc;
 #define TG_SERVER "173.240.5.1"
 //#define TG_SERVER "95.142.192.66"
 #define TG_APP_HASH "3bc14c6455ef1595ec86a125762c3aad"
-#define TG_APP_ID 51
+#define TG_APP_ID 2899
 
 #define ACK_TIMEOUT 60
 #define MAX_DC_ID 10
