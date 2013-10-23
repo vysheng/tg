@@ -580,11 +580,19 @@ int get_dialogs_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
+  static int dlist[3 * 100];
+  int dl_size = n;
   for (i = 0; i < n; i++) {
     assert (fetch_int () == CODE_dialog);
-    fetch_peer_id ();
-    fetch_int ();
-    fetch_int ();
+    if (i < 100) {
+      dlist[3 * i + 0] = fetch_peer_id ();
+      dlist[3 * i + 1] = fetch_int ();
+      dlist[3 * i + 2] = fetch_int ();
+    } else {
+      fetch_peer_id ();
+      fetch_int ();
+      fetch_int ();
+    }
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
@@ -601,6 +609,23 @@ int get_dialogs_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
   }
+  print_start ();
+  push_color (COLOR_YELLOW);
+  for (i = dl_size - 1; i >= 0; i--) {
+    if (dlist[3 * i] < 0) {
+      union user_chat *UC = user_chat_get (dlist[3 * i]);
+      printf ("Chat ");
+      print_chat_name (dlist[3 * i], UC);
+      printf (": %d unread\n", dlist[3 * i + 2]);
+    } else {
+      union user_chat *UC = user_chat_get (dlist[3 * i]);
+      printf ("User ");
+      print_user_name (dlist[3 * i], UC);
+      printf (": %d unread\n", dlist[3 * i + 2]);
+    }
+  }
+  pop_color ();
+  print_end ();
   return 0;
 }
 

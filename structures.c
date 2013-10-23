@@ -262,6 +262,7 @@ void fetch_message_short (struct message *M) {
   M->date = fetch_int ();
   fetch_int (); // seq
   M->media.type = CODE_message_media_empty;
+  M->unread = 1;
 }
 
 void fetch_message_short_chat (struct message *M) {
@@ -274,6 +275,7 @@ void fetch_message_short_chat (struct message *M) {
   M->date = fetch_int ();
   fetch_int (); // seq
   M->media.type = CODE_message_media_empty;
+  M->unread = 1;
 }
 
 
