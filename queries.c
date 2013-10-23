@@ -56,6 +56,9 @@ struct query *query_get (long long id) {
 
 int alarm_query (struct query *q) {
   assert (q);
+  if (verbosity) {
+    logprintf ("Alarm query %lld\n", q->msg_id);
+  }
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   insert_event_timer (&q->ev);
   return 0;
