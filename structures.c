@@ -23,6 +23,7 @@
 #include "tree.h"
 #include "loop.h"
 int verbosity;
+union user_chat *Peers[MAX_USER_NUM];
 
 void fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
@@ -60,6 +61,9 @@ void fetch_user_status (struct user_status *S) {
 }
 
 int our_id;
+int user_num;
+int chat_num;
+
 void fetch_user (struct user *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
@@ -99,6 +103,48 @@ void fetch_user (struct user *U) {
   while (*s) {
     if (*s == ' ') { *s = '_'; }
     s++;
+  }
+  int cc = 0;
+  while (1) {
+    int ok = 1;
+    int i;
+    for (i = 0; i < user_num + chat_num; i++) {
+      if (Peers[i] != (void *)U && !strcmp (Peers[i]->print_name, U->print_name)) {
+        ok = 0;
+        break;
+      }
+    }
+    if (ok) {
+      break;
+    }
+    cc ++;
+    assert (cc <= 99);
+    if (cc == 1) {
+      int l = strlen (U->print_name);
+      char *s = malloc (l + 3);
+      memcpy (s, U->print_name, l);
+      s[l + 2] = 0;
+      s[l] = '#';
+      s[l + 1] = '1';
+      free (U->print_name);
+      U->print_name = s;
+    } else if (cc == 10) {
+      int l = strlen (U->print_name);
+      char *s = malloc (l + 2);
+      memcpy (s, U->print_name, l);
+      s[l + 1] = 0;
+      s[l] = '0';
+      s[l - 1] = '1';
+      free (U->print_name);
+      U->print_name = s;
+    } else {
+      int l = strlen (U->print_name);
+      U->print_name[l - 1] ++;
+      if (U->print_name[l - 1] > '9') {
+        U->print_name[l - 1] = '0';
+        U->print_name[l - 2] ++;
+      }
+    }
   }
   if (x == CODE_user_deleted) {
     U->flags |= FLAG_DELETED;
@@ -443,7 +489,6 @@ int user_num;
 int users_allocated;
 int chats_allocated;
 int messages_allocated;
-union user_chat *Peers[MAX_USER_NUM];
 
 struct message message_list = {
   .next_use = &message_list,
