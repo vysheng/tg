@@ -101,7 +101,12 @@ struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYP
     delete_tree_node_ ## X_NAME (T);\
     return N;\
   } else {\
-    return tree_delete_ ## X_NAME (c < 0 ? T->left : T->right, x);\
+    if (c < 0) { \
+      T->left = tree_delete_ ## X_NAME (T->left, x); \
+    } else { \
+      T->right = tree_delete_ ## X_NAME (T->right, x); \
+    } \
+    return T; \
   }\
 }\
 \

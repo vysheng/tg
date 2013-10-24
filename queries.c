@@ -51,7 +51,6 @@ double get_double_time (void) {
 }
 
 struct query *query_get (long long id) {
-  tree_check_query (queries_tree);
   return tree_lookup_query (queries_tree, (void *)&id);
 }
 
@@ -105,7 +104,6 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
 void query_ack (long long id) {
   struct query *q = query_get (id);
   if (q && !(q->flags & QUERY_ACK_RECEIVED)) { 
-    tree_check_query (queries_tree);
     assert (q->msg_id == id);
     q->flags |= QUERY_ACK_RECEIVED; 
     remove_event_timer (&q->ev);
@@ -213,18 +211,14 @@ void insert_event_timer (struct event_timer *ev) {
   if (verbosity > 2) {
     logprintf ( "INSERT: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
   }
-  tree_check_timer (timer_tree);
   timer_tree = tree_insert_timer (timer_tree, ev, lrand48 ());
-  tree_check_timer (timer_tree);
 }
 
 void remove_event_timer (struct event_timer *ev) {
   if (verbosity > 2) {
     logprintf ( "REMOVE: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
   }
-  tree_check_timer (timer_tree);
   timer_tree = tree_delete_timer (timer_tree, ev);
-  tree_check_timer (timer_tree);
 }
 
 double next_timer_in (void) {
