@@ -22,7 +22,7 @@
 #define FLAG_EMPTY 1
 #define FLAG_DELETED 2
 #define FLAG_FORBIDDEN 4
-
+#define FLAG_HAS_PHOTO 8
 
 #define FLAG_USER_SELF 128
 #define FLAG_USER_FOREIGN 256
@@ -35,49 +35,6 @@ struct file_location {
   long long volume;
   int local_id;
   long long secret;
-};
-
-struct user_status {
-  int online;
-  int when;
-};
-
-struct user {
-  int id;
-  int flags;
-  char *print_name;
-  struct file_location photo_big;
-  struct file_location photo_small;
-  char *first_name;
-  char *last_name;
-  char *phone;
-  long long access_hash;
-  struct user_status status;
-};
-
-struct chat {
-  int id;
-  int flags;
-  char *print_title;
-  struct file_location photo_big;
-  struct file_location photo_small;
-  char *title;
-  int user_num;
-  int date;
-  int version;
-  int admin_id;
-};
-
-union user_chat {
-  struct {
-    int id;
-    int flags;
-    char *print_name;
-    struct file_location photo_big;
-    struct file_location photo_small;
-  };
-  struct user user;
-  struct chat chat;
 };
 
 struct photo_size {
@@ -103,6 +60,59 @@ struct photo {
   struct geo geo;
   int sizes_num;
   struct photo_size *sizes;
+};
+
+struct user_status {
+  int online;
+  int when;
+};
+
+struct user {
+  int id;
+  int flags;
+  char *print_name;
+  struct file_location photo_big;
+  struct file_location photo_small;
+  struct photo photo;
+  char *first_name;
+  char *last_name;
+  char *phone;
+  long long access_hash;
+  struct user_status status;
+};
+
+struct chat_user {
+  int user_id;
+  int inviter_id;
+  int date;
+};
+
+struct chat {
+  int id;
+  int flags;
+  char *print_title;
+  struct file_location photo_big;
+  struct file_location photo_small;
+  struct photo photo;
+  char *title;
+  int users_num;
+  struct chat_user *users;
+  int date;
+  int version;
+  int admin_id;
+};
+
+union user_chat {
+  struct {
+    int id;
+    int flags;
+    char *print_name;
+    struct file_location photo_big;
+    struct file_location photo_small;
+    struct photo photo;
+  };
+  struct user user;
+  struct chat chat;
 };
 
 struct video {
@@ -179,6 +189,7 @@ struct chat *fetch_alloc_chat (void);
 struct message *fetch_alloc_message (void);
 struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
+struct chat *fetch_alloc_chat_full (void);
 int fetch_peer_id (void);
 
 void free_user (struct user *U);
@@ -189,4 +200,6 @@ union user_chat *user_chat_get (int id);
 struct message *message_get (int id);
 void update_message_id (struct message *M, int id);
 void message_insert (struct message *M);
+void free_photo (struct photo *P);
+void fetch_photo (struct photo *P);
 #endif

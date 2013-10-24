@@ -334,6 +334,10 @@ static inline int prefetch_int (void) {
   return *(in_ptr);
 }
 
+static inline void prefetch_data (void *data, int size) {
+  memcpy (data, in_ptr, size);
+}
+
 static inline long long fetch_long (void) {
   long long r = *(long long *)in_ptr;
   in_ptr += 2;

@@ -103,8 +103,8 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
 void query_ack (long long id) {
   struct query *q = query_get (id);
   if (q && !(q->flags & QUERY_ACK_RECEIVED)) { 
-    remove_event_timer (&q->ev);
     q->flags |= QUERY_ACK_RECEIVED; 
+    remove_event_timer (&q->ev);
   }
 }
 
@@ -863,37 +863,22 @@ void do_send_photo (int type, int to_id, char *file_name) {
 }
 
 int chat_info_on_answer (struct query *q UU) {
-  assert (fetch_int () == (int)CODE_messages_chat_full);
-
-  assert (fetch_int () == (int)CODE_chat_full);
-  int id = fetch_int (); // id
-
-  assert (fetch_int () == (int)CODE_chat_participants);
-  assert (id == fetch_int ()); // id
-
-  int admin_id = fetch_int ();
-  assert (fetch_int () == CODE_vector);
-  int n = fetch_int ();
-  assert (n <= 100);
-  int i;
-  static int a[300];
-  for (i = 0; i < n; i ++) {
-    assert (fetch_int () == (int)CODE_chat_participant);
-    a[3 * i + 0] = fetch_int ();
-    a[3 * i + 1] = fetch_int ();
-    a[3 * i + 2] = fetch_int ();
-  }
-  fetch_int (); // version
-
+  struct chat *C = fetch_alloc_chat_full ();
+  union user_chat *U = (void *)C;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("Chat ");
-  print_chat_name (-id, user_chat_get (-id));
+  print_chat_name (U->id, U);
   printf (" members:\n");
-  for (i = 0; i < n; i++) {
+  int i;
+  for (i = 0; i < C->users_num; i++) {
     printf ("\t\t");
-    print_user_name (a[3 * i], user_chat_get (a[3 * i]));
-    if (a[3 * i] == admin_id) {
+    print_user_name (C->users[i].user_id, user_chat_get (C->users[i].user_id));
+    printf (" invited by ");
+    print_user_name (C->users[i].inviter_id, user_chat_get (C->users[i].inviter_id));
+    printf (" at ");
+    print_date_full (C->users[i].date);
+    if (C->users[i].user_id == C->admin_id) {
       printf (" admin");
     }
     printf ("\n");
