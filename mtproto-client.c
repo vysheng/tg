@@ -633,6 +633,8 @@ int auth_work_start (struct connection *c UU) {
 
 void rpc_execute_answer (struct connection *c, long long msg_id UU);
 
+int unread_messages;
+int our_id;
 void work_update (struct connection *c UU, long long msg_id UU) {
   unsigned op = fetch_int ();
   switch (op) {
@@ -640,6 +642,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       struct message *M = fetch_alloc_message ();
       fetch_int (); //pts
+      unread_messages ++;
       print_message (M);
       break;
     };
@@ -936,12 +939,14 @@ void work_updates (struct connection *c, long long msg_id) {
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_update_short_message);
   struct message *M = fetch_alloc_message_short ();  
+  unread_messages ++;
   print_message (M);
 }
 
 void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == CODE_update_short_chat_message);
   struct message *M = fetch_alloc_message_short_chat ();  
+  unread_messages ++;
   print_message (M);
 }
 

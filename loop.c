@@ -48,6 +48,7 @@ int default_dc_num;
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
 
+int unread_messages;
 void net_loop (int flags, int (*is_end)(void)) {
   while (!is_end ()) {
     struct pollfd fds[101];
@@ -75,6 +76,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     }
     work_timers ();
     if ((flags & 1) && (fds[0].revents & POLLIN)) {
+      unread_messages = 0;
       rl_callback_read_char ();
     }
     connections_poll_result (fds + cc, x - cc);

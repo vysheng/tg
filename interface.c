@@ -35,10 +35,18 @@
 #include "structures.h"
 
 #include "mtproto-common.h"
-char *default_prompt = ">";
+char *default_prompt = "> ";
+
+int unread_messages;
 
 char *get_default_prompt (void) {
-  return default_prompt;
+  static char buf[100];
+  if (unread_messages) {
+    sprintf (buf, COLOR_RED "[%d unread]" COLOR_NORMAL "%s", unread_messages, default_prompt);
+    return buf;
+  } else {
+    return default_prompt;
+  }
 }
 
 char *complete_none (const char *text UU, int state UU) {
@@ -385,7 +393,8 @@ void print_start (void) {
 void print_end (void) {
   assert (prompt_was);
   if (readline_active) {
-    rl_restore_prompt();
+    rl_set_prompt (get_default_prompt ());
+    rl_redisplay();
     rl_replace_line(saved_line, 0);
     rl_point = saved_point;
     rl_redisplay();
