@@ -51,6 +51,7 @@ double get_double_time (void) {
 }
 
 struct query *query_get (long long id) {
+  tree_check_query (queries_tree);
   return tree_lookup_query (queries_tree, (void *)&id);
 }
 
@@ -59,8 +60,9 @@ int alarm_query (struct query *q) {
   if (verbosity) {
     logprintf ("Alarm query %lld\n", q->msg_id);
   }
+  tree_delete_query (queries_tree, q);
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
-  insert_event_timer (&q->ev);
+  //insert_event_timer (&q->ev);
   return 0;
 }
 
@@ -80,7 +82,7 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   memcpy (q->data, data, 4 * ints);
   q->msg_id = encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
   if (verbosity) {
-    logprintf ( "Msg_id is %lld\n", q->msg_id);
+    logprintf ( "Msg_id is %lld %p\n", q->msg_id, q);
   }
   q->methods = methods;
   q->DC = DC;
@@ -103,6 +105,8 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
 void query_ack (long long id) {
   struct query *q = query_get (id);
   if (q && !(q->flags & QUERY_ACK_RECEIVED)) { 
+    tree_check_query (queries_tree);
+    assert (q->msg_id == id);
     q->flags |= QUERY_ACK_RECEIVED; 
     remove_event_timer (&q->ev);
   }

@@ -991,6 +991,9 @@ void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
   int i;
   for (i = 0; i < n; i++) {
     long long id = fetch_long ();
+    if (verbosity) {
+      logprintf ("ack for %lld\n", id);
+    }
     query_ack (id);
   }
 }
