@@ -66,7 +66,7 @@ void fetch_user (struct user *U) {
   assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
   U->id = fetch_int ();
   if (x == CODE_user_empty) {
-    U->flags = 1;
+    U->flags = FLAG_EMPTY;
     return;
   }
   if (x == CODE_user_self) {
@@ -98,16 +98,16 @@ void fetch_user (struct user *U) {
     s++;
   }
   if (x == CODE_user_deleted) {
-    U->flags = 2;
+    U->flags = FLAG_DELETED;
     return;
   }
   if (x == CODE_user_self) {
-    U->flags = 4;
+    U->flags = FLAG_USER_SELF;
   } else {
     U->access_hash = fetch_long ();
   }
   if (x == CODE_user_foreign) {
-    U->flags |= 8;
+    U->flags |= FLAG_USER_FOREIGN;
   } else {
     U->phone = fetch_str_dup ();
   }
@@ -125,7 +125,7 @@ void fetch_user (struct user *U) {
     assert (fetch_int () == (int)CODE_bool_false);
   }
   if (x == CODE_user_contact) {
-    U->flags |= 16;
+    U->flags |= FLAG_USER_CONTACT;
   }
 }
 
@@ -135,11 +135,11 @@ void fetch_chat (struct chat *C) {
   assert (x == CODE_chat_empty || x == CODE_chat || x == CODE_chat_forbidden);
   C->id = -fetch_int ();
   if (x == CODE_chat_empty) {
-    C->flags = 1;
+    C->flags = FLAG_EMPTY;
     return;
   }
   if (x == CODE_chat_forbidden) {
-    C->flags |= 8;
+    C->flags |= FLAG_FORBIDDEN;
   }
   C->title = fetch_str_dup ();
   C->print_title = strdup (C->title);
@@ -161,7 +161,7 @@ void fetch_chat (struct chat *C) {
     C->user_num = fetch_int ();
     C->date = fetch_int ();
     if (fetch_int () == (int)CODE_bool_true) {
-      C->flags |= 16;
+      C->flags |= FLAG_CHAT_IN_CHAT;
     }
     C->version = fetch_int ();
   } else {

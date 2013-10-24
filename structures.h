@@ -19,6 +19,16 @@
 #ifndef __STRUCTURES_H__
 #define __STRUCTURES_H__
 
+#define FLAG_EMPTY 1
+#define FLAG_DELETED 2
+#define FLAG_FORBIDDEN 4
+
+
+#define FLAG_USER_SELF 128
+#define FLAG_USER_FOREIGN 256
+#define FLAG_USER_CONTACT 512
+
+#define FLAG_CHAT_IN_CHAT 128
 
 struct file_location {
   int dc;

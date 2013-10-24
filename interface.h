@@ -49,4 +49,5 @@ void pop_color (void);
 void push_color (const char *color);
 void print_start (void);
 void print_end (void);
+void print_date_full (long t);
 #endif

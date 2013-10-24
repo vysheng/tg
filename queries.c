@@ -444,8 +444,19 @@ int get_contacts_on_answer (struct query *q UU) {
     push_color (COLOR_GREEN);
     printf (" (");
     printf ("%s", U->print_name);
-    printf (")\n");
+    printf (") ");
     pop_color ();
+    if (U->status.online > 0) {
+      printf ("online\n");
+    } else {
+      if (U->status.online < 0) {
+        printf ("offline. Was online ");
+        print_date_full (U->status.when);
+      } else {
+        printf ("offline permanent");
+      }
+      printf ("\n");
+    }
     pop_color ();
     print_end ();
   }

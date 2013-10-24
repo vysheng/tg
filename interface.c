@@ -538,7 +538,7 @@ void print_user_name (int id, union user_chat *U) {
       unknown_user_list[unknown_user_list_pos ++] = id;
     }
   } else {
-    if (U->flags & 20) {
+    if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
       push_color (COLOR_REDB);
     }
     if (!U->user.first_name) {
@@ -548,7 +548,7 @@ void print_user_name (int id, union user_chat *U) {
     } else {
       printf ("%s %s", U->user.first_name, U->user.last_name); 
     }
-    if (U->flags & 20) {
+    if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
       pop_color ();
     }
   }
@@ -573,6 +573,11 @@ void print_date (long t) {
   } else {
     printf ("[%02d %s]", tm->tm_mday, monthes[tm->tm_mon]);
   }
+}
+
+void print_date_full (long t) {
+  struct tm *tm = localtime (&t);
+  printf ("[%04d/%02d/%02d %02d:%02d:%02d]", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
 int our_id;
