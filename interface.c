@@ -612,8 +612,10 @@ int our_id;
 void print_service_message (struct message *M) {
   print_start ();
   push_color (COLOR_GREY);
-
+  
+  push_color (COLOR_MAGENTA);
   print_date (M->date);
+  pop_color ();
   printf (" ");
   print_chat_name (M->to_id, user_chat_get (M->to_id));
   printf (" ");
@@ -705,6 +707,11 @@ void print_message (struct message *M) {
     } else {
       printf (" »»» ");
     }
+  }
+  if (M->fwd_from_id) {
+    printf ("[fwd from ");
+    print_user_name (M->fwd_from_id, user_chat_get (M->fwd_from_id));
+    printf ("] ");
   }
   if (M->message && strlen (M->message)) {
     printf ("%s", M->message);
