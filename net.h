@@ -24,7 +24,7 @@ struct dc;
 #include "queries.h"
 #define TG_SERVER "173.240.5.1"
 //#define TG_SERVER "95.142.192.66"
-#define TG_APP_HASH "3bc14c6455ef1595ec86a125762c3aad"
+#define TG_APP_HASH "36722c72256a24c1225de00eb6a1ca74"
 #define TG_APP_ID 2899
 
 #define ACK_TIMEOUT 60
