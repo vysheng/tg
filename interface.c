@@ -347,6 +347,24 @@ void interpreter (char *line UU) {
       }
       do_get_history (Peers[index], limit);
     }
+  } else if (!memcmp (line, "help", 4)) {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf (
+      "help - prints this help\n"
+      "msg <peer> Text - sends message to this peer\n"
+      "contact_list - prints info about users in your contact list\n"
+      "stats - just for debugging \n"
+      "history <peerd> [limit] - prints history (and marks it as read). Default limit = 40\n"
+      "dialog_list - prints info about your dialogs\n"
+      "send_photo <peer> <photo-file-name> - sends photo to peer\n"
+      "send_video <peer> <video-file-name> - sends video to peer\n"
+      "send_text <peer> <text-file-name> - sends text file as plain messages\n"
+      "chat_info <chat> - prints info about chat\n"
+      );
+    pop_color ();
+    print_end ();
+    printf ("\033[1K\033H");
   }
 }
 

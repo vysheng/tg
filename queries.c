@@ -655,7 +655,11 @@ void do_get_history (union user_chat *U, int limit) {
 }
 
 int get_dialogs_on_answer (struct query *q UU) {
-  assert (fetch_int () == CODE_messages_dialogs);
+  unsigned x = fetch_int (); 
+  assert (x == CODE_messages_dialogs || x == CODE_messages_dialogs_slice);
+  if (x == CODE_messages_dialogs_slice) {
+    fetch_int (); // total_count
+  }
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
