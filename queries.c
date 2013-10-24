@@ -61,7 +61,16 @@ int alarm_query (struct query *q) {
   }
   tree_delete_query (queries_tree, q);
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
-  //insert_event_timer (&q->ev);
+  insert_event_timer (&q->ev);
+
+  clear_packet ();
+  out_int (CODE_msg_container);
+  out_long (q->msg_id);
+  out_int (q->seq_no);
+  out_int (4 * q->data_len);
+  out_ints (q->data, q->data_len);
+  
+  encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, 0);
   return 0;
 }
 
@@ -80,6 +89,8 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   q->data = malloc (4 * ints);
   memcpy (q->data, data, 4 * ints);
   q->msg_id = encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
+  q->session = DC->sessions[0];
+  q->seq_no = DC->sessions[0]->seq_no - 1; 
   if (verbosity) {
     logprintf ( "Msg_id is %lld %p\n", q->msg_id, q);
   }

@@ -39,10 +39,12 @@ struct query {
   long long msg_id;
   int data_len;
   int flags;
+  int seq_no;
   void *data;
   struct query_methods *methods;
   struct event_timer ev;
   struct dc *DC;
+  struct session *session;
   void *extra;
 };
 

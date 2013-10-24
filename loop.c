@@ -254,6 +254,8 @@ int loop (void) {
   rl_attempted_completion_function = (CPPFunction *) complete_text;
   rl_completion_entry_function = complete_none;
 
+  do_get_dialog_list ();
+
   return main_loop ();
 }
 
