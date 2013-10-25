@@ -74,7 +74,8 @@
 #define CODE_ping_delay_disconnect	0xf3427b8c
 #define CODE_gzip_packed 0x3072cfa1
 
-
+#define CODE_input_peer_notify_settings_old 0x3cf4b1be
+#define CODE_peer_notify_settings_old 0xddbcd4a5
 /* not really a limit, for struct encrypted_message only */
 // #define MAX_MESSAGE_INTS	16384
 #define MAX_MESSAGE_INTS	1048576

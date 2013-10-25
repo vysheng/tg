@@ -271,13 +271,20 @@ void fetch_chat (struct chat *C) {
 
 void fetch_notify_settings (void) {
   unsigned x = fetch_int ();
-  assert (x == CODE_peer_notify_settings || x == CODE_peer_notify_settings_empty);
-  if (x == CODE_peer_notify_settings) {
+  assert (x == CODE_peer_notify_settings || x == CODE_peer_notify_settings_empty || x == CODE_peer_notify_settings_old);
+  if (x == CODE_peer_notify_settings_old) {
     fetch_int (); // mute_until
     int l = prefetch_strlen ();
     fetch_str (l);
     fetch_bool (); // show_previews
     fetch_int (); // peer notify events
+  }
+  if (x == CODE_peer_notify_settings) {
+    fetch_int (); // mute_until
+    int l = prefetch_strlen ();
+    fetch_str (l);
+    fetch_bool (); // show_previews
+    fetch_int (); // events_mask
   }
 }
 
