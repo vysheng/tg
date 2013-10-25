@@ -200,7 +200,7 @@ void fetch_user_full (struct user *U) {
   if (x == CODE_contacts_foreign_link_mutual) {
     U->flags |= FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT; 
   }
-  if (x == CODE_contacts_my_link_requested) {
+  if (x == CODE_contacts_foreign_link_requested) {
     U->flags |= FLAG_USER_OUT_CONTACT;
     fetch_bool ();
   }
