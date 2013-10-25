@@ -56,7 +56,7 @@ struct query *query_get (long long id) {
 
 int alarm_query (struct query *q) {
   assert (q);
-  if (verbosity) {
+  if (verbosity >= 1) {
     logprintf ("Alarm query %lld\n", q->msg_id);
   }
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
@@ -64,6 +64,7 @@ int alarm_query (struct query *q) {
 
   clear_packet ();
   out_int (CODE_msg_container);
+  out_int (1);
   out_long (q->msg_id);
   out_int (q->seq_no);
   out_int (4 * q->data_len);
