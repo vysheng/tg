@@ -74,6 +74,14 @@ int alarm_query (struct query *q) {
   return 0;
 }
 
+void query_restart (long long id) {
+  struct query *q = query_get (id);
+  if (q) {
+    remove_event_timer (&q->ev);
+    alarm_query (q);
+  }
+}
+
 struct query *send_query (struct dc *DC, int ints, void *data, struct query_methods *methods, void *extra) {
   assert (DC);
   assert (DC->auth_key_id);

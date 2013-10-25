@@ -1052,6 +1052,16 @@ void work_packed (struct connection *c, long long msg_id) {
   in_gzip = 0;
 }
 
+void work_bad_server_salt (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == (int)CODE_bad_server_salt);
+  long long id = fetch_long ();
+  query_restart (id);
+  fetch_int (); // seq_no
+  fetch_int (); // error_code
+  long long new_server_salt = fetch_long ();
+  GET_DC(c)->server_salt = new_server_salt;
+}
+
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   if (verbosity >= 5) {
     hexdump_in ();
@@ -1084,6 +1094,9 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     return;
   case CODE_gzip_packed:
     work_packed (c, msg_id);
+    return;
+  case CODE_bad_server_salt:
+    work_bad_server_salt (c, msg_id);
     return;
   }
   logprintf ( "Unknown message: \n");

@@ -53,6 +53,7 @@ struct query *send_query (struct dc *DC, int len, void *data, struct query_metho
 void query_ack (long long id);
 void query_error (long long id);
 void query_result (long long id);
+void query_restart (long long id);
 
 void insert_event_timer (struct event_timer *ev);
 void remove_event_timer (struct event_timer *ev);
