@@ -356,6 +356,7 @@ void do_send_code (const char *user) {
   out_int (0);
   out_int (TG_APP_ID);
   out_string (TG_APP_HASH);
+  out_string ("en");
 
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
   net_loop (0, code_is_sent);
@@ -391,6 +392,7 @@ void do_send_code (const char *user) {
   out_int (0);
   out_int (TG_APP_ID);
   out_string (TG_APP_HASH);
+  out_string ("en");
 
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
   net_loop (0, code_is_sent);
