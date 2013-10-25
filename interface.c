@@ -38,6 +38,7 @@
 char *default_prompt = "> ";
 
 int unread_messages;
+int msg_num_mode;
 
 char *get_default_prompt (void) {
   static char buf[100];
@@ -65,6 +66,7 @@ char *commands[] = {
   "send_text",
   "chat_info",
   "user_info",
+  "fwd",
   "show_license",
   0 };
 
@@ -79,6 +81,7 @@ int commands_flags[] = {
   0732,
   0732,
   074,
+  071,
   072,
   07,
 };
@@ -319,6 +322,24 @@ void interpreter (char *line UU) {
       char *f = get_token (&q, &len);
       if (len > 0) {
         do_send_text (Peers[index], strndup (f, len));
+      }
+    }
+  } else if (!memcmp (line, "fwd ", 4)) {
+    char *q = line + 4;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+      index ++;
+    }
+    if (index < user_num + chat_num) {
+      int len = 0;
+      char *f = get_token (&q, &len);
+      if (f) {
+        int num = atoi (f);
+        if (num > 0) {
+          do_forward_message (Peers[index], num);
+        }
       }
     }
   } else if (!memcmp (line, "chat_info", 9)) {
@@ -689,6 +710,9 @@ void print_message (struct message *M) {
   if (M->to_id >= 0) {
     if (M->out) {
       push_color (COLOR_GREEN);
+      if (msg_num_mode) {
+        printf ("%d ", M->id);
+      }
       print_date (M->date);
       pop_color ();
       printf (" ");
@@ -701,6 +725,9 @@ void print_message (struct message *M) {
       }
     } else {
       push_color (COLOR_BLUE);
+      if (msg_num_mode) {
+        printf ("%d ", M->id);
+      }
       print_date (M->date);
       pop_color ();
       printf (" ");
@@ -714,6 +741,9 @@ void print_message (struct message *M) {
     }
   } else {
     push_color (COLOR_MAGENTA);
+    if (msg_num_mode) {
+      printf ("%d ", M->id);
+    }
     print_date (M->date);
     pop_color ();
     printf (" ");

@@ -879,6 +879,40 @@ void do_send_photo (int type, int to_id, char *file_name) {
   send_part (f);
 }
 
+int fwd_msg_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_messages_stated_message);
+  struct message *M = fetch_alloc_message ();
+  assert (fetch_int () == CODE_vector);
+  int n, i;
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_chat ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    fetch_alloc_user ();
+  }
+  fetch_int (); // pts
+  fetch_int (); // seq
+  print_message (M);
+  return 0;
+}
+
+struct query_methods fwd_msg_methods = {
+  .on_answer = fwd_msg_on_answer
+};
+
+void do_forward_message (union user_chat *U, int n) {
+  clear_packet ();
+  out_int (CODE_invoke_with_layer3);
+  out_int (CODE_messages_forward_message);
+  out_peer_id (U->id);
+  out_int (n);
+  out_long (lrand48 () * (1ll << 32) + lrand48 ());
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0);
+}
+
 int chat_info_on_answer (struct query *q UU) {
   struct chat *C = fetch_alloc_chat_full ();
   union user_chat *U = (void *)C;

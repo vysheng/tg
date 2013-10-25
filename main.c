@@ -52,6 +52,7 @@
 char *default_username;
 int setup_mode;
 char *auth_token;
+int msg_num_mode;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -203,7 +204,7 @@ extern int default_dc_num;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:N")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -216,6 +217,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'n':
       default_dc_num = atoi (optarg);
+      break;
+    case 'N':
+      msg_num_mode ++;
       break;
     case 'h':
     default:

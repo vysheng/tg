@@ -75,5 +75,6 @@ void do_send_photo (int type, int to_id, char *file_name);
 void do_get_chat_info (union user_chat *chat);
 void do_get_user_list_info_silent (int num, int *list);
 void do_get_user_info (union user_chat *user);
+void do_forward_message (union user_chat *U, int n);
 
 #endif

@@ -157,16 +157,22 @@ void fetch_user (struct user *U) {
   }
   if (x == CODE_user_foreign) {
     U->flags |= FLAG_USER_FOREIGN;
+    U->phone = 0;
   } else {
     if (U->phone) { free (U->phone); }
     U->phone = fetch_str_dup ();
   }
+  //logprintf ("name = %s, surname = %s, phone = %s\n", U->first_name, U->last_name, U->phone);
   unsigned y = fetch_int ();
+  //fprintf (stderr, "y = 0x%08x\n", y);
   if (y == CODE_user_profile_photo_empty) {
     U->photo_small.dc = -2;
     U->photo_big.dc = -2;
   } else {
-    assert (y == CODE_user_profile_photo);
+    assert (y == CODE_user_profile_photo || y == 0x990d1493);
+    if (y == CODE_user_profile_photo) {
+      fetch_long ();
+    }
     fetch_file_location (&U->photo_small);
     fetch_file_location (&U->photo_big);
   }
