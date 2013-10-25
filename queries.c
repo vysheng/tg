@@ -59,7 +59,6 @@ int alarm_query (struct query *q) {
   if (verbosity) {
     logprintf ("Alarm query %lld\n", q->msg_id);
   }
-  tree_delete_query (queries_tree, q);
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   insert_event_timer (&q->ev);
 

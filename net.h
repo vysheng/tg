@@ -27,6 +27,8 @@ struct dc;
 #define TG_APP_HASH "36722c72256a24c1225de00eb6a1ca74"
 #define TG_APP_ID 2899
 
+#define TG_VERSION "0.01-beta"
+
 #define ACK_TIMEOUT 60
 #define MAX_DC_ID 10
 

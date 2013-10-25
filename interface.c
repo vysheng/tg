@@ -64,6 +64,7 @@ char *commands[] = {
   "send_video",
   "send_text",
   "chat_info",
+  "show_license",
   0 };
 
 int commands_flags[] = {
@@ -77,6 +78,7 @@ int commands_flags[] = {
   0732,
   0732,
   074,
+  07,
 };
 
 char *a = 0;
@@ -365,6 +367,13 @@ void interpreter (char *line UU) {
     pop_color ();
     print_end ();
     printf ("\033[1K\033H");
+  } else if (!memcmp (line, "show_license", 12)) {
+    char *b = 
+#include "LICENSE.h"
+    ;
+    print_start ();
+    printf ("%s", b);
+    print_end ();
   }
 }
 
