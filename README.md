@@ -5,11 +5,16 @@ Command-line interface for [Telegram](http://telegram.org). Uses readline interf
 ### API, Protocol documentation
 
 Documentation for Telegram API is available here: http://core.telegram.org/api
+
 Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
 
 ### Installation
 
 Just run `make`
+
+#### Requirements
+
+Currently only Linux OS is supported. But if you manage to launch it on OS X or other UNIX, please let me know.
 
 ### Usage
 
