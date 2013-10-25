@@ -27,6 +27,8 @@
 #define FLAG_USER_SELF 128
 #define FLAG_USER_FOREIGN 256
 #define FLAG_USER_CONTACT 512
+#define FLAG_USER_IN_CONTACT 1024
+#define FLAG_USER_OUT_CONTACT 2048
 
 #define FLAG_CHAT_IN_CHAT 128
 
@@ -79,6 +81,9 @@ struct user {
   char *phone;
   long long access_hash;
   struct user_status status;
+  int blocked;
+  char *real_first_name;
+  char *real_last_name;
 };
 
 struct chat_user {
@@ -185,11 +190,12 @@ void fetch_file_location (struct file_location *loc);
 void fetch_user_status (struct user_status *S);
 void fetch_user (struct user *U);
 struct user *fetch_alloc_user (void);
+struct user *fetch_alloc_user_full (void);
 struct chat *fetch_alloc_chat (void);
+struct chat *fetch_alloc_chat_full (void);
 struct message *fetch_alloc_message (void);
 struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
-struct chat *fetch_alloc_chat_full (void);
 int fetch_peer_id (void);
 
 void free_user (struct user *U);

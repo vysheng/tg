@@ -911,6 +911,39 @@ void do_get_chat_info (union user_chat *chat) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
 }
 
+int user_info_on_answer (struct query *q UU) {
+  struct user *U = fetch_alloc_user_full ();
+  union user_chat *C = (void *)U;
+  print_start ();
+  push_color (COLOR_YELLOW);
+  printf ("User ");
+  print_user_name (U->id, C);
+  printf (":\n");
+  printf ("\t real name: %s %s\n", U->real_first_name, U->real_last_name);
+  printf ("\t phone: %s\n", U->phone);
+  pop_color ();
+  print_end ();
+  return 0;
+}
+
+struct query_methods user_info_methods = {
+  .on_answer = user_info_on_answer
+};
+
+void do_get_user_info (union user_chat *U) {
+  clear_packet ();
+  out_int (CODE_users_get_full_user);
+  if (U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (U->id);
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (U->id);
+  }
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0);
+}
+
 int user_list_info_silent_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();

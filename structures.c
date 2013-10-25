@@ -133,6 +133,44 @@ void fetch_user (struct user *U) {
   }
 }
 
+void fetch_notify_settings (void);
+void fetch_user_full (struct user *U) {
+  assert (fetch_int () == CODE_user_full);
+  fetch_alloc_user ();
+  unsigned x;
+  assert (fetch_int () == (int)CODE_contacts_link);
+  x = fetch_int ();
+  assert (x == CODE_contacts_my_link_empty || x == CODE_contacts_my_link_requested || x == CODE_contacts_my_link_contact);
+  U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
+  if (x == CODE_contacts_my_link_contact) {
+    U->flags |= FLAG_USER_IN_CONTACT; 
+  }
+  if (x == CODE_contacts_my_link_requested) {
+    fetch_bool ();
+  }
+  x = fetch_int ();
+  assert (x == CODE_contacts_foreign_link_unknown || x == CODE_contacts_foreign_link_requested || x == CODE_contacts_foreign_link_mutual);
+  U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
+  if (x == CODE_contacts_foreign_link_mutual) {
+    U->flags |= FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT; 
+  }
+  if (x == CODE_contacts_my_link_requested) {
+    U->flags |= FLAG_USER_OUT_CONTACT;
+    fetch_bool ();
+  }
+  fetch_alloc_user ();
+  if (U->flags & FLAG_HAS_PHOTO) {
+    free_photo (&U->photo);
+  }
+  fetch_photo (&U->photo);
+  fetch_notify_settings ();
+  U->blocked = fetch_int ();
+  if (U->real_first_name) { free (U->real_first_name); }
+  if (U->real_last_name) { free (U->real_last_name); }
+  U->real_first_name = fetch_str_dup ();
+  U->real_last_name = fetch_str_dup ();
+}
+
 void fetch_chat (struct chat *C) {
   unsigned x = fetch_int ();
   assert (x == CODE_chat_empty || x == CODE_chat || x == CODE_chat_forbidden);
@@ -464,6 +502,25 @@ struct user *fetch_alloc_user (void) {
     fetch_user (&U->user);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     Peers[chat_num + (user_num ++)] = U;
+    return &U->user;
+  }
+}
+
+struct user *fetch_alloc_user_full (void) {
+  int data[3];
+  prefetch_data (data, 12);
+  union user_chat *U = user_chat_get (data[2]);
+  if (U) {
+    fetch_user_full (&U->user);
+    return &U->user;
+  } else {
+    users_allocated ++;
+    U = malloc (sizeof (*U));
+    memset (U, 0, sizeof (*U));
+    U->id = data[2];
+    peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
+    fetch_user_full (&U->user);
+    Peers[chat_num + (user_num ++ )] = U;
     return &U->user;
   }
 }

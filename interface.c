@@ -64,6 +64,7 @@ char *commands[] = {
   "send_video",
   "send_text",
   "chat_info",
+  "user_info",
   "show_license",
   0 };
 
@@ -78,6 +79,7 @@ int commands_flags[] = {
   0732,
   0732,
   074,
+  072,
   07,
 };
 
@@ -330,6 +332,17 @@ void interpreter (char *line UU) {
     if (index < user_num + chat_num && Peers[index]->id < 0) {
       do_get_chat_info (Peers[index]);
     }
+  } else if (!memcmp (line, "user_info", 9)) {
+    char *q = line + 10;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+      index ++;
+    }
+    if (index < user_num + chat_num && Peers[index]->id > 0) {
+      do_get_user_info (Peers[index]);
+    }
   } else if (!memcmp (line, "history", 7)) {
     char *q = line + 7;
     int len;
@@ -363,6 +376,7 @@ void interpreter (char *line UU) {
       "send_video <peer> <video-file-name> - sends video to peer\n"
       "send_text <peer> <text-file-name> - sends text file as plain messages\n"
       "chat_info <chat> - prints info about chat\n"
+      "user_info <user> - prints info about user\n"
       );
     pop_color ();
     print_end ();
