@@ -67,6 +67,7 @@ char *commands[] = {
   "chat_info",
   "user_info",
   "fwd",
+  "rename_chat",
   "show_license",
   0 };
 
@@ -83,6 +84,7 @@ int commands_flags[] = {
   074,
   071,
   072,
+  074,
   07,
 };
 
@@ -276,6 +278,18 @@ void interpreter (char *line UU) {
     while (*q && (*q == ' ' || *q == '\t')) { q ++; }
     if (*q && index < user_num + chat_num) {
       do_send_message (Peers[index], q, strlen (q));
+    }
+  } else if (!memcmp (line, "rename_chat", 11)) {
+    char *q = line + 11;
+    int len;
+    char *text = get_token (&q, &len);
+    int index = 0;
+    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id >= 0)) {
+      index ++;
+    }
+    while (*q && (*q == ' ' || *q == '\t')) { q ++; }
+    if (*q && index < user_num + chat_num) {
+      do_rename_chat (Peers[index], q);
     }
   } else if (!memcmp (line, "send_photo", 10)) {
     char *q = line + 10;
