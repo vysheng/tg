@@ -245,7 +245,7 @@ int main (int argc, char **argv) {
   running_for_first_time ();
 
   printf (
-    "Telegram-client version " TG_VERSION ", Copyright (C) year name of author\n"
+    "Telegram-client version " TG_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
     "Telegram-client comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; type `show_license' for details.\n"
