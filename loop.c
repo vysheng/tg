@@ -120,7 +120,7 @@ void write_dc (int auth_file_fd, struct dc *DC) {
 
 int our_id;
 void write_auth_file (void) {
-  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
   assert (auth_file_fd >= 0);
   int x = DC_SERIALIZED_MAGIC;
   assert (write (auth_file_fd, &x, 4) == 4);
@@ -169,7 +169,7 @@ void empty_auth_file (void) {
 }
 
 void read_auth_file (void) {
-  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
   if (auth_file_fd < 0) {
     empty_auth_file ();
   }

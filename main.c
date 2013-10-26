@@ -158,7 +158,7 @@ void running_for_first_time (void) {
   // see if config file is there
   if (stat (config_filename, config_file_stat) != 0) {
     // config file missing, so touch it
-    config_file_fd = open (config_filename, O_CREAT | O_RDWR, S_IRWXU);
+    config_file_fd = open (config_filename, O_CREAT | O_RDWR, 0600);
     if (config_file_fd == -1)  {
       perror ("open[config_file]");
       exit (EXIT_FAILURE);
@@ -172,7 +172,7 @@ void running_for_first_time (void) {
       exit (EXIT_FAILURE);
     }
     close (config_file_fd);
-    int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, S_IRWXU);
+    int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
     int x = -1;
     assert (write (auth_file_fd, &x, 4) == 4);
     close (auth_file_fd);
@@ -194,7 +194,7 @@ void inner_main (void) {
 }
 
 void usage (void) {
-  printf ("%s [-u username]\n", PROGNAME);
+  printf ("%s [-u username] [-h] [-k public key name]\n", PROGNAME);
   exit (1);
 }
 

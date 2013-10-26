@@ -103,7 +103,7 @@ int Response_len;
  *
  */
 
-char *rsa_public_key_name = "id_rsa.pub";
+char *rsa_public_key_name = "tg.pub";
 RSA *pubKey;
 long long pk_fingerprint;
 
@@ -964,9 +964,11 @@ void work_container (struct connection *c, long long msg_id UU) {
       insert_seqno (c->session, seqno);
     }
     int bytes = fetch_int ();
-    int *t = in_ptr;
+    int *t = in_end;
+    in_end = in_ptr + (bytes / 4);
     rpc_execute_answer (c, id);
-    assert (in_ptr == t + (bytes / 4));
+    assert (in_ptr == in_end);
+    in_end = t;
   }
 }
 
@@ -1122,6 +1124,7 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   }
   logprintf ( "Unknown message: \n");
   hexdump_in ();
+  in_ptr = in_end; // Will not fail due to assertion in_ptr == in_end
 }
 
 int process_rpc_message (struct connection *c UU, struct encrypted_message *enc, int len) {
@@ -1166,9 +1169,6 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
 
   assert (l >= (MINSZ - UNENCSZ) + 8);
   //assert (enc->message[0] == CODE_rpc_result && *(long long *)(enc->message + 1) == client_last_msg_id);
-  if (verbosity >= 2) {
-    logprintf ( "OK, message is good!\n");
-  }
   ++good_messages;
   
   in_ptr = enc->message;

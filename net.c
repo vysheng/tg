@@ -195,12 +195,11 @@ int max_connection_fd;
 struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods) {
   struct connection *c = malloc (sizeof (*c));
   memset (c, 0, sizeof (*c));
-  struct hostent *h;
-  if (!(h = gethostbyname (host)) || h->h_addrtype != AF_INET || h->h_length != 4 || !h->h_addr_list || !h->h_addr) {
-    assert (0);
+  int fd = socket (AF_INET, SOCK_STREAM, 0);
+  if (fd == -1) {
+    logprintf ("Can not create socket: %m\n");
+    exit (1);
   }
-  int fd;
-  assert ((fd = socket (AF_INET, SOCK_STREAM, 0)) != -1);
   assert (fd >= 0 && fd < MAX_CONNECTIONS);
   if (fd > max_connection_fd) {
     max_connection_fd = fd;
@@ -231,8 +230,13 @@ struct connection *create_connection (const char *host, int port, struct session
   s.fd = fd;
   s.events = POLLOUT | POLLERR | POLLRDHUP | POLLHUP;
   
-  if (poll (&s, 1, 10000) <= 0 || !(s.revents & POLLOUT)) {
-    perror ("poll");
+  while (poll (&s, 1, 10000) <= 0 || !(s.revents & POLLOUT)) {
+    if (errno == EINTR) { continue; }
+    if (errno) {
+      logprintf ("Problems in poll: %m\n");
+      exit (1);
+    }
+    logprintf ("Connect timeout\n");
     close (fd);
     free (c);
     return 0;
@@ -260,12 +264,16 @@ struct connection *create_connection (const char *host, int port, struct session
 
 void restart_connection (struct connection *c) {
   if (c->last_connect_time == time (0)) {
+    start_fail_timer (c);
     return;
   }
   
   c->last_connect_time = time (0);
-  int fd;
-  assert ((fd = socket (AF_INET, SOCK_STREAM, 0)) != -1);
+  int fd = socket (AF_INET, SOCK_STREAM, 0);
+  if (fd == -1) {
+    logprintf ("Can not create socket: %m\n");
+    exit (1);
+  }
   assert (fd >= 0 && fd < MAX_CONNECTIONS);
   if (fd > max_connection_fd) {
     max_connection_fd = fd;
@@ -563,6 +571,10 @@ void dc_create_session (struct dc *DC) {
   assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
   S->dc = DC;
   S->c = create_connection (DC->ip, DC->port, S, &auth_methods);
+  if (!S->c) {
+    logprintf ("Can not create connection to DC. Is network down?\n");
+    exit (1);
+  }
   assert (!DC->sessions[0]);
   DC->sessions[0] = S;
 }
