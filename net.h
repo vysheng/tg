@@ -32,7 +32,7 @@ struct dc;
 #define ACK_TIMEOUT 60
 #define MAX_DC_ID 10
 
-enum dc_state{
+enum dc_state {
   st_init,
   st_reqpq_sent,
   st_reqdh_sent,
@@ -104,7 +104,7 @@ enum conn_state {
 
 struct connection {
   int fd;
-  int ip;
+  char *ip;
   int port;
   int flags;
   enum conn_state state;
@@ -117,9 +117,12 @@ struct connection {
   int out_bytes;
   int packet_num;
   int out_packet_num;
+  int last_connect_time;
   struct connection_methods *methods;
   struct session *session;
   void *extra;
+  struct event_timer ev;
+  double last_receive_time;
 };
 
 extern struct connection *Connections[];

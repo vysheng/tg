@@ -76,6 +76,8 @@
 
 #define CODE_input_peer_notify_settings_old 0x3cf4b1be
 #define CODE_peer_notify_settings_old 0xddbcd4a5
+
+#define CODE_msg_detained_info 0x276d3ec6
 /* not really a limit, for struct encrypted_message only */
 // #define MAX_MESSAGE_INTS	16384
 #define MAX_MESSAGE_INTS	1048576

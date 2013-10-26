@@ -1062,8 +1062,23 @@ void work_bad_server_salt (struct connection *c UU, long long msg_id UU) {
   GET_DC(c)->server_salt = new_server_salt;
 }
 
+void work_pong (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == CODE_pong);
+  fetch_long (); // msg_id
+  fetch_long (); // ping_id
+}
+
+void work_detained_info (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == CODE_msg_detained_info);
+  fetch_long (); // msg_id
+  fetch_long (); // answer_msg_id
+  fetch_int (); // bytes
+  fetch_int (); // status
+}
+
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   if (verbosity >= 5) {
+    logprintf ("rpc_execute_answer: fd=%d\n", c->fd);
     hexdump_in ();
   }
   int op = prefetch_int ();
@@ -1097,6 +1112,12 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     return;
   case CODE_bad_server_salt:
     work_bad_server_salt (c, msg_id);
+    return;
+  case CODE_pong:
+    work_pong (c, msg_id);
+    return;
+  case CODE_msg_detained_info:
+    work_detained_info (c, msg_id);
     return;
   }
   logprintf ( "Unknown message: \n");
@@ -1158,6 +1179,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   }
   assert (c->session->session_id == enc->session_id);
   rpc_execute_answer (c, enc->msg_id);
+  assert (in_ptr == in_end);
   return 0;
 }
 

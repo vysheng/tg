@@ -1000,8 +1000,15 @@ int user_info_on_answer (struct query *q UU) {
   printf ("User ");
   print_user_name (U->id, C);
   printf (":\n");
-  printf ("\t real name: %s %s\n", U->real_first_name, U->real_last_name);
-  printf ("\t phone: %s\n", U->phone);
+  printf ("\treal name: %s %s\n", U->real_first_name, U->real_last_name);
+  printf ("\tphone: %s\n", U->phone);
+  if (U->status.online > 0) {
+    printf ("\tonline\n");
+  } else {
+    printf ("\toffline (was online ");
+    print_date_full (U->status.when);
+    printf (")\n");
+  }
   pop_color ();
   print_end ();
   return 0;
