@@ -762,6 +762,9 @@ void print_service_message (struct message *M) {
   push_color (COLOR_GREY);
   
   push_color (COLOR_MAGENTA);
+  if (msg_num_mode) {
+    printf ("%d ", M->id);
+  }
   print_date (M->date);
   pop_color ();
   printf (" ");

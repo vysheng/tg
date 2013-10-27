@@ -270,13 +270,11 @@ int loop (void) {
   if (verbosity) {
     logprintf ("DC_info: %d new DC got\n", new_dc_num);
   }
-  if (new_dc_num) {
-    int i;
-    for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->auth_key_id) {
-      dc_authorize (DC_list[i]);
-      assert (DC_list[i]->auth_key_id);
-      write_auth_file ();
-    }
+  int i;
+  for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->auth_key_id) {
+    dc_authorize (DC_list[i]);
+    assert (DC_list[i]->auth_key_id);
+    write_auth_file ();
   }
 
   if (auth_state == 100) {
@@ -362,7 +360,6 @@ int loop (void) {
     }
   }
 
-  int i;
   for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->has_auth) {
     do_export_auth (i);
     do_import_auth (i);
