@@ -73,9 +73,11 @@ struct dc {
 
   int server_time_delta;
   double server_time_udelta;
+  int has_auth;
 };
 
 #define DC_SERIALIZED_MAGIC 0x64582faa
+#define DC_SERIALIZED_MAGIC_V2 0x94032abb
 struct dc_serialized {
   int magic;
   int port;

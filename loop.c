@@ -87,6 +87,30 @@ void net_loop (int flags, int (*is_end)(void)) {
   }
 }
 
+char **_s;
+size_t *_l;
+int got_it_ok;
+
+void got_it (char *line) {
+  *_s = strdup (line);
+  *_l = strlen (line);
+  got_it_ok = 1;
+}
+
+int is_got_it (void) {
+  return got_it_ok;
+}
+
+int net_getline (char **s, size_t *l) {
+  got_it_ok = 0;
+  _s = s;
+  _l = l;
+  rl_callback_handler_install (0, got_it);
+  net_loop (1, is_got_it);
+  printf ("'%s'\n", *s);
+  return 0;
+}
+
 int ret1 (void) { return 0; }
 
 int main_loop (void) {
@@ -116,13 +140,14 @@ void write_dc (int auth_file_fd, struct dc *DC) {
   }
  
   assert (write (auth_file_fd, &DC->server_salt, 8) == 8);
+  assert (write (auth_file_fd, &DC->has_auth, 4) == 4);
 }
 
 int our_id;
 void write_auth_file (void) {
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
   assert (auth_file_fd >= 0);
-  int x = DC_SERIALIZED_MAGIC;
+  int x = DC_SERIALIZED_MAGIC_V2;
   assert (write (auth_file_fd, &x, 4) == 4);
   x = MAX_DC_ID;
   assert (write (auth_file_fd, &x, 4) == 4);
@@ -143,7 +168,7 @@ void write_auth_file (void) {
   close (auth_file_fd);
 }
 
-void read_dc (int auth_file_fd, int id) {
+void read_dc (int auth_file_fd, int id, unsigned ver) {
   int port = 0;
   assert (read (auth_file_fd, &port, 4) == 4);
   int l = 0;
@@ -159,37 +184,48 @@ void read_dc (int auth_file_fd, int id) {
   if (DC->auth_key_id) {
     DC->flags |= 1;
   }
+  if (ver != DC_SERIALIZED_MAGIC) {
+    assert (read (auth_file_fd, &DC->has_auth, 4) == 4);
+  } else {
+    DC->has_auth = 0;
+  }
 }
 
 void empty_auth_file (void) {
   struct dc *DC = alloc_dc (1, strdup (TG_SERVER), 443);
   assert (DC);
   dc_working_num = 1;
+  auth_state = 0;
   write_auth_file ();
 }
 
+int need_dc_list_update;
 void read_auth_file (void) {
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
   if (auth_file_fd < 0) {
     empty_auth_file ();
   }
   assert (auth_file_fd >= 0);
-  int x;
-  if (read (auth_file_fd, &x, 4) < 4 || x != DC_SERIALIZED_MAGIC) {
+  unsigned x;
+  unsigned m;
+  if (read (auth_file_fd, &m, 4) < 4 || (m != DC_SERIALIZED_MAGIC && m != DC_SERIALIZED_MAGIC_V2)) {
     close (auth_file_fd);
     empty_auth_file ();
     return;
   }
   assert (read (auth_file_fd, &x, 4) == 4);
-  assert (x >= 0 && x <= MAX_DC_ID);
+  assert (x <= MAX_DC_ID);
   assert (read (auth_file_fd, &dc_working_num, 4) == 4);
   assert (read (auth_file_fd, &auth_state, 4) == 4);
+  if (m == DC_SERIALIZED_MAGIC) {
+    auth_state = 700;
+  }
   int i;
-  for (i = 0; i <= x; i++) {
+  for (i = 0; i <= (int)x; i++) {
     int y;
     assert (read (auth_file_fd, &y, 4) == 4);
     if (y) {
-      read_dc (auth_file_fd, i);
+      read_dc (auth_file_fd, i, m);
     }
   }
   int l = read (auth_file_fd, &our_id, 4);
@@ -197,59 +233,148 @@ void read_auth_file (void) {
     assert (!l);
   }
   close (auth_file_fd);
+  DC_working = DC_list[dc_working_num];
+  if (m == DC_SERIALIZED_MAGIC) {
+    DC_working->has_auth = 1;
+  }
+}
+
+extern int max_chat_size;
+int mcs (void) {
+  return max_chat_size;
 }
 
 int readline_active;
+int new_dc_num;
 int loop (void) {
   on_start ();
   read_auth_file ();
+  readline_active = 1;
+  rl_set_prompt ("");
+
   assert (DC_list[dc_working_num]);
-  DC_working = DC_list[dc_working_num];
-  if (!DC_working->auth_key_id) {
+  if (auth_state == 0) {
+    DC_working = DC_list[dc_working_num];
+    assert (!DC_working->auth_key_id);
     dc_authorize (DC_working);
-  } else {
-    dc_create_session (DC_working);
+    assert (DC_working->auth_key_id);
+    auth_state = 100;
+    write_auth_file ();
   }
-  if (!auth_state) {
+  
+  if (verbosity) {
+    logprintf ("Requesting info about DC...\n");
+  }
+  do_help_get_config ();
+  net_loop (0, mcs);
+  if (verbosity) {
+    logprintf ("DC_info: %d new DC got\n", new_dc_num);
+  }
+  if (new_dc_num) {
+    int i;
+    for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->auth_key_id) {
+      dc_authorize (DC_list[i]);
+      assert (DC_list[i]->auth_key_id);
+      write_auth_file ();
+    }
+  }
+
+  if (auth_state == 100) {
     if (!default_username) {
       size_t size = 0;
       char *user = 0;
 
-      if (!user && !auth_token) {
+      if (!user) {
         printf ("Telephone number (with '+' sign): ");         
-        if (getline (&user, &size, stdin) == -1) {
+        if (net_getline (&user, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
         }
-        user[strlen (user) - 1] = 0;      
         set_default_username (user);
       }
     }
-    do_send_code (default_username);
-    char *code = 0;
-    size_t size = 0;
-    printf ("Code from sms: ");
-    while (1) {
-      if (getline (&code, &size, stdin) == -1) {
+    int res = do_auth_check_phone (default_username);
+    assert (res >= 0);
+    logprintf ("%s\n", res > 0 ? "phone registered" : "phone not registered");
+    if (res > 0) {
+      do_send_code (default_username);
+      char *code = 0;
+      size_t size = 0;
+      printf ("Code from sms: ");
+      while (1) {
+        if (net_getline (&code, &size) == -1) {
+          perror ("getline()");
+          exit (EXIT_FAILURE);
+        }
+        if (do_send_code_result (code) >= 0) {
+          break;
+        }
+        printf ("Invalid code. Try again: ");
+        free (code);
+      }
+      auth_state = 300;
+    } else {
+      printf ("User is not registered. Do you want to register? [Y/n] ");
+      char *code;
+      size_t size;
+      if (net_getline (&code, &size) == -1) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
-      code[strlen (code) - 1] = 0;      
-      if (do_send_code_result (code) >= 0) {
-        break;
+      if (!*code || *code == 'y') {
+        printf ("Ok, starting registartion.\n");
+      } else {
+        printf ("Then try again\n");
+        exit (EXIT_SUCCESS);
       }
-      printf ("Invalid code. Try again: ");
+      char *first_name;
+      printf ("Name: ");
+      if (net_getline (&first_name, &size) == -1) {
+        perror ("getline()");
+        exit (EXIT_FAILURE);
+      }
+      char *last_name;
+      printf ("Name: ");
+      if (net_getline (&last_name, &size) == -1) {
+        perror ("getline()");
+        exit (EXIT_FAILURE);
+      }
+
+      int dc_num = do_get_nearest_dc ();
+      assert (dc_num >= 0 && dc_num <= MAX_DC_NUM && DC_list[dc_num]);
+      dc_working_num = dc_num;
+      DC_working = DC_list[dc_working_num];
+      
+      do_send_code (default_username);
+      printf ("Code from sms: ");
+      while (1) {
+        if (net_getline (&code, &size) == -1) {
+          perror ("getline()");
+          exit (EXIT_FAILURE);
+        }
+        if (do_send_code_result_auth (code, first_name, last_name) >= 0) {
+          break;
+        }
+        printf ("Invalid code. Try again: ");
+        free (code);
+      }
+      auth_state = 300;
     }
-    auth_state = 1;
   }
 
+  int i;
+  for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->has_auth) {
+    do_export_auth (i);
+    do_import_auth (i);
+    DC_list[i]->has_auth = 1;
+    write_auth_file ();
+  }
   write_auth_file ();
 
   fflush (stdin);
   fflush (stdout);
   fflush (stderr);
 
-  readline_active = 1;
   rl_callback_handler_install (get_default_prompt (), interpreter);
   rl_attempted_completion_function = (CPPFunction *) complete_text;
   rl_completion_entry_function = complete_none;

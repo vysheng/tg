@@ -206,6 +206,7 @@ void query_result (long long id UU) {
     if (verbosity) {
       logprintf ( "No such query\n");
     }
+    in_ptr = in_end;
   } else {
     if (!(q->flags & QUERY_ACK_RECEIVED)) {
       remove_event_timer (&q->ev);
@@ -213,6 +214,7 @@ void query_result (long long id UU) {
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_answer) {
       q->methods->on_answer (q);
+      assert (in_ptr == in_end);
     }
     free (q->data);
     free (q);
@@ -263,6 +265,7 @@ void work_timers (void) {
 
 int max_chat_size;
 int want_dc_num;
+int new_dc_num;
 extern struct dc *DC_list[];
 extern struct dc *DC_working;
 
@@ -294,6 +297,7 @@ int help_get_config_on_answer (struct query *q UU) {
     }
     if (!DC_list[id]) {
       alloc_dc (id, strndup (ip, l2), port);
+      new_dc_num ++;
     }
   }
   max_chat_size = fetch_int ();
@@ -307,10 +311,16 @@ struct query_methods help_get_config_methods  = {
   .on_answer = help_get_config_on_answer
 };
 
+void do_help_get_config (void) {
+  clear_packet ();  
+  out_int (CODE_help_get_config);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0);
+}
+
 char *phone_code_hash;
 int send_code_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_auth_sent_code);
-  assert (fetch_int () == (int)CODE_bool_true);
+  assert (fetch_bool ());
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
   if (phone_code_hash) {
@@ -350,6 +360,7 @@ char *suser;
 extern int dc_working_num;
 void do_send_code (const char *user) {
   suser = strdup (user);
+  fprintf (stderr, "user='%s'\n", user);
   want_dc_num = 0;
   clear_packet ();
   out_int (CODE_auth_send_code);
@@ -363,29 +374,11 @@ void do_send_code (const char *user) {
   net_loop (0, code_is_sent);
   if (want_dc_num == -1) { return; }
 
-  if (DC_list[want_dc_num]) {
-    DC_working = DC_list[want_dc_num];
-    if (!DC_working->auth_key_id) {
-      dc_authorize (DC_working);
-    }
-    if (!DC_working->sessions[0]) {
-      dc_create_session (DC_working);
-    }
-    dc_working_num = want_dc_num;
-  } else {
-    clear_packet ();
-    out_int (CODE_help_get_config);
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0);
-    net_loop (0, config_got);
-    DC_working = DC_list[want_dc_num];
-    if (!DC_working->auth_key_id) {
-      dc_authorize (DC_working);
-    }
-    if (!DC_working->sessions[0]) {
-      dc_create_session (DC_working);
-    }
-    dc_working_num = want_dc_num;
+  DC_working = DC_list[want_dc_num];
+  if (!DC_working->sessions[0]) {
+    dc_create_session (DC_working);
   }
+  dc_working_num = want_dc_num;
   want_dc_num = 0;
   clear_packet ();
   out_int (CODE_auth_send_code);
@@ -398,6 +391,97 @@ void do_send_code (const char *user) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
   net_loop (0, code_is_sent);
   assert (want_dc_num == -1);
+}
+
+
+int check_phone_result;
+int cr_f (void) {
+  return check_phone_result >= 0;
+}
+
+int check_phone_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_auth_checked_phone);
+  check_phone_result = fetch_bool ();
+  fetch_bool ();
+  return 0;
+}
+
+int check_phone_on_error (struct query *q UU, int error_code, int l, char *error) {
+  int s = strlen ("PHONE_MIGRATE_");
+  int s2 = strlen ("NETWORK_MIGRATE_");
+  if (l >= s && !memcmp (error, "PHONE_MIGRATE_", s)) {
+    int i = error[s] - '0';
+    assert (DC_list[i]);
+    dc_working_num = i;
+    DC_working = DC_list[i];
+    write_auth_file ();
+    check_phone_result = 1;
+  } else if (l >= s2 && !memcmp (error, "NETWORK_MIGRATE_", s)) {
+    int i = error[s2] - '0';
+    assert (DC_list[i]);
+    dc_working_num = i;
+    DC_working = DC_list[i];
+    write_auth_file ();
+    check_phone_result = 1;
+  } else {
+    logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
+    assert (0);
+  }
+  return 0;
+}
+
+struct query_methods check_phone_methods = {
+  .on_answer = check_phone_on_answer,
+  .on_error = check_phone_on_error
+};
+
+int do_auth_check_phone (const char *user) {
+  suser = strdup (user);
+  clear_packet ();
+  out_int (CODE_auth_check_phone);
+  out_string (user);
+  printf ("'%s'\n", user);
+  check_phone_result = -1;
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
+  net_loop (0, cr_f);
+  return check_phone_result;
+}
+
+int nearest_dc_num;
+int nr_f (void) {
+  return nearest_dc_num >= 0;
+}
+
+int nearest_dc_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_nearest_dc);
+  char *country = fetch_str_dup ();
+  if (verbosity > 0) {
+    logprintf ("Server thinks that you are in %s\n", country);
+  }
+  fetch_int (); // this_dc
+  nearest_dc_num = fetch_int ();
+  assert (nearest_dc_num >= 0);
+  return 0;
+}
+
+int fail_on_error (struct query *q UU, int error_code UU, int l UU, char *error UU) {
+  fprintf (stderr, "error #%d: %.*s\n", error_code, l, error);
+  assert (0);
+  return 0;
+}
+
+struct query_methods nearest_dc_methods = {
+  .on_answer = nearest_dc_on_answer,
+  .on_error = fail_on_error
+};
+
+int do_get_nearest_dc (void) {
+  clear_packet ();
+  out_int (CODE_help_get_nearest_dc);
+  nearest_dc_num = -1;
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &nearest_dc_methods, 0);
+  net_loop (0, nr_f);
+  return nearest_dc_num;
 }
 
 int sign_in_ok;
@@ -415,12 +499,14 @@ int sign_in_on_answer (struct query *q UU) {
   if (verbosity) {
     logprintf ( "authorized successfully: name = '%s %s', phone = '%s', expires = %d\n", User.first_name, User.last_name, User.phone, (int)(expires - get_double_time ()));
   }
+  DC_working->has_auth = 1;
   return 0;
 }
 
 int sign_in_on_error (struct query *q UU, int error_code, int l, char *error) {
   logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
   sign_in_ok = -1;
+  assert (0);
   return 0;
 }
 
@@ -435,6 +521,20 @@ int do_send_code_result (const char *code) {
   out_string (suser);
   out_string (phone_code_hash);
   out_string (code);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0);
+  sign_in_ok = 0;
+  net_loop (0, sign_in_is_ok);
+  return sign_in_ok;
+}
+
+int do_send_code_result_auth (const char *code, const char *first_name, const char *last_name) {
+  clear_packet ();
+  out_int (CODE_auth_sign_up);
+  out_string (suser);
+  out_string (phone_code_hash);
+  out_string (code);
+  out_string (first_name);
+  out_string (last_name);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0);
   sign_in_ok = 0;
   net_loop (0, sign_in_is_ok);
@@ -1218,4 +1318,66 @@ void do_load_video (struct video *V, int next) {
   D->name = 0;
   D->fd = -1;
   load_next_part (D);
+}
+
+char *export_auth_str;
+int export_auth_str_len;
+int is_export_auth_str (void) {
+  return export_auth_str != 0;
+}
+int isn_export_auth_str (void) {
+  return export_auth_str == 0;
+}
+
+int export_auth_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_auth_exported_authorization);
+  int l = fetch_int ();
+  if (!our_id) {
+    our_id = l;
+  } else {
+    assert (our_id == l);
+  }
+  l = prefetch_strlen ();
+  char *s = malloc (l);
+  memcpy (s, fetch_str (l), l);
+  export_auth_str_len = l;
+  export_auth_str = s;
+  return 0;
+}
+
+struct query_methods export_auth_methods = {
+  .on_answer = export_auth_on_answer,
+  .on_error = fail_on_error
+};
+
+void do_export_auth (int num) {
+  export_auth_str = 0;
+  clear_packet ();
+  out_int (CODE_auth_export_authorization);
+  out_int (num);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &export_auth_methods, 0);
+  net_loop (0, is_export_auth_str);
+}
+
+int import_auth_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_auth_authorization);
+  fetch_int (); // expires
+  fetch_alloc_user ();
+  free (export_auth_str);
+  export_auth_str = 0;
+  return 0;
+}
+
+struct query_methods import_auth_methods = {
+  .on_answer = import_auth_on_answer,
+  .on_error = fail_on_error
+};
+
+void do_import_auth (int num) {
+  clear_packet ();
+  out_int (CODE_auth_import_authorization);
+  out_int (our_id);
+  out_cstring (export_auth_str, export_auth_str_len);
+  send_query (DC_list[num], packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0);
+  net_loop (0, isn_export_auth_str);
 }
