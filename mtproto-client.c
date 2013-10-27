@@ -764,8 +764,6 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         fetch_str (l);
         l = prefetch_strlen ();
         fetch_str (l);
-        l = prefetch_strlen ();
-        fetch_str (l);
       }
     }
     break;
