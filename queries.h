@@ -79,4 +79,10 @@ void do_get_user_info (union user_chat *user);
 void do_forward_message (union user_chat *U, int n);
 void do_rename_chat (union user_chat *U, char *name);
 
+struct photo;
+struct video;
+void do_load_photo (struct photo *photo, int next);
+void do_load_video_thumb (struct video *video, int next);
+void do_load_video (struct video *V, int next);
+
 #endif

@@ -68,6 +68,12 @@ char *commands[] = {
   "user_info",
   "fwd",
   "rename_chat",
+  "load_photo",
+  "view_photo",
+  "load_video_thumb",
+  "view_video_thumb",
+  "load_video",
+  "view_video",
   "show_license",
   0 };
 
@@ -85,6 +91,12 @@ int commands_flags[] = {
   071,
   072,
   074,
+  07,
+  07,
+  07,
+  07,
+  07,
+  07,
   07,
 };
 
@@ -353,6 +365,84 @@ void interpreter (char *line UU) {
         int num = atoi (f);
         if (num > 0) {
           do_forward_message (Peers[index], num);
+        }
+      }
+    }
+  } else if (!memcmp (line, "load_photo ", 10)) {
+    char *q = line + 10;
+    int len = 0;
+    char *f = get_token (&q, &len);
+    if (f) {
+      int num = atoi (f);
+      if (num > 0) {
+        struct message *M = message_get (num);
+        if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
+          do_load_photo (&M->media.photo, 1);
+        }
+      }
+    }
+  } else if (!memcmp (line, "view_photo ", 10)) {
+    char *q = line + 10;
+    int len = 0;
+    char *f = get_token (&q, &len);
+    if (f) {
+      int num = atoi (f);
+      if (num > 0) {
+        struct message *M = message_get (num);
+        if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
+          do_load_photo (&M->media.photo, 2);
+        }
+      }
+    }
+  } else if (!memcmp (line, "load_video_thumb ", 16)) {
+    char *q = line + 16;
+    int len = 0;
+    char *f = get_token (&q, &len);
+    if (f) {
+      int num = atoi (f);
+      if (num > 0) {
+        struct message *M = message_get (num);
+        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+          do_load_video_thumb (&M->media.video, 1);
+        }
+      }
+    }
+  } else if (!memcmp (line, "view_video_thumb ", 16)) {
+    char *q = line + 16;
+    int len = 0;
+    char *f = get_token (&q, &len);
+    if (f) {
+      int num = atoi (f);
+      if (num > 0) {
+        struct message *M = message_get (num);
+        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+          do_load_video_thumb (&M->media.video, 2);
+        }
+      }
+    }
+  } else if (!memcmp (line, "load_video ", 10)) {
+    char *q = line + 10;
+    int len = 0;
+    char *f = get_token (&q, &len);
+    if (f) {
+      int num = atoi (f);
+      if (num > 0) {
+        struct message *M = message_get (num);
+        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+          do_load_video (&M->media.video, 1);
+        }
+      }
+    }
+  } else if (!memcmp (line, "view_video ", 10)) {
+    char *q = line + 10;
+    int len = 0;
+    char *f = get_token (&q, &len);
+    if (f) {
+      int num = atoi (f);
+      if (num > 0) {
+        struct message *M = message_get (num);
+        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+          do_load_video (&M->media.video, 2);
         }
       }
     }

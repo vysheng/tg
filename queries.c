@@ -36,6 +36,7 @@
 #include "structures.h"
 #include "interface.h"
 
+char *get_downloads_directory (void);
 int verbosity;
 
 #define QUERY_TIMEOUT 0.3
@@ -1058,4 +1059,163 @@ void do_get_user_list_info_silent (int num, int *list) {
     //out_long (0);
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
+}
+
+struct download {
+  int offset;
+  int size;
+  long long volume;
+  long long secret;
+  long long access_hash;
+  int local_id;
+  int dc;
+  int next;
+  int fd;
+  char *name;
+  long long id;
+};
+
+
+void end_load (struct download *D) {
+  close (D->fd);
+  if (D->next == 1) {
+    logprintf ("Done: %s\n", D->name);
+  } else if (D->next == 2) {
+    static char buf[1000];
+    sprintf (buf, "xdg-open %s", D->name);
+    int x = system (buf);
+    if (x < 0) {
+      logprintf ("Can not open image viewer: %m\n");
+      logprintf ("Image is at %s\n", D->name);
+    }
+  }
+  free (D->name);
+  free (D);
+}
+
+void load_next_part (struct download *D);
+int download_on_answer (struct query *q) {
+  assert (fetch_int () == (int)CODE_upload_file);
+  unsigned x = fetch_int ();
+  struct download *D = q->extra;
+  if (D->fd == -1) {
+    static char buf[100];
+    sprintf (buf, "%s/tmp_%ld_%ld", get_downloads_directory (), lrand48 (), lrand48 ());
+    int l = strlen (buf);
+    switch (x) {
+    case CODE_storage_file_unknown:
+      break;
+    case CODE_storage_file_jpeg:
+      sprintf (buf + l, "%s", ".jpg");
+      break;
+    case CODE_storage_file_gif:
+      sprintf (buf + l, "%s", ".gif");
+      break;
+    case CODE_storage_file_png:
+      sprintf (buf + l, "%s", ".png");
+      break;
+    case CODE_storage_file_mp3:
+      sprintf (buf + l, "%s", ".mp3");
+      break;
+    case CODE_storage_file_mov:
+      sprintf (buf + l, "%s", ".mov");
+      break;
+    case CODE_storage_file_partial:
+      sprintf (buf + l, "%s", ".part");
+      break;
+    case CODE_storage_file_mp4:
+      sprintf (buf + l, "%s", ".mp4");
+      break;
+    case CODE_storage_file_webp:
+      sprintf (buf + l, "%s", ".webp");
+      break;
+    }
+    D->name = strdup (buf);
+    D->fd = open (D->name, O_CREAT | O_WRONLY, 0640);
+  }
+  fetch_int (); // mtime
+  int len = prefetch_strlen ();
+  assert (len >= 0);
+  assert (write (D->fd, fetch_str (len), len) == len);
+  D->offset += len;
+  if (D->offset < D->size) {
+    load_next_part (D);
+    return 0;
+  } else {
+    end_load (D);
+    return 0;
+  }
+}
+
+struct query_methods download_methods = {
+  .on_answer = download_on_answer
+};
+
+void load_next_part (struct download *D) {
+  clear_packet ();
+  out_int (CODE_upload_get_file);
+  if (!D->id) {
+    out_int (CODE_input_file_location);
+    out_long (D->volume);
+    out_int (D->local_id);
+    out_long (D->secret);
+  } else {
+    out_int (CODE_input_video_file_location);
+    out_long (D->id);
+    out_long (D->access_hash);
+  }
+  out_int (D->offset);
+  out_int (1 << 14);
+  send_query (DC_list[D->dc], packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
+  //send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
+}
+
+void do_load_photo_size (struct photo_size *P, int next) {
+  assert (P);
+  assert (next);
+  struct download *D = malloc (sizeof (*D));
+  D->id = 0;
+  D->offset = 0;
+  D->size = P->size;
+  D->volume = P->loc.volume;
+  D->dc = P->loc.dc;
+  D->local_id = P->loc.local_id;
+  D->secret = P->loc.secret;
+  D->next = next;
+  D->name = 0;
+  D->fd = -1;
+  load_next_part (D);
+}
+
+void do_load_photo (struct photo *photo, int next) {
+  if (!photo->sizes_num) { return; }
+  int max = -1;
+  int maxi = 0;
+  int i;
+  for (i = 0; i < photo->sizes_num; i++) {
+    if (photo->sizes[i].w + photo->sizes[i].h > max) {
+      max = photo->sizes[i].w + photo->sizes[i].h;
+      maxi = i;
+    }
+  }
+  do_load_photo_size (&photo->sizes[maxi], next);
+}
+
+void do_load_video_thumb (struct video *video, int next) {
+  do_load_photo_size (&video->thumb, next);
+}
+
+void do_load_video (struct video *V, int next) {
+  assert (V);
+  assert (next);
+  struct download *D = malloc (sizeof (*D));
+  D->offset = 0;
+  D->size = V->size;
+  D->id = V->id;
+  D->access_hash = V->access_hash;
+  D->dc = V->dc_id;
+  D->next = next;
+  D->name = 0;
+  D->fd = -1;
+  load_next_part (D);
 }
