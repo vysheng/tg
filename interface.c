@@ -488,7 +488,7 @@ void interpreter (char *line UU) {
       do_get_history (Peers[index], limit);
     }
   } else if (!memcmp (line, "help", 4)) {
-    print_start ();
+    //print_start ();
     push_color (COLOR_YELLOW);
     printf (
       "help - prints this help\n"
@@ -502,17 +502,21 @@ void interpreter (char *line UU) {
       "send_text <peer> <text-file-name> - sends text file as plain messages\n"
       "chat_info <chat> - prints info about chat\n"
       "user_info <user> - prints info about user\n"
+      "fwd <user> <msg-seqno> - forward message to user. You can see message numbers starting client with -N\n"
+      "rename_chat <char> <new-name>\n"
+      "load_photo/load_video/load_video_thumb <msg-seqno> - loads photo/video to download dir\n"
+      "view_photo/view_video/view_video_thumb <msg-seqno> - loads photo/video to download dir and starts system default viewer\n"
+      "show_license - prints contents of GPLv2\n"
       );
     pop_color ();
-    print_end ();
+    rl_on_new_line ();
+    //print_end ();
     printf ("\033[1K\033H");
   } else if (!memcmp (line, "show_license", 12)) {
     char *b = 
 #include "LICENSE.h"
     ;
-    print_start ();
     printf ("%s", b);
-    print_end ();
   }
 }
 
