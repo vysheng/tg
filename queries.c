@@ -39,6 +39,11 @@
 char *get_downloads_directory (void);
 int verbosity;
 
+long long cur_uploading_bytes;
+long long cur_uploaded_bytes;
+long long cur_downloading_bytes;
+long long cur_downloaded_bytes;
+
 #define QUERY_TIMEOUT 0.3
 
 #define memcmp8(a,b) memcmp ((a), (b), 8)
@@ -914,6 +919,9 @@ struct query_methods send_file_methods = {
 
 void send_part (struct send_file *f) {
   if (f->fd >= 0) {
+    if (!f->part_num) {
+      cur_uploading_bytes += f->size;
+    }
     clear_packet ();
     out_int (CODE_upload_save_file_part);
     out_long (f->id);
@@ -923,6 +931,7 @@ void send_part (struct send_file *f) {
     assert (x > 0);
     out_cstring (buf, x);
     f->offset += x;
+    cur_uploaded_bytes += x;
     if (verbosity >= 2) {
       logprintf ("offset=%lld size=%lld\n", f->offset, f->size);
     }
@@ -932,6 +941,8 @@ void send_part (struct send_file *f) {
     }
     send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
   } else {
+    cur_uploaded_bytes -= f->size;
+    cur_uploading_bytes -= f->size;
     clear_packet ();
     out_int (CODE_messages_send_media);
     out_peer_id (f->to_id);
@@ -1175,6 +1186,9 @@ struct download {
 
 
 void end_load (struct download *D) {
+  cur_downloading_bytes -= D->size;
+  cur_downloaded_bytes -= D->size;
+  update_prompt ();
   close (D->fd);
   if (D->next == 1) {
     logprintf ("Done: %s\n", D->name);
@@ -1234,6 +1248,8 @@ int download_on_answer (struct query *q) {
   fetch_int (); // mtime
   int len = prefetch_strlen ();
   assert (len >= 0);
+  cur_downloaded_bytes += len;
+  update_prompt ();
   assert (write (D->fd, fetch_str (len), len) == len);
   D->offset += len;
   if (D->offset < D->size) {
@@ -1250,6 +1266,10 @@ struct query_methods download_methods = {
 };
 
 void load_next_part (struct download *D) {
+  if (!D->offset) {
+    cur_downloading_bytes += D->size;
+    update_prompt ();
+  }
   clear_packet ();
   out_int (CODE_upload_get_file);
   if (!D->id) {

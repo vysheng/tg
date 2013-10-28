@@ -50,4 +50,6 @@ void push_color (const char *color);
 void print_start (void);
 void print_end (void);
 void print_date_full (long t);
+
+void update_prompt (void);
 #endif

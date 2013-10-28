@@ -40,10 +40,32 @@ char *default_prompt = "> ";
 int unread_messages;
 int msg_num_mode;
 
+long long cur_uploading_bytes;
+long long cur_uploaded_bytes;
+long long cur_downloading_bytes;
+long long cur_downloaded_bytes;
+
+
 char *get_default_prompt (void) {
   static char buf[100];
-  if (unread_messages) {
-    sprintf (buf, COLOR_RED "[%d unread]" COLOR_NORMAL "%s", unread_messages, default_prompt);
+  if (unread_messages || cur_uploading_bytes || cur_downloading_bytes) {
+    int l = sprintf (buf, COLOR_RED "[");
+    int ok = 0;
+    if (unread_messages) {
+      l += sprintf (buf + l, "%d unread", unread_messages);
+      ok = 1;
+    }
+    if (cur_uploading_bytes) {
+      if (ok) { *(buf + l) = ' '; l ++; }
+      ok = 1;
+      l += sprintf (buf + l, "%lld%%Up", 100 * cur_uploaded_bytes / cur_uploading_bytes);
+    }
+    if (cur_downloading_bytes) {
+      if (ok) { *(buf + l) = ' '; l ++; }
+      ok = 1;
+      l += sprintf (buf + l, "%lld%%Down", 100 * cur_downloaded_bytes / cur_downloading_bytes);
+    }
+    sprintf (buf + l, "]" COLOR_NORMAL "%s", default_prompt);
     return buf;
   } else {
     return default_prompt;
@@ -52,6 +74,13 @@ char *get_default_prompt (void) {
 
 char *complete_none (const char *text UU, int state UU) {
   return 0;
+}
+
+void update_prompt (void) {
+  print_start ();
+  rl_set_prompt (get_default_prompt ());
+  rl_redisplay ();
+  print_end ();
 }
 
 char *commands[] = {

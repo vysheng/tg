@@ -644,6 +644,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       fetch_int (); //pts
       unread_messages ++;
       print_message (M);
+      update_prompt ();
       break;
     };
   case CODE_update_message_i_d:
@@ -939,6 +940,7 @@ void work_update_short_message (struct connection *c UU, long long msg_id UU) {
   struct message *M = fetch_alloc_message_short ();  
   unread_messages ++;
   print_message (M);
+  update_prompt ();
 }
 
 void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
@@ -946,6 +948,7 @@ void work_update_short_chat_message (struct connection *c UU, long long msg_id U
   struct message *M = fetch_alloc_message_short_chat ();  
   unread_messages ++;
   print_message (M);
+  update_prompt ();
 }
 
 void work_container (struct connection *c, long long msg_id UU) {
