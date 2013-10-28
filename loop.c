@@ -107,7 +107,6 @@ int net_getline (char **s, size_t *l) {
   _l = l;
   rl_callback_handler_install (0, got_it);
   net_loop (1, is_got_it);
-  printf ("'%s'\n", *s);
   return 0;
 }
 

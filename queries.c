@@ -360,7 +360,6 @@ char *suser;
 extern int dc_working_num;
 void do_send_code (const char *user) {
   suser = strdup (user);
-  fprintf (stderr, "user='%s'\n", user);
   want_dc_num = 0;
   clear_packet ();
   out_int (CODE_auth_send_code);
@@ -440,7 +439,6 @@ int do_auth_check_phone (const char *user) {
   clear_packet ();
   out_int (CODE_auth_check_phone);
   out_string (user);
-  printf ("'%s'\n", user);
   check_phone_result = -1;
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
   net_loop (0, cr_f);

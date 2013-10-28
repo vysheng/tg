@@ -109,7 +109,7 @@ void fetch_user (struct user *U) {
     int ok = 1;
     int i;
     for (i = 0; i < user_num + chat_num; i++) {
-      if (Peers[i] != (void *)U && !strcmp (Peers[i]->print_name, U->print_name)) {
+      if (Peers[i] != (void *)U && Peers[i]->print_name && !strcmp (Peers[i]->print_name, U->print_name)) {
         ok = 0;
         break;
       }
