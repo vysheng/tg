@@ -236,7 +236,10 @@ char *command_generator (const char *text, int state) {
     if (index == -1) { return 0; }
   }
 
-  if (mode == -1) { return 0; }
+  if (mode == -1) { 
+    if (c) { rl_line_buffer[rl_point] = c; }
+    return 0; 
+  }
 
   char *R = 0;
   switch (mode & 7) {
