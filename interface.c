@@ -224,17 +224,13 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
 char *command_generator (const char *text, int state) {  
   static int len, index, mode;
  
+  char c = 0;
   if (!state) {
     len = strlen (text);
     index = -1;
-     
-    rl_line_buffer[rl_point] = '\0'; /* the effect should be such
-      * that the cursor position
-      * is at the end of line for
-      * the auto completion regex
-      * above (note the $ at end)
-      */
-
+    
+    c = rl_line_buffer[rl_point];
+    rl_line_buffer[rl_point] = 0;
     mode = get_complete_mode ();
   } else {
     if (index == -1) { return 0; }
@@ -246,19 +242,26 @@ char *command_generator (const char *text, int state) {
   switch (mode & 7) {
   case 0:
     index = complete_string_list (commands, index, text, len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 1:
     index = complete_user_list (index, text, len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 2:
     index = complete_user_chat_list (index, text, len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 3:
-    return rl_filename_completion_function(text,state);
+    R = rl_filename_completion_function(text,state);
+    if (c) { rl_line_buffer[rl_point] = c; }
+    return R;
   case 4:
     index = complete_chat_list (index, text, len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   default:
+    if (c) { rl_line_buffer[rl_point] = c; }
     return 0;
   }
 }
@@ -268,6 +271,7 @@ char **complete_text (char *text, int start UU, int end UU) {
 }
 
 void interpreter (char *line UU) {
+  if (!line) { return; }
   if (line && *line) {
     add_history (line);
   }
