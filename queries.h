@@ -68,16 +68,16 @@ double get_double_time (void);
 
 void do_update_contact_list (void);
 union user_chat;
-void do_send_message (union user_chat *U, const char *msg, int len);
-void do_send_text (union user_chat *U, char *file);
-void do_get_history (union user_chat *U, int limit);
+void do_send_message (int id, const char *msg, int len);
+void do_send_text (int id, char *file);
+void do_get_history (int id, int limit);
 void do_get_dialog_list (void);
 void do_send_photo (int type, int to_id, char *file_name);
-void do_get_chat_info (union user_chat *chat);
+void do_get_chat_info (int id);
 void do_get_user_list_info_silent (int num, int *list);
-void do_get_user_info (union user_chat *user);
-void do_forward_message (union user_chat *U, int n);
-void do_rename_chat (union user_chat *U, char *name);
+void do_get_user_info (int id);
+void do_forward_message (int id, int n);
+void do_rename_chat (int id, char *name);
 
 struct photo;
 struct video;

@@ -622,7 +622,8 @@ struct query_methods msg_send_methods = {
 
 int out_message_num;
 int our_id;
-void do_send_message (union user_chat *U, const char *msg, int len) {
+void out_peer_id (int id);
+void do_send_message (int id, const char *msg, int len) {
   if (!out_message_num) {
     out_message_num = -lrand48 ();
   }
@@ -631,21 +632,9 @@ void do_send_message (union user_chat *U, const char *msg, int len) {
   struct message *M = malloc (sizeof (*M));
   memset (M, 0, sizeof (*M));
   M->from_id = our_id;
-  M->to_id = U->id;
+  M->to_id = id;
   M->unread = 1;
-  if (U->id < 0) {
-    out_int (CODE_input_peer_chat);
-    out_int (-U->id);
-  } else {
-    if (U->user.access_hash) {
-      out_int (CODE_input_peer_foreign);
-      out_int (U->id);
-      out_long (U->user.access_hash);
-    } else {
-      out_int (CODE_input_peer_contact);
-      out_int (U->id);
-    }
-  }
+  out_peer_id (id);
   M->message = malloc (len + 1);
   memcpy (M->message, msg, len);
   M->message[len] = 0;
@@ -660,7 +649,7 @@ void do_send_message (union user_chat *U, const char *msg, int len) {
   print_message (M);
 }
 
-void do_send_text (union user_chat *U, char *file_name) {
+void do_send_text (int id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
@@ -676,7 +665,7 @@ void do_send_text (union user_chat *U, char *file_name) {
     close (fd);
   } else {
     buf[x] = 0;
-    do_send_message (U, buf, x);
+    do_send_message (id, buf, x);
     free (file_name);
     close (fd);
   }
@@ -694,22 +683,10 @@ struct query_methods mark_read_methods = {
   .on_answer = mark_read_on_receive
 };
 
-void do_messages_mark_read (union user_chat *U, int max_id) {
+void do_messages_mark_read (int id, int max_id) {
   clear_packet ();
   out_int (CODE_messages_read_history);
-  if (U->id < 0) {
-    out_int (CODE_input_peer_chat);
-    out_int (-U->id);
-  } else {
-    if (U->user.access_hash) {
-      out_int (CODE_input_peer_foreign);
-      out_int (U->id);
-      out_long (U->user.access_hash);
-    } else {
-      out_int (CODE_input_peer_contact);
-      out_int (U->id);
-    }
-  }
+  out_peer_id (id);
   out_int (max_id);
   out_int (0);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0);
@@ -749,7 +726,7 @@ int get_history_on_answer (struct query *q UU) {
     fetch_alloc_user ();
   }
   if (sn > 0) {
-    do_messages_mark_read (q->extra, ML[0]->id);
+    do_messages_mark_read ((long)(q->extra), ML[0]->id);
   }
   return 0;
 }
@@ -759,26 +736,14 @@ struct query_methods get_history_methods = {
 };
 
 
-void do_get_history (union user_chat *U, int limit) {
+void do_get_history (int id, int limit) {
   clear_packet ();
   out_int (CODE_messages_get_history);
-  if (U->id < 0) {
-    out_int (CODE_input_peer_chat);
-    out_int (-U->id);
-  } else {
-    if (U->user.access_hash) {
-      out_int (CODE_input_peer_foreign);
-      out_int (U->id);
-      out_long (U->user.access_hash);
-    } else {
-      out_int (CODE_input_peer_contact);
-      out_int (U->id);
-    }
-  }
+  out_peer_id (id);
   out_int (0);
   out_int (0);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, U);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)(long)id);
 }
 
 int get_dialogs_on_answer (struct query *q UU) {
@@ -1023,11 +988,11 @@ struct query_methods fwd_msg_methods = {
   .on_answer = fwd_msg_on_answer
 };
 
-void do_forward_message (union user_chat *U, int n) {
+void do_forward_message (int id, int n) {
   clear_packet ();
   out_int (CODE_invoke_with_layer3);
   out_int (CODE_messages_forward_message);
-  out_peer_id (U->id);
+  out_peer_id (id);
   out_int (n);
   out_long (lrand48 () * (1ll << 32) + lrand48 ());
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0);
@@ -1057,10 +1022,10 @@ struct query_methods rename_chat_methods = {
   .on_answer = rename_chat_on_answer
 };
 
-void do_rename_chat (union user_chat *U, char *name) {
+void do_rename_chat (int id, char *name) {
   clear_packet ();
   out_int (CODE_messages_edit_chat_title);
-  out_int (-U->id);
+  out_int (-id);
   out_string (name);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0);
 }
@@ -1095,10 +1060,10 @@ struct query_methods chat_info_methods = {
   .on_answer = chat_info_on_answer
 };
 
-void do_get_chat_info (union user_chat *chat) {
+void do_get_chat_info (int id) {
   clear_packet ();
   out_int (CODE_messages_get_full_chat);
-  out_int (-chat->id);
+  out_int (-id);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
 }
 
@@ -1128,16 +1093,17 @@ struct query_methods user_info_methods = {
   .on_answer = user_info_on_answer
 };
 
-void do_get_user_info (union user_chat *U) {
+void do_get_user_info (int id) {
   clear_packet ();
   out_int (CODE_users_get_full_user);
-  if (U->user.access_hash) {
+  union user_chat *U = user_chat_get (id);
+  if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (U->id);
+    out_int (id);
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (U->id);
+    out_int (id);
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0);
 }

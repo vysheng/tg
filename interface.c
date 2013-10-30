@@ -40,11 +40,136 @@ char *default_prompt = "> ";
 int unread_messages;
 int msg_num_mode;
 
+int in_readline;
+
 long long cur_uploading_bytes;
 long long cur_uploaded_bytes;
 long long cur_downloading_bytes;
 long long cur_downloaded_bytes;
 
+char *line_ptr;
+extern int user_num;
+extern int chat_num;
+extern union user_chat *Peers[];
+
+int is_same_word (const char *s, size_t l, const char *word) {
+  return s && word && strlen (word) == l && !memcmp (s, word, l);
+}
+
+char *next_token (int *l) {
+  while (*line_ptr == ' ') { line_ptr ++; }
+  if (!*line_ptr) { 
+    *l = 0;
+    return 0;
+  }
+  int neg = 0;
+  char *s = line_ptr;
+  while (*line_ptr && (*line_ptr != ' ' || neg)) {
+    if (*line_ptr == '\\') {
+      neg = 1 - neg;
+    } else {
+      neg = 0;
+    }
+    line_ptr++;
+  }
+  *l = line_ptr - s;
+  return s;
+}
+
+#define NOT_FOUND (int)0x80000000
+int next_token_int (void) {
+  int l;
+  char *s = next_token (&l);
+  if (!s) { return NOT_FOUND; }
+  char *r;
+  int x = strtod (s, &r);
+  if (r == s + l) { 
+    return x;
+  } else {
+    return NOT_FOUND;
+  }
+}
+
+int next_token_user (void) {
+  int l;
+  char *s = next_token (&l);
+  if (!s) { return NOT_FOUND; }
+
+  if (*s == '#') {
+    s ++; 
+    l --;
+    if (l > 0) {
+      int r = atoi (s);
+      if (r < 0) { return r; }
+      else { return NOT_FOUND; }
+    } else {
+      return NOT_FOUND;
+    }
+  }
+  int index = 0;
+  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || Peers[index]->id < 0)) {
+    index ++;
+  }
+  if (index < user_num + chat_num) {
+    return Peers[index]->id;
+  } else {
+    return NOT_FOUND;
+  }
+}
+
+int next_token_chat (void) {
+  int l;
+  char *s = next_token (&l);
+  if (!s) { return NOT_FOUND; }
+
+  if (*s == '#') {
+    s ++; 
+    l --;
+    if (l > 0) {
+      int r = atoi (s);
+      if (r < 0) { return r; }
+      else { return NOT_FOUND; }
+    } else {
+      return NOT_FOUND;
+    }
+  }
+  int index = 0;
+  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || Peers[index]->id > 0)) {
+    index ++;
+  }
+  if (index < user_num + chat_num) {
+    return Peers[index]->id;
+  } else {
+    return NOT_FOUND;
+  }
+}
+
+int next_token_user_chat (void) {
+  int l;
+  char *s = next_token (&l);
+  if (!s) { return NOT_FOUND; }
+
+  if (*s == '#') {
+    s ++; 
+    l --;
+    if (l > 0) {
+      int r = atoi (s);
+      if (r != 0) { return r; }
+      else { return NOT_FOUND; }
+    } else {
+      return NOT_FOUND;
+    }
+  }
+  int index = 0;
+  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || !Peers[index]->id)) {
+    index ++;
+  }
+  if (index < user_num + chat_num) {
+    return Peers[index]->id;
+  } else {
+    return NOT_FOUND;
+  }
+}
 
 char *get_default_prompt (void) {
   static char buf[100];
@@ -129,54 +254,22 @@ int commands_flags[] = {
   07,
 };
 
-char *a = 0;
-char *user_list[MAX_USER_NUM + 1];
-char **chat_list = &a;
-
-int init_token (char **q) {
-  char *r = *q;
-  while (*r == ' ') { r ++; }
-  if (!*r) { return 0; }
-  *q = r;
-  return 1;
-}
-
-char *get_token (char **q, int *l) {
-  char *r = *q;
-  while (*r == ' ') { r ++; }
-  if (!*r) { 
-    *q = r; 
-    *l = 0;
-    return 0;
-  }
-  int neg = 0;
-  char *s = r;
-  while (*r && (*r != ' ' || neg)) {
-    if (*r == '\\') {
-      neg = 1 - neg;
-    } else {
-      neg = 0;
-    }
-    r++;
-  }
-  *q = r;
-  *l = r - s;
-  return s;
-}
-
-
 int get_complete_mode (void) {
-  char *q = rl_line_buffer;
-  if (!init_token (&q)) { return 0; }
+  line_ptr = rl_line_buffer;
   int l = 0;
-  char *r = get_token (&q, &l);
-  if (!*q) { return 0; }
-  
+  char *r = next_token (&l);
+  if (!r) { return 0; }
+  while (r && r[0] == '[' && r[l - 1] == ']') {
+    r = next_token (&l);
+    if (!r) { return 0; }
+  }
+ 
+  if (!*line_ptr) { return 0; }
   char **command = commands;
   int n = 0;
   int flags = -1;
   while (*command) {
-    if (!strncmp (r, *command, l)) {
+    if (is_same_word (r, l, *command)) {
       flags = commands_flags[n];
       break;
     }
@@ -184,20 +277,18 @@ int get_complete_mode (void) {
     command ++;
   }
   if (flags == -1) {
-    return -1;
+    return 7;
   }
   int s = 0;
   while (1) {
-    get_token (&q, &l);
-    if (!*q) { return flags ? flags & 7 : 7; }
+    if (!next_token (&l) || !*line_ptr) {
+      return flags ? flags & 7 : 7;
+    }
     s ++;
     if (s <= 4) { flags >>= 3; }
   }
 }
 
-extern int user_num;
-extern int chat_num;
-extern union user_chat *Peers[];
 int complete_user_list (int index, const char *text, int len, char **R) {
   index ++;
   while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
@@ -302,228 +393,221 @@ char **complete_text (char *text, int start UU, int end UU) {
   return (char **) rl_completion_matches (text, command_generator);
 }
 
+void work_modifier (const char *s UU) {
+}
+
 void interpreter (char *line UU) {
-  if (!line) { return; }
+  line_ptr = line;
+  assert (!in_readline);
+  in_readline = 1;
+  if (!line) { 
+    in_readline = 0;
+    return; 
+  }
   if (line && *line) {
     add_history (line);
   }
-  if (!memcmp (line, "contact_list", 12)) {
+
+  int l;
+  char *command;
+  while (1) {
+    command = next_token (&l);
+    if (!command) { return; }
+    if (*command == '[' && command[l - 1] == ']') {
+      work_modifier (command);
+    } else {
+      break;
+    }
+  }
+
+#define IS_WORD(s) is_same_word (command, l, (s))
+#define RET in_readline = 0; return; 
+  if (IS_WORD ("contact_list")) {
     do_update_contact_list ();
-  } else if (!memcmp (line, "dialog_list", 11)) {
+  } else if (IS_WORD ("dialog_list")) {
     do_get_dialog_list ();
-  } else if (!memcmp (line, "stats", 5)) {
+  } else if (IS_WORD ("stats")) {
     static char stat_buf[1 << 15];
     print_stat (stat_buf, (1 << 15) - 1);
     printf ("%s\n", stat_buf);
-  } else if (!memcmp (line, "msg ", 4)) {
-    char *q = line + 4;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+  } else if (IS_WORD ("msg")) {
+    int id = next_token_user_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user/chat id\n");
+      RET;
     }
-    while (*q && (*q == ' ' || *q == '\t')) { q ++; }
-    if (*q && index < user_num + chat_num) {
-      do_send_message (Peers[index], q, strlen (q));
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty message\n");
+      RET;
     }
-  } else if (!memcmp (line, "rename_chat", 11)) {
-    char *q = line + 11;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id >= 0)) {
-      index ++;
+    do_send_message (id, s, strlen (s));
+  } else if (IS_WORD ("rename_chat")) {
+    int id = next_token_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad chat id\n");
+      RET;
     }
-    while (*q && (*q == ' ' || *q == '\t')) { q ++; }
-    if (*q && index < user_num + chat_num) {
-      do_rename_chat (Peers[index], q);
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty new name\n");
+      RET;
     }
-  } else if (!memcmp (line, "send_photo", 10)) {
-    char *q = line + 10;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+    do_rename_chat (id, s);
+  } else if (IS_WORD ("send_photo")) {
+    int id = next_token_user_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user/chat id\n");
+      RET;
     }
-    if (index < user_num + chat_num) {
-      int len = 0;
-      char *f = get_token (&q, &len);
-      if (len > 0) {
-        do_send_photo (CODE_input_media_uploaded_photo, 
-        Peers[index]->id, strndup (f, len));
-      }
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
     }
-  } else if (!memcmp (line, "send_video", 10)) {
-    char *q = line + 10;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+    do_send_photo (CODE_input_media_uploaded_photo, id, strndup (s, t));
+  } else if (IS_WORD("send_video")) {
+    int id = next_token_user_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user/chat id\n");
+      RET;
     }
-    if (index < user_num + chat_num) {
-      int len = 0;
-      char *f = get_token (&q, &len);
-      if (len > 0) {
-        do_send_photo (CODE_input_media_uploaded_video, 
-        Peers[index]->id, strndup (f, len));
-      }
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
     }
-  } else if (!memcmp (line, "send_text", 9)) {
-    char *q = line + 10;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+    do_send_photo (CODE_input_media_uploaded_video, id, strndup (s, t));
+  } else if (IS_WORD ("send_text")) {
+    int id = next_token_user_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user/chat id\n");
+      RET;
     }
-    if (index < user_num + chat_num) {
-      int len = 0;
-      char *f = get_token (&q, &len);
-      if (len > 0) {
-        do_send_text (Peers[index], strndup (f, len));
-      }
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
     }
-  } else if (!memcmp (line, "fwd ", 4)) {
-    char *q = line + 4;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+    do_send_text (id, strndup (s, t));
+  } else if (IS_WORD ("fwd")) {
+    int id = next_token_user_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user/chat id\n");
+      RET;
     }
-    if (index < user_num + chat_num) {
-      int len = 0;
-      char *f = get_token (&q, &len);
-      if (f) {
-        int num = atoi (f);
-        if (num > 0) {
-          do_forward_message (Peers[index], num);
-        }
-      }
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "load_photo ", 10)) {
-    char *q = line + 10;
-    int len = 0;
-    char *f = get_token (&q, &len);
-    if (f) {
-      int num = atoi (f);
-      if (num > 0) {
-        struct message *M = message_get (num);
-        if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
-          do_load_photo (&M->media.photo, 1);
-        }
-      }
+    do_forward_message (id, num);
+  } else if (IS_WORD ("load_photo")) {
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "view_photo ", 10)) {
-    char *q = line + 10;
-    int len = 0;
-    char *f = get_token (&q, &len);
-    if (f) {
-      int num = atoi (f);
-      if (num > 0) {
-        struct message *M = message_get (num);
-        if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
-          do_load_photo (&M->media.photo, 2);
-        }
-      }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
+      do_load_photo (&M->media.photo, 1);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "load_video_thumb ", 16)) {
-    char *q = line + 16;
-    int len = 0;
-    char *f = get_token (&q, &len);
-    if (f) {
-      int num = atoi (f);
-      if (num > 0) {
-        struct message *M = message_get (num);
-        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
-          do_load_video_thumb (&M->media.video, 1);
-        }
-      }
+  } else if (IS_WORD ("view_photo")) {
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "view_video_thumb ", 16)) {
-    char *q = line + 16;
-    int len = 0;
-    char *f = get_token (&q, &len);
-    if (f) {
-      int num = atoi (f);
-      if (num > 0) {
-        struct message *M = message_get (num);
-        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
-          do_load_video_thumb (&M->media.video, 2);
-        }
-      }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
+      do_load_photo (&M->media.photo, 2);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "load_video ", 10)) {
-    char *q = line + 10;
-    int len = 0;
-    char *f = get_token (&q, &len);
-    if (f) {
-      int num = atoi (f);
-      if (num > 0) {
-        struct message *M = message_get (num);
-        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
-          do_load_video (&M->media.video, 1);
-        }
-      }
+  } else if (IS_WORD ("load_video_thumb")) {
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "view_video ", 10)) {
-    char *q = line + 10;
-    int len = 0;
-    char *f = get_token (&q, &len);
-    if (f) {
-      int num = atoi (f);
-      if (num > 0) {
-        struct message *M = message_get (num);
-        if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
-          do_load_video (&M->media.video, 2);
-        }
-      }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+      do_load_video_thumb (&M->media.video, 1);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "chat_info", 9)) {
-    char *q = line + 10;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+  } else if (IS_WORD ("view_video_thumb")) {
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-    if (index < user_num + chat_num && Peers[index]->id < 0) {
-      do_get_chat_info (Peers[index]);
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+      do_load_video_thumb (&M->media.video, 2);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "user_info", 9)) {
-    char *q = line + 10;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+  } else if (IS_WORD ("load_video")) {
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-    if (index < user_num + chat_num && Peers[index]->id > 0) {
-      do_get_user_info (Peers[index]);
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+      do_load_video (&M->media.video, 1);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "history", 7)) {
-    char *q = line + 7;
-    int len;
-    char *text = get_token (&q, &len);
-    int index = 0;
-    while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-      index ++;
+  } else if (IS_WORD ("view_video")) {
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
     }
-    if (index < user_num + chat_num) {
-      char *text = get_token (&q, &len);
-      int limit = 40;
-      if (text) {
-        limit = atoi (text);
-        if (limit <= 0 || limit >= 1000000) {
-          limit = 40;
-        }
-      }
-      do_get_history (Peers[index], limit);
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+      do_load_video (&M->media.video, 2);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
     }
-  } else if (!memcmp (line, "help", 4)) {
+  } else if (IS_WORD ("chat_info")) {
+    int id = next_token_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad chat id\n");
+      RET;
+    }
+    do_get_chat_info (id);
+  } else if (IS_WORD ("user_info")) {
+    int id = next_token_user ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user id\n");
+      RET;
+    }
+    do_get_user_info (id);
+  } else if (IS_WORD ("history")) {
+    int id = next_token_user_chat ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user/chat id\n");
+      RET;
+    }
+    int limit = next_token_int ();
+    do_get_history (id, limit > 0 ? limit : 40);
+  } else if (IS_WORD ("help")) {
     //print_start ();
     push_color (COLOR_YELLOW);
     printf (
@@ -548,12 +632,15 @@ void interpreter (char *line UU) {
     rl_on_new_line ();
     //print_end ();
     printf ("\033[1K\033H");
-  } else if (!memcmp (line, "show_license", 12)) {
+  } else if (IS_WORD ("show_license")) {
     char *b = 
 #include "LICENSE.h"
     ;
     printf ("%s", b);
   }
+#undef IS_WORD
+#undef RET
+  in_readline = 0;
 }
 
 int readline_active;
@@ -586,6 +673,7 @@ int saved_point;
 char *saved_line;
 int prompt_was;
 void print_start (void) {
+  if (in_readline) { return; }
   assert (!prompt_was);
   if (readline_active) {
     saved_point = rl_point;
@@ -597,6 +685,7 @@ void print_start (void) {
   prompt_was = 1;
 }
 void print_end (void) {
+  if (in_readline) { return; }
   assert (prompt_was);
   if (readline_active) {
     rl_set_prompt (get_default_prompt ());

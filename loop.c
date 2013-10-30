@@ -63,14 +63,6 @@ void net_loop (int flags, int (*is_end)(void)) {
     double timer = next_timer_in ();
     if (timer > 1000) { timer = 1000; }
     if (poll (fds, x, timer) < 0) {
-      /* resuming from interrupt, so not an error situation,
-         this generally happens when you suspend your
-         messenger with "C-z" and then "fg". This is allowed "
-       */
-      if (flags & 1) {
-        rl_reset_line_state ();
-        rl_forced_update_display ();
-      }
       work_timers ();
       continue;
     }
@@ -102,6 +94,7 @@ int is_got_it (void) {
 }
 
 int net_getline (char **s, size_t *l) {
+  rl_already_prompted = 1;
   got_it_ok = 0;
   _s = s;
   _l = l;
