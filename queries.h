@@ -90,5 +90,6 @@ int do_get_nearest_dc (void);
 int do_send_code_result_auth (const char *code, const char *first_name, const char *last_name);
 void do_import_auth (int num);
 void do_export_auth (int num);
+void do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force);
 
 #endif

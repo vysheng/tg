@@ -1365,3 +1365,71 @@ void do_import_auth (int num) {
   send_query (DC_list[num], packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0);
   net_loop (0, isn_export_auth_str);
 }
+
+int add_contact_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_contacts_imported_contacts);
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  if (n > 0) {
+    logprintf ("Added successfully");
+  } else {
+    logprintf ("Not added");
+  }
+  int i;
+  for (i = 0; i < n ; i++) {
+    assert (fetch_int () == (int)CODE_imported_contact);
+    fetch_int (); // uid
+    fetch_long (); // client_id
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n ; i++) {
+    struct user *U = fetch_alloc_user ();
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("User #%d: ", U->id);
+    print_user_name (U->id, (union user_chat *)U);
+    push_color (COLOR_GREEN);
+    printf (" (");
+    printf ("%s", U->print_name);
+    if (U->phone) {
+      printf (" ");
+      printf ("%s", U->phone);
+    }
+    printf (") ");
+    pop_color ();
+    if (U->status.online > 0) {
+      printf ("online\n");
+    } else {
+      if (U->status.online < 0) {
+        printf ("offline. Was online ");
+        print_date_full (U->status.when);
+      } else {
+        printf ("offline permanent");
+      }
+      printf ("\n");
+    }
+    pop_color ();
+    print_end ();
+
+  }
+  return 0;
+}
+
+struct query_methods add_contact_methods = {
+  .on_answer = add_contact_on_answer,
+};
+
+void do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force) {
+  clear_packet ();
+  out_int (CODE_contacts_import_contacts);
+  out_int (CODE_vector);
+  out_int (1);
+  out_int (CODE_input_phone_contact);
+  out_long (lrand48 () * (1ll << 32) + lrand48 ());
+  out_cstring (phone, phone_len);
+  out_cstring (first_name, first_name_len);
+  out_cstring (last_name, last_name_len);
+  out_int (force ? CODE_bool_true : CODE_bool_false);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0);
+}

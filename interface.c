@@ -228,6 +228,8 @@ char *commands[] = {
   "view_video_thumb",
   "load_video",
   "view_video",
+  "add_contact",
+  "rename_contact",
   "show_license",
   0 };
 
@@ -251,6 +253,8 @@ int commands_flags[] = {
   07,
   07,
   07,
+  07,
+  071,
   07,
 };
 
@@ -607,6 +611,55 @@ void interpreter (char *line UU) {
     }
     int limit = next_token_int ();
     do_get_history (id, limit > 0 ? limit : 40);
+  } else if (IS_WORD ("add_contact")) {
+    int phone_len, first_name_len, last_name_len;
+    char *phone, *first_name, *last_name;
+    phone = next_token (&phone_len);
+    if (!phone) {
+      printf ("No phone number found\n");
+      RET;
+    }
+    first_name = next_token (&first_name_len);
+    if (!first_name_len) {
+      printf ("No first name found\n");
+      RET;
+    }
+    last_name = next_token (&last_name_len);
+    if (!last_name_len) {
+      printf ("No last name found\n");
+      RET;
+    }
+    do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0);
+  } else if (IS_WORD ("rename_contact")) {
+    int id = next_token_user ();
+    if (id == NOT_FOUND) {
+      printf ("Bad user\n");
+      RET;
+    }
+    union user_chat *U = user_chat_get (id);
+    if (!U) {
+      printf ("No such user\n");
+      RET;
+    }
+    if (!U->user.phone || !strlen (U->user.phone)) {
+      printf ("User has no phone. Can not rename\n");
+      RET;
+    }
+    int phone_len, first_name_len, last_name_len;
+    char *phone, *first_name, *last_name;
+    phone_len = strlen (U->user.phone);
+    phone = U->user.phone;
+    first_name = next_token (&first_name_len);
+    if (!first_name_len) {
+      printf ("No first name found\n");
+      RET;
+    }
+    last_name = next_token (&last_name_len);
+    if (!last_name_len) {
+      printf ("No last name found\n");
+      RET;
+    }
+    do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 1);
   } else if (IS_WORD ("help")) {
     //print_start ();
     push_color (COLOR_YELLOW);
