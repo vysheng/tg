@@ -17,13 +17,14 @@
     Copyright Vitaly Valtman 2013
 */
 #include <assert.h>
+#include <string.h>
 #include "structures.h"
 #include "mtproto-common.h"
 #include "telegram.h"
 #include "tree.h"
 #include "loop.h"
 int verbosity;
-union user_chat *Peers[MAX_USER_NUM];
+peer_t *Peers[MAX_USER_NUM];
 
 void fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
@@ -67,16 +68,16 @@ int chat_num;
 void fetch_user (struct user *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
-  U->id = fetch_int ();
+  U->id = MK_USER (fetch_int ());
   U->flags &= ~(FLAG_EMPTY | FLAG_DELETED | FLAG_USER_SELF | FLAG_USER_FOREIGN | FLAG_USER_CONTACT);
   if (x == CODE_user_empty) {
     U->flags |= FLAG_EMPTY;
     return;
   }
   if (x == CODE_user_self) {
-    assert (!our_id || (our_id == U->id));
+    assert (!our_id || (our_id == get_peer_id (U->id)));
     if (!our_id) {
-      our_id = U->id;
+      our_id = get_peer_id (U->id);
       write_auth_file ();
     }
   }
@@ -226,7 +227,7 @@ void fetch_user_full (struct user *U) {
 void fetch_chat (struct chat *C) {
   unsigned x = fetch_int ();
   assert (x == CODE_chat_empty || x == CODE_chat || x == CODE_chat_forbidden);
-  C->id = -fetch_int ();
+  C->id = MK_CHAT (fetch_int ());
   C->flags &= ~(FLAG_EMPTY | FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
   if (x == CODE_chat_empty) {
     C->flags |= FLAG_EMPTY;
@@ -292,11 +293,11 @@ void fetch_chat_full (struct chat *C) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_chat_full);
   assert (fetch_int () == CODE_chat_full); 
-  C->id = -fetch_int ();
+  C->id = MK_CHAT (fetch_int ());
   C->flags &= ~(FLAG_EMPTY | FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
   x = fetch_int ();
   if (x == CODE_chat_participants) {
-    assert (fetch_int () == -C->id);
+    assert (fetch_int () == get_peer_id (C->id));
     C->admin_id =  fetch_int ();
     assert (fetch_int () == CODE_vector);
     if (C->users) {
@@ -440,7 +441,8 @@ void fetch_message_action (struct message_action *M) {
 void fetch_message_short (struct message *M) {
   memset (M, 0, sizeof (*M));
   M->id = fetch_int ();
-  M->from_id = fetch_int ();
+  M->to_id = MK_USER (our_id);
+  M->from_id = MK_USER (fetch_int ());
   M->message = fetch_str_dup ();
   fetch_int (); // pts
   M->date = fetch_int ();
@@ -452,8 +454,8 @@ void fetch_message_short (struct message *M) {
 void fetch_message_short_chat (struct message *M) {
   memset (M, 0, sizeof (*M));
   M->id = fetch_int ();
-  M->from_id = fetch_int ();
-  M->to_id = -fetch_int ();
+  M->from_id = MK_USER (fetch_int ());
+  M->to_id = MK_CHAT (fetch_int ());
   M->message = fetch_str_dup ();
   fetch_int (); // pts
   M->date = fetch_int ();
@@ -493,13 +495,13 @@ void fetch_message_media (struct message_media *M) {
   }
 }
 
-int fetch_peer_id (void) {
+peer_id_t fetch_peer_id (void) {
   unsigned x =fetch_int ();
   if (x == CODE_peer_user) {
-    return fetch_int ();
+    return MK_USER (fetch_int ());
   } else {
     assert (CODE_peer_chat);
-    return -fetch_int ();
+    return MK_CHAT (fetch_int ());
   }
 }
 
@@ -513,10 +515,10 @@ void fetch_message (struct message *M) {
     return;
   }
   if (x == CODE_message_forwarded) {
-    M->fwd_from_id = fetch_int ();
+    M->fwd_from_id = MK_USER (fetch_int ());
     M->fwd_date = fetch_int ();
   }
-  M->from_id = fetch_int ();
+  M->from_id = MK_USER (fetch_int ());
   M->to_id = fetch_peer_id ();
   M->out = fetch_bool ();
   M->unread = fetch_bool ();
@@ -530,10 +532,11 @@ void fetch_message (struct message *M) {
   }
 }
 
-#define user_cmp(a,b) ((a)->id - (b)->id)
+#define id_cmp(a,b) ((a)->id - (b)->id)
+#define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
 
-DEFINE_TREE(peer,union user_chat *,user_cmp,0)
-DEFINE_TREE(message,struct message *,user_cmp,0)
+DEFINE_TREE(peer,peer_t *,peer_cmp,0)
+DEFINE_TREE(message,struct message *,id_cmp,0)
 struct tree_peer *peer_tree;
 struct tree_message *message_tree;
 
@@ -551,7 +554,7 @@ struct message message_list = {
 struct user *fetch_alloc_user (void) {
   int data[2];
   prefetch_data (data, 8);
-  union user_chat *U = user_chat_get (data[1]);
+  peer_t *U = user_chat_get (MK_USER (data[1]));
   if (U) {
     fetch_user (&U->user);
     return &U->user;
@@ -569,7 +572,7 @@ struct user *fetch_alloc_user (void) {
 struct user *fetch_alloc_user_full (void) {
   int data[3];
   prefetch_data (data, 12);
-  union user_chat *U = user_chat_get (data[2]);
+  peer_t *U = user_chat_get (MK_USER (data[2]));
   if (U) {
     fetch_user_full (&U->user);
     return &U->user;
@@ -577,7 +580,7 @@ struct user *fetch_alloc_user_full (void) {
     users_allocated ++;
     U = malloc (sizeof (*U));
     memset (U, 0, sizeof (*U));
-    U->id = data[2];
+    U->id = MK_USER (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     fetch_user_full (&U->user);
     Peers[chat_num + (user_num ++ )] = U;
@@ -754,7 +757,7 @@ struct message *fetch_alloc_message_short_chat (void) {
 struct chat *fetch_alloc_chat (void) {
   int data[2];
   prefetch_data (data, 8);
-  union user_chat *U = user_chat_get (-data[1]);
+  peer_t *U = user_chat_get (MK_CHAT (data[1]));
   if (U) {
     fetch_chat (&U->chat);
     return &U->chat;
@@ -772,7 +775,7 @@ struct chat *fetch_alloc_chat (void) {
 struct chat *fetch_alloc_chat_full (void) {
   int data[3];
   prefetch_data (data, 12);
-  union user_chat *U = user_chat_get (-data[2]);
+  peer_t *U = user_chat_get (MK_CHAT (data[2]));
   if (U) {
     fetch_chat_full (&U->chat);
     return &U->chat;
@@ -780,7 +783,7 @@ struct chat *fetch_alloc_chat_full (void) {
     chats_allocated ++;
     U = malloc (sizeof (*U));
     memset (U, 0, sizeof (*U));
-    U->id = -data[2];
+    U->id = MK_CHAT (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     fetch_chat_full (&U->chat);
     Peers[(chat_num ++) + user_num] = U;
@@ -804,8 +807,8 @@ int print_stat (char *s, int len) {
     );
 }
 
-union user_chat *user_chat_get (int id) {
-  union user_chat U;
+peer_t *user_chat_get (peer_id_t id) {
+  peer_t U;
   U.id = id;
   return tree_lookup_peer (peer_tree, &U);
 }

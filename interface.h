@@ -18,6 +18,7 @@
 */
 #ifndef __INTERFACE_H__
 #define __INTERFACE_H__
+#include "structures.h"
 
 #define COLOR_RED "\033[0;31m"
 #define COLOR_REDB "\033[1;31m"
@@ -40,10 +41,10 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
 void hexdump (int *in_ptr, int *in_end);
 
 struct message;
-union user_chat;
+union peer;
 void print_message (struct message *M);
-void print_chat_name (int id, union user_chat *C);
-void print_user_name (int id, union user_chat *U);
+void print_chat_name (peer_id_t id, union peer *C);
+void print_user_name (peer_id_t id, union peer *U);
 //void print_media (struct message_media *M);
 void pop_color (void);
 void push_color (const char *color);

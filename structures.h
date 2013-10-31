@@ -19,6 +19,9 @@
 #ifndef __STRUCTURES_H__
 #define __STRUCTURES_H__
 
+#include <assert.h>
+typedef struct { int id; } peer_id_t;
+
 #define FLAG_EMPTY 1
 #define FLAG_DELETED 2
 #define FLAG_FORBIDDEN 4
@@ -31,6 +34,7 @@
 #define FLAG_USER_OUT_CONTACT 2048
 
 #define FLAG_CHAT_IN_CHAT 128
+
 
 struct file_location {
   int dc;
@@ -70,7 +74,7 @@ struct user_status {
 };
 
 struct user {
-  int id;
+  peer_id_t id;
   int flags;
   char *print_name;
   struct file_location photo_big;
@@ -93,7 +97,7 @@ struct chat_user {
 };
 
 struct chat {
-  int id;
+  peer_id_t id;
   int flags;
   char *print_title;
   struct file_location photo_big;
@@ -107,9 +111,9 @@ struct chat {
   int admin_id;
 };
 
-union user_chat {
+typedef union peer {
   struct {
-    int id;
+    peer_id_t id;
     int flags;
     char *print_name;
     struct file_location photo_big;
@@ -118,7 +122,7 @@ union user_chat {
   };
   struct user user;
   struct chat chat;
-};
+} peer_t;
 
 struct video {
   long long id;
@@ -168,10 +172,10 @@ struct message {
   struct message *next_use, *prev_use;
   int id;
   int flags;
-  int fwd_from_id;
+  peer_id_t fwd_from_id;
   int fwd_date;
-  int from_id;
-  int to_id;
+  peer_id_t from_id;
+  peer_id_t to_id;
   int out;
   int unread;
   int date;
@@ -196,16 +200,64 @@ struct chat *fetch_alloc_chat_full (void);
 struct message *fetch_alloc_message (void);
 struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
-int fetch_peer_id (void);
+peer_id_t fetch_peer_id (void);
 
 void free_user (struct user *U);
 void free_chat (struct chat *U);
 
 int print_stat (char *s, int len);
-union user_chat *user_chat_get (int id);
+peer_t *user_chat_get (peer_id_t id);
 struct message *message_get (int id);
 void update_message_id (struct message *M, int id);
 void message_insert (struct message *M);
 void free_photo (struct photo *P);
 void fetch_photo (struct photo *P);
+
+#define PEER_USER 1
+#define PEER_CHAT 2
+#define PEER_UNKNOWN 0
+
+#define MK_USER(id) set_peer_id (PEER_USER,id)
+#define MK_CHAT(id) set_peer_id (PEER_CHAT,id)
+
+static inline int get_peer_type (peer_id_t id) {
+  if (id.id > 0) { 
+    return PEER_USER; 
+  }
+  if (id.id < 0) { 
+    return PEER_CHAT; 
+  }
+  return PEER_UNKNOWN;
+}
+
+static inline int get_peer_id (peer_id_t id) {
+  switch (get_peer_type (id)) {
+  case PEER_USER:
+    return id.id;
+  case PEER_CHAT:
+    return -id.id;
+  default:
+    return 0;
+  }
+}
+
+static inline peer_id_t set_peer_id (int type, int id) {
+  peer_id_t ID;
+  switch (type) {
+  case PEER_USER:
+    ID.id = id;
+    return ID;
+  case PEER_CHAT:
+    ID.id = -id;
+    return ID;
+  default:
+    assert (0);
+    return ID;
+  }
+}
+
+static inline int cmp_peer_id (peer_id_t a, peer_id_t b) {
+  return memcmp (&a, &b, sizeof (a));
+}
+
 #endif

@@ -562,8 +562,8 @@ int get_contacts_on_answer (struct query *q UU) {
     struct user *U = fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
-    printf ("User #%d: ", U->id);
-    print_user_name (U->id, (union user_chat *)U);
+    printf ("User #%d: ", get_peer_id (U->id));
+    print_user_name (U->id, (peer_t *)U);
     push_color (COLOR_GREEN);
     printf (" (");
     printf ("%s", U->print_name);
@@ -622,8 +622,8 @@ struct query_methods msg_send_methods = {
 
 int out_message_num;
 int our_id;
-void out_peer_id (int id);
-void do_send_message (int id, const char *msg, int len) {
+void out_peer_id (peer_id_t id);
+void do_send_message (peer_id_t id, const char *msg, int len) {
   if (!out_message_num) {
     out_message_num = -lrand48 ();
   }
@@ -631,7 +631,7 @@ void do_send_message (int id, const char *msg, int len) {
   out_int (CODE_messages_send_message);
   struct message *M = malloc (sizeof (*M));
   memset (M, 0, sizeof (*M));
-  M->from_id = our_id;
+  M->from_id = MK_USER (our_id);
   M->to_id = id;
   M->unread = 1;
   out_peer_id (id);
@@ -649,7 +649,7 @@ void do_send_message (int id, const char *msg, int len) {
   print_message (M);
 }
 
-void do_send_text (int id, char *file_name) {
+void do_send_text (peer_id_t id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
@@ -683,7 +683,7 @@ struct query_methods mark_read_methods = {
   .on_answer = mark_read_on_receive
 };
 
-void do_messages_mark_read (int id, int max_id) {
+void do_messages_mark_read (peer_id_t id, int max_id) {
   clear_packet ();
   out_int (CODE_messages_read_history);
   out_peer_id (id);
@@ -726,7 +726,7 @@ int get_history_on_answer (struct query *q UU) {
     fetch_alloc_user ();
   }
   if (sn > 0) {
-    do_messages_mark_read ((long)(q->extra), ML[0]->id);
+    do_messages_mark_read (*(peer_id_t *)&(q->extra), ML[0]->id);
   }
   return 0;
 }
@@ -736,14 +736,14 @@ struct query_methods get_history_methods = {
 };
 
 
-void do_get_history (int id, int limit) {
+void do_get_history (peer_id_t id, int limit) {
   clear_packet ();
   out_int (CODE_messages_get_history);
   out_peer_id (id);
   out_int (0);
   out_int (0);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)(long)id);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id);
 }
 
 int get_dialogs_on_answer (struct query *q UU) {
@@ -755,14 +755,15 @@ int get_dialogs_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
-  static int dlist[3 * 100];
+  static int dlist[2 * 100];
+  static peer_id_t plist[100];
   int dl_size = n;
   for (i = 0; i < n; i++) {
     assert (fetch_int () == CODE_dialog);
     if (i < 100) {
-      dlist[3 * i + 0] = fetch_peer_id ();
-      dlist[3 * i + 1] = fetch_int ();
-      dlist[3 * i + 2] = fetch_int ();
+      plist[i] = fetch_peer_id ();
+      dlist[2 * i + 0] = fetch_int ();
+      dlist[2 * i + 1] = fetch_int ();
     } else {
       fetch_peer_id ();
       fetch_int ();
@@ -787,16 +788,20 @@ int get_dialogs_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = dl_size - 1; i >= 0; i--) {
-    if (dlist[3 * i] < 0) {
-      union user_chat *UC = user_chat_get (dlist[3 * i]);
-      printf ("Chat ");
-      print_chat_name (dlist[3 * i], UC);
-      printf (": %d unread\n", dlist[3 * i + 2]);
-    } else {
-      union user_chat *UC = user_chat_get (dlist[3 * i]);
+    peer_t *UC;
+    switch (get_peer_type (plist[i])) {
+    case PEER_USER:
+      UC = user_chat_get (plist[i]);
       printf ("User ");
-      print_user_name (dlist[3 * i], UC);
-      printf (": %d unread\n", dlist[3 * i + 2]);
+      print_user_name (plist[i], UC);
+      printf (": %d unread\n", dlist[2 * i + 1]);
+      break;
+    case PEER_CHAT:
+      UC = user_chat_get (plist[i]);
+      printf ("Chat ");
+      print_chat_name (plist[i], UC);
+      printf (": %d unread\n", dlist[2 * i + 1]);
+      break;
     }
   }
   pop_color ();
@@ -825,25 +830,31 @@ struct send_file {
   int part_num;
   int part_size;
   long long id;
-  int to_id;
+  peer_id_t to_id;
   int media_type;
   char *file_name;
 };
 
-void out_peer_id (int id) {
-  union user_chat *U = user_chat_get (id);
-  if (id < 0) {
+void out_peer_id (peer_id_t id) {
+  peer_t *U;
+  switch (get_peer_type (id)) {
+  case PEER_CHAT:
     out_int (CODE_input_peer_chat);
-    out_int (-id);
-  } else {
+    out_int (get_peer_id (id));
+    break;
+  case PEER_USER:
+    U = user_chat_get (id);
     if (U && U->user.access_hash) {
       out_int (CODE_input_peer_foreign);
-      out_int (id);
+      out_int (get_peer_id (id));
       out_long (U->user.access_hash);
     } else {
       out_int (CODE_input_peer_contact);
-      out_int (id);
+      out_int (get_peer_id (id));
     }
+    break;
+  default:
+    assert (0);
   }
 }
 
@@ -932,7 +943,7 @@ void send_part (struct send_file *f) {
   }
 }
 
-void do_send_photo (int type, int to_id, char *file_name) {
+void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
@@ -988,7 +999,7 @@ struct query_methods fwd_msg_methods = {
   .on_answer = fwd_msg_on_answer
 };
 
-void do_forward_message (int id, int n) {
+void do_forward_message (peer_id_t id, int n) {
   clear_packet ();
   out_int (CODE_invoke_with_layer3);
   out_int (CODE_messages_forward_message);
@@ -1022,17 +1033,18 @@ struct query_methods rename_chat_methods = {
   .on_answer = rename_chat_on_answer
 };
 
-void do_rename_chat (int id, char *name) {
+void do_rename_chat (peer_id_t id, char *name) {
   clear_packet ();
   out_int (CODE_messages_edit_chat_title);
-  out_int (-id);
+  assert (get_peer_type (id) == PEER_CHAT);
+  out_int (get_peer_id (id));
   out_string (name);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0);
 }
 
 int chat_info_on_answer (struct query *q UU) {
   struct chat *C = fetch_alloc_chat_full ();
-  union user_chat *U = (void *)C;
+  peer_t *U = (void *)C;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("Chat ");
@@ -1041,9 +1053,9 @@ int chat_info_on_answer (struct query *q UU) {
   int i;
   for (i = 0; i < C->users_num; i++) {
     printf ("\t\t");
-    print_user_name (C->users[i].user_id, user_chat_get (C->users[i].user_id));
+    print_user_name (MK_USER (C->users[i].user_id), user_chat_get (MK_USER (C->users[i].user_id)));
     printf (" invited by ");
-    print_user_name (C->users[i].inviter_id, user_chat_get (C->users[i].inviter_id));
+    print_user_name (MK_USER (C->users[i].inviter_id), user_chat_get (MK_USER (C->users[i].inviter_id)));
     printf (" at ");
     print_date_full (C->users[i].date);
     if (C->users[i].user_id == C->admin_id) {
@@ -1060,16 +1072,17 @@ struct query_methods chat_info_methods = {
   .on_answer = chat_info_on_answer
 };
 
-void do_get_chat_info (int id) {
+void do_get_chat_info (peer_id_t id) {
   clear_packet ();
   out_int (CODE_messages_get_full_chat);
-  out_int (-id);
+  assert (get_peer_type (id) == PEER_CHAT);
+  out_int (get_peer_id (id));
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
 }
 
 int user_info_on_answer (struct query *q UU) {
   struct user *U = fetch_alloc_user_full ();
-  union user_chat *C = (void *)U;
+  peer_t *C = (void *)U;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("User ");
@@ -1093,17 +1106,18 @@ struct query_methods user_info_methods = {
   .on_answer = user_info_on_answer
 };
 
-void do_get_user_info (int id) {
+void do_get_user_info (peer_id_t id) {
   clear_packet ();
   out_int (CODE_users_get_full_user);
-  union user_chat *U = user_chat_get (id);
+  assert (get_peer_type (id) == PEER_USER);
+  peer_t *U = user_chat_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (id);
+    out_int (get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (id);
+    out_int (get_peer_id (id));
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0);
 }
@@ -1387,8 +1401,8 @@ int add_contact_on_answer (struct query *q UU) {
     struct user *U = fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
-    printf ("User #%d: ", U->id);
-    print_user_name (U->id, (union user_chat *)U);
+    printf ("User #%d: ", get_peer_id (U->id));
+    print_user_name (U->id, (peer_t *)U);
     push_color (COLOR_GREEN);
     printf (" (");
     printf ("%s", U->print_name);

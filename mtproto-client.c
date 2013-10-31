@@ -635,13 +635,45 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU);
 
 int unread_messages;
 int our_id;
+int pts;
+int qts;
+
+void fetch_pts (void) {
+  int p = fetch_int ();
+  if (p != pts + 1) {
+    if (pts) {
+      logprintf ("Hole in pts p = %d, pts = %d\n", p, pts);
+
+      // get difference should be here
+    } else {
+      pts = p;
+    }
+  } else {
+    pts ++;
+  }
+}
+
+void fetch_qts (void) {
+  int p = fetch_int ();
+  if (p != qts + 1) {
+    if (qts) {
+      logprintf ("Hole in qts\n");
+      // get difference should be here
+    } else {
+      qts = p;
+    }
+  } else {
+    qts ++;
+  }
+}
+
 void work_update (struct connection *c UU, long long msg_id UU) {
   unsigned op = fetch_int ();
   switch (op) {
   case CODE_update_new_message:
     {
       struct message *M = fetch_alloc_message ();
-      fetch_int (); //pts
+      fetch_pts ();
       unread_messages ++;
       print_message (M);
       update_prompt ();
@@ -667,7 +699,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           M->unread = 0;
         }
       }
-      fetch_int (); //pts
+      fetch_pts ();
       print_start ();
       push_color (COLOR_YELLOW);
       printf ("%d messages marked as read\n", n);
@@ -677,8 +709,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_typing:
     {
-      int id = fetch_int ();
-      union user_chat *U = user_chat_get (id);
+      peer_id_t id = MK_USER (fetch_int ());
+      peer_t *U = user_chat_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
       printf ("User ");
@@ -690,16 +722,16 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_chat_user_typing:
     {
-      int chat_id = fetch_int ();
-      int id = fetch_int ();
-      union user_chat *C = user_chat_get (-chat_id);
-      union user_chat *U = user_chat_get (id);
+      peer_id_t chat_id = MK_CHAT (fetch_int ());
+      peer_id_t id = MK_USER (fetch_int ());
+      peer_t *C = user_chat_get (chat_id);
+      peer_t *U = user_chat_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
       printf ("User ");
       print_user_name (id, U);
       printf (" is typing in chat ");
-      print_chat_name (-chat_id, C);
+      print_chat_name (chat_id, C);
       printf ("....\n");
       pop_color ();
       print_end ();
@@ -707,8 +739,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_status:
     {
-      int user_id = fetch_int ();
-      union user_chat *U = user_chat_get (user_id);
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *U = user_chat_get (user_id);
       if (U) {
         fetch_user_status (&U->user.status);
         print_start ();
@@ -727,8 +759,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_name:
     {
-      int user_id = fetch_int ();
-      union user_chat *UC = user_chat_get (user_id);
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *UC = user_chat_get (user_id);
       if (UC) {
         struct user *U = &UC->user;
         print_start ();
@@ -770,8 +802,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_photo:
     {
-      int user_id = fetch_int ();
-      union user_chat *UC = user_chat_get (user_id);
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *UC = user_chat_get (user_id);
       if (UC) {
         struct user *U = &UC->user;
         
@@ -813,23 +845,36 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       pop_color ();
       print_end ();
       fetch_skip (n);
-      fetch_int (); // pts
+      fetch_pts ();
+    }
+    break;
+  case CODE_update_delete_messages:
+    {
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("Deleted %d messages\n", n);
+      pop_color ();
+      print_end ();
+      fetch_skip (n);
+      fetch_pts ();
     }
     break;
   case CODE_update_chat_participants:
     {
       assert (fetch_int () == CODE_chat_participants);
-      int chat_id = fetch_int ();
+      peer_id_t chat_id = MK_CHAT (fetch_int ());
       fetch_int (); // admin_id
       assert (fetch_int () == CODE_vector);
       int n = fetch_int ();
       fetch_skip (n * 4);
       fetch_int (); // version
-      union user_chat *C = user_chat_get (-chat_id);
+      peer_t *C = user_chat_get (chat_id);
       print_start ();
       push_color (COLOR_YELLOW);
       printf ("Chat ");
-      print_chat_name (-chat_id, C);
+      print_chat_name (chat_id, C);
       printf (" changed list: now %d members\n", n);
       pop_color ();
       print_end ();
@@ -837,8 +882,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_contact_registered:
     {
-      int user_id = fetch_int ();
-      union user_chat *U = user_chat_get (user_id);
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *U = user_chat_get (user_id);
       fetch_int (); // date
       print_start ();
       push_color (COLOR_YELLOW);
@@ -851,8 +896,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_contact_link:
     {
-      int user_id = fetch_int ();
-      union user_chat *U = user_chat_get (user_id);
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *U = user_chat_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
       printf ("Updated link with user ");
@@ -874,8 +919,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_activation:
     {
-      int user_id = fetch_int ();
-      union user_chat *U = user_chat_get (user_id);
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *U = user_chat_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
       printf ("User ");

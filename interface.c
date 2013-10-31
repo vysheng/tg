@@ -50,7 +50,7 @@ long long cur_downloaded_bytes;
 char *line_ptr;
 extern int user_num;
 extern int chat_num;
-extern union user_chat *Peers[];
+extern peer_t *Peers[];
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -77,6 +77,8 @@ char *next_token (int *l) {
 }
 
 #define NOT_FOUND (int)0x80000000
+peer_id_t PEER_NOT_FOUND = {.id = NOT_FOUND};
+
 int next_token_int (void) {
   int l;
   char *s = next_token (&l);
@@ -90,84 +92,82 @@ int next_token_int (void) {
   }
 }
 
-int next_token_user (void) {
+peer_id_t next_token_user (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return NOT_FOUND; }
+  if (!s) { return PEER_NOT_FOUND; }
 
-  if (*s == '#') {
-    s ++; 
-    l --;
-    if (l > 0) {
-      int r = atoi (s);
-      if (r < 0) { return r; }
-      else { return NOT_FOUND; }
-    } else {
-      return NOT_FOUND;
-    }
+  if (l >= 6 && !memcmp (s, "user#", 5)) {
+    s += 5;    
+    l -= 5;
+    int r = atoi (s);
+    if (r >= 0) { return set_peer_id (PEER_USER, r); }
+    else { return PEER_NOT_FOUND; }
   }
+
   int index = 0;
-  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || Peers[index]->id < 0)) {
+  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_USER)) {
     index ++;
   }
   if (index < user_num + chat_num) {
     return Peers[index]->id;
   } else {
-    return NOT_FOUND;
+    return PEER_NOT_FOUND;
   }
 }
 
-int next_token_chat (void) {
+peer_id_t next_token_chat (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return NOT_FOUND; }
-
-  if (*s == '#') {
-    s ++; 
-    l --;
-    if (l > 0) {
-      int r = atoi (s);
-      if (r < 0) { return r; }
-      else { return NOT_FOUND; }
-    } else {
-      return NOT_FOUND;
-    }
+  if (!s) { return PEER_NOT_FOUND; }
+  
+  if (l >= 6 && !memcmp (s, "chat#", 5)) {
+    s += 5;    
+    l -= 5;
+    int r = atoi (s);
+    if (r >= 0) { return set_peer_id (PEER_CHAT, r); }
+    else { return PEER_NOT_FOUND; }
   }
+
   int index = 0;
-  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || Peers[index]->id > 0)) {
+  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
     index ++;
   }
   if (index < user_num + chat_num) {
     return Peers[index]->id;
   } else {
-    return NOT_FOUND;
+    return PEER_NOT_FOUND;
   }
 }
 
-int next_token_user_chat (void) {
+peer_id_t next_token_peer (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return NOT_FOUND; }
-
-  if (*s == '#') {
-    s ++; 
-    l --;
-    if (l > 0) {
-      int r = atoi (s);
-      if (r != 0) { return r; }
-      else { return NOT_FOUND; }
-    } else {
-      return NOT_FOUND;
-    }
+  if (!s) { return PEER_NOT_FOUND; }
+  
+  if (l >= 6 && !memcmp (s, "user#", 5)) {
+    s += 5;    
+    l -= 5;
+    int r = atoi (s);
+    if (r >= 0) { return set_peer_id (PEER_USER, r); }
+    else { return PEER_NOT_FOUND; }
   }
+  if (l >= 6 && !memcmp (s, "chat#", 5)) {
+    s += 5;    
+    l -= 5;
+    int r = atoi (s);
+    if (r >= 0) { return set_peer_id (PEER_CHAT, r); }
+    else { return PEER_NOT_FOUND; }
+  }
+
   int index = 0;
-  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || !Peers[index]->id)) {
+  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name))) {
     index ++;
   }
   if (index < user_num + chat_num) {
     return Peers[index]->id;
   } else {
-    return NOT_FOUND;
+    return PEER_NOT_FOUND;
   }
 }
 
@@ -295,7 +295,7 @@ int get_complete_mode (void) {
 
 int complete_user_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id < 0)) {
+  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_USER)) {
     index ++;
   }
   if (index < user_num + chat_num) {
@@ -308,7 +308,7 @@ int complete_user_list (int index, const char *text, int len, char **R) {
 
 int complete_chat_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || Peers[index]->id > 0)) {
+  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
     index ++;
   }
   if (index < user_num + chat_num) {
@@ -426,6 +426,27 @@ void interpreter (char *line UU) {
 
 #define IS_WORD(s) is_same_word (command, l, (s))
 #define RET in_readline = 0; return; 
+
+  peer_id_t id;
+#define GET_PEER \
+  id = next_token_peer (); \
+  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+    printf ("Bad user/char id\n"); \
+    RET; \
+  } 
+#define GET_PEER_USER \
+  id = next_token_user (); \
+  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+    printf ("Bad user id\n"); \
+    RET; \
+  } 
+#define GET_PEER_CHAT \
+  id = next_token_chat (); \
+  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+    printf ("Bad char id\n"); \
+    RET; \
+  } 
+
   if (IS_WORD ("contact_list")) {
     do_update_contact_list ();
   } else if (IS_WORD ("dialog_list")) {
@@ -435,11 +456,7 @@ void interpreter (char *line UU) {
     print_stat (stat_buf, (1 << 15) - 1);
     printf ("%s\n", stat_buf);
   } else if (IS_WORD ("msg")) {
-    int id = next_token_user_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user/chat id\n");
-      RET;
-    }
+    GET_PEER;
     int t;
     char *s = next_token (&t);
     if (!s) {
@@ -448,11 +465,7 @@ void interpreter (char *line UU) {
     }
     do_send_message (id, s, strlen (s));
   } else if (IS_WORD ("rename_chat")) {
-    int id = next_token_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad chat id\n");
-      RET;
-    }
+    GET_PEER_CHAT;
     int t;
     char *s = next_token (&t);
     if (!s) {
@@ -461,11 +474,7 @@ void interpreter (char *line UU) {
     }
     do_rename_chat (id, s);
   } else if (IS_WORD ("send_photo")) {
-    int id = next_token_user_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user/chat id\n");
-      RET;
-    }
+    GET_PEER;
     int t;
     char *s = next_token (&t);
     if (!s) {
@@ -474,11 +483,7 @@ void interpreter (char *line UU) {
     }
     do_send_photo (CODE_input_media_uploaded_photo, id, strndup (s, t));
   } else if (IS_WORD("send_video")) {
-    int id = next_token_user_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user/chat id\n");
-      RET;
-    }
+    GET_PEER;
     int t;
     char *s = next_token (&t);
     if (!s) {
@@ -487,11 +492,7 @@ void interpreter (char *line UU) {
     }
     do_send_photo (CODE_input_media_uploaded_video, id, strndup (s, t));
   } else if (IS_WORD ("send_text")) {
-    int id = next_token_user_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user/chat id\n");
-      RET;
-    }
+    GET_PEER;
     int t;
     char *s = next_token (&t);
     if (!s) {
@@ -500,11 +501,7 @@ void interpreter (char *line UU) {
     }
     do_send_text (id, strndup (s, t));
   } else if (IS_WORD ("fwd")) {
-    int id = next_token_user_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user/chat id\n");
-      RET;
-    }
+    GET_PEER;
     int num = next_token_int ();
     if (num == NOT_FOUND || num <= 0) {
       printf ("Bad msg id\n");
@@ -590,25 +587,13 @@ void interpreter (char *line UU) {
       RET;
     }
   } else if (IS_WORD ("chat_info")) {
-    int id = next_token_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad chat id\n");
-      RET;
-    }
+    GET_PEER_CHAT;
     do_get_chat_info (id);
   } else if (IS_WORD ("user_info")) {
-    int id = next_token_user ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user id\n");
-      RET;
-    }
+    GET_PEER_USER;
     do_get_user_info (id);
   } else if (IS_WORD ("history")) {
-    int id = next_token_user_chat ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user/chat id\n");
-      RET;
-    }
+    GET_PEER;
     int limit = next_token_int ();
     do_get_history (id, limit > 0 ? limit : 40);
   } else if (IS_WORD ("add_contact")) {
@@ -631,12 +616,8 @@ void interpreter (char *line UU) {
     }
     do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0);
   } else if (IS_WORD ("rename_contact")) {
-    int id = next_token_user ();
-    if (id == NOT_FOUND) {
-      printf ("Bad user\n");
-      RET;
-    }
-    union user_chat *U = user_chat_get (id);
+    GET_PEER_USER;
+    peer_t *U = user_chat_get (id);
     if (!U) {
       printf ("No such user\n");
       RET;
@@ -879,20 +860,22 @@ void print_media (struct message_media *M) {
 int unknown_user_list_pos;
 int unknown_user_list[1000];
 
-void print_user_name (int id, union user_chat *U) {
+void print_user_name (peer_id_t id, peer_t *U) {
+  assert (get_peer_type (id) == PEER_USER);
   push_color (COLOR_RED);
   if (!U) {
-    printf ("user#%d", id);
+    printf ("user#%d", get_peer_id (id));
     int i;
+    int ok = 1;
     for (i = 0; i < unknown_user_list_pos; i++) {
-      if (unknown_user_list[i] == id) {
-        id = 0;
+      if (unknown_user_list[i] == get_peer_id (id)) {
+        ok = 0;
         break;
       }
     }
-    if (id) {
+    if (ok) {
       assert (unknown_user_list_pos < 1000);
-      unknown_user_list[unknown_user_list_pos ++] = id;
+      unknown_user_list[unknown_user_list_pos ++] = get_peer_id (id);
     }
   } else {
     if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
@@ -912,10 +895,10 @@ void print_user_name (int id, union user_chat *U) {
   pop_color ();
 }
 
-void print_chat_name (int id, union user_chat *C) {
+void print_chat_name (peer_id_t id, peer_t *C) {
   push_color (COLOR_MAGENTA);
   if (!C) {
-    printf ("chat#%d", -id);
+    printf ("chat#%d", get_peer_id (id));
   } else {
     printf ("%s", C->chat.title);
   }
@@ -973,12 +956,12 @@ void print_service_message (struct message *M) {
     break;
   case CODE_message_action_chat_add_user:
     printf (" added user ");
-    print_user_name (M->action.user, user_chat_get (M->action.user));
+    print_user_name (set_peer_id (PEER_USER, M->action.user), user_chat_get (set_peer_id (PEER_USER, M->action.user)));
     printf ("\n");
     break;
   case CODE_message_action_chat_delete_user:
     printf (" deleted user ");
-    print_user_name (M->action.user, user_chat_get (M->action.user));
+    print_user_name (set_peer_id (PEER_USER, M->action.user), user_chat_get (set_peer_id (PEER_USER, M->action.user)));
     printf ("\n");
     break;
   default:
@@ -988,15 +971,20 @@ void print_service_message (struct message *M) {
   print_end ();
 }
 
+peer_id_t last_from_id;
+peer_id_t last_to_id;
+
 void print_message (struct message *M) {
   if (M->service) {
     print_service_message (M);
     return;
   }
 
+  last_from_id = M->from_id;
+  last_to_id = M->to_id;
 
   print_start ();
-  if (M->to_id >= 0) {
+  if (get_peer_type (M->to_id) == PEER_USER) {
     if (M->out) {
       push_color (COLOR_GREEN);
       if (msg_num_mode) {
@@ -1039,7 +1027,7 @@ void print_message (struct message *M) {
     print_chat_name (M->to_id, user_chat_get (M->to_id));
     printf (" ");
     print_user_name (M->from_id, user_chat_get (M->from_id));
-    if (M->from_id == our_id) {
+    if ((get_peer_type (M->from_id) == PEER_USER) && (get_peer_id (M->from_id) == our_id)) {
       push_color (COLOR_GREEN);
     } else {
       push_color (COLOR_BLUE);
@@ -1050,7 +1038,7 @@ void print_message (struct message *M) {
       printf (" »»» ");
     }
   }
-  if (M->fwd_from_id) {
+  if (get_peer_type (M->fwd_from_id) == PEER_USER) {
     printf ("[fwd from ");
     print_user_name (M->fwd_from_id, user_chat_get (M->fwd_from_id));
     printf ("] ");
