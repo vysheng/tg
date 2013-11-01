@@ -851,9 +851,9 @@ void do_get_dialog_list_ex (void) {
     out_string (TG_VERSION " (build " TG_BUILD ")");
     out_string ("En");
   } else { 
-    out_string ("A");
-    out_string ("L");
-    out_string ("T");
+    out_string ("x86");
+    out_string ("Linux");
+    out_string (TG_VERSION);
     out_string ("en");
   }
   out_int (CODE_messages_get_dialogs);

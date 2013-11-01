@@ -26,6 +26,7 @@ struct dc;
 //#define TG_SERVER "95.142.192.66"
 #define TG_APP_HASH "36722c72256a24c1225de00eb6a1ca74"
 #define TG_APP_ID 2899
+#define TG_BUILD "200"
 
 #define TG_VERSION "0.01-beta"
 
