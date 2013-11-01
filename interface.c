@@ -416,7 +416,7 @@ void interpreter (char *line UU) {
   char *command;
   while (1) {
     command = next_token (&l);
-    if (!command) { return; }
+    if (!command) { in_readline = 0; return; }
     if (*command == '[' && command[l - 1] == ']') {
       work_modifier (command);
     } else {
