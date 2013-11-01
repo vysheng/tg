@@ -261,6 +261,7 @@ static inline void out_bignum (BIGNUM *n) {
 
 extern int *in_ptr, *in_end;
 
+void fetch_pts (void);
 static inline int prefetch_strlen (void) {
   if (in_ptr >= in_end) { 
     return -1; 

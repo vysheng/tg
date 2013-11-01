@@ -607,12 +607,12 @@ int msg_send_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_sent_message);
   int id = fetch_int (); // id
   int date = fetch_int (); // date
-  int ptr = fetch_int (); // ptr
+  fetch_pts ();
   int seq = fetch_int (); // seq
   struct message *M = q->extra;
   M->id = id;
   message_insert (M);
-  logprintf ("Sent: id = %d, date = %d, ptr = %d, seq = %d\n", id, date, ptr, seq);
+  logprintf ("Sent: id = %d, date = %d, seq = %d\n", id, date, seq);
   return 0;
 }
 
@@ -725,7 +725,7 @@ int get_history_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
   }
-  if (sn > 0) {
+  if (sn > 0 && q->extra) {
     do_messages_mark_read (*(peer_id_t *)&(q->extra), ML[0]->id);
   }
   return 0;
@@ -1446,4 +1446,26 @@ void do_add_contact (const char *phone, int phone_len, const char *first_name, i
   out_cstring (last_name, last_name_len);
   out_int (force ? CODE_bool_true : CODE_bool_false);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0);
+}
+
+int msg_search_on_answer (struct query *q UU) {
+  return get_history_on_answer (q);
+}
+
+struct query_methods msg_search_methods = {
+  .on_answer = msg_search_on_answer
+};
+
+void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
+  clear_packet ();
+  out_int (CODE_messages_search);
+  out_peer_id (id);
+  out_string (s);
+  out_int (CODE_input_messages_filter_empty);
+  out_int (from);
+  out_int (to);
+  out_int (0); // offset
+  out_int (0); // max_id
+  out_int (limit);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0);
 }

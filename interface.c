@@ -231,6 +231,7 @@ char *commands[] = {
   "add_contact",
   "rename_contact",
   "show_license",
+  "search",
   0 };
 
 int commands_flags[] = {
@@ -256,6 +257,7 @@ int commands_flags[] = {
   07,
   071,
   07,
+  072,
 };
 
 int get_complete_mode (void) {
@@ -671,6 +673,18 @@ void interpreter (char *line UU) {
 #include "LICENSE.h"
     ;
     printf ("%s", b);
+  } else if (IS_WORD ("search")) {
+    GET_PEER;
+    int from = 0;
+    int to = 0;
+    int limit = 40;
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty message\n");
+      RET;
+    }
+    do_msg_search (id, from, to, limit, s);
   }
 #undef IS_WORD
 #undef RET
