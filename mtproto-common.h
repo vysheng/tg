@@ -377,4 +377,8 @@ int pad_aes_decrypt (char *from, int from_len, char *to, int size);
 static inline void hexdump_in (void) {
   hexdump (in_ptr, in_end);
 }
+
+static inline void hexdump_out (void) {
+  hexdump (packet_buffer, packet_ptr);
+}
 #endif

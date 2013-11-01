@@ -198,6 +198,7 @@ struct user *fetch_alloc_user_full (void);
 struct chat *fetch_alloc_chat (void);
 struct chat *fetch_alloc_chat_full (void);
 struct message *fetch_alloc_message (void);
+struct message *fetch_alloc_geo_message (void);
 struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
 peer_id_t fetch_peer_id (void);
@@ -215,14 +216,19 @@ void fetch_photo (struct photo *P);
 
 #define PEER_USER 1
 #define PEER_CHAT 2
+#define PEER_GEO_CHAT 3
 #define PEER_UNKNOWN 0
 
 #define MK_USER(id) set_peer_id (PEER_USER,id)
 #define MK_CHAT(id) set_peer_id (PEER_CHAT,id)
+#define MK_GEO_CHAT(id) set_peer_id (PEER_GEO_CHAT,id)
 
 static inline int get_peer_type (peer_id_t id) {
   if (id.id > 0) { 
     return PEER_USER; 
+  }
+  if (id.id < -1000000000) { 
+    return PEER_GEO_CHAT; 
   }
   if (id.id < 0) { 
     return PEER_CHAT; 
@@ -236,6 +242,8 @@ static inline int get_peer_id (peer_id_t id) {
     return id.id;
   case PEER_CHAT:
     return -id.id;
+  case PEER_GEO_CHAT:
+    return -id.id - 1000000000;
   default:
     return 0;
   }
@@ -249,6 +257,9 @@ static inline peer_id_t set_peer_id (int type, int id) {
     return ID;
   case PEER_CHAT:
     ID.id = -id;
+    return ID;
+  case PEER_GEO_CHAT:
+    ID.id = -id - 1000000000;
     return ID;
   default:
     assert (0);

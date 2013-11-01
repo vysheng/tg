@@ -252,10 +252,11 @@
 #define CODE_messages_dh_config 0x2c221edd
 #define CODE_messages_sent_encrypted_message 0x560f8935
 #define CODE_messages_sent_encrypted_file 0x9493ff32
+#define CODE_input_file_big 0xfa4f0bb5
+#define CODE_input_encrypted_file_big_uploaded 0x2dc173c8
 #define CODE_invoke_after_msg 0xcb9f372d
 #define CODE_invoke_after_msgs 0x3dc4b4f0
 #define CODE_invoke_with_layer1 0x53835315
-#define CODE_init_connection 0x3fc12e08
 #define CODE_auth_check_phone 0x6fe51dfb
 #define CODE_auth_send_code 0x768d5f4d
 #define CODE_auth_send_call 0x3c51564
@@ -348,4 +349,7 @@
 #define CODE_messages_send_encrypted_service 0x32d439a4
 #define CODE_messages_received_queue 0x55a5bb66
 #define CODE_invoke_with_layer8 0xe9abd9fd
+#define CODE_upload_save_big_file_part 0xde7b673d
+#define CODE_init_connection 0x69796de9
+#define CODE_invoke_with_layer9 0x76715a63
 #endif

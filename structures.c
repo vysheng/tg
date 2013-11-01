@@ -179,7 +179,7 @@ void fetch_user (struct user *U) {
   }
   fetch_user_status (&U->status);
   if (x == CODE_user_self) {
-    assert (fetch_int () == (int)CODE_bool_false);
+    fetch_bool ();
   }
   if (x == CODE_user_contact) {
     U->flags |= FLAG_USER_CONTACT;
@@ -532,6 +532,27 @@ void fetch_message (struct message *M) {
   }
 }
 
+void fetch_geo_message (struct message *M) {
+  memset (M, 0, sizeof (*M));
+  unsigned x = fetch_int ();
+  assert (x == CODE_geo_chat_message_empty || x == CODE_geo_chat_message || x == CODE_geo_chat_message_service);
+  M->to_id = MK_GEO_CHAT (fetch_int ());
+  M->id = fetch_int ();
+  if (x == CODE_geo_chat_message_empty) {
+    M->flags |= 1;
+    return;
+  }
+  M->from_id = MK_USER (fetch_int ());
+  M->date = fetch_int ();
+  if (x == CODE_geo_chat_message_service) {
+    M->service = 1;
+    fetch_message_action (&M->action);
+  } else {
+    M->message = fetch_str_dup ();
+    fetch_message_media (&M->media);
+  }
+}
+
 #define id_cmp(a,b) ((a)->id - (b)->id)
 #define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
 
@@ -694,6 +715,26 @@ void message_add_use (struct message *M) {
 struct message *fetch_alloc_message (void) {
   struct message *M = malloc (sizeof (*M));
   fetch_message (M);
+  struct message *M1 = tree_lookup_message (message_tree, M);
+  messages_allocated ++;
+  if (M1) {
+    message_del_use (M1);
+    free_message (M1);
+    memcpy (M1, M, sizeof (*M));
+    free (M);
+    message_add_use (M1);
+    messages_allocated --;
+    return M1;
+  } else {
+    message_add_use (M);
+    message_tree = tree_insert_message (message_tree, M, lrand48 ());
+    return M;
+  }
+}
+
+struct message *fetch_alloc_geo_message (void) {
+  struct message *M = malloc (sizeof (*M));
+  fetch_geo_message (M);
   struct message *M1 = tree_lookup_message (message_tree, M);
   messages_allocated ++;
   if (M1) {

@@ -311,7 +311,7 @@ int loop (void) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
-      if (!*code || *code == 'y') {
+      if (!*code || *code == 'y' || *code == 'Y') {
         printf ("Ok, starting registartion.\n");
       } else {
         printf ("Then try again\n");
@@ -368,7 +368,7 @@ int loop (void) {
   rl_attempted_completion_function = (CPPFunction *) complete_text;
   rl_completion_entry_function = complete_none;
 
-  do_get_dialog_list ();
+  do_get_dialog_list_ex ();
 
   return main_loop ();
 }

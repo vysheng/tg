@@ -946,6 +946,41 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       free (location);
     }
     break;
+  case CODE_update_new_geo_chat_message:
+    {
+      struct message *M = fetch_alloc_geo_message ();
+      unread_messages ++;
+      print_message (M);
+      update_prompt ();
+    }
+    break;
+  case CODE_update_new_encrypted_message:
+    {
+      logprintf ("New encrypted message. Unsupported yet\n");
+    }
+    break;
+  case CODE_update_encryption:
+    {
+      logprintf ("New encrypted chat. Unsupported yet\n");
+    }
+    break;
+  case CODE_update_encrypted_chat_typing:
+    {
+      logprintf ("Typing in encrypted chat. Unsupported yet\n");
+    }
+    break;
+  case CODE_update_encrypted_messages_read:
+    {
+      fetch_int (); // chat_id
+      fetch_int (); // max_date
+      fetch_int (); // date
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("Messages in encrypted chat mark read \n");
+      pop_color ();
+      print_end ();
+    }
+    break;
   default:
     logprintf ("Unknown update type %08x\n", op);
   }

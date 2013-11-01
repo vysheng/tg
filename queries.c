@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/utsname.h>
 
 #include "include.h"
 #include "mtproto-client.h"
@@ -35,6 +36,7 @@
 #include "loop.h"
 #include "structures.h"
 #include "interface.h"
+#include "net.h"
 
 char *get_downloads_directory (void);
 int verbosity;
@@ -280,7 +282,7 @@ int help_get_config_on_answer (struct query *q UU) {
 
   unsigned test_mode = fetch_int ();
   assert (test_mode == CODE_bool_true || test_mode == CODE_bool_false);
-  assert (test_mode == CODE_bool_false);
+  assert (test_mode == CODE_bool_false || test_mode == CODE_bool_true);
   int this_dc = fetch_int ();
   if (verbosity) {
     logprintf ( "this_dc = %d\n", this_dc);
@@ -325,7 +327,7 @@ void do_help_get_config (void) {
 char *phone_code_hash;
 int send_code_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_auth_sent_code);
-  assert (fetch_bool ());
+  fetch_bool ();
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
   if (phone_code_hash) {
@@ -338,8 +340,12 @@ int send_code_on_answer (struct query *q UU) {
 
 int send_code_on_error (struct query *q UU, int error_code, int l, char *error) {
   int s = strlen ("PHONE_MIGRATE_");
+  int s2 = strlen ("NETWORK_MIGRATE_");
   if (l >= s && !memcmp (error, "PHONE_MIGRATE_", s)) {
     int i = error[s] - '0';
+    want_dc_num = i;
+  } else if (l >= s2 && !memcmp (error, "NETWORK_MIGRATE_", s2)) {
+    int i = error[s2] - '0';
     want_dc_num = i;
   } else {
     logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
@@ -364,9 +370,11 @@ int config_got (void) {
 char *suser;
 extern int dc_working_num;
 void do_send_code (const char *user) {
+  logprintf ("sending code\n");
   suser = strdup (user);
   want_dc_num = 0;
   clear_packet ();
+  out_int (CODE_invoke_with_layer6);
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -374,6 +382,7 @@ void do_send_code (const char *user) {
   out_string (TG_APP_HASH);
   out_string ("en");
 
+  logprintf ("send_code: dc_num = %d\n", dc_working_num);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
   net_loop (0, code_is_sent);
   if (want_dc_num == -1) { return; }
@@ -383,8 +392,10 @@ void do_send_code (const char *user) {
     dc_create_session (DC_working);
   }
   dc_working_num = want_dc_num;
+  logprintf ("send_code: dc_num = %d\n", dc_working_num);
   want_dc_num = 0;
   clear_packet ();
+  out_int (CODE_invoke_with_layer6);
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -420,7 +431,7 @@ int check_phone_on_error (struct query *q UU, int error_code, int l, char *error
     DC_working = DC_list[i];
     write_auth_file ();
     check_phone_result = 1;
-  } else if (l >= s2 && !memcmp (error, "NETWORK_MIGRATE_", s)) {
+  } else if (l >= s2 && !memcmp (error, "NETWORK_MIGRATE_", s2)) {
     int i = error[s2] - '0';
     assert (DC_list[i]);
     dc_working_num = i;
@@ -746,6 +757,7 @@ void do_get_history (peer_id_t id, int limit) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id);
 }
 
+
 int get_dialogs_on_answer (struct query *q UU) {
   unsigned x = fetch_int (); 
   assert (x == CODE_messages_dialogs || x == CODE_messages_dialogs_slice);
@@ -820,6 +832,34 @@ void do_get_dialog_list (void) {
   out_int (0);
   out_int (0);
   out_int (1000);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
+}
+
+int allow_send_linux_version = 1;
+void do_get_dialog_list_ex (void) {
+  clear_packet ();  
+  out_int (CODE_invoke_with_layer9);
+  out_int (CODE_init_connection);
+  out_int (TG_APP_ID);
+  if (allow_send_linux_version) {
+    struct utsname st;
+    uname (&st);
+    out_string (st.machine);
+    static char buf[1000000];
+    sprintf (buf, "%s %s %s", st.sysname, st.release, st.version);
+    out_string (buf);
+    out_string (TG_VERSION " (build " TG_BUILD ")");
+    out_string ("En");
+  } else { 
+    out_string ("A");
+    out_string ("L");
+    out_string ("T");
+    out_string ("en");
+  }
+  out_int (CODE_messages_get_dialogs);
+  out_int (0);
+  out_int (0);
+  out_int (100);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
 }
 
