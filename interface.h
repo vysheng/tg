@@ -45,6 +45,8 @@ union peer;
 void print_message (struct message *M);
 void print_chat_name (peer_id_t id, union peer *C);
 void print_user_name (peer_id_t id, union peer *U);
+void print_encr_chat_name_full (peer_id_t id, peer_t *C);
+void print_encr_chat_name (peer_id_t id, peer_t *C);
 //void print_media (struct message_media *M);
 void pop_color (void);
 void push_color (const char *color);

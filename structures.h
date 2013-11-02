@@ -35,6 +35,7 @@ typedef struct { int id; } peer_id_t;
 
 #define FLAG_CHAT_IN_CHAT 128
 
+#define FLAG_ENCRYPTED 4096
 
 struct file_location {
   int dc;
@@ -67,6 +68,40 @@ struct photo {
   int sizes_num;
   struct photo_size *sizes;
 };
+
+struct encr_photo {
+  long long id;
+  long long access_hash;
+  int dc_id;
+  int size;
+  int key_fingerprint;
+
+  int w;
+  int h;
+  unsigned char *key;
+  unsigned char *iv;
+};
+
+struct encr_video {
+  long long id;
+  long long access_hash;
+  int dc_id;
+  int size;
+  int key_fingerprint;
+  
+  int w;
+  int h;
+  int duration;
+  unsigned char *key;
+  unsigned char *iv;
+};
+
+struct encr_file {
+  char *filename;
+  unsigned char *key;
+  unsigned char *iv;
+};
+
 
 struct user_status {
   int online;
@@ -113,9 +148,10 @@ struct chat {
 
 enum secret_chat_state {
   sc_none,
-  sc_sent_request,
+  sc_waiting,
+  sc_request,
   sc_ok,
-  sc_bad
+  sc_deleted
 };
 
 struct secret_chat {
@@ -125,6 +161,13 @@ struct secret_chat {
   struct file_location photo_big;
   struct file_location photo_small;
   struct photo photo;
+  int user_id;
+  int admin_id;
+  int date;
+  int ttl;
+  long long access_hash;
+  unsigned char *g_key;
+  unsigned char *nonce;
 
   enum secret_chat_state state;
   int key[64];
@@ -185,6 +228,9 @@ struct message_media {
       char *last_name;
       int user_id;
     };
+    struct encr_photo encr_photo;
+    struct encr_video encr_video;
+    struct encr_file encr_file;
     void *data;
   };
 };
@@ -218,10 +264,13 @@ struct user *fetch_alloc_user (void);
 struct user *fetch_alloc_user_full (void);
 struct chat *fetch_alloc_chat (void);
 struct chat *fetch_alloc_chat_full (void);
+struct secret_chat *fetch_alloc_encrypted_chat (void);
 struct message *fetch_alloc_message (void);
 struct message *fetch_alloc_geo_message (void);
 struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
+struct message *fetch_alloc_encrypted_message (void);
+void fetch_encrypted_message_file (struct message_media *M);
 peer_id_t fetch_peer_id (void);
 
 void free_user (struct user *U);

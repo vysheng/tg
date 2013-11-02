@@ -956,27 +956,79 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_new_encrypted_message:
     {
-      logprintf ("New encrypted message. Unsupported yet\n");
+      struct message *M = fetch_alloc_encrypted_message ();
+      unread_messages ++;
+      print_message (M);
+      update_prompt ();
+      fetch_qts ();
     }
     break;
   case CODE_update_encryption:
     {
-      logprintf ("New encrypted chat. Unsupported yet\n");
+      struct secret_chat *E = fetch_alloc_encrypted_chat ();
+      print_start ();
+      push_color (COLOR_YELLOW);
+      switch (E->state) {
+      case sc_none:
+        assert (0);
+        break;
+      case sc_waiting:
+        printf ("Encrypted chat ");
+        print_encr_chat_name (E->id, (void *)E);
+        printf (" is now in wait state\n");
+        break;
+      case sc_request:
+        printf ("Encrypted chat ");
+        print_encr_chat_name (E->id, (void *)E);
+        printf (" is now in request state. Sending request ok\n");
+        break;
+      case sc_ok:
+        printf ("Encrypted chat ");
+        print_encr_chat_name (E->id, (void *)E);
+        printf (" is now in ok state\n");
+        break;
+      case sc_deleted:
+        printf ("Encrypted chat ");
+        print_encr_chat_name (E->id, (void *)E);
+        printf (" is now in deleted state\n");
+        break;
+      }
+      /*if (E->state == state_requested) {
+        do_accept_encr_chat_request (E);
+      }*/
+      fetch_int (); // date
     }
     break;
   case CODE_update_encrypted_chat_typing:
     {
-      logprintf ("Typing in encrypted chat. Unsupported yet\n");
+      peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+      peer_t *P = user_chat_get (id);
+      print_start ();
+      push_color (COLOR_YELLOW);
+      if (P) {
+        printf ("User ");
+        peer_id_t user_id = MK_USER (P->encr_chat.user_id);
+        print_user_name (user_id, user_chat_get (user_id));
+        printf (" typing in secret chat ");
+        print_encr_chat_name (id, P);
+        printf ("\n");
+      } else {
+        printf ("Some user is typing in unknown secret chat\n");
+      }
+      pop_color ();
+      print_end ();
     }
     break;
   case CODE_update_encrypted_messages_read:
     {
-      fetch_int (); // chat_id
+      peer_id_t id = MK_ENCR_CHAT (fetch_int ()); // chat_id
       fetch_int (); // max_date
       fetch_int (); // date
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Messages in encrypted chat mark read \n");
+      printf ("Messages in encrypted chat ");
+      print_encr_chat_name_full (id, user_chat_get (id));
+      printf (" marked read \n");
       pop_color ();
       print_end ();
     }

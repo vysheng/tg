@@ -919,6 +919,26 @@ void print_chat_name (peer_id_t id, peer_t *C) {
   pop_color ();
 }
 
+void print_encr_chat_name (peer_id_t id, peer_t *C) {
+  push_color (COLOR_MAGENTA);
+  if (!C) {
+    printf ("encr_chat#%d", get_peer_id (id));
+  } else {
+    printf ("%s", C->print_name);
+  }
+  pop_color ();
+}
+
+void print_encr_chat_name_full (peer_id_t id, peer_t *C) {
+  push_color (COLOR_MAGENTA);
+  if (!C) {
+    printf ("encr_chat#%d", get_peer_id (id));
+  } else {
+    printf ("%s", C->print_name);
+  }
+  pop_color ();
+}
+
 static char *monthes[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 void print_date (long t) {
   struct tm *tm = localtime (&t);

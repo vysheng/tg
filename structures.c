@@ -192,6 +192,55 @@ void fetch_user (struct user *U) {
   }
 }
 
+void fetch_encrypted_chat (struct secret_chat *U) {
+  unsigned x = fetch_int ();
+  assert (x == CODE_encrypted_chat_empty || x == CODE_encrypted_chat_waiting || x == CODE_encrypted_chat_requested ||  x == CODE_encrypted_chat || x == CODE_encrypted_chat_discarded);
+  U->id = MK_ENCR_CHAT (fetch_int ());
+  U->flags &= ~(FLAG_EMPTY | FLAG_DELETED);
+  if (x == CODE_encrypted_chat_empty) {
+    U->state = sc_none;
+    U->flags |= FLAG_EMPTY;
+    return;
+  }
+  if (x == CODE_encrypted_chat_discarded) {
+    U->state = sc_deleted;
+    U->flags |= FLAG_DELETED;
+    return;
+  }
+  U->access_hash = fetch_long ();
+  U->date = fetch_int ();
+  U->admin_id = fetch_int ();
+  U->user_id = fetch_int () + U->admin_id - our_id;
+  if (x == CODE_encrypted_chat_waiting) {
+    U->state = sc_waiting;
+  } else if (x == CODE_encrypted_chat_requested) {
+    U->state = sc_request;
+    if (!U->g_key) {
+      U->g_key = malloc (256);
+    }
+    if (!U->nonce) {
+      U->nonce = malloc (256);
+    }
+    assert (prefetch_strlen () == 256);
+    memcpy (U->g_key, fetch_str (256), 256);
+    assert (prefetch_strlen () == 256);
+    memcpy (U->nonce, fetch_str (256), 256);
+  } else {
+    U->state = sc_ok;
+    if (!U->g_key) {
+      U->g_key = malloc (256);
+    }
+    if (!U->nonce) {
+      U->nonce = malloc (256);
+    }
+    assert (prefetch_strlen () == 256);
+    memcpy (U->g_key, fetch_str (256), 256);
+    assert (prefetch_strlen () == 256);
+    memcpy (U->nonce, fetch_str (256), 256);
+    U->key_fingerprint = fetch_long ();
+  }
+}
+
 void fetch_notify_settings (void);
 void fetch_user_full (struct user *U) {
   assert (fetch_int () == CODE_user_full);
@@ -501,6 +550,87 @@ void fetch_message_media (struct message_media *M) {
   }
 }
 
+void fetch_message_media_encrypted (struct message_media *M) {
+  memset (M, 0, sizeof (*M));
+  unsigned x = fetch_int ();
+  int l;
+  switch (M->type) {
+  case CODE_decrypted_message_media_empty:
+    M->type = CODE_message_media_empty;
+    break;
+  case CODE_decrypted_message_media_photo:
+    M->type = x;
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    fetch_int (); // thumb_w
+    fetch_int (); // thumb_h
+    M->encr_photo.w = fetch_int ();
+    M->encr_photo.h = fetch_int ();
+    M->encr_photo.size = fetch_int ();
+    l = fetch_int ();
+    assert (l > 0);
+    M->encr_photo.key = malloc (l);
+    memcpy (M->encr_photo.key, fetch_str (l), l);
+    
+    l = fetch_int ();
+    assert (l > 0);
+    M->encr_photo.iv = malloc (l);
+    memcpy (M->encr_photo.iv, fetch_str (l), l);
+    break;
+  case CODE_decrypted_message_media_video:
+    M->type = x;
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    fetch_int (); // thumb_w
+    fetch_int (); // thumb_h
+    M->encr_video.w = fetch_int ();
+    M->encr_video.h = fetch_int ();
+    M->encr_video.size = fetch_int ();
+    M->encr_video.duration = fetch_int ();
+    l = fetch_int ();
+    assert (l > 0);
+    M->encr_video.key = malloc (l);
+    memcpy (M->encr_video.key, fetch_str (l), l);
+    
+    l = fetch_int ();
+    assert (l > 0);
+    M->encr_video.iv = malloc (l);
+    memcpy (M->encr_video.iv, fetch_str (l), l);
+    break;
+/*  case CODE_decrypted_message_media_file:
+    M->type = x;
+    M->encr_file.filename = fetch_str_dup ();
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    l = fetch_int ();
+    assert (l > 0);
+    M->encr_file.key = malloc (l);
+    memcpy (M->encr_file.key, fetch_str (l), l);
+    
+    l = fetch_int ();
+    assert (l > 0);
+    M->encr_file.iv = malloc (l);
+    memcpy (M->encr_file.iv, fetch_str (l), l);
+    break;
+  */  
+  case CODE_decrypted_message_media_geo_point:
+    M->geo.longitude = fetch_double ();
+    M->geo.latitude = fetch_double ();
+    M->type = CODE_message_media_geo;
+    break;
+  case CODE_decrypted_message_media_contact:
+    M->type = CODE_message_media_contact;
+    M->phone = fetch_str_dup ();
+    M->first_name = fetch_str_dup ();
+    M->last_name = fetch_str_dup ();
+    M->user_id = fetch_int ();
+    break;
+  default:
+    logprintf ("type = 0x%08x\n", M->type);
+    assert (0);
+  }
+}
+
 peer_id_t fetch_peer_id (void) {
   unsigned x =fetch_int ();
   if (x == CODE_peer_user) {
@@ -629,6 +759,7 @@ void fetch_encrypted_message (struct message *M) {
   assert (!(len & 15));
   decr_ptr = (void *)fetch_str (len);
   decr_end = in_ptr;
+  M->flags |= FLAG_ENCRYPTED;
   if (P && decrypt_encrypted_message (&P->encr_chat) >= 0) {
     in_ptr = decr_ptr;
     unsigned x = fetch_int ();
@@ -643,7 +774,29 @@ void fetch_encrypted_message (struct message *M) {
     fetch_str (l); // random_bytes
     M->from_id = MK_USER (fetch_int ());
     M->date = fetch_int ();
-    M->message = fetch_str_dup ();
+    if (x == CODE_decrypted_message) {
+      M->message = fetch_str_dup ();
+      fetch_encrypted_message_file (&M->media);
+    } else {
+      assert (fetch_int () == (int)CODE_decrypted_message_action_set_message_t_t_l);
+      P->encr_chat.ttl = fetch_int ();
+    }
+  }
+}
+
+void fetch_encrypted_message_file (struct message_media *M) {
+  unsigned x = fetch_int ();
+  assert (x == CODE_encrypted_file || x == CODE_encrypted_file_empty);
+  if (x == CODE_encrypted_file_empty) {
+    assert (M->type != CODE_decrypted_message_media_photo && M->type != CODE_decrypted_message_media_video);
+  } else {
+    assert (M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video);
+    M->encr_photo.id = fetch_long ();
+    M->encr_photo.access_hash = fetch_long ();
+    assert (M->encr_photo.size == fetch_int ());
+    M->encr_photo.dc_id = fetch_int ();
+    M->encr_photo.key_fingerprint = fetch_int ();
+    
   }
 }
 
@@ -686,6 +839,24 @@ struct user *fetch_alloc_user (void) {
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     Peers[chat_num + (user_num ++)] = U;
     return &U->user;
+  }
+}
+
+struct secret_chat *fetch_alloc_encrypted_chat (void) {
+  int data[2];
+  prefetch_data (data, 8);
+  peer_t *U = user_chat_get (MK_ENCR_CHAT (data[1]));
+  if (U) {
+    fetch_encrypted_chat (&U->encr_chat);
+    return &U->encr_chat;
+  } else {
+    chats_allocated ++;
+    U = malloc (sizeof (*U));
+    memset (U, 0, sizeof (*U));
+    fetch_encrypted_chat (&U->encr_chat);
+    peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
+    Peers[(chat_num ++) + user_num] = U;
+    return &U->encr_chat;
   }
 }
 
@@ -758,6 +929,14 @@ void free_message_media (struct message_media *M) {
     return;
   case CODE_message_media_unsupported:
     free (M->data);
+    return;
+  case CODE_decrypted_message_media_photo:
+    free (M->encr_photo.key);
+    free (M->encr_photo.iv);
+    return;
+  case CODE_decrypted_message_media_video:
+    free (M->encr_video.key);
+    free (M->encr_video.iv);
     return;
   default:
     logprintf ("%08x\n", M->type);
