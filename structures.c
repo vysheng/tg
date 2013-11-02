@@ -23,6 +23,12 @@
 #include "telegram.h"
 #include "tree.h"
 #include "loop.h"
+#include <openssl/rand.h>
+#include <openssl/aes.h>
+#include <openssl/sha.h>
+
+#define sha1 SHA1
+
 int verbosity;
 peer_t *Peers[MAX_USER_NUM];
 
@@ -553,7 +559,100 @@ void fetch_geo_message (struct message *M) {
   }
 }
 
-#define id_cmp(a,b) ((a)->id - (b)->id)
+int *decr_ptr;
+int *decr_end;
+
+int decrypt_encrypted_message (struct secret_chat *E) {
+  int *msg_key = decr_ptr;
+  decr_ptr += 4;
+  assert (decr_ptr < decr_end);
+  static unsigned char sha1a_buffer[20];
+  static unsigned char sha1b_buffer[20];
+  static unsigned char sha1c_buffer[20];
+  static unsigned char sha1d_buffer[20];
+ 
+  static unsigned char buf[64];
+  memcpy (buf, msg_key, 16);
+  memcpy (buf + 16, E->key, 32);
+  sha1 (buf, 48, sha1a_buffer);
+  
+  memcpy (buf, E->key + 8, 16);
+  memcpy (buf + 16, msg_key, 16);
+  memcpy (buf + 32, E->key + 12, 16);
+  sha1 (buf, 48, sha1b_buffer);
+  
+  memcpy (buf, E->key + 16, 32);
+  memcpy (buf + 32, msg_key, 16);
+  sha1 (buf, 48, sha1c_buffer);
+  
+  memcpy (buf, msg_key, 16);
+  memcpy (buf + 16, E->key + 24, 32);
+  sha1 (buf, 48, sha1d_buffer);
+
+  static unsigned char iv[32];
+  memcpy (iv, sha1a_buffer + 0, 8);
+  memcpy (iv + 8, sha1b_buffer + 8, 12);
+  memcpy (iv + 20, sha1c_buffer + 4, 12);
+
+  static unsigned char key[32];
+  memcpy (key, sha1a_buffer + 8, 12);
+  memcpy (key + 12, sha1b_buffer + 0, 8);
+  memcpy (key + 20, sha1c_buffer + 16, 4);
+  memcpy (key + 24, sha1d_buffer + 0, 8);
+
+  AES_KEY aes_key;
+  AES_set_decrypt_key (key, 256, &aes_key);
+  AES_ige_encrypt ((void *)decr_ptr, (void *)decr_ptr, 4 * (decr_end - decr_ptr), &aes_key, iv, 0);
+
+  sha1 ((void *)decr_ptr, 4 * (decr_end - decr_ptr), sha1a_buffer);
+
+  if (memcmp (sha1a_buffer, msg_key, 16)) {
+    logprintf ("Sha1 mismatch\n");
+    return -1;
+  }
+  return 0;
+}
+
+void fetch_encrypted_message (struct message *M) {
+  memset (M, 0, sizeof (*M));
+  unsigned x = fetch_int ();
+  assert (x == CODE_encrypted_message || x == CODE_encrypted_message_service);
+  peer_id_t chat = MK_ENCR_CHAT (fetch_int ());
+  M->id = fetch_long ();
+  peer_t *P = user_chat_get (chat);
+  if (!P) {
+    logprintf ("Encrypted message to unknown chat. Dropping\n");
+  }
+  M->date = fetch_int ();
+
+  int len = prefetch_strlen ();
+  assert (!(len & 15));
+  decr_ptr = (void *)fetch_str (len);
+  decr_end = in_ptr;
+  if (P && decrypt_encrypted_message (&P->encr_chat) >= 0) {
+    in_ptr = decr_ptr;
+    unsigned x = fetch_int ();
+    if (x == CODE_decrypted_message_layer) {
+      int layer = fetch_int ();
+      assert (layer >= 0);
+      x = fetch_int ();
+    }
+    assert (x == CODE_decrypted_message);
+    assert (M->id = fetch_long ());
+    int l = prefetch_strlen ();
+    fetch_str (l); // random_bytes
+    M->from_id = MK_USER (fetch_int ());
+    M->date = fetch_int ();
+    M->message = fetch_str_dup ();
+  }
+}
+
+static int id_cmp (struct message *M1, struct message *M2) {
+  if (M1->id < M2->id) { return -1; }
+  else if (M1->id > M2->id) { return 1; }
+  else { return 0; }
+}
+
 #define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
 
 DEFINE_TREE(peer,peer_t *,peer_cmp,0)
@@ -752,6 +851,26 @@ struct message *fetch_alloc_geo_message (void) {
   }
 }
 
+struct message *fetch_alloc_encrypted_message (void) {
+  struct message *M = malloc (sizeof (*M));
+  fetch_encrypted_message (M);
+  struct message *M1 = tree_lookup_message (message_tree, M);
+  messages_allocated ++;
+  if (M1) {
+    message_del_use (M1);
+    free_message (M1);
+    memcpy (M1, M, sizeof (*M));
+    free (M);
+    message_add_use (M1);
+    messages_allocated --;
+    return M1;
+  } else {
+    message_add_use (M);
+    message_tree = tree_insert_message (message_tree, M, lrand48 ());
+    return M;
+  }
+}
+
 struct message *fetch_alloc_message_short (void) {
   struct message *M = malloc (sizeof (*M));
   fetch_message_short (M);
@@ -776,7 +895,7 @@ struct message *fetch_alloc_message_short_chat (void) {
   struct message *M = malloc (sizeof (*M));
   fetch_message_short_chat (M);
   if (verbosity >= 2) {
-    logprintf ("Read message with id %d\n", M->id);
+    logprintf ("Read message with id %lld\n", M->id);
   }
   struct message *M1 = tree_lookup_message (message_tree, M);
   messages_allocated ++;
@@ -854,13 +973,13 @@ peer_t *user_chat_get (peer_id_t id) {
   return tree_lookup_peer (peer_tree, &U);
 }
 
-struct message *message_get (int id) {
+struct message *message_get (long long id) {
   struct message M;
   M.id = id;
   return tree_lookup_message (message_tree, &M);
 }
 
-void update_message_id (struct message *M, int id) {
+void update_message_id (struct message *M, long long id) {
   message_tree = tree_delete_message (message_tree, M);
   M->id = id;
   message_tree = tree_insert_message (message_tree, M, lrand48 ());

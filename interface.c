@@ -942,7 +942,7 @@ void print_service_message (struct message *M) {
   
   push_color (COLOR_MAGENTA);
   if (msg_num_mode) {
-    printf ("%d ", M->id);
+    printf ("%lld ", M->id);
   }
   print_date (M->date);
   pop_color ();
@@ -1002,7 +1002,7 @@ void print_message (struct message *M) {
     if (M->out) {
       push_color (COLOR_GREEN);
       if (msg_num_mode) {
-        printf ("%d ", M->id);
+        printf ("%lld ", M->id);
       }
       print_date (M->date);
       pop_color ();
@@ -1017,7 +1017,7 @@ void print_message (struct message *M) {
     } else {
       push_color (COLOR_BLUE);
       if (msg_num_mode) {
-        printf ("%d ", M->id);
+        printf ("%lld ", M->id);
       }
       print_date (M->date);
       pop_color ();
@@ -1033,7 +1033,7 @@ void print_message (struct message *M) {
   } else {
     push_color (COLOR_MAGENTA);
     if (msg_num_mode) {
-      printf ("%d ", M->id);
+      printf ("%lld ", M->id);
     }
     print_date (M->date);
     pop_color ();
