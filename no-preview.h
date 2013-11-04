@@ -1,3 +1,24 @@
+/*
+    This file is part of telegram-client.
+
+    Telegram-client is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Telegram-client is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+
+    Copyright Vitaly Valtman 2013
+*/
+
+// Just sample jpg file 90x90
+
 int thumb_file_size = (82 * 6 - 2) * 4;
 int thumb_file [] = {
 0xe0ffd8ff, 0x464a1000, 0x01004649, 0x64000101, 0x00006400, 0xa002e2ff,
