@@ -893,8 +893,9 @@ void fetch_encrypted_message_file (struct message_media *M) {
     assert (M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video);
     M->encr_photo.id = fetch_long ();
     M->encr_photo.access_hash = fetch_long ();
+    fetch_int ();
     //assert (M->encr_photo.size == fetch_int ());
-    M->encr_photo.size = fetch_int (); // Why it is not the same?
+    //M->encr_photo.size = fetch_int (); // Why it is not the same?
     M->encr_photo.dc_id = fetch_int ();
     M->encr_photo.key_fingerprint = fetch_int ();
     

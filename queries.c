@@ -1160,7 +1160,8 @@ int send_encr_file_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_encrypted_file);
   M->media.encr_photo.id = fetch_long ();
   M->media.encr_photo.access_hash = fetch_long ();
-  M->media.encr_photo.size = fetch_int ();
+  //M->media.encr_photo.size = fetch_int ();
+  fetch_int ();
   M->media.encr_photo.dc_id = fetch_int ();
   assert (fetch_int () == M->media.encr_photo.key_fingerprint);
   print_message (M);
@@ -1292,7 +1293,7 @@ void send_part (struct send_file *f) {
       M->media.encr_photo.key = f->key;
       M->media.encr_photo.iv = f->init_iv;
       M->media.encr_photo.key_fingerprint = (*(int *)md5) ^ (*(int *)(md5 + 4)); 
-  
+      M->media.encr_photo.size = f->size;
   
       M->flags = FLAG_ENCRYPTED;
       M->from_id = MK_USER (our_id);
@@ -1640,6 +1641,9 @@ int download_on_answer (struct query *q) {
     AES_KEY aes_key;
     AES_set_decrypt_key (D->key, 256, &aes_key);
     AES_ige_encrypt (ptr, ptr, len, &aes_key, D->iv, 0);
+    if (len > D->size - D->offset) {
+      len = D->size - D->offset;
+    }
     assert (write (D->fd, ptr, len) == len);
   } else {
     assert (write (D->fd, fetch_str (len), len) == len);
