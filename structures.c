@@ -818,6 +818,8 @@ void fetch_encrypted_message (struct message *M) {
   peer_id_t chat = MK_ENCR_CHAT (fetch_int ());
   M->to_id = chat;
   peer_t *P = user_chat_get (chat);
+  M->flags &= ~(FLAG_EMPTY | FLAG_DELETED);
+  M->flags |= FLAG_ENCRYPTED;
   if (!P) {
     logprintf ("Encrypted message to unknown chat. Dropping\n");
     M->flags |= FLAG_EMPTY;

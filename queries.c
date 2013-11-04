@@ -41,6 +41,9 @@
 #include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <openssl/sha.h>
+#include <openssl/md5.h>
+
+#include "no-preview.h"
 
 #define sha1 SHA1
 
@@ -281,6 +284,16 @@ int want_dc_num;
 int new_dc_num;
 extern struct dc *DC_list[];
 extern struct dc *DC_working;
+
+void out_random (int n) {
+  assert (n <= 16);
+  static char buf[16];
+  int i;
+  for (i = 0; i < n; i++) {
+    buf[i] = lrand48 () & 255;
+  }
+  out_cstring (buf, n);
+}
 
 /* {{{ Get config */
 
@@ -780,6 +793,7 @@ void do_send_encr_message (peer_id_t id, const char *msg, int len) {
   
   struct message *M = malloc (sizeof (*M));
   memset (M, 0, sizeof (*M));
+  M->flags = FLAG_ENCRYPTED;
   M->from_id = MK_USER (our_id);
   M->to_id = id;
   M->unread = 1;
@@ -991,6 +1005,7 @@ void do_get_history (peer_id_t id, int limit) {
 }
 /* }}} */
 
+/* {{{ Get dialogs */
 int get_dialogs_on_answer (struct query *q UU) {
   unsigned x = fetch_int (); 
   assert (x == CODE_messages_dialogs || x == CODE_messages_dialogs_slice);
@@ -1067,35 +1082,11 @@ void do_get_dialog_list (void) {
   out_int (1000);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
 }
+/* }}} */
 
 int allow_send_linux_version = 1;
-void do_get_dialog_list_ex (void) {
-  clear_packet ();  
-  out_int (CODE_invoke_with_layer9);
-  out_int (CODE_init_connection);
-  out_int (TG_APP_ID);
-  if (allow_send_linux_version) {
-    struct utsname st;
-    uname (&st);
-    out_string (st.machine);
-    static char buf[1000000];
-    sprintf (buf, "%s %s %s", st.sysname, st.release, st.version);
-    out_string (buf);
-    out_string (TG_VERSION " (build " TG_BUILD ")");
-    out_string ("En");
-  } else { 
-    out_string ("x86");
-    out_string ("Linux");
-    out_string (TG_VERSION);
-    out_string ("en");
-  }
-  out_int (CODE_messages_get_dialogs);
-  out_int (0);
-  out_int (0);
-  out_int (100);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
-}
 
+/* {{{ Send photo/video file */
 struct send_file {
   int fd;
   long long size;
@@ -1106,6 +1097,10 @@ struct send_file {
   peer_id_t to_id;
   int media_type;
   char *file_name;
+  int encr;
+  unsigned char *iv;
+  unsigned char *init_iv;
+  unsigned char *key;
 };
 
 void out_peer_id (peer_id_t id) {
@@ -1158,12 +1153,31 @@ int send_file_on_answer (struct query *q UU) {
   return 0;
 }
 
+int send_encr_file_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_messages_sent_encrypted_file);
+  struct message *M = q->extra;
+  M->date = fetch_int ();
+  assert (fetch_int () == CODE_encrypted_file);
+  M->media.encr_photo.id = fetch_long ();
+  M->media.encr_photo.access_hash = fetch_long ();
+  M->media.encr_photo.size = fetch_int ();
+  M->media.encr_photo.dc_id = fetch_int ();
+  assert (fetch_int () == M->media.encr_photo.key_fingerprint);
+  print_message (M);
+  message_insert (M);
+  return 0;
+}
+
 struct query_methods send_file_part_methods = {
   .on_answer = send_file_part_on_answer
 };
 
 struct query_methods send_file_methods = {
   .on_answer = send_file_on_answer
+};
+
+struct query_methods send_encr_file_methods = {
+  .on_answer = send_encr_file_on_answer
 };
 
 void send_part (struct send_file *f) {
@@ -1178,9 +1192,22 @@ void send_part (struct send_file *f) {
     static char buf[512 << 10];
     int x = read (f->fd, buf, f->part_size);
     assert (x > 0);
-    out_cstring (buf, x);
     f->offset += x;
     cur_uploaded_bytes += x;
+    
+    if (f->encr) {
+      if (x & 15) {
+        assert (f->offset == f->size);
+        while (x & 15) {
+          buf[x ++] = lrand48 () & 255;
+        }
+      }
+      
+      AES_KEY aes_key;
+      AES_set_encrypt_key (f->key, 256, &aes_key);
+      AES_ige_encrypt ((void *)buf, (void *)buf, x, &aes_key, f->iv, 1);
+    }
+    out_cstring (buf, x);
     if (verbosity >= 2) {
       logprintf ("offset=%lld size=%lld\n", f->offset, f->size);
     }
@@ -1193,24 +1220,92 @@ void send_part (struct send_file *f) {
     cur_uploaded_bytes -= f->size;
     cur_uploading_bytes -= f->size;
     clear_packet ();
-    out_int (CODE_messages_send_media);
-    out_peer_id (f->to_id);
     assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video);
-    out_int (f->media_type);
-    out_int (CODE_input_file);
-    out_long (f->id);
-    out_int (f->part_num);
-    char *s = f->file_name + strlen (f->file_name);
-    while (s >= f->file_name && *s != '/') { s --;}
-    out_string (s + 1);
-    out_string ("");
-    if (f->media_type == CODE_input_media_uploaded_video) {
+    if (!f->encr) {
+      out_int (CODE_messages_send_media);
+      out_peer_id (f->to_id);
+      out_int (f->media_type);
+      out_int (CODE_input_file);
+      out_long (f->id);
+      out_int (f->part_num);
+      char *s = f->file_name + strlen (f->file_name);
+      while (s >= f->file_name && *s != '/') { s --;}
+      out_string (s + 1);
+      out_string ("");
+      if (f->media_type == CODE_input_media_uploaded_video) {
+        out_int (100);
+        out_int (100);
+        out_int (100);
+      }
+      out_long (-lrand48 () * (1ll << 32) - lrand48 ());
+      send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
+    } else {
+      struct message *M = malloc (sizeof (*M));
+      memset (M, 0, sizeof (*M));
+
+      out_int (CODE_messages_send_encrypted_file);
+      out_int (CODE_input_encrypted_chat);
+      out_int (get_peer_id (f->to_id));
+      peer_t *P = user_chat_get (f->to_id);
+      assert (P);
+      out_long (P->encr_chat.access_hash);
+      long long r = -lrand48 () * (1ll << 32) - lrand48 ();
+      out_long (r);
+      encr_start ();
+      out_int (CODE_decrypted_message);
+      out_long (r);
+      out_random (16);
+      out_string ("");
+      if (f->media_type == CODE_input_media_uploaded_photo) {
+        out_int (CODE_decrypted_message_media_photo);
+        M->media.type = CODE_decrypted_message_media_photo;
+      } else {
+        out_int (CODE_decrypted_message_media_video);
+        M->media.type = CODE_decrypted_message_media_video;
+      }
+      out_cstring ((void *)thumb_file, thumb_file_size);
+      out_int (90);
+      out_int (90);
+      if (f->media_type == CODE_input_media_uploaded_video) {
+        out_int (0);
+      }
       out_int (100);
       out_int (100);
-      out_int (100);
+      out_int (f->size);
+      out_cstring ((void *)f->key, 32);
+      out_cstring ((void *)f->init_iv, 32);
+      encr_finish (&P->encr_chat);
+      out_int (CODE_input_encrypted_file_uploaded);
+      out_long (f->id);
+      out_int (f->part_num);
+      out_string ("");
+ 
+      unsigned char md5[16];
+      unsigned char str[64];
+      memcpy (str, f->key, 32);
+      memcpy (str + 32, f->init_iv, 32);
+      MD5 (str, 64, md5);
+      out_int ((*(int *)md5) ^ (*(int *)(md5 + 4)));
+
+      free (f->iv);
+      
+      M->media.encr_photo.key = f->key;
+      M->media.encr_photo.iv = f->init_iv;
+      M->media.encr_photo.key_fingerprint = (*(int *)md5) ^ (*(int *)(md5 + 4)); 
+  
+  
+      M->flags = FLAG_ENCRYPTED;
+      M->from_id = MK_USER (our_id);
+      M->to_id = f->to_id;
+      M->unread = 1;
+      M->message = strdup ("");
+      M->out = 1;
+      M->id = r;
+      M->date = time (0);
+      
+      send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M);
+
     }
-    out_long (-lrand48 () * (1ll << 32) - lrand48 ());
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
     free (f->file_name);
     free (f);
   }
@@ -1231,6 +1326,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     return;
   }
   struct send_file *f = malloc (sizeof (*f));
+  memset (f, 0, sizeof (*f));
   f->fd = fd;
   f->size = size;
   f->offset = 0;
@@ -1240,6 +1336,20 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   f->to_id = to_id;
   f->media_type = type;
   f->file_name = file_name;
+  if (get_peer_type (f->to_id) == PEER_ENCR_CHAT) {
+    f->encr = 1;
+    f->iv = malloc (32);
+    int i;
+    for (i = 0; i < 8; i++) {
+      ((int *)f->iv)[i] = mrand48 ();
+    }
+    f->init_iv = malloc (32);
+    memcpy (f->init_iv, f->iv, 32);
+    f->key = malloc (32);
+    for (i = 0; i < 8; i++) {
+      ((int *)f->key)[i] = mrand48 ();
+    }
+  }
   if (f->part_size > (512 << 10)) {
     close (fd);
     rprintf ("Too big file. Maximal supported size is %d", (512 << 10) * 1000);
@@ -1247,7 +1357,9 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   }
   send_part (f);
 }
+/* }}} */
 
+/* {{{ Forward */
 int fwd_msg_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
   struct message *M = fetch_alloc_message ();
@@ -1273,6 +1385,10 @@ struct query_methods fwd_msg_methods = {
 };
 
 void do_forward_message (peer_id_t id, int n) {
+  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+    rprintf ("Can not forward messages from secret chat\n");
+    return;
+  }
   clear_packet ();
   out_int (CODE_invoke_with_layer9);
   out_int (CODE_messages_forward_message);
@@ -1281,7 +1397,9 @@ void do_forward_message (peer_id_t id, int n) {
   out_long (lrand48 () * (1ll << 32) + lrand48 ());
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0);
 }
+/* }}} */
 
+/* {{{ Rename chat */
 int rename_chat_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
   struct message *M = fetch_alloc_message ();
@@ -1314,7 +1432,9 @@ void do_rename_chat (peer_id_t id, char *name) {
   out_string (name);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0);
 }
+/* }}} */
 
+/* {{{ Chat info */
 int chat_info_on_answer (struct query *q UU) {
   struct chat *C = fetch_alloc_chat_full ();
   peer_t *U = (void *)C;
@@ -1352,7 +1472,9 @@ void do_get_chat_info (peer_id_t id) {
   out_int (get_peer_id (id));
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
 }
+/* }}} */
 
+/* {{{ User info */
 int user_info_on_answer (struct query *q UU) {
   struct user *U = fetch_alloc_user_full ();
   peer_t *C = (void *)U;
@@ -1394,7 +1516,9 @@ void do_get_user_info (peer_id_t id) {
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0);
 }
+/* }}} */
 
+/* {{{ Get user info silently */
 int user_list_info_silent_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -1422,7 +1546,9 @@ void do_get_user_list_info_silent (int num, int *list) {
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
 }
+/* }}} */
 
+/* {{{ Load photo/video */
 struct download {
   int offset;
   int size;
@@ -1435,6 +1561,8 @@ struct download {
   int fd;
   char *name;
   long long id;
+  unsigned char *iv;
+  unsigned char *key;
 };
 
 
@@ -1453,6 +1581,9 @@ void end_load (struct download *D) {
       logprintf ("Can not open image viewer: %m\n");
       logprintf ("Image is at %s\n", D->name);
     }
+  }
+  if (D->iv) {
+    free (D->iv);
   }
   free (D->name);
   free (D);
@@ -1503,7 +1634,16 @@ int download_on_answer (struct query *q) {
   assert (len >= 0);
   cur_downloaded_bytes += len;
   update_prompt ();
-  assert (write (D->fd, fetch_str (len), len) == len);
+  if (D->iv) {
+    unsigned char *ptr = (void *)fetch_str (len);
+    assert (!(len & 15));
+    AES_KEY aes_key;
+    AES_set_decrypt_key (D->key, 256, &aes_key);
+    AES_ige_encrypt (ptr, ptr, len, &aes_key, D->iv, 0);
+    assert (write (D->fd, ptr, len) == len);
+  } else {
+    assert (write (D->fd, fetch_str (len), len) == len);
+  }
   D->offset += len;
   if (D->offset < D->size) {
     load_next_part (D);
@@ -1531,7 +1671,11 @@ void load_next_part (struct download *D) {
     out_int (D->local_id);
     out_long (D->secret);
   } else {
-    out_int (CODE_input_video_file_location);
+    if (D->iv) {
+      out_int (CODE_input_encrypted_file_location);
+    } else {
+      out_int (CODE_input_video_file_location);
+    }
     out_long (D->id);
     out_long (D->access_hash);
   }
@@ -1545,6 +1689,7 @@ void do_load_photo_size (struct photo_size *P, int next) {
   assert (P);
   assert (next);
   struct download *D = malloc (sizeof (*D));
+  memset (D, 0, sizeof (*D));
   D->id = 0;
   D->offset = 0;
   D->size = P->size;
@@ -1580,6 +1725,7 @@ void do_load_video (struct video *V, int next) {
   assert (V);
   assert (next);
   struct download *D = malloc (sizeof (*D));
+  memset (D, 0, sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
@@ -1591,6 +1737,34 @@ void do_load_video (struct video *V, int next) {
   load_next_part (D);
 }
 
+void do_load_encr_video (struct encr_video *V, int next) {
+  assert (V);
+  assert (next);
+  struct download *D = malloc (sizeof (*D));
+  memset (D, 0, sizeof (*D));
+  D->offset = 0;
+  D->size = V->size;
+  D->id = V->id;
+  D->access_hash = V->access_hash;
+  D->dc = V->dc_id;
+  D->next = next;
+  D->name = 0;
+  D->fd = -1;
+  D->key = V->key;
+  D->iv = malloc (32);
+  memcpy (D->iv, V->iv, 32);
+  load_next_part (D);
+      
+  unsigned char md5[16];
+  unsigned char str[64];
+  memcpy (str, V->key, 32);
+  memcpy (str + 32, V->iv, 32);
+  MD5 (str, 64, md5);
+  assert (V->key_fingerprint == ((*(int *)md5) ^ (*(int *)(md5 + 4))));
+}
+/* }}} */
+
+/* {{{ Export auth */
 char *export_auth_str;
 int export_auth_str_len;
 int is_export_auth_str (void) {
@@ -1629,7 +1803,9 @@ void do_export_auth (int num) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &export_auth_methods, 0);
   net_loop (0, is_export_auth_str);
 }
+/* }}} */
 
+/* {{{ Import auth */
 int import_auth_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   fetch_int (); // expires
@@ -1652,7 +1828,9 @@ void do_import_auth (int num) {
   send_query (DC_list[num], packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0);
   net_loop (0, isn_export_auth_str);
 }
+/* }}} */
 
+/* {{{ Add contact */
 int add_contact_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_contacts_imported_contacts);
   assert (fetch_int () == CODE_vector);
@@ -1720,7 +1898,9 @@ void do_add_contact (const char *phone, int phone_len, const char *first_name, i
   out_int (force ? CODE_bool_true : CODE_bool_false);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0);
 }
+/* }}} */
 
+/* {{{ Msg search */
 int msg_search_on_answer (struct query *q UU) {
   return get_history_on_answer (q);
 }
@@ -1742,7 +1922,9 @@ void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
   out_int (limit);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0);
 }
+/* }}} */
 
+/* {{{ Encr accept */
 int send_encr_accept_on_answer (struct query *q UU) {
   struct secret_chat *E = fetch_alloc_encrypted_chat ();
 
@@ -1860,7 +2042,9 @@ void do_accept_encr_chat_request (struct secret_chat *E) {
   out_int (256);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, E);
 }
+/* }}} */
 
+/* {{{ Get difference */
 int unread_messages;
 int difference_got;
 int seq, pts, qts, last_date;
@@ -1980,3 +2164,36 @@ void do_get_difference (void) {
     send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_state_methods, 0);
   }
 }
+/* }}} */
+
+/* {{{ Visualize key */
+char *colors[4] = {COLOR_GREY, COLOR_GREEN, COLOR_CYAN, COLOR_BLUE};
+
+void do_visualize_key (peer_id_t id) {
+  assert (get_peer_type (id) == PEER_ENCR_CHAT);
+  peer_t *P = user_chat_get (id);
+  assert (P);
+  if (P->encr_chat.state != sc_ok) {
+    rprintf ("Chat is not initialized yet\n");
+    return;
+  }
+  unsigned char buf[20];
+  SHA1 ((void *)P->encr_chat.key, 256, buf);
+  print_start ();
+  int i;
+  for (i = 0; i < 16; i++) {
+    int x = buf[i];
+    int j;
+    for (j = 0; j < 4; j ++) {    
+      push_color (colors[x & 3]);
+      push_color (COLOR_INVERSE);
+      printf ("  ");
+      pop_color ();
+      pop_color ();
+      x = x >> 2;
+    }
+    if (i & 1) { printf ("\n"); }
+  }
+  print_end ();
+}
+/* }}} */

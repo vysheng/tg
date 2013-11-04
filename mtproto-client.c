@@ -1050,11 +1050,24 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t id = MK_ENCR_CHAT (fetch_int ()); // chat_id
       fetch_int (); // max_date
       fetch_int (); // date
+      peer_t *P = user_chat_get (id);
+      int x = -1;
+      if (P && P->last) {
+        x = 0;
+        struct message *M = P->last;
+        while (M && (!M->out || M->unread)) {
+          if (M->out) {
+            M->unread = 0;
+            x ++;
+          }
+          M = M->next;
+        }
+      }
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Messages in encrypted chat ");
+      printf ("Encrypted chat ");
       print_encr_chat_name_full (id, user_chat_get (id));
-      printf (" marked read \n");
+      printf (": %d messages marked read \n", x);
       pop_color ();
       print_end ();
     }

@@ -78,12 +78,12 @@ char *next_token (int *l) {
 #define NOT_FOUND (int)0x80000000
 peer_id_t PEER_NOT_FOUND = {.id = NOT_FOUND};
 
-int next_token_int (void) {
+long long next_token_int (void) {
   int l;
   char *s = next_token (&l);
   if (!s) { return NOT_FOUND; }
   char *r;
-  int x = strtod (s, &r);
+  long long x = strtoll (s, &r, 10);
   if (r == s + l) { 
     return x;
   } else {
@@ -130,6 +130,22 @@ peer_id_t next_token_chat (void) {
 
   int index = 0;
   while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
+    index ++;
+  }
+  if (index < peer_num) {
+    return Peers[index]->id;
+  } else {
+    return PEER_NOT_FOUND;
+  }
+}
+
+peer_id_t next_token_encr_chat (void) {
+  int l;
+  char *s = next_token (&l);
+  if (!s) { return PEER_NOT_FOUND; }
+
+  int index = 0;
+  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_ENCR_CHAT)) {
     index ++;
   }
   if (index < peer_num) {
@@ -232,6 +248,7 @@ char *commands[] = {
   "show_license",
   "search",
   "mark_read",
+  "visualize_key",
   0 };
 
 int commands_flags[] = {
@@ -259,6 +276,7 @@ int commands_flags[] = {
   07,
   072,
   072,
+  075,
 };
 
 int get_complete_mode (void) {
@@ -312,6 +330,19 @@ int complete_user_list (int index, const char *text, int len, char **R) {
 int complete_chat_list (int index, const char *text, int len, char **R) {
   index ++;
   while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
+    index ++;
+  }
+  if (index < peer_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
+}
+
+int complete_encr_chat_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_ENCR_CHAT)) {
     index ++;
   }
   if (index < peer_num) {
@@ -390,6 +421,10 @@ char *command_generator (const char *text, int state) {
     index = complete_chat_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
+  case 5:
+    index = complete_encr_chat_list (index, text, len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
+    return R;
   default:
     if (c) { rl_line_buffer[rl_point] = c; }
     return 0;
@@ -446,7 +481,13 @@ void interpreter (char *line UU) {
 #define GET_PEER_CHAT \
   id = next_token_chat (); \
   if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
-    printf ("Bad char id\n"); \
+    printf ("Bad chat id\n"); \
+    RET; \
+  } 
+#define GET_PEER_ENCR_CHAT \
+  id = next_token_encr_chat (); \
+  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+    printf ("Bad encr_chat id\n"); \
     RET; \
   } 
 
@@ -512,34 +553,38 @@ void interpreter (char *line UU) {
     }
     do_forward_message (id, num);
   } else if (IS_WORD ("load_photo")) {
-    int num = next_token_int ();
-    if (num == NOT_FOUND || num <= 0) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
       do_load_photo (&M->media.photo, 1);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_photo) {
+      do_load_encr_video (&M->media.encr_video, 1); // this is not a bug. 
     } else {
       printf ("Bad msg id\n");
       RET;
     }
   } else if (IS_WORD ("view_photo")) {
-    int num = next_token_int ();
-    if (num == NOT_FOUND || num <= 0) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
       do_load_photo (&M->media.photo, 2);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_photo) {
+      do_load_encr_video (&M->media.encr_video, 2); // this is not a bug. 
     } else {
       printf ("Bad msg id\n");
       RET;
     }
   } else if (IS_WORD ("load_video_thumb")) {
-    int num = next_token_int ();
-    if (num == NOT_FOUND || num <= 0) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
@@ -551,8 +596,8 @@ void interpreter (char *line UU) {
       RET;
     }
   } else if (IS_WORD ("view_video_thumb")) {
-    int num = next_token_int ();
-    if (num == NOT_FOUND || num <= 0) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
@@ -564,27 +609,31 @@ void interpreter (char *line UU) {
       RET;
     }
   } else if (IS_WORD ("load_video")) {
-    int num = next_token_int ();
-    if (num == NOT_FOUND || num <= 0) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
       do_load_video (&M->media.video, 1);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_video) {
+      do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
     }
   } else if (IS_WORD ("view_video")) {
-    int num = next_token_int ();
-    if (num == NOT_FOUND || num <= 0) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
       do_load_video (&M->media.video, 2);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_video) {
+      do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -691,6 +740,9 @@ void interpreter (char *line UU) {
   } else if (IS_WORD ("mark_read")) {
     GET_PEER;
     do_mark_read (id);
+  } else if (IS_WORD ("visualize_key")) {
+    GET_PEER_ENCR_CHAT;
+    do_visualize_key (id);
   }
 #undef IS_WORD
 #undef RET

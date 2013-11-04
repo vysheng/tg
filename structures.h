@@ -91,9 +91,9 @@ struct encr_video {
   
   int w;
   int h;
-  int duration;
   unsigned char *key;
   unsigned char *iv;
+  int duration;
 };
 
 struct encr_file {

@@ -29,6 +29,9 @@
 #define COLOR_BLUE "\033[34;1m"
 #define COLOR_MAGENTA "\033[35;1m"
 #define COLOR_CYAN "\033[36;1m"
+#define COLOR_LCYAN "\033[0;36m"
+
+#define COLOR_INVERSE "\033[7m"
 
 char *get_default_prompt (void);
 char *complete_none (const char *text, int state);
