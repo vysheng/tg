@@ -21,4 +21,6 @@
 int loop (void);
 void net_loop (int flags, int (*end)(void));
 void write_auth_file (void);
+void write_state_file (void);
+void write_secret_chat_file (void);
 #endif

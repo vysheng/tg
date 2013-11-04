@@ -20,7 +20,7 @@
 #define __STRUCTURES_H__
 
 #include <assert.h>
-typedef struct { int id; } peer_id_t;
+typedef struct { int type; int id; } peer_id_t;
 
 #define FLAG_EMPTY 1
 #define FLAG_DELETED 2
@@ -111,6 +111,7 @@ struct user_status {
 struct user {
   peer_id_t id;
   int flags;
+  struct message *last;
   char *print_name;
   struct file_location photo_big;
   struct file_location photo_small;
@@ -134,6 +135,7 @@ struct chat_user {
 struct chat {
   peer_id_t id;
   int flags;
+  struct message *last;
   char *print_title;
   struct file_location photo_big;
   struct file_location photo_small;
@@ -157,6 +159,7 @@ enum secret_chat_state {
 struct secret_chat {
   peer_id_t id;
   int flags;
+  struct message *last;
   char *print_name;
   struct file_location photo_big;
   struct file_location photo_small;
@@ -178,6 +181,7 @@ typedef union peer {
   struct {
     peer_id_t id;
     int flags;
+    struct message *last;
     char *print_name;
     struct file_location photo_big;
     struct file_location photo_small;
@@ -237,6 +241,7 @@ struct message_media {
 
 struct message {
   struct message *next_use, *prev_use;
+  struct message *next, *prev;
   long long id;
   int flags;
   peer_id_t fwd_from_id;
@@ -283,6 +288,7 @@ void update_message_id (struct message *M, long long id);
 void message_insert (struct message *M);
 void free_photo (struct photo *P);
 void fetch_photo (struct photo *P);
+void insert_encrypted_chat (peer_t *P);
 
 #define PEER_USER 1
 #define PEER_CHAT 2
@@ -296,55 +302,18 @@ void fetch_photo (struct photo *P);
 #define MK_ENCR_CHAT(id) set_peer_id (PEER_ENCR_CHAT,id)
 
 static inline int get_peer_type (peer_id_t id) {
-  if (id.id > 1000000000) { 
-    return PEER_ENCR_CHAT; 
-  }
-  if (id.id > 0) { 
-    return PEER_USER; 
-  }
-  if (id.id < -1000000000) { 
-    return PEER_GEO_CHAT; 
-  }
-  if (id.id < 0) { 
-    return PEER_CHAT; 
-  }
-  return PEER_UNKNOWN;
+  return id.type;
 }
 
 static inline int get_peer_id (peer_id_t id) {
-  switch (get_peer_type (id)) {
-  case PEER_USER:
-    return id.id;
-  case PEER_CHAT:
-    return -id.id;
-  case PEER_GEO_CHAT:
-    return -id.id - 1000000000;
-  case PEER_ENCR_CHAT:
-    return id.id - 1000000000;
-  default:
-    return 0;
-  }
+  return id.id;
 }
 
 static inline peer_id_t set_peer_id (int type, int id) {
   peer_id_t ID;
-  switch (type) {
-  case PEER_USER:
-    ID.id = id;
-    return ID;
-  case PEER_CHAT:
-    ID.id = -id;
-    return ID;
-  case PEER_GEO_CHAT:
-    ID.id = -id - 1000000000;
-    return ID;
-  case PEER_ENCR_CHAT:
-    ID.id = id + 1000000000;
-    return ID;
-  default:
-    assert (0);
-    return ID;
-  }
+  ID.id = id;
+  ID.type = type;
+  return ID;
 }
 
 static inline int cmp_peer_id (peer_id_t a, peer_id_t b) {

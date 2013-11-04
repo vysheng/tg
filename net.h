@@ -26,7 +26,7 @@ struct dc;
 //#define TG_SERVER "95.142.192.66"
 #define TG_APP_HASH "36722c72256a24c1225de00eb6a1ca74"
 #define TG_APP_ID 2899
-#define TG_BUILD "200"
+#define TG_BUILD "203"
 
 #define TG_VERSION "0.01-beta"
 
@@ -79,6 +79,9 @@ struct dc {
 
 #define DC_SERIALIZED_MAGIC 0x64582faa
 #define DC_SERIALIZED_MAGIC_V2 0x94032abb
+#define STATE_FILE_MAGIC 0x84217a0d
+#define SECRET_CHAT_FILE_MAGIC 0xa9840add
+
 struct dc_serialized {
   int magic;
   int port;

@@ -41,6 +41,8 @@
 #define CONFIG_DIRECTORY ".telegram/"
 #define CONFIG_FILE CONFIG_DIRECTORY "config"
 #define AUTH_KEY_FILE CONFIG_DIRECTORY "auth"
+#define STATE_FILE CONFIG_DIRECTORY "state"
+#define SECRET_CHAT_FILE CONFIG_DIRECTORY "secret"
 #define DOWNLOADS_DIRECTORY "downloads/"
 
 #define CONFIG_DIRECTORY_MODE 0700
@@ -128,6 +130,24 @@ char *get_auth_key_filename (void) {
   auth_key_filename = (char *) calloc (length, sizeof (char));
   sprintf (auth_key_filename, "%s/" AUTH_KEY_FILE, get_home_directory ());
   return auth_key_filename;
+}
+
+char *get_state_filename (void) {
+  char *state_filename;
+  int length = strlen (get_home_directory ()) + strlen (STATE_FILE) + 2;
+
+  state_filename = (char *) calloc (length, sizeof (char));
+  sprintf (state_filename, "%s/" STATE_FILE, get_home_directory ());
+  return state_filename;
+}
+
+char *get_secret_chat_filename (void) {
+  char *secret_chat_filename;
+  int length = strlen (get_home_directory ()) + strlen (SECRET_CHAT_FILE) + 2;
+
+  secret_chat_filename = (char *) calloc (length, sizeof (char));
+  sprintf (secret_chat_filename, "%s/" SECRET_CHAT_FILE, get_home_directory ());
+  return secret_chat_filename;
 }
 
 char *get_downloads_directory (void)

@@ -39,6 +39,7 @@
 #include "mtproto-common.h"
 #include "queries.h"
 #include "telegram.h"
+#include "loop.h"
 
 extern char *default_username;
 extern char *auth_token;
@@ -59,6 +60,7 @@ void net_loop (int flags, int (*is_end)(void)) {
       cc ++;
     }
 
+    write_state_file ();
     int x = connections_make_poll_array (fds + cc, 101 - cc) + cc;
     double timer = next_timer_in ();
     if (timer > 1000) { timer = 1000; }
@@ -116,6 +118,8 @@ struct dc *DC_working;
 int dc_working_num;
 int auth_state;
 char *get_auth_key_filename (void);
+char *get_state_filename (void);
+char *get_secret_chat_filename (void);
 int zero[512];
 
 
@@ -231,9 +235,155 @@ void read_auth_file (void) {
   }
 }
 
+int pts, qts, seq, last_date;
+
+void read_state_file (void) {
+  int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
+  if (state_file_fd < 0) {
+    return;
+  }
+  int version, magic;
+  if (read (state_file_fd, &magic, 4) < 4) { close (state_file_fd); return; }
+  if (magic != (int)STATE_FILE_MAGIC) { close (state_file_fd); return; }
+  if (read (state_file_fd, &version, 4) < 4) { close (state_file_fd); return; }
+  assert (version >= 0);
+  int x[4];
+  if (read (state_file_fd, x, 16) < 16) {
+    close (state_file_fd); 
+    return;
+  }
+  pts = x[0];
+  qts = x[1];
+  seq = x[2];
+  last_date = x[3];
+  close (state_file_fd); 
+}
+
+void write_state_file (void) {
+  static int wseq;
+  static int wpts;
+  static int wqts;
+  static int wdate;
+  if (wseq >= seq && wpts >= pts && wqts >= qts && wdate >= last_date) { return; }
+  int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
+  if (state_file_fd < 0) {
+    return;
+  }
+  int x[6];
+  x[0] = STATE_FILE_MAGIC;
+  x[1] = 0;
+  x[2] = pts;
+  x[3] = qts;
+  x[4] = seq;
+  x[5] = last_date;
+  assert (write (state_file_fd, x, 24) == 24);
+  close (state_file_fd); 
+  wseq = seq; wpts = pts; wqts = qts; wdate = last_date;
+}
+
+extern peer_t *Peers[];
+extern int peer_num;
+
+void read_secret_chat_file (void) {
+  int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
+  if (fd < 0) {
+    return;
+  }
+  int x[2];
+  if (read (fd, x, 8) < 8) {
+    close (fd); return;
+  }
+  if (x[0] != (int)SECRET_CHAT_FILE_MAGIC) { close (fd); return; }
+  int version = x[1];
+  assert (version >= 0);
+  int cc;
+  assert (read (fd, &cc, 4) == 4);
+  int i;
+  for (i = 0; i < cc; i++) {
+    peer_t *P = malloc (sizeof (*P));
+    memset (P, 0, sizeof (*P));
+    struct secret_chat *E = &P->encr_chat;
+    int t;
+    assert (read (fd, &t, 4) == 4);
+    P->id = MK_ENCR_CHAT (t);
+    assert (read (fd, &P->flags, 4) == 4);
+    assert (read (fd, &t, 4) == 4);
+    assert (t > 0);
+    P->print_name = malloc (t + 1);
+    assert (read (fd, P->print_name, t) == t);
+    P->print_name[t] = 0;
+
+    assert (read (fd, &E->state, 4) == 4);
+    assert (read (fd, &E->user_id, 4) == 4);
+    assert (read (fd, &E->admin_id, 4) == 4);
+    assert (read (fd, &E->ttl, 4) == 4);
+    assert (read (fd, &E->access_hash, 8) == 8);
+
+    if (E->state != sc_waiting) {
+      E->g_key = malloc (256);
+      assert (read (fd, E->g_key, 256) == 256);
+    }
+    E->nonce = malloc (256);
+    assert (read (fd, E->nonce, 256) == 256);
+    assert (read (fd, E->key, 256) == 256);
+    assert (read (fd, &E->key_fingerprint, 8) == 8);
+    insert_encrypted_chat (P);
+  }
+  close (fd);
+}
+
+void write_secret_chat_file (void) {
+  int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
+  if (fd < 0) {
+    return;
+  }
+  int x[2];
+  x[0] = SECRET_CHAT_FILE_MAGIC;
+  x[1] = 0;
+  assert (write (fd, x, 8) == 8);
+  int i;
+  int cc = 0;
+  for (i = 0; i < peer_num; i++) if (get_peer_type (Peers[i]->id) == PEER_ENCR_CHAT) {
+    if (Peers[i]->encr_chat.state != sc_none && Peers[i]->encr_chat.state != sc_deleted) {
+      cc ++;
+    }
+  }
+  assert (write (fd, &cc, 4) == 4);
+  for (i = 0; i < peer_num; i++) if (get_peer_type (Peers[i]->id) == PEER_ENCR_CHAT) {
+    if (Peers[i]->encr_chat.state != sc_none && Peers[i]->encr_chat.state != sc_deleted) {
+      int t = get_peer_id (Peers[i]->id);
+      assert (write (fd, &t, 4) == 4);
+      t = Peers[i]->flags;
+      assert (write (fd, &t, 4) == 4);
+      t = strlen (Peers[i]->print_name);
+      assert (write (fd, &t, 4) == 4);
+      assert (write (fd, Peers[i]->print_name, t) == t);
+      
+      assert (write (fd, &Peers[i]->encr_chat.state, 4) == 4);
+
+      assert (write (fd, &Peers[i]->encr_chat.user_id, 4) == 4);
+      assert (write (fd, &Peers[i]->encr_chat.admin_id, 4) == 4);
+      assert (write (fd, &Peers[i]->encr_chat.ttl, 4) == 4);
+      assert (write (fd, &Peers[i]->encr_chat.access_hash, 8) == 8);
+      if (Peers[i]->encr_chat.state != sc_waiting) {
+        assert (write (fd, Peers[i]->encr_chat.g_key, 256) == 256);
+      }
+      assert (write (fd, Peers[i]->encr_chat.nonce, 256) == 256);
+      assert (write (fd, Peers[i]->encr_chat.key, 256) == 256);
+      assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);      
+    }
+  }
+  close (fd);
+}
+
 extern int max_chat_size;
 int mcs (void) {
   return max_chat_size;
+}
+
+extern int difference_got;
+int dgot (void) {
+  return !difference_got;
 }
 
 int readline_active;
@@ -368,7 +518,11 @@ int loop (void) {
   rl_attempted_completion_function = (CPPFunction *) complete_text;
   rl_completion_entry_function = complete_none;
 
-  do_get_dialog_list_ex ();
+  read_state_file ();
+  read_secret_chat_file ();
+  do_get_difference ();
+  net_loop (0, dgot);
+  do_get_dialog_list ();
 
   return main_loop ();
 }

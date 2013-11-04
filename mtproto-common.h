@@ -83,6 +83,7 @@
 #define MAX_MESSAGE_INTS	1048576
 #define MAX_PROTO_MESSAGE_INTS	1048576
 
+#define PACKET_BUFFER_SIZE	(16384 * 100 + 16) // temp fix
 #pragma pack(push,4)
 struct encrypted_message {
   // unencrypted header
@@ -219,8 +220,8 @@ void prng_seed (const char *password_filename, int password_length);
 int serialize_bignum (BIGNUM *b, char *buffer, int maxlen);
 long long compute_rsa_key_fingerprint (RSA *key);
 
-#define PACKET_BUFFER_SIZE	(16384 * 100) // temp fix
-int packet_buffer[PACKET_BUFFER_SIZE], *packet_ptr;
+extern int *packet_buffer;
+extern int *packet_ptr;
 
 static inline void out_ints (int *what, int len) {
   assert (packet_ptr + len <= packet_buffer + PACKET_BUFFER_SIZE);
@@ -262,6 +263,9 @@ static inline void out_bignum (BIGNUM *n) {
 extern int *in_ptr, *in_end;
 
 void fetch_pts (void);
+void fetch_qts (void);
+void fetch_date (void);
+void fetch_seq (void);
 static inline int prefetch_strlen (void) {
   if (in_ptr >= in_end) { 
     return -1; 

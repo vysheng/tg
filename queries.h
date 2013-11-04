@@ -94,5 +94,8 @@ void do_import_auth (int num);
 void do_export_auth (int num);
 void do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force);
 void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s);
+void do_accept_encr_chat_request (struct secret_chat *E);
+void do_get_difference (void);
+void do_mark_read (peer_id_t id);
 
 #endif

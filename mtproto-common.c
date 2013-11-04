@@ -37,6 +37,9 @@
 #include "mtproto-common.h"
 #include "interface.h"
 
+int __packet_buffer[PACKET_BUFFER_SIZE], *packet_ptr;
+int *packet_buffer = __packet_buffer + 16;
+
 long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
 BN_CTX *BN_ctx;

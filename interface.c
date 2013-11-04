@@ -48,9 +48,8 @@ long long cur_downloading_bytes;
 long long cur_downloaded_bytes;
 
 char *line_ptr;
-extern int user_num;
-extern int chat_num;
 extern peer_t *Peers[];
+extern int peer_num;
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -106,10 +105,10 @@ peer_id_t next_token_user (void) {
   }
 
   int index = 0;
-  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_USER)) {
+  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_USER)) {
     index ++;
   }
-  if (index < user_num + chat_num) {
+  if (index < peer_num) {
     return Peers[index]->id;
   } else {
     return PEER_NOT_FOUND;
@@ -130,10 +129,10 @@ peer_id_t next_token_chat (void) {
   }
 
   int index = 0;
-  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
+  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
     index ++;
   }
-  if (index < user_num + chat_num) {
+  if (index < peer_num) {
     return Peers[index]->id;
   } else {
     return PEER_NOT_FOUND;
@@ -161,10 +160,10 @@ peer_id_t next_token_peer (void) {
   }
 
   int index = 0;
-  while (index < user_num + chat_num && (!is_same_word (s, l, Peers[index]->print_name))) {
+  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name))) {
     index ++;
   }
-  if (index < user_num + chat_num) {
+  if (index < peer_num) {
     return Peers[index]->id;
   } else {
     return PEER_NOT_FOUND;
@@ -232,6 +231,7 @@ char *commands[] = {
   "rename_contact",
   "show_license",
   "search",
+  "mark_read",
   0 };
 
 int commands_flags[] = {
@@ -257,6 +257,7 @@ int commands_flags[] = {
   07,
   071,
   07,
+  072,
   072,
 };
 
@@ -297,10 +298,10 @@ int get_complete_mode (void) {
 
 int complete_user_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_USER)) {
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_USER)) {
     index ++;
   }
-  if (index < user_num + chat_num) {
+  if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
     return index;
   } else {
@@ -310,10 +311,10 @@ int complete_user_list (int index, const char *text, int len, char **R) {
 
 int complete_chat_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
     index ++;
   }
-  if (index < user_num + chat_num) {
+  if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
     return index;
   } else {
@@ -323,10 +324,10 @@ int complete_chat_list (int index, const char *text, int len, char **R) {
 
 int complete_user_chat_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < user_num + chat_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
     index ++;
   }
-  if (index < user_num + chat_num) {
+  if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
     return index;
   } else {
@@ -663,6 +664,8 @@ void interpreter (char *line UU) {
       "load_photo/load_video/load_video_thumb <msg-seqno> - loads photo/video to download dir\n"
       "view_photo/view_video/view_video_thumb <msg-seqno> - loads photo/video to download dir and starts system default viewer\n"
       "show_license - prints contents of GPLv2\n"
+      "search <peer> pattern - searches pattern in messages with peer\n"
+      "mark_read <peer> - mark read all received messages with peer\n"
       );
     pop_color ();
     rl_on_new_line ();
@@ -685,6 +688,9 @@ void interpreter (char *line UU) {
       RET;
     }
     do_msg_search (id, from, to, limit, s);
+  } else if (IS_WORD ("mark_read")) {
+    GET_PEER;
+    do_mark_read (id);
   }
 #undef IS_WORD
 #undef RET
@@ -796,30 +802,6 @@ void logprintf (const char *format, ...) {
   }
 }
 
-const char *message_media_type_str (struct message_media *M) {
-  static char buf[1000];
-  switch (M->type) {
-    case CODE_message_media_empty:
-      return "";
-    case CODE_message_media_photo:
-      return "[photo]";
-    case CODE_message_media_video:
-      return "[video]";
-    case CODE_message_media_geo:
-      sprintf (buf, "[geo] https://maps.google.com/maps?ll=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
-      return buf;
-    case CODE_message_media_contact:
-      snprintf (buf, 999, "[contact] " COLOR_RED "%s %s" COLOR_NORMAL " %s", M->first_name, M->last_name, M->phone);
-      return buf;
-    case CODE_message_media_unsupported:
-      return "[unsupported]";
-    default:
-      assert (0);
-      return "";
-
-  }
-}
-
 int color_stack_pos;
 const char *color_stack[10];
 
@@ -851,6 +833,12 @@ void print_media (struct message_media *M) {
       }
       return;
     case CODE_message_media_video:
+      printf ("[video]");
+      return;
+    case CODE_decrypted_message_media_photo:
+       printf ("[photo]");
+      return;
+    case CODE_decrypted_message_media_video:
       printf ("[video]");
       return;
     case CODE_message_media_geo:
@@ -1009,6 +997,9 @@ peer_id_t last_from_id;
 peer_id_t last_to_id;
 
 void print_message (struct message *M) {
+  if (M->flags & (FLAG_EMPTY | FLAG_DELETED)) {
+    return;
+  }
   if (M->service) {
     print_service_message (M);
     return;
@@ -1050,7 +1041,42 @@ void print_message (struct message *M) {
         printf (" »»» ");
       }
     }
+  } else if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
+    peer_t *P = user_chat_get (M->to_id);
+    assert (P);
+    if (M->out) {
+      push_color (COLOR_GREEN);
+      if (msg_num_mode) {
+        printf ("%lld ", M->id);
+      }
+      print_date (M->date);
+      printf (" ");
+      push_color (COLOR_CYAN);
+      printf (" %s", P->print_name);
+      pop_color ();
+      if (M->unread) {
+        printf (" <<< ");
+      } else {
+        printf (" ««« ");
+      }
+    } else {
+      push_color (COLOR_BLUE);
+      if (msg_num_mode) {
+        printf ("%lld ", M->id);
+      }
+      print_date (M->date);
+      push_color (COLOR_CYAN);
+      printf (" %s", P->print_name);
+      pop_color ();
+      if (M->unread) {
+        printf (" >>> ");
+      } else {
+        printf (" »»» ");
+      }
+    }
+    
   } else {
+    assert (get_peer_type (M->to_id) == PEER_CHAT);
     push_color (COLOR_MAGENTA);
     if (msg_num_mode) {
       printf ("%lld ", M->id);

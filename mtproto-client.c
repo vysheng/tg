@@ -637,14 +637,18 @@ int unread_messages;
 int our_id;
 int pts;
 int qts;
+int last_date;
+int seq;
 
 void fetch_pts (void) {
   int p = fetch_int ();
+  if (p <= pts) { return; }
   if (p != pts + 1) {
     if (pts) {
-      logprintf ("Hole in pts p = %d, pts = %d\n", p, pts);
+      //logprintf ("Hole in pts p = %d, pts = %d\n", p, pts);
 
       // get difference should be here
+      pts = p;
     } else {
       pts = p;
     }
@@ -655,15 +659,35 @@ void fetch_pts (void) {
 
 void fetch_qts (void) {
   int p = fetch_int ();
+  if (p <= qts) { return; }
   if (p != qts + 1) {
     if (qts) {
-      logprintf ("Hole in qts\n");
+      //logprintf ("Hole in qts\n");
       // get difference should be here
+      qts = p;
     } else {
       qts = p;
     }
   } else {
     qts ++;
+  }
+}
+
+void fetch_date (void) {
+  int p = fetch_int ();
+  if (p > last_date) {
+    last_date = p;
+  }
+}
+
+void fetch_seq (void) {
+  int x = fetch_int ();
+  if (x > seq + 1) {
+    logprintf ("Hole in seq: seq = %d, x = %d\n", seq, x);
+    //do_get_difference ();
+    seq = x;
+  } else if (x >= seq + 1) {
+    seq = x;
   }
 }
 
@@ -993,9 +1017,11 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         printf (" is now in deleted state\n");
         break;
       }
-      /*if (E->state == state_requested) {
+      pop_color ();
+      print_end ();
+      if (E->state == sc_request) {
         do_accept_encr_chat_request (E);
-      }*/
+      }
       fetch_int (); // date
     }
     break;
@@ -1041,7 +1067,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
 void work_update_short (struct connection *c, long long msg_id) {
   assert (fetch_int () == CODE_update_short);
   work_update (c, msg_id);
-  fetch_int (); // date
+  fetch_date ();
 }
 
 void work_updates (struct connection *c, long long msg_id) {
@@ -1062,9 +1088,8 @@ void work_updates (struct connection *c, long long msg_id) {
   for (i = 0; i < n; i++) {
     fetch_alloc_chat ();
   }
-  fetch_int (); // date
-  fetch_int (); // seq
-  
+  fetch_date (); // date
+  fetch_seq (); // seq
 }
 
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {
@@ -1073,6 +1098,9 @@ void work_update_short_message (struct connection *c UU, long long msg_id UU) {
   unread_messages ++;
   print_message (M);
   update_prompt ();
+  if (M->date > last_date) {
+    last_date = M->date;
+  }
 }
 
 void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
@@ -1081,6 +1109,9 @@ void work_update_short_chat_message (struct connection *c UU, long long msg_id U
   unread_messages ++;
   print_message (M);
   update_prompt ();
+  if (M->date > last_date) {
+    last_date = M->date;
+  }
 }
 
 void work_container (struct connection *c, long long msg_id UU) {
@@ -1211,6 +1242,10 @@ void work_detained_info (struct connection *c UU, long long msg_id UU) {
   fetch_int (); // status
 }
 
+void work_updates_to_long (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == (int)CODE_updates_too_long);
+  do_get_difference ();
+}
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   if (verbosity >= 5) {
     logprintf ("rpc_execute_answer: fd=%d\n", c->fd);
@@ -1253,6 +1288,9 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     return;
   case CODE_msg_detained_info:
     work_detained_info (c, msg_id);
+    return;
+  case CODE_updates_too_long:
+    work_updates_to_long (c, msg_id);
     return;
   }
   logprintf ( "Unknown message: \n");

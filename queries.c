@@ -37,6 +37,12 @@
 #include "structures.h"
 #include "interface.h"
 #include "net.h"
+#include <openssl/bn.h>
+#include <openssl/rand.h>
+#include <openssl/aes.h>
+#include <openssl/sha.h>
+
+#define sha1 SHA1
 
 char *get_downloads_directory (void);
 int verbosity;
@@ -276,6 +282,8 @@ int new_dc_num;
 extern struct dc *DC_list[];
 extern struct dc *DC_working;
 
+/* {{{ Get config */
+
 int help_get_config_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_config);
   fetch_int ();
@@ -323,7 +331,9 @@ void do_help_get_config (void) {
   out_int (CODE_help_get_config);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0);
 }
+/* }}} */
 
+/* {{{ Send code */
 char *phone_code_hash;
 int send_code_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_auth_sent_code);
@@ -407,8 +417,9 @@ void do_send_code (const char *user) {
   net_loop (0, code_is_sent);
   assert (want_dc_num == -1);
 }
+/* }}} */
 
-
+/* {{{ Check phone */
 int check_phone_result;
 int cr_f (void) {
   return check_phone_result >= 0;
@@ -460,7 +471,9 @@ int do_auth_check_phone (const char *user) {
   net_loop (0, cr_f);
   return check_phone_result;
 }
+/* }}} */
 
+/* {{{ Nearest DC */
 int nearest_dc_num;
 int nr_f (void) {
   return nearest_dc_num >= 0;
@@ -497,7 +510,9 @@ int do_get_nearest_dc (void) {
   net_loop (0, nr_f);
   return nearest_dc_num;
 }
+/* }}} */
 
+/* {{{ Sign in / Sign up */
 int sign_in_ok;
 int sign_in_is_ok (void) {
   return sign_in_ok;
@@ -554,7 +569,9 @@ int do_send_code_result_auth (const char *code, const char *first_name, const ch
   net_loop (0, sign_in_is_ok);
   return sign_in_ok;
 }
+/* }}} */
 
+/* {{{ Get contacts */
 extern char *user_list[];
 
 int get_contacts_on_answer (struct query *q UU) {
@@ -612,18 +629,106 @@ void do_update_contact_list (void) {
   out_string ("");
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods, 0);
 }
+/* }}} */
 
+/* {{{ Encrypt decrypted */
+int *encr_extra;
+int *encr_ptr;
+int *encr_end;
+
+char *encrypt_decrypted_message (struct secret_chat *E) {
+  static int msg_key[4];
+  static unsigned char sha1a_buffer[20];
+  static unsigned char sha1b_buffer[20];
+  static unsigned char sha1c_buffer[20];
+  static unsigned char sha1d_buffer[20];
+  int x = *(encr_ptr);  
+  assert (x >= 0 && !(x & 3));
+  sha1 ((void *)encr_ptr, 4 + x, sha1a_buffer);
+  memcpy (msg_key, sha1a_buffer + 4, 16);
+ 
+  static unsigned char buf[64];
+  memcpy (buf, msg_key, 16);
+  memcpy (buf + 16, E->key, 32);
+  sha1 (buf, 48, sha1a_buffer);
+  
+  memcpy (buf, E->key + 8, 16);
+  memcpy (buf + 16, msg_key, 16);
+  memcpy (buf + 32, E->key + 12, 16);
+  sha1 (buf, 48, sha1b_buffer);
+  
+  memcpy (buf, E->key + 16, 32);
+  memcpy (buf + 32, msg_key, 16);
+  sha1 (buf, 48, sha1c_buffer);
+  
+  memcpy (buf, msg_key, 16);
+  memcpy (buf + 16, E->key + 24, 32);
+  sha1 (buf, 48, sha1d_buffer);
+
+  static unsigned char key[32];
+  memcpy (key, sha1a_buffer + 0, 8);
+  memcpy (key + 8, sha1b_buffer + 8, 12);
+  memcpy (key + 20, sha1c_buffer + 4, 12);
+
+  static unsigned char iv[32];
+  memcpy (iv, sha1a_buffer + 8, 12);
+  memcpy (iv + 12, sha1b_buffer + 0, 8);
+  memcpy (iv + 20, sha1c_buffer + 16, 4);
+  memcpy (iv + 24, sha1d_buffer + 0, 8);
+
+  AES_KEY aes_key;
+  AES_set_encrypt_key (key, 256, &aes_key);
+  AES_ige_encrypt ((void *)encr_ptr, (void *)encr_ptr, 4 * (encr_end - encr_ptr), &aes_key, iv, 1);
+
+  return (void *)msg_key;
+}
+
+void encr_start (void) {
+  encr_extra = packet_ptr;
+  packet_ptr += 1; // str len
+  packet_ptr += 2; // fingerprint
+  packet_ptr += 4; // msg_key
+  packet_ptr += 1; // len
+}
+
+
+void encr_finish (struct secret_chat *E) {
+  int l = packet_ptr - (encr_extra +  8);
+  while (((packet_ptr - encr_extra) - 3) & 3) {
+    out_int (mrand48 ());
+  }
+
+  *encr_extra = ((packet_ptr - encr_extra) - 1) * 4 * 256 + 0xfe;
+  encr_extra ++;
+  *(long long *)encr_extra = E->key_fingerprint;
+  encr_extra += 2;
+  encr_extra[4] = l * 4;
+  encr_ptr = encr_extra + 4;
+  encr_end = packet_ptr;
+  memcpy (encr_extra, encrypt_decrypted_message (E), 16);
+}
+/* }}} */
+
+/* {{{ Seng msg (plain text) */
+int msg_send_encr_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_messages_sent_encrypted_message);
+  logprintf ("Sent\n");
+  struct message *M = q->extra;
+  M->date = fetch_int ();
+  message_insert (M);
+  return 0;
+}
 
 int msg_send_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_sent_message);
   int id = fetch_int (); // id
-  int date = fetch_int (); // date
+  fetch_date ();
   fetch_pts ();
-  int seq = fetch_int (); // seq
+  fetch_seq ();
   struct message *M = q->extra;
   M->id = id;
   message_insert (M);
-  logprintf ("Sent: id = %d, date = %d, seq = %d\n", id, date, seq);
+  logprintf ("Sent: id = %d\n", id);
   return 0;
 }
 
@@ -631,10 +736,71 @@ struct query_methods msg_send_methods = {
   .on_answer = msg_send_on_answer
 };
 
+struct query_methods msg_send_encr_methods = {
+  .on_answer = msg_send_encr_on_answer
+};
+
 int out_message_num;
 int our_id;
 void out_peer_id (peer_id_t id);
+
+void do_send_encr_message (peer_id_t id, const char *msg, int len) {
+  peer_t *P = user_chat_get (id);
+  if (!P) {
+    logprintf ("Can not send to unknown encrypted chat\n");
+    return;
+  }
+  if (P->encr_chat.state != sc_ok) {
+    logprintf ("Chat is not yet initialized\n");
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_messages_send_encrypted);
+  out_int (CODE_input_encrypted_chat);
+  out_int (get_peer_id (id));
+  out_long (P->encr_chat.access_hash);
+  if (!out_message_num) {
+    out_message_num = -lrand48 ();
+  }
+  out_long ((--out_message_num) - (4ll << 32));
+  encr_start ();
+  //out_int (CODE_decrypted_message_layer);
+  //out_int (8);
+  out_int (CODE_decrypted_message);
+  out_long ((out_message_num) - (4ll << 32));
+  static int buf[4];
+  int i;
+  for (i = 0; i < 3; i++) {
+    buf[i] = mrand48 ();
+  }
+  out_cstring ((void *)buf, 16);
+  out_cstring ((void *)msg, len);
+  out_int (CODE_decrypted_message_media_empty);
+  encr_finish (&P->encr_chat);
+  
+  struct message *M = malloc (sizeof (*M));
+  memset (M, 0, sizeof (*M));
+  M->from_id = MK_USER (our_id);
+  M->to_id = id;
+  M->unread = 1;
+  M->message = malloc (len + 1);
+  memcpy (M->message, msg, len);
+  M->message[len] = 0;
+  M->message_len = len;
+  M->out = 1;
+  M->media.type = CODE_message_media_empty;
+  M->id = (out_message_num) - (4ll << 32);
+  M->date = time (0);
+  
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M);
+  print_message (M);
+}
+
 void do_send_message (peer_id_t id, const char *msg, int len) {
+  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+    do_send_encr_message (id, msg, len);
+    return;
+  }
   if (!out_message_num) {
     out_message_num = -lrand48 ();
   }
@@ -659,7 +825,9 @@ void do_send_message (peer_id_t id, const char *msg, int len) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
   print_message (M);
 }
+/* }}} */
 
+/* {{{ Send text file */
 void do_send_text (peer_id_t id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
@@ -681,17 +849,27 @@ void do_send_text (peer_id_t id, char *file_name) {
     close (fd);
   }
 }
+/* }}} */
 
 int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
-  fetch_int (); // pts
-  fetch_int (); // seq
+  fetch_pts ();
+  fetch_seq ();
   fetch_int (); // offset
+  return 0;
+}
+
+int mark_read_encr_on_receive (struct query *q UU) {
+  fetch_bool ();
   return 0;
 }
 
 struct query_methods mark_read_methods = {
   .on_answer = mark_read_on_receive
+};
+
+struct query_methods mark_read_encr_methods = {
+  .on_answer = mark_read_encr_on_receive
 };
 
 void do_messages_mark_read (peer_id_t id, int max_id) {
@@ -701,6 +879,34 @@ void do_messages_mark_read (peer_id_t id, int max_id) {
   out_int (max_id);
   out_int (0);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0);
+}
+
+void do_messages_mark_read_encr (peer_id_t id, long long access_hash, int last_time) {
+  clear_packet ();
+  out_int (CODE_messages_read_encrypted_history);
+  out_int (CODE_input_encrypted_chat);
+  out_int (get_peer_id (id));
+  out_long (access_hash);
+  out_int (last_time);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_encr_methods, 0);
+}
+
+void do_mark_read (peer_id_t id) {
+  peer_t *P = user_chat_get (id);
+  if (!P) {
+    rprintf ("Unknown peer\n");
+    return;
+  }
+  if (!P->last) {
+    rprintf ("Unknown last peer message\n");
+    return;
+  }
+  if (get_peer_type (id) == PEER_USER || get_peer_type (id) == PEER_CHAT) {
+    do_messages_mark_read (id, P->last->id);
+    return;
+  }
+  assert (get_peer_type (id) == PEER_ENCR_CHAT);
+  do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date);
 }
 
 int get_history_on_answer (struct query *q UU) {
@@ -919,8 +1125,8 @@ int send_file_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
   }
-  fetch_int (); // pts
-  fetch_int (); // seq
+  fetch_pts ();
+  fetch_seq ();
   print_message (M);
   return 0;
 }
@@ -1029,8 +1235,8 @@ int fwd_msg_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
   }
-  fetch_int (); // pts
-  fetch_int (); // seq
+  fetch_pts ();
+  fetch_seq ();
   print_message (M);
   return 0;
 }
@@ -1041,7 +1247,7 @@ struct query_methods fwd_msg_methods = {
 
 void do_forward_message (peer_id_t id, int n) {
   clear_packet ();
-  out_int (CODE_invoke_with_layer3);
+  out_int (CODE_invoke_with_layer9);
   out_int (CODE_messages_forward_message);
   out_peer_id (id);
   out_int (n);
@@ -1063,8 +1269,8 @@ int rename_chat_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
   }
-  fetch_int (); // pts
-  fetch_int (); // seq
+  fetch_pts ();
+  fetch_seq ();
   print_message (M);
   return 0;
 }
@@ -1508,4 +1714,242 @@ void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
   out_int (0); // max_id
   out_int (limit);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0);
+}
+
+int send_encr_accept_on_answer (struct query *q UU) {
+  struct secret_chat *E = fetch_alloc_encrypted_chat ();
+
+  if (E->state == sc_ok) {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("Encrypted connection with ");
+    print_encr_chat_name (E->id, (void *)E);
+    printf (" established\n");
+    pop_color ();
+    print_end ();
+  } else {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("Encrypted connection with ");
+    print_encr_chat_name (E->id, (void *)E);
+    printf (" failed\n");
+    pop_color ();
+    print_end ();
+  }
+  return 0;
+}
+
+struct query_methods send_encr_accept_methods  = {
+  .on_answer = send_encr_accept_on_answer
+};
+
+int encr_root;
+unsigned char *encr_prime;
+int encr_param_version;
+BN_CTX *ctx;
+
+void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
+  int i;
+  for (i = 0; i < 64; i++) {
+    *(((int *)random) + i) ^= mrand48 ();
+  }
+  BIGNUM *b = BN_bin2bn (random, 256, 0);
+  assert (b);
+  BIGNUM *g_a = BN_bin2bn (E->g_key, 256, 0);
+  assert (g_a);
+  if (!ctx) {
+    ctx = BN_CTX_new ();
+    BN_CTX_init (ctx);
+  }
+  BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  BIGNUM *r = BN_new ();
+  BN_init (r);
+  BN_mod_exp (r, g_a, b, p, ctx); 
+  memset (E->key, 0, sizeof (E->key));
+  BN_bn2bin (r, (void *)E->key);
+  for (i = 0; i < 64; i++) {
+    E->key[i] ^= *(((int *)E->nonce) + i);
+  }
+  static unsigned char sha_buffer[20];
+  sha1 ((void *)E->key, 256, sha_buffer);
+  E->key_fingerprint = *(long long *)(sha_buffer + 12);
+
+  clear_packet ();
+  out_int (CODE_messages_accept_encryption);
+  out_int (CODE_input_encrypted_chat);
+  logprintf ("id = %d\n", get_peer_id (E->id));
+  out_int (get_peer_id (E->id));
+  out_long (E->access_hash);
+  
+  BN_set_word (g_a, encr_root);
+  BN_mod_exp (r, g_a, b, p, ctx); 
+  static unsigned char buf[256];
+  memset (buf, 0, sizeof (buf));
+  BN_bn2bin (r, buf);
+  out_cstring ((void *)buf, 256);
+
+  out_long (E->key_fingerprint);
+  BN_clear_free (b);
+  BN_clear_free (g_a);
+  BN_clear_free (p);
+  BN_clear_free (r);
+  
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E);
+}
+
+int get_dh_config_on_answer (struct query *q UU) {
+  unsigned x = fetch_int ();
+  assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified);
+  if (x == CODE_messages_dh_config)  {
+    encr_root = fetch_int ();
+    if (encr_prime) { free (encr_prime); }
+    int l = prefetch_strlen ();
+    assert (l == 256);
+    encr_prime = (void *)fetch_str_dup ();
+    encr_param_version = fetch_int ();
+  }
+  int l = prefetch_strlen ();
+  assert (l == 256);
+  unsigned char *random = (void *)fetch_str_dup ();
+  if (q->extra) {
+    do_send_accept_encr_chat (q->extra, random);
+    free (random);
+  } else {
+    free (random);
+  }
+  return 0;
+}
+
+struct query_methods get_dh_config_methods  = {
+  .on_answer = get_dh_config_on_answer
+};
+
+void do_accept_encr_chat_request (struct secret_chat *E) {
+  assert (E->state == sc_request);
+  
+  clear_packet ();
+  out_int (CODE_messages_get_dh_config);
+  out_int (encr_param_version);
+  out_int (256);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, E);
+}
+
+int unread_messages;
+int difference_got;
+int seq, pts, qts, last_date;
+int get_state_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_updates_state);
+  pts = fetch_int ();
+  qts = fetch_int ();
+  last_date = fetch_int ();
+  seq = fetch_int ();
+  unread_messages = fetch_int ();
+  write_state_file ();
+  difference_got = 1;
+  return 0;
+}
+
+int get_difference_on_answer (struct query *q UU) {
+  unsigned x = fetch_int ();
+  if (x == CODE_updates_difference_empty) {
+    fetch_date ();
+    fetch_seq ();
+    difference_got = 1;
+  } else if (x == CODE_updates_difference || x == CODE_updates_difference_slice) {
+    int n, i;
+    assert (fetch_int () == CODE_vector);
+    n = fetch_int ();
+    static struct message *ML[10000];
+    int ml_pos = 0;
+    for (i = 0; i < n; i++) {
+      if (ml_pos < 10000) {
+        ML[ml_pos ++] = fetch_alloc_message ();
+      } else {
+        fetch_alloc_message ();
+      }
+    }
+    assert (fetch_int () == CODE_vector);
+    n = fetch_int ();
+    for (i = 0; i < n; i++) {
+      if (ml_pos < 10000) {
+        ML[ml_pos ++] = fetch_alloc_encrypted_message ();
+      } else {
+        fetch_alloc_encrypted_message ();
+      }
+    }
+    assert (fetch_int () == CODE_vector);
+    n = fetch_int ();
+    for (i = 0; i < n; i++) {
+      work_update (0, 0);
+    }
+    assert (fetch_int () == CODE_vector);
+    n = fetch_int ();
+    for (i = 0; i < n; i++) {
+      fetch_alloc_chat ();
+    }
+    assert (fetch_int () == CODE_vector);
+    n = fetch_int ();
+    for (i = 0; i < n; i++) {
+      fetch_alloc_user ();
+    }
+    assert (fetch_int () == (int)CODE_updates_state);
+    pts = fetch_int ();
+    qts = fetch_int ();
+    last_date = fetch_int ();
+    seq = fetch_int ();
+    unread_messages = fetch_int ();
+    write_state_file ();
+    for (i = 0; i < ml_pos; i++) {
+      print_message (ML[i]);
+    }
+    if (x == CODE_updates_difference_slice) {
+      do_get_difference ();
+    } else {
+      difference_got = 1;
+    }
+  } else {
+    assert (0);
+  }
+  return 0;   
+}
+
+struct query_methods get_state_methods = {
+  .on_answer = get_state_on_answer
+};
+
+struct query_methods get_difference_methods = {
+  .on_answer = get_difference_on_answer
+};
+
+void do_get_difference (void) {
+  difference_got = 0;
+  clear_packet ();
+  out_int (CODE_invoke_with_layer9);
+  out_int (CODE_init_connection);
+  out_int (TG_APP_ID);
+  if (allow_send_linux_version) {
+    struct utsname st;
+    uname (&st);
+    out_string (st.machine);
+    static char buf[1000000];
+    sprintf (buf, "%s %s %s", st.sysname, st.release, st.version);
+    out_string (buf);
+    out_string (TG_VERSION " (build " TG_BUILD ")");
+    out_string ("En");
+  } else { 
+    out_string ("x86");
+    out_string ("Linux");
+    out_string (TG_VERSION);
+    out_string ("en");
+  }
+  if (seq > 0) {
+    out_int (CODE_updates_get_difference);
+    out_int (pts);
+    out_int (last_date);
+    out_int (qts);
+    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_difference_methods, 0);
+  } else {
+    out_int (CODE_updates_get_state);
+    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_state_methods, 0);
+  }
 }
