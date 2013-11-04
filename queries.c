@@ -851,6 +851,7 @@ void do_send_text (peer_id_t id, char *file_name) {
 }
 /* }}} */
 
+/* {{{ Mark read */
 int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
   fetch_pts ();
@@ -897,18 +898,25 @@ void do_mark_read (peer_id_t id) {
     rprintf ("Unknown peer\n");
     return;
   }
-  if (!P->last) {
-    rprintf ("Unknown last peer message\n");
-    return;
-  }
   if (get_peer_type (id) == PEER_USER || get_peer_type (id) == PEER_CHAT) {
+    if (!P->last) {
+      rprintf ("Unknown last peer message\n");
+      return;
+    }
     do_messages_mark_read (id, P->last->id);
     return;
   }
   assert (get_peer_type (id) == PEER_ENCR_CHAT);
-  do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date);
+  if (P->last) {
+    do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date);
+  } else {
+    do_messages_mark_read_encr (id, P->encr_chat.access_hash, time (0) - 10);
+    
+  }
 }
+/* }}} */
 
+/* {{{ Get history */
 int get_history_on_answer (struct query *q UU) {
   static struct message *ML[10000];
   int i;
@@ -952,8 +960,27 @@ struct query_methods get_history_methods = {
   .on_answer = get_history_on_answer,
 };
 
+void do_get_local_history (peer_id_t id, int limit) {
+  peer_t *P = user_chat_get (id);
+  if (!P || !P->last) { return; }
+  struct message *M = P->last;
+  int count = 1;
+  while (count < limit && M->next) {
+    M = M->next;
+    count ++;
+  }
+  while (M) {
+    print_message (M);
+    M = M->prev;
+  }
+}
 
 void do_get_history (peer_id_t id, int limit) {
+  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+    do_get_local_history (id, limit);
+    do_mark_read (id);
+    return;
+  }
   clear_packet ();
   out_int (CODE_messages_get_history);
   out_peer_id (id);
@@ -962,7 +989,7 @@ void do_get_history (peer_id_t id, int limit) {
   out_int (limit);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id);
 }
-
+/* }}} */
 
 int get_dialogs_on_answer (struct query *q UU) {
   unsigned x = fetch_int (); 
