@@ -1954,7 +1954,6 @@ int send_encr_accept_on_answer (struct query *q UU) {
 
 int send_encr_request_on_answer (struct query *q UU) {
   struct secret_chat *E = fetch_alloc_encrypted_chat ();
-  logprintf ("state = %d\n", E->state);
   if (E->state == sc_deleted) {
     print_start ();
     push_color (COLOR_YELLOW);
