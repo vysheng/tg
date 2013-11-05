@@ -284,6 +284,10 @@ void write_state_file (void) {
 extern peer_t *Peers[];
 extern int peer_num;
 
+extern int encr_root;
+extern unsigned char *encr_prime;
+extern int encr_param_version;
+
 void read_secret_chat_file (void) {
   int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
   if (fd < 0) {
@@ -329,6 +333,14 @@ void read_secret_chat_file (void) {
     assert (read (fd, &E->key_fingerprint, 8) == 8);
     insert_encrypted_chat (P);
   }
+  if (version >= 1) {
+    assert (read (fd, &encr_root, 4) == 4);
+    if (encr_root) {
+      assert (read (fd, &encr_param_version, 4) == 4);
+      encr_prime = malloc (256);
+      assert (read (fd, encr_prime, 256) == 256);
+    }
+  }
   close (fd);
 }
 
@@ -339,7 +351,7 @@ void write_secret_chat_file (void) {
   }
   int x[2];
   x[0] = SECRET_CHAT_FILE_MAGIC;
-  x[1] = 0;
+  x[1] = 1;
   assert (write (fd, x, 8) == 8);
   int i;
   int cc = 0;
@@ -374,6 +386,11 @@ void write_secret_chat_file (void) {
       assert (write (fd, Peers[i]->encr_chat.key, 256) == 256);
       assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);      
     }
+  }
+  assert (write (fd, &encr_root, 4) == 4);
+  if (encr_root) {
+    assert (write (fd, &encr_param_version, 4) == 4);
+    assert (write (fd, encr_prime, 256) == 256);
   }
   close (fd);
 }
