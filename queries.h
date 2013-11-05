@@ -81,6 +81,8 @@ void do_get_user_info (peer_id_t id);
 void do_forward_message (peer_id_t id, int n);
 void do_rename_chat (peer_id_t id, char *name);
 void do_load_encr_video (struct encr_video *V, int next);
+void do_create_encr_chat_request (struct secret_chat *E);
+void do_create_secret_chat (peer_id_t id);
 
 struct photo;
 struct video;
@@ -99,5 +101,6 @@ void do_accept_encr_chat_request (struct secret_chat *E);
 void do_get_difference (void);
 void do_mark_read (peer_id_t id);
 void do_visualize_key (peer_id_t id);
+void do_create_keys_end (struct secret_chat *U);
 
 #endif

@@ -26,6 +26,7 @@
 #include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <openssl/sha.h>
+#include "queries.h"
 
 #define sha1 SHA1
 
@@ -283,6 +284,9 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       U->key_fingerprint = fetch_long ();
     } else {
       assert (U->key_fingerprint == fetch_long ());
+    }
+    if (old_state == sc_waiting) {
+      do_create_keys_end (U);
     }
   }
   if (U->state != old_state) {
@@ -799,6 +803,9 @@ int decrypt_encrypted_message (struct secret_chat *E) {
   AES_ige_encrypt ((void *)decr_ptr, (void *)decr_ptr, 4 * (decr_end - decr_ptr), &aes_key, iv, 0);
 
   int x = *(decr_ptr);
+  if (x < 0 || (x & 3)) {
+    return -1;
+  }
   assert (x >= 0 && !(x & 3));
   sha1 ((void *)decr_ptr, 4 + x, sha1a_buffer);
 

@@ -55,6 +55,7 @@ long long cur_uploaded_bytes;
 long long cur_downloading_bytes;
 long long cur_downloaded_bytes;
 
+void out_peer_id (peer_id_t id);
 #define QUERY_TIMEOUT 0.3
 
 #define memcmp8(a,b) memcmp ((a), (b), 8)
@@ -755,7 +756,6 @@ struct query_methods msg_send_encr_methods = {
 
 int out_message_num;
 int our_id;
-void out_peer_id (peer_id_t id);
 
 void do_send_encr_message (peer_id_t id, const char *msg, int len) {
   peer_t *P = user_chat_get (id);
@@ -1952,8 +1952,35 @@ int send_encr_accept_on_answer (struct query *q UU) {
   return 0;
 }
 
+int send_encr_request_on_answer (struct query *q UU) {
+  struct secret_chat *E = fetch_alloc_encrypted_chat ();
+  logprintf ("state = %d\n", E->state);
+  if (E->state == sc_deleted) {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("Encrypted connection with ");
+    print_encr_chat_name (E->id, (void *)E);
+    printf (" can not be established\n");
+    pop_color ();
+    print_end ();
+  } else {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("Establishing connection with ");
+    print_encr_chat_name (E->id, (void *)E);
+    printf ("\n");
+    pop_color ();
+    print_end ();
+  }
+  return 0;
+}
+
 struct query_methods send_encr_accept_methods  = {
   .on_answer = send_encr_accept_on_answer
+};
+
+struct query_methods send_encr_request_methods  = {
+  .on_answer = send_encr_request_on_answer
 };
 
 int encr_root;
@@ -2010,6 +2037,94 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E);
 }
 
+void do_create_keys_end (struct secret_chat *U) {
+  if (!encr_prime) {
+    rprintf (COLOR_YELLOW "Something failed in bad moment. Did not fail\n"COLOR_NORMAL);
+    return;
+  }
+  BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
+  assert (g_b);
+  if (!ctx) {
+    ctx = BN_CTX_new ();
+    BN_CTX_init (ctx);
+  }
+  BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  BIGNUM *r = BN_new ();
+  BIGNUM *a = BN_bin2bn ((void *)U->key, 256, 0);
+  BN_init (r);
+  BN_mod_exp (r, g_b, a, p, ctx); 
+  
+  memset (U->key, 0, sizeof (U->key));
+  BN_bn2bin (r, (void *)U->key);
+  int i;
+  for (i = 0; i < 64; i++) {
+    U->key[i] ^= *(((int *)U->nonce) + i);
+  }
+  
+  static unsigned char sha_buffer[20];
+  sha1 ((void *)U->key, 256, sha_buffer);
+  long long k = *(long long *)(sha_buffer + 12);
+  assert (k == U->key_fingerprint);
+  
+  BN_clear_free (p);
+  BN_clear_free (g_b);
+  BN_clear_free (r);
+  BN_clear_free (a);
+}
+
+void do_send_create_encr_chat (struct secret_chat *E, unsigned char *random) {
+  int i;
+  for (i = 0; i < 64; i++) {
+    *(((int *)random) + i) ^= mrand48 ();
+  }
+  if (!ctx) {
+    ctx = BN_CTX_new ();
+    BN_CTX_init (ctx);
+  }
+  BIGNUM *a = BN_bin2bn (random, 256, 0);
+  assert (a);
+  BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+ 
+  BIGNUM *g = BN_new ();
+  BN_init (g);
+
+  BN_set_word (g, encr_root);
+
+  BIGNUM *r = BN_new ();
+  BN_init (r);
+
+  BN_mod_exp (r, g, a, p, ctx); 
+
+  memcpy (E->key, random, 256);
+
+  static char g_a[256];
+  memset (g_a, 0, 256);
+
+  BN_bn2bin (r, (void *)g_a);
+  
+  clear_packet ();
+  out_int (CODE_messages_request_encryption);
+  peer_t *U = user_chat_get (MK_USER (E->user_id));
+  assert (U);
+  if (U && U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (E->user_id);
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (E->user_id);
+  }
+  out_int (get_peer_id (E->id));
+  out_cstring (g_a, 256);
+  write_secret_chat_file ();
+  
+  BN_clear_free (g);
+  BN_clear_free (p);
+  BN_clear_free (r);
+
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_request_methods, E);
+}
+
 int get_dh_config_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified);
@@ -2025,7 +2140,12 @@ int get_dh_config_on_answer (struct query *q UU) {
   assert (l == 256);
   unsigned char *random = (void *)fetch_str_dup ();
   if (q->extra) {
-    do_send_accept_encr_chat (q->extra, random);
+    struct secret_chat *E = q->extra;
+    if (E->state == sc_request) {
+      do_send_accept_encr_chat (q->extra, random);
+    } else if (E->state == sc_none) {
+      do_send_create_encr_chat (q->extra, random);
+    }
     free (random);
   } else {
     free (random);
@@ -2040,6 +2160,16 @@ struct query_methods get_dh_config_methods  = {
 void do_accept_encr_chat_request (struct secret_chat *E) {
   assert (E->state == sc_request);
   
+  clear_packet ();
+  out_int (CODE_messages_get_dh_config);
+  out_int (encr_param_version);
+  out_int (256);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, E);
+}
+
+void do_create_encr_chat_request (struct secret_chat *E) {
+  assert (E->state == sc_none);
+
   clear_packet ();
   out_int (CODE_messages_get_dh_config);
   out_int (encr_param_version);
@@ -2199,5 +2329,28 @@ void do_visualize_key (peer_id_t id) {
     if (i & 1) { printf ("\n"); }
   }
   print_end ();
+}
+/* }}} */
+
+/* {{{ Create secret chat */
+char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
+
+void do_create_secret_chat (peer_id_t id) {
+  assert (get_peer_type (id) == PEER_USER);
+  peer_t *U = user_chat_get (id);
+  if (!U) { 
+    rprintf ("Can not create chat with unknown user\n");
+  }
+
+  peer_t *P = malloc (sizeof (*P));
+  memset (P, 0, sizeof (*P));
+  P->id = MK_ENCR_CHAT (lrand48 ());
+
+  P->encr_chat.user_id = get_peer_id (id);
+
+  insert_encrypted_chat (P);
+  P->print_name = create_print_name (P->id, "!", U->user.first_name, U->user.last_name, 0);
+
+  do_create_encr_chat_request (&P->encr_chat); 
 }
 /* }}} */

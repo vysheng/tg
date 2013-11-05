@@ -322,9 +322,9 @@ void read_secret_chat_file (void) {
     if (E->state != sc_waiting) {
       E->g_key = malloc (256);
       assert (read (fd, E->g_key, 256) == 256);
+      E->nonce = malloc (256);
+      assert (read (fd, E->nonce, 256) == 256);
     }
-    E->nonce = malloc (256);
-    assert (read (fd, E->nonce, 256) == 256);
     assert (read (fd, E->key, 256) == 256);
     assert (read (fd, &E->key_fingerprint, 8) == 8);
     insert_encrypted_chat (P);
@@ -368,7 +368,9 @@ void write_secret_chat_file (void) {
       if (Peers[i]->encr_chat.state != sc_waiting) {
         assert (write (fd, Peers[i]->encr_chat.g_key, 256) == 256);
       }
-      assert (write (fd, Peers[i]->encr_chat.nonce, 256) == 256);
+      if (Peers[i]->encr_chat.state != sc_waiting) {
+        assert (write (fd, Peers[i]->encr_chat.nonce, 256) == 256);
+      }
       assert (write (fd, Peers[i]->encr_chat.key, 256) == 256);
       assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);      
     }
