@@ -1971,9 +1971,17 @@ struct query_methods msg_search_methods = {
 };
 
 void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
+  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+    rprintf ("Can not search in secure chat\n");
+    return;
+  }
   clear_packet ();
   out_int (CODE_messages_search);
-  out_peer_id (id);
+  if (get_peer_type (id) == PEER_UNKNOWN) {
+    out_int (CODE_input_peer_empty);
+  } else {
+    out_peer_id (id);
+  }
   out_string (s);
   out_int (CODE_input_messages_filter_empty);
   out_int (from);

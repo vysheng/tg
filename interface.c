@@ -255,6 +255,7 @@ char *commands[] = {
   "visualize_key",
   "create_secret_chat",
   "suggested_contacts",
+  "global_search",
   0 };
 
 int commands_flags[] = {
@@ -284,6 +285,7 @@ int commands_flags[] = {
   072,
   075,
   071,
+  07,
   07,
 };
 
@@ -745,6 +747,17 @@ void interpreter (char *line UU) {
       RET;
     }
     do_msg_search (id, from, to, limit, s);
+  } else if (IS_WORD ("global_search")) {
+    int from = 0;
+    int to = 0;
+    int limit = 40;
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty message\n");
+      RET;
+    }
+    do_msg_search (PEER_NOT_FOUND, from, to, limit, s);
   } else if (IS_WORD ("mark_read")) {
     GET_PEER;
     do_mark_read (id);
@@ -916,9 +929,11 @@ void print_user_name (peer_id_t id, peer_t *U) {
     if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
       push_color (COLOR_REDB);
     }
-    if (!U->user.first_name) {
+    if ((U->flags & FLAG_DELETED) || (U->flags & FLAG_EMPTY)) {
+      printf ("deleted user#%d", get_peer_id (id));
+    } else if (!U->user.first_name || !strlen (U->user.first_name)) {
       printf ("%s", U->user.last_name);
-    } else if (!U->user.last_name) {
+    } else if (!U->user.last_name || !strlen (U->user.last_name)) {
       printf ("%s", U->user.first_name);
     } else {
       printf ("%s %s", U->user.first_name, U->user.last_name); 
