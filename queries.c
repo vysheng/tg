@@ -1187,9 +1187,16 @@ void send_part (struct send_file *f) {
       cur_uploading_bytes += f->size;
     }
     clear_packet ();
-    out_int (CODE_upload_save_file_part);
-    out_long (f->id);
-    out_int (f->part_num ++);
+    if (f->size < (16 << 20)) {
+      out_int (CODE_upload_save_file_part);      
+      out_long (f->id);
+      out_int (f->part_num ++);
+    } else {
+      out_int (CODE_upload_save_big_file_part);      
+      out_long (f->id);
+      out_int (f->part_num ++);
+      out_int ((f->size + f->part_size - 1) / f->part_size);
+    }
     static char buf[512 << 10];
     int x = read (f->fd, buf, f->part_size);
     assert (x > 0);
@@ -1215,6 +1222,8 @@ void send_part (struct send_file *f) {
     if (f->offset == f->size) {
       close (f->fd);
       f->fd = -1;
+    } else {
+      assert (f->part_size == x);
     }
     send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
   } else {
@@ -1226,7 +1235,11 @@ void send_part (struct send_file *f) {
       out_int (CODE_messages_send_media);
       out_peer_id (f->to_id);
       out_int (f->media_type);
-      out_int (CODE_input_file);
+      if (f->size < (16 << 20)) {
+        out_int (CODE_input_file);
+      } else {
+        out_int (CODE_input_file_big);
+      }
       out_long (f->id);
       out_int (f->part_num);
       char *s = f->file_name + strlen (f->file_name);
@@ -1276,7 +1289,11 @@ void send_part (struct send_file *f) {
       out_cstring ((void *)f->key, 32);
       out_cstring ((void *)f->init_iv, 32);
       encr_finish (&P->encr_chat);
-      out_int (CODE_input_encrypted_file_uploaded);
+      if (f->size < (16 << 20)) {
+        out_int (CODE_input_encrypted_file_uploaded);
+      } else {
+        out_int (CODE_input_encrypted_file_big_uploaded);
+      }
       out_long (f->id);
       out_int (f->part_num);
       out_string ("");
@@ -1332,7 +1349,13 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   f->size = size;
   f->offset = 0;
   f->part_num = 0;
-  f->part_size = ((size + 999) / 1000 + 0x3ff) & ~0x3ff;
+/*  int tmp = ((size + 1999) / 2000);
+  f->part_size = (1 << 10);
+  while (f->part_size < tmp) {
+    f->part_size *= 2;
+  }*/
+  f->part_size = 256 << 10;
+
   f->id = lrand48 () * (1ll << 32) + lrand48 ();
   f->to_id = to_id;
   f->media_type = type;
@@ -1351,7 +1374,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
       ((int *)f->key)[i] = mrand48 ();
     }
   }
-  if (f->part_size > (512 << 10)) {
+  if (f->part_size >= (512 << 10)) {
     close (fd);
     rprintf ("Too big file. Maximal supported size is %d", (512 << 10) * 1000);
     return;
