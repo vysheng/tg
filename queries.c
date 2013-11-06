@@ -2357,7 +2357,7 @@ void do_get_difference (void) {
 /* }}} */
 
 /* {{{ Visualize key */
-char *colors[4] = {COLOR_GREY, COLOR_GREEN, COLOR_CYAN, COLOR_BLUE};
+char *colors[4] = {COLOR_GREY, COLOR_CYAN, COLOR_BLUE, COLOR_GREEN};
 
 void do_visualize_key (peer_id_t id) {
   assert (get_peer_type (id) == PEER_ENCR_CHAT);
