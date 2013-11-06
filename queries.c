@@ -2388,6 +2388,48 @@ void do_visualize_key (peer_id_t id) {
 }
 /* }}} */
 
+/* {{{ Get suggested */
+int get_suggested_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_contacts_suggested);
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  logprintf ("n = %d\n", n);
+  assert (n <= 200);
+  int l[400];
+  int i;
+  for (i = 0; i < n; i++) {
+    assert (fetch_int () == CODE_contact_suggested);
+    l[2 * i] = fetch_int ();
+    l[2 * i + 1] = fetch_int ();
+  }
+  assert (fetch_int () == CODE_vector);
+  int m = fetch_int ();
+  assert (n == m);
+  print_start ();
+  push_color (COLOR_YELLOW);
+  for (i = 0; i < m; i++) {
+    peer_t *U = (void *)fetch_alloc_user ();
+    assert (get_peer_id (U->id) == l[2 * i]);
+    print_user_name (U->id, U);
+    printf ("phone %s: %d mutual friends\n", U->user.phone, l[2 * i + 1]);
+  }
+  pop_color ();
+  print_end ();
+  return 0;
+}
+
+struct query_methods get_suggested_methods = {
+  .on_answer = get_suggested_on_answer
+};
+
+void do_get_suggested (void) {
+  clear_packet ();
+  out_int (CODE_contacts_get_suggested);
+  out_int (100);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_suggested_methods, 0);
+}
+/* }}} */
+
 /* {{{ Create secret chat */
 char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 

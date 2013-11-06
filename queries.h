@@ -83,6 +83,7 @@ void do_rename_chat (peer_id_t id, char *name);
 void do_load_encr_video (struct encr_video *V, int next);
 void do_create_encr_chat_request (struct secret_chat *E);
 void do_create_secret_chat (peer_id_t id);
+void do_get_suggested (void);
 
 struct photo;
 struct video;

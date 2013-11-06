@@ -254,6 +254,7 @@ char *commands[] = {
   "mark_read",
   "visualize_key",
   "create_secret_chat",
+  "suggested_contacts",
   0 };
 
 int commands_flags[] = {
@@ -283,6 +284,7 @@ int commands_flags[] = {
   072,
   075,
   071,
+  07,
 };
 
 int get_complete_mode (void) {
@@ -752,6 +754,8 @@ void interpreter (char *line UU) {
   } else if (IS_WORD ("create_secret_chat")) {
     GET_PEER;    
     do_create_secret_chat (id);
+  } else if (IS_WORD ("suggested_contacts")) {
+    do_get_suggested ();
   }
 #undef IS_WORD
 #undef RET
