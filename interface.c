@@ -724,7 +724,13 @@ void interpreter (char *line UU) {
       "view_photo/view_video/view_video_thumb <msg-seqno> - loads photo/video to download dir and starts system default viewer\n"
       "show_license - prints contents of GPLv2\n"
       "search <peer> pattern - searches pattern in messages with peer\n"
+      "global_search pattern - searches pattern in all messages\n"
       "mark_read <peer> - mark read all received messages with peer\n"
+      "add_contact <phone-number> <first-name> <last-name> - tries to add contact to contact-list by phone\n"
+      "create_secret_chat <user> - creates secret chat with this user\n"
+      "rename_contact <user> <first-name> <last-name> - tries to rename contact. If you have another device it will be a fight\n"
+      "suggested_contacts - print info about contacts, you have max common friends\n"
+      "visualize_key <secret_chat> - prints visualization of encryption key. You should compare it to your partner's one\n"
       );
     pop_color ();
     rl_on_new_line ();
