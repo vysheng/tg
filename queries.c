@@ -2411,7 +2411,7 @@ int get_suggested_on_answer (struct query *q UU) {
     peer_t *U = (void *)fetch_alloc_user ();
     assert (get_peer_id (U->id) == l[2 * i]);
     print_user_name (U->id, U);
-    printf ("phone %s: %d mutual friends\n", U->user.phone, l[2 * i + 1]);
+    printf (" phone %s: %d mutual friends\n", U->user.phone, l[2 * i + 1]);
   }
   pop_color ();
   print_end ();
