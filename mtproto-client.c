@@ -708,7 +708,9 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       int id = fetch_int (); // id
       int new = fetch_long (); // random_id
       struct message *M = message_get (new);
-      update_message_id (M, id);
+      if (M) {
+        update_message_id (M, id);
+      }
     }
     break;
   case CODE_update_read_messages:

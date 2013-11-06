@@ -1094,8 +1094,9 @@ struct send_file {
   int part_num;
   int part_size;
   long long id;
+  long long thumb_id;
   peer_id_t to_id;
-  int media_type;
+  unsigned media_type;
   char *file_name;
   int encr;
   unsigned char *iv;
@@ -1225,12 +1226,14 @@ void send_part (struct send_file *f) {
     } else {
       assert (f->part_size == x);
     }
+    update_prompt ();
     send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
   } else {
     cur_uploaded_bytes -= f->size;
     cur_uploading_bytes -= f->size;
+    update_prompt ();
     clear_packet ();
-    assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video);
+    assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_thumb_video);
     if (!f->encr) {
       out_int (CODE_messages_send_media);
       out_peer_id (f->to_id);
@@ -1245,8 +1248,17 @@ void send_part (struct send_file *f) {
       char *s = f->file_name + strlen (f->file_name);
       while (s >= f->file_name && *s != '/') { s --;}
       out_string (s + 1);
-      out_string ("");
-      if (f->media_type == CODE_input_media_uploaded_video) {
+      if (f->size < (16 << 20)) {
+        out_string ("");
+      }
+      if (f->media_type == CODE_input_media_uploaded_thumb_video) {
+        out_int (CODE_input_file);
+        out_long (f->thumb_id);
+        out_int (1);
+        out_string ("thumb.jpg");
+        out_string ("");
+      }
+      if (f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_thumb_video) {
         out_int (100);
         out_int (100);
         out_int (100);
@@ -1296,7 +1308,9 @@ void send_part (struct send_file *f) {
       }
       out_long (f->id);
       out_int (f->part_num);
-      out_string ("");
+      if (f->size < (16 << 20)) {
+        out_string ("");
+      }
  
       unsigned char md5[16];
       unsigned char str[64];
@@ -1327,6 +1341,16 @@ void send_part (struct send_file *f) {
     free (f->file_name);
     free (f);
   }
+}
+
+void send_file_thumb (struct send_file *f) {
+  clear_packet ();
+  f->thumb_id = lrand48 () * (1ll << 32) + lrand48 ();
+  out_int (CODE_upload_save_file_part);
+  out_long (f->thumb_id);
+  out_int (0);
+  out_cstring ((void *)thumb_file, thumb_file_size);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
 }
 
 void do_send_photo (int type, peer_id_t to_id, char *file_name) {
@@ -1379,7 +1403,12 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     rprintf ("Too big file. Maximal supported size is %d", (512 << 10) * 1000);
     return;
   }
-  send_part (f);
+  if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
+    f->media_type = CODE_input_media_uploaded_thumb_video;
+    send_file_thumb (f);
+  } else {
+    send_part (f);
+  }
 }
 /* }}} */
 
@@ -1713,6 +1742,11 @@ void load_next_part (struct download *D) {
 }
 
 void do_load_photo_size (struct photo_size *P, int next) {
+  if (!P->loc.dc) {
+    rprintf ("Bad video thumb\n");
+    return;
+  }
+  
   assert (P);
   assert (next);
   struct download *D = malloc (sizeof (*D));

@@ -63,10 +63,14 @@ char *next_token (int *l) {
   }
   int neg = 0;
   char *s = line_ptr;
-  while (*line_ptr && (*line_ptr != ' ' || neg)) {
+  int in_str = 0;
+  while (*line_ptr && (*line_ptr != ' ' || neg || in_str)) {
     if (*line_ptr == '\\') {
       neg = 1 - neg;
     } else {
+      if (*line_ptr == '"' && !neg) {
+        in_str = !in_str;
+      }
       neg = 0;
     }
     line_ptr++;
@@ -756,28 +760,12 @@ void interpreter (char *line UU) {
 
 int readline_active;
 void rprintf (const char *format, ...) {
-  int saved_point = 0;
-  char *saved_line = 0;
-  if (readline_active) {
-    saved_point = rl_point;
-    saved_line = rl_copy_text(0, rl_end);
-    rl_save_prompt();
-    rl_replace_line("", 0);
-    rl_redisplay();
-  }
-
+  print_start ();
   va_list ap;
   va_start (ap, format);
   vfprintf (stdout, format, ap);
   va_end (ap);
-
-  if (readline_active) {
-    rl_restore_prompt();
-    rl_replace_line(saved_line, 0);
-    rl_point = saved_point;
-    rl_redisplay();
-    free(saved_line);
-  }
+  print_end();
 }
 
 int saved_point;
@@ -833,30 +821,14 @@ void hexdump (int *in_ptr, int *in_end) {
 }
 
 void logprintf (const char *format, ...) {
-  int saved_point = 0;
-  char *saved_line = 0;
-  if (readline_active) {
-    saved_point = rl_point;
-    saved_line = rl_copy_text(0, rl_end);
-    rl_save_prompt();
-    rl_replace_line("", 0);
-    rl_redisplay();
-  }
-  
+  print_start ();
   printf (COLOR_GREY " *** ");
   va_list ap;
   va_start (ap, format);
   vfprintf (stdout, format, ap);
   va_end (ap);
   printf (COLOR_NORMAL);
-
-  if (readline_active) {
-    rl_restore_prompt();
-    rl_replace_line(saved_line, 0);
-    rl_point = saved_point;
-    rl_redisplay();
-    free(saved_line);
-  }
+  print_end ();
 }
 
 int color_stack_pos;
