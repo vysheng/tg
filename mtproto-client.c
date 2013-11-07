@@ -1390,6 +1390,10 @@ int rpc_execute (struct connection *c, int op, int len) {
   if (verbosity) {
     logprintf ( "outbound rpc connection #%d : received rpc answer %d with %d content bytes\n", c->fd, op, len);
   }
+  if (op < 0) {
+    assert (read_in (c, Response, Response_len) == Response_len);
+    return 0;
+  }
 
   if (len >= MAX_RESPONSE_SIZE/* - 12*/ || len < 0/*12*/) {
     logprintf ( "answer too long (%d bytes), skipping\n", len);

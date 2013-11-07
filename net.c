@@ -141,7 +141,7 @@ int read_in (struct connection *c, void *data, int len) {
   int x = 0;
   while (len) {
     int y = c->in_head->wptr - c->in_head->rptr;
-    if (y > len) {
+    if (y >= len) {
       memcpy (data, c->in_head->rptr, len);
       c->in_head->rptr += len;
       c->in_bytes -= len;
@@ -164,7 +164,7 @@ int read_in (struct connection *c, void *data, int len) {
 }
 
 int read_in_lookup (struct connection *c, void *data, int len) {
-  if (!len) { return 0; }
+  if (!len || !c->in_bytes) { return 0; }
   assert (len > 0);
   if (len > c->in_bytes) {
     len = c->in_bytes;
@@ -173,12 +173,13 @@ int read_in_lookup (struct connection *c, void *data, int len) {
   struct connection_buffer *b = c->in_head;
   while (len) {
     int y = b->wptr - b->rptr;
-    if (y > len) {
+    if (y >= len) {
       memcpy (data, b->rptr, len);
       return x + len;
     } else {
       memcpy (data, b->rptr, y);
       x += y;
+      data += y;
       b = b->next;
     }
   }

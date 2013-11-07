@@ -1373,12 +1373,11 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   f->size = size;
   f->offset = 0;
   f->part_num = 0;
-/*  int tmp = ((size + 1999) / 2000);
+  int tmp = ((size + 2999) / 3000);
   f->part_size = (1 << 10);
   while (f->part_size < tmp) {
     f->part_size *= 2;
-  }*/
-  f->part_size = 256 << 10;
+  }
 
   f->id = lrand48 () * (1ll << 32) + lrand48 ();
   f->to_id = to_id;
@@ -1398,7 +1397,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
       ((int *)f->key)[i] = mrand48 ();
     }
   }
-  if (f->part_size >= (512 << 10)) {
+  if (f->part_size > (512 << 10)) {
     close (fd);
     rprintf ("Too big file. Maximal supported size is %d", (512 << 10) * 1000);
     return;
