@@ -256,6 +256,8 @@ char *commands[] = {
   "create_secret_chat",
   "suggested_contacts",
   "global_search",
+  "chat_add_user",
+  "chat_del_user",
   0 };
 
 int commands_flags[] = {
@@ -287,6 +289,8 @@ int commands_flags[] = {
   071,
   07,
   07,
+  0724,
+  0724,
 };
 
 int get_complete_mode (void) {
@@ -658,6 +662,16 @@ void interpreter (char *line UU) {
     GET_PEER;
     int limit = next_token_int ();
     do_get_history (id, limit > 0 ? limit : 40);
+  } else if (IS_WORD ("chat_add_user")) {
+    GET_PEER_CHAT;    
+    peer_id_t chat_id = id;
+    GET_PEER_USER;
+    do_add_user_to_chat (chat_id, id, 100);
+  } else if (IS_WORD ("chat_del_user")) {
+    GET_PEER_CHAT;    
+    peer_id_t chat_id = id;
+    GET_PEER_USER;
+    do_del_user_from_chat (chat_id, id);
   } else if (IS_WORD ("add_contact")) {
     int phone_len, first_name_len, last_name_len;
     char *phone, *first_name, *last_name;

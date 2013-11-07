@@ -2438,6 +2438,50 @@ void do_get_suggested (void) {
 }
 /* }}} */
 
+/* {{{ Add user to chat */
+
+struct query_methods add_user_to_chat_methods = {
+  .on_answer = fwd_msg_on_answer
+};
+
+void do_add_user_to_chat (peer_id_t chat_id, peer_id_t id, int limit) {
+  clear_packet ();
+  out_int (CODE_messages_add_chat_user);
+  out_int (get_peer_id (chat_id));
+  
+  assert (get_peer_type (id) == PEER_USER);
+  peer_t *U = user_chat_get (id);
+  if (U && U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (get_peer_id (id));
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (get_peer_id (id));
+  }
+  out_int (limit);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0);
+}
+
+void do_del_user_from_chat (peer_id_t chat_id, peer_id_t id) {
+  clear_packet ();
+  out_int (CODE_messages_delete_chat_user);
+  out_int (get_peer_id (chat_id));
+  
+  assert (get_peer_type (id) == PEER_USER);
+  peer_t *U = user_chat_get (id);
+  if (U && U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (get_peer_id (id));
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (get_peer_id (id));
+  }
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0);
+}
+/* }}} */
+
 /* {{{ Create secret chat */
 char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 

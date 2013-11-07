@@ -728,7 +728,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       fetch_pts ();
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("%d messages marked as read\n", n);
+      print_date (time (0));
+      printf (" %d messages marked as read\n", n);
       pop_color ();
       print_end ();
     }
@@ -739,7 +740,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *U = user_chat_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("User ");
+      print_date (time (0));
+      printf (" User ");
       print_user_name (id, U);
       printf (" is typing....\n");
       pop_color ();
@@ -754,7 +756,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *U = user_chat_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("User ");
+      print_date (time (0));
+      printf (" User ");
       print_user_name (id, U);
       printf (" is typing in chat ");
       print_chat_name (chat_id, C);
@@ -771,7 +774,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         fetch_user_status (&U->user.status);
         print_start ();
         push_color (COLOR_YELLOW);
-        printf ("User ");
+        print_date (time (0));
+        printf (" User ");
         print_user_name (user_id, U);
         printf (" is now ");
         printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
@@ -791,7 +795,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         struct user *U = &UC->user;
         print_start ();
         push_color (COLOR_YELLOW);
-        printf ("User ");
+        print_date (time (0));
+        printf (" User ");
         print_user_name (user_id, UC);
         if (U->first_name) { free (U->first_name); }
         if (U->last_name) { free (U->last_name); }
@@ -835,7 +840,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         
         print_start ();
         push_color (COLOR_YELLOW);
-        printf ("User ");
+        print_date (time (0));
+        printf (" User ");
         print_user_name (user_id, UC);
         printf (" updated profile photo\n");
         pop_color ();
@@ -867,7 +873,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       int n = fetch_int ();
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Restored %d messages\n", n);
+      print_date (time (0));
+      printf (" Restored %d messages\n", n);
       pop_color ();
       print_end ();
       fetch_skip (n);
@@ -880,7 +887,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       int n = fetch_int ();
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Deleted %d messages\n", n);
+      print_date (time (0));
+      printf (" Deleted %d messages\n", n);
       pop_color ();
       print_end ();
       fetch_skip (n);
@@ -899,7 +907,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *C = user_chat_get (chat_id);
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Chat ");
+      print_date (time (0));
+      printf (" Chat ");
       print_chat_name (chat_id, C);
       printf (" changed list: now %d members\n", n);
       pop_color ();
@@ -913,7 +922,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       fetch_int (); // date
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("User ");
+      print_date (time (0));
+      printf (" User ");
       print_user_name (user_id, U);
       printf (" registered\n");
       pop_color ();
@@ -926,7 +936,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *U = user_chat_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Updated link with user ");
+      print_date (time (0));
+      printf (" Updated link with user ");
       print_user_name (user_id, U);
       printf ("\n");
       pop_color ();
@@ -949,7 +960,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *U = user_chat_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("User ");
+      print_date (time (0));
+      printf (" User ");
       print_user_name (user_id, U);
       printf (" activated\n");
       pop_color ();
@@ -964,7 +976,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       char *location = fetch_str_dup ();
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("New autorization: device='%s' location='%s'\n",
+      print_date (time (0));
+      printf (" New autorization: device='%s' location='%s'\n",
         s, location);
       pop_color ();
       print_end ();
@@ -994,27 +1007,28 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       struct secret_chat *E = fetch_alloc_encrypted_chat ();
       print_start ();
       push_color (COLOR_YELLOW);
+      print_date (time (0));
       switch (E->state) {
       case sc_none:
         assert (0);
         break;
       case sc_waiting:
-        printf ("Encrypted chat ");
+        printf (" Encrypted chat ");
         print_encr_chat_name (E->id, (void *)E);
         printf (" is now in wait state\n");
         break;
       case sc_request:
-        printf ("Encrypted chat ");
+        printf (" Encrypted chat ");
         print_encr_chat_name (E->id, (void *)E);
         printf (" is now in request state. Sending request ok\n");
         break;
       case sc_ok:
-        printf ("Encrypted chat ");
+        printf (" Encrypted chat ");
         print_encr_chat_name (E->id, (void *)E);
         printf (" is now in ok state\n");
         break;
       case sc_deleted:
-        printf ("Encrypted chat ");
+        printf (" Encrypted chat ");
         print_encr_chat_name (E->id, (void *)E);
         printf (" is now in deleted state\n");
         break;
@@ -1033,15 +1047,16 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *P = user_chat_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
+      print_date (time (0));
       if (P) {
-        printf ("User ");
+        printf (" User ");
         peer_id_t user_id = MK_USER (P->encr_chat.user_id);
         print_user_name (user_id, user_chat_get (user_id));
         printf (" typing in secret chat ");
         print_encr_chat_name (id, P);
         printf ("\n");
       } else {
-        printf ("Some user is typing in unknown secret chat\n");
+        printf (" Some user is typing in unknown secret chat\n");
       }
       pop_color ();
       print_end ();
@@ -1067,7 +1082,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       }
       print_start ();
       push_color (COLOR_YELLOW);
-      printf ("Encrypted chat ");
+      print_date (time (0));
+      printf (" Encrypted chat ");
       print_encr_chat_name_full (id, user_chat_get (id));
       printf (": %d messages marked read \n", x);
       pop_color ();
