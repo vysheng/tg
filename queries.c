@@ -56,7 +56,7 @@ long long cur_downloading_bytes;
 long long cur_downloaded_bytes;
 
 void out_peer_id (peer_id_t id);
-#define QUERY_TIMEOUT 0.3
+#define QUERY_TIMEOUT 6.0
 
 #define memcmp8(a,b) memcmp ((a), (b), 8)
 DEFINE_TREE (query, struct query *, memcmp8, 0) ;
@@ -79,6 +79,10 @@ int alarm_query (struct query *q) {
   }
   q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   insert_event_timer (&q->ev);
+
+  if (q->session->c->out_bytes >= 100000) {
+    return 0;
+  }
 
   clear_packet ();
   out_int (CODE_msg_container);
