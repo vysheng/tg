@@ -1159,6 +1159,9 @@ int send_file_on_answer (struct query *q UU) {
 }
 
 int send_encr_file_on_answer (struct query *q UU) {
+  if (prefetch_int () != (int)CODE_messages_sent_encrypted_file) {
+    hexdump_in ();
+  }
   assert (fetch_int () == (int)CODE_messages_sent_encrypted_file);
   struct message *M = q->extra;
   M->date = fetch_int ();
@@ -1649,40 +1652,9 @@ void load_next_part (struct download *D);
 int download_on_answer (struct query *q) {
   assert (fetch_int () == (int)CODE_upload_file);
   unsigned x = fetch_int ();
+  assert (x);
   struct download *D = q->extra;
   if (D->fd == -1) {
-    static char buf[100];
-    sprintf (buf, "%s/tmp_%ld_%ld", get_downloads_directory (), lrand48 (), lrand48 ());
-    int l = strlen (buf);
-    switch (x) {
-    case CODE_storage_file_unknown:
-      break;
-    case CODE_storage_file_jpeg:
-      sprintf (buf + l, "%s", ".jpg");
-      break;
-    case CODE_storage_file_gif:
-      sprintf (buf + l, "%s", ".gif");
-      break;
-    case CODE_storage_file_png:
-      sprintf (buf + l, "%s", ".png");
-      break;
-    case CODE_storage_file_mp3:
-      sprintf (buf + l, "%s", ".mp3");
-      break;
-    case CODE_storage_file_mov:
-      sprintf (buf + l, "%s", ".mov");
-      break;
-    case CODE_storage_file_partial:
-      sprintf (buf + l, "%s", ".part");
-      break;
-    case CODE_storage_file_mp4:
-      sprintf (buf + l, "%s", ".mp4");
-      break;
-    case CODE_storage_file_webp:
-      sprintf (buf + l, "%s", ".webp");
-      break;
-    }
-    D->name = strdup (buf);
     D->fd = open (D->name, O_CREAT | O_WRONLY, 0640);
   }
   fetch_int (); // mtime
@@ -1719,7 +1691,27 @@ struct query_methods download_methods = {
 
 void load_next_part (struct download *D) {
   if (!D->offset) {
+    static char buf[1000];
+    if (!D->id) {
+      sprintf (buf, "%s/download_%lld_%d", get_downloads_directory (), D->volume, D->local_id);
+    } else {
+      sprintf (buf, "%s/download_%lld", get_downloads_directory (), D->id);
+    }
+    D->name = strdup (buf);
+    struct stat st;
+    if (stat (buf, &st) >= 0) {
+      D->offset = st.st_size;      
+      if (D->offset >= D->size) {
+        cur_downloading_bytes += D->size;
+        cur_downloaded_bytes += D->offset;
+        rprintf ("Already downloaded\n");
+        end_load (D);
+        return;
+      }
+    }
+    
     cur_downloading_bytes += D->size;
+    cur_downloaded_bytes += D->offset;
     update_prompt ();
   }
   clear_packet ();

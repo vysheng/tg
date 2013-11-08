@@ -43,6 +43,7 @@
 
 extern char *default_username;
 extern char *auth_token;
+extern int test_dc;
 void set_default_username (const char *s);
 int default_dc_num;
 
@@ -188,7 +189,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 }
 
 void empty_auth_file (void) {
-  struct dc *DC = alloc_dc (1, strdup (TG_SERVER), 443);
+  struct dc *DC = alloc_dc (1, strdup (test_dc ? TG_SERVER_TEST : TG_SERVER), 443);
   assert (DC);
   dc_working_num = 1;
   auth_state = 0;

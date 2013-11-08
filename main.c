@@ -16,6 +16,7 @@
 
     Copyright Vitaly Valtman 2013
 */
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <unistd.h>
@@ -31,6 +32,7 @@
 #include <fcntl.h>
 #include <execinfo.h>
 #include <signal.h>
+#include <libconfig.h>
 
 #include "loop.h"
 #include "mtproto-client.h"
@@ -38,12 +40,12 @@
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
 
-#define CONFIG_DIRECTORY ".telegram/"
-#define CONFIG_FILE CONFIG_DIRECTORY "config"
-#define AUTH_KEY_FILE CONFIG_DIRECTORY "auth"
-#define STATE_FILE CONFIG_DIRECTORY "state"
-#define SECRET_CHAT_FILE CONFIG_DIRECTORY "secret"
-#define DOWNLOADS_DIRECTORY "downloads/"
+#define CONFIG_DIRECTORY ".telegram"
+#define CONFIG_FILE "config"
+#define AUTH_KEY_FILE "auth"
+#define STATE_FILE "state"
+#define SECRET_CHAT_FILE "secret"
+#define DOWNLOADS_DIRECTORY "downloads"
 
 #define CONFIG_DIRECTORY_MODE 0700
 
@@ -52,9 +54,16 @@
   "# Feel free to put something here\n"
 
 char *default_username;
-int setup_mode;
 char *auth_token;
 int msg_num_mode;
+char *config_filename;
+char *prefix;
+int test_dc;
+char *auth_file_name;
+char *state_file_name;
+char *secret_chat_file_name;
+char *downloads_directory;
+char *config_directory;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -62,11 +71,6 @@ void set_default_username (const char *s) {
   }
   default_username = strdup (s);
 }
-
-void set_setup_mode (void) {
-  setup_mode = 1;
-}
-
 
 /* {{{ TERMINAL */
 tcflag_t old_lflag;
@@ -100,7 +104,7 @@ char *get_home_directory (void) {
       return current_passwd->pw_dir;
     }
   }
-  return 0;
+  return "";
 }
 
 char *get_config_directory (void) {
@@ -115,63 +119,47 @@ char *get_config_directory (void) {
 }
 
 char *get_config_filename (void) {
-  char *config_filename;
-  int length = strlen (get_home_directory ()) + strlen (CONFIG_FILE) + 2;
-
-  config_filename = (char *) calloc (length, sizeof (char));
-  sprintf (config_filename, "%s/" CONFIG_FILE, get_home_directory ());
   return config_filename;
 }
 
 char *get_auth_key_filename (void) {
-  char *auth_key_filename;
-  int length = strlen (get_home_directory ()) + strlen (AUTH_KEY_FILE) + 2;
-
-  auth_key_filename = (char *) calloc (length, sizeof (char));
-  sprintf (auth_key_filename, "%s/" AUTH_KEY_FILE, get_home_directory ());
-  return auth_key_filename;
+  return auth_file_name;
 }
 
 char *get_state_filename (void) {
-  char *state_filename;
-  int length = strlen (get_home_directory ()) + strlen (STATE_FILE) + 2;
-
-  state_filename = (char *) calloc (length, sizeof (char));
-  sprintf (state_filename, "%s/" STATE_FILE, get_home_directory ());
-  return state_filename;
+  return state_file_name;
 }
 
 char *get_secret_chat_filename (void) {
-  char *secret_chat_filename;
-  int length = strlen (get_home_directory ()) + strlen (SECRET_CHAT_FILE) + 2;
-
-  secret_chat_filename = (char *) calloc (length, sizeof (char));
-  sprintf (secret_chat_filename, "%s/" SECRET_CHAT_FILE, get_home_directory ());
-  return secret_chat_filename;
+  return secret_chat_file_name;
 }
 
-char *get_downloads_directory (void)
-{
-  char *downloads_directory;
-  int length = strlen (get_config_directory ()) + strlen (DOWNLOADS_DIRECTORY) + 2;
-
-  downloads_directory = (char *) calloc (length, sizeof (char));
-  sprintf (downloads_directory, "%s/" DOWNLOADS_DIRECTORY, get_config_directory ());
-
+char *get_downloads_directory (void) {
   return downloads_directory;
 }
 
+char *make_full_path (char *s) {
+  if (*s != '/') {
+    char *t = s;
+    assert (asprintf (&s, "%s/%s", get_home_directory (), s) >= 0);
+    free (t);
+  }
+  return s;
+}
+
 void running_for_first_time (void) {
+  if (config_filename) {
+    return; // Do not create custom config file
+  }
+  assert (asprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE) >= 0);
+  config_filename = make_full_path (config_filename);
+
   struct stat *config_file_stat = NULL;
   int config_file_fd;
   char *config_directory = get_config_directory ();
-  char *config_filename = get_config_filename ();
-  char *downloads_directory = get_downloads_directory ();
+  //char *downloads_directory = get_downloads_directory ();
 
-  if (mkdir (config_directory, CONFIG_DIRECTORY_MODE) != 0) {
-    return;
-  } else {
-    printf ("\nRunning " PROGNAME " for first time!!\n");
+  if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
     printf ("[%s] created\n", config_directory);
   }
 
@@ -192,21 +180,92 @@ void running_for_first_time (void) {
       exit (EXIT_FAILURE);
     }
     close (config_file_fd);
-    int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
+    /*int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
     int x = -1;
     assert (write (auth_file_fd, &x, 4) == 4);
     close (auth_file_fd);
 
-    printf ("[%s] created\n", config_filename);
+    printf ("[%s] created\n", config_filename);*/
   
     /* create downloads directory */
-    if (mkdir (downloads_directory, 0755) !=0) {
+    /*if (mkdir (downloads_directory, 0755) !=0) {
       perror ("creating download directory");
       exit (EXIT_FAILURE);
+    }*/
+  }
+}
+
+void parse_config_val (config_t *conf, char **s, char *param_name, const char *default_name, const char *path) {
+  static char buf[1000]; 
+  int l = 0;
+  if (prefix) {
+    l = strlen (prefix);
+    memcpy (buf, prefix, l);
+    buf[l ++] = '.';
+  }
+  *s = 0;
+  const char *r = 0;
+  strcpy (buf + l, param_name);
+  config_lookup_string (conf, buf, &r);
+  if (r) {
+    if (path) {
+      assert (asprintf (s, "%s/%s", path, r) >= 0);
+    } else {
+      *s = strdup (r);
+    }
+  } else {
+    if (path) {
+      assert (asprintf (s, "%s/%s", path, default_name) >= 0);
+    } else {
+      *s  = strdup (default_name);
     }
   }
+}
 
-  set_setup_mode ();
+void parse_config (void) {
+  config_filename = make_full_path (config_filename);
+  
+  config_t conf;
+  config_init (&conf);
+  if (config_read_file (&conf, config_filename) != CONFIG_TRUE) {
+    fprintf (stderr, "Can not read config '%s': error '%s' on the line %d\n", config_filename, config_error_text (&conf), config_error_line (&conf));
+    exit (2);
+  }
+
+  if (!prefix) {
+    config_lookup_string (&conf, "default_profile", (void *)&prefix);
+  }
+
+  static char buf[1000];
+  int l = 0;
+  if (prefix) {
+    l = strlen (prefix);
+    memcpy (buf, prefix, l);
+    buf[l ++] = '.';
+  }
+  test_dc = 0;
+  strcpy (buf + l, "test");
+  config_lookup_bool (&conf, buf, &test_dc);
+  
+  if (!msg_num_mode) {
+    strcpy (buf + l, "msg_num");
+    config_lookup_bool (&conf, buf, &msg_num_mode);
+  }
+
+  parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
+  config_directory = make_full_path (config_directory);
+
+  parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
+  parse_config_val (&conf, &state_file_name, "state_file", STATE_FILE, config_directory);
+  parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
+  parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
+  
+  if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
+    printf ("[%s] created\n", config_directory);
+  }
+  if (!mkdir (downloads_directory, CONFIG_DIRECTORY_MODE)) {
+    printf ("[%s] created\n", downloads_directory);
+  }
 }
 
 void inner_main (void) {
@@ -214,7 +273,7 @@ void inner_main (void) {
 }
 
 void usage (void) {
-  printf ("%s [-u username] [-h] [-k public key name]\n", PROGNAME);
+  printf ("%s [-u username] [-h] [-k public key name] [-N] [-v]\n", PROGNAME);
   exit (1);
 }
 
@@ -224,7 +283,7 @@ extern int default_dc_num;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:N")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -235,11 +294,15 @@ void args_parse (int argc, char **argv) {
     case 'v':
       verbosity ++;
       break;
-    case 'n':
-      default_dc_num = atoi (optarg);
-      break;
     case 'N':
       msg_num_mode ++;
+      break;
+    case 'c':
+      config_filename = strdup (optarg);
+      break;
+    case 'p':
+      prefix = strdup (optarg);
+      assert (strlen (prefix) <= 100);
       break;
     case 'h':
     default:
@@ -266,18 +329,20 @@ void sig_handler (int signum) {
 int main (int argc, char **argv) {
   signal (SIGSEGV, sig_handler);
   signal (SIGABRT, sig_handler);
-  running_for_first_time ();
-
+  
+  args_parse (argc, argv);
   printf (
     "Telegram-client version " TG_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
     "Telegram-client comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; type `show_license' for details.\n"
   );
+  running_for_first_time ();
+  parse_config ();
+
 
   get_terminal_attributes ();
 
-  args_parse (argc, argv);
 
   inner_main ();
   

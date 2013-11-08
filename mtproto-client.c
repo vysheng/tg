@@ -1361,8 +1361,9 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   double st = get_server_time (DC);
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);
   //assert (enc->msg_id > server_last_msg_id && (enc->msg_id & 3) == 1);
-  if (verbosity >= 2) {
+  if (verbosity >= 1) {
     logprintf ( "received mesage id %016llx\n", enc->msg_id);
+    hexdump_in ();
   }
   server_last_msg_id = enc->msg_id;
 
@@ -1390,10 +1391,10 @@ int rpc_execute (struct connection *c, int op, int len) {
   if (verbosity) {
     logprintf ( "outbound rpc connection #%d : received rpc answer %d with %d content bytes\n", c->fd, op, len);
   }
-  if (op < 0) {
+/*  if (op < 0) {
     assert (read_in (c, Response, Response_len) == Response_len);
     return 0;
-  }
+  }*/
 
   if (len >= MAX_RESPONSE_SIZE/* - 12*/ || len < 0/*12*/) {
     logprintf ( "answer too long (%d bytes), skipping\n", len);

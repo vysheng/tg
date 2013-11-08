@@ -146,7 +146,7 @@ int read_in (struct connection *c, void *data, int len) {
   int x = 0;
   while (len) {
     int y = c->in_head->wptr - c->in_head->rptr;
-    if (y >= len) {
+    if (y > len) {
       memcpy (data, c->in_head->rptr, len);
       c->in_head->rptr += len;
       c->in_bytes -= len;
@@ -185,6 +185,7 @@ int read_in_lookup (struct connection *c, void *data, int len) {
       memcpy (data, b->rptr, y);
       x += y;
       data += y;
+      len -= y;
       b = b->next;
     }
   }
@@ -405,7 +406,7 @@ void hexdump_buf (struct connection_buffer *b) {
 
 void try_rpc_read (struct connection *c) {
   assert (c->in_head);
-  if (verbosity >= 4) {
+  if (verbosity >= 1) {
     hexdump_buf (c->in_head);
   }
 
