@@ -17,15 +17,22 @@
     Copyright Vitaly Valtman 2013
 */
 
+#include "config.h"
 #define _GNU_SOURCE 
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef READLINE_GNU
 #include <readline/readline.h>
 #include <readline/history.h>
+#else
+#include <editline/readline.h>
+#include <editline/history.h>
+#endif
 
 #include "include.h"
 #include "queries.h"
@@ -50,6 +57,7 @@ long long cur_downloaded_bytes;
 char *line_ptr;
 extern peer_t *Peers[];
 extern int peer_num;
+
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -220,9 +228,14 @@ char *complete_none (const char *text UU, int state UU) {
   return 0;
 }
 
+
+void set_prompt (const char *s) {
+  rl_set_prompt (s);
+}
+
 void update_prompt (void) {
   print_start ();
-  rl_set_prompt (get_default_prompt ());
+  set_prompt (get_default_prompt ());
   rl_redisplay ();
   print_end ();
 }
@@ -755,9 +768,6 @@ void interpreter (char *line UU) {
       "visualize_key <secret_chat> - prints visualization of encryption key. You should compare it to your partner's one\n"
       );
     pop_color ();
-    rl_on_new_line ();
-    //print_end ();
-    printf ("\033[1K\033H");
   } else if (IS_WORD ("show_license")) {
     char *b = 
 #include "LICENSE.h"
@@ -835,20 +845,32 @@ void print_start (void) {
   assert (!prompt_was);
   if (readline_active) {
     saved_point = rl_point;
-    saved_line = rl_copy_text(0, rl_end);
+#ifdef READLINE_GNU
+    saved_line = rl_copy_text(0, rl_end);    
     rl_save_prompt();
     rl_replace_line("", 0);
+#else
+    assert (rl_end >= 0);
+    saved_line = malloc (rl_end + 1);
+    memcpy (saved_line, rl_line_buffer, rl_end + 1);
+    rl_line_buffer[0] = 0;
+    set_prompt ("");
+#endif
     rl_redisplay();
   }
   prompt_was = 1;
 }
+
 void print_end (void) {
   if (in_readline) { return; }
   assert (prompt_was);
   if (readline_active) {
-    rl_set_prompt (get_default_prompt ());
-    rl_redisplay();
+    set_prompt (get_default_prompt ());
+#if READLINE_GNU
     rl_replace_line(saved_line, 0);
+#else
+    memcpy (rl_line_buffer, saved_line, rl_end + 1); // not safe, but I hope this would work. 
+#endif
     rl_point = saved_point;
     rl_redisplay();
     free(saved_line);
@@ -857,26 +879,11 @@ void print_end (void) {
 }
 
 void hexdump (int *in_ptr, int *in_end) {
-  int saved_point = 0;
-  char *saved_line = 0;
-  if (readline_active) {
-    saved_point = rl_point;
-    saved_line = rl_copy_text(0, rl_end);
-    rl_save_prompt();
-    rl_replace_line("", 0);
-    rl_redisplay();
-  }
+  print_start ();
   int *ptr = in_ptr;
-  while (ptr < in_end) { fprintf (stdout, " %08x", *(ptr ++)); }
-  fprintf (stdout, "\n");
-  
-  if (readline_active) {
-    rl_restore_prompt();
-    rl_replace_line(saved_line, 0);
-    rl_point = saved_point;
-    rl_redisplay();
-    free(saved_line);
-  }
+  while (ptr < in_end) { printf (" %08x", *(ptr ++)); }
+  printf ("\n");
+  print_end (); 
 }
 
 void logprintf (const char *format, ...) {
@@ -1203,4 +1210,11 @@ void print_message (struct message *M) {
   assert (!color_stack_pos);
   printf ("\n");
   print_end();
+}
+
+void set_interface_callbacks (void) {
+  readline_active = 1;
+  rl_callback_handler_install (get_default_prompt (), interpreter);
+  rl_attempted_completion_function = (CPPFunction *) complete_text;
+  rl_completion_entry_function = (void *)complete_none;
 }

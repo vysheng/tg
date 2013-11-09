@@ -17,6 +17,7 @@
     Copyright Vitaly Valtman 2013
 */
 #define _GNU_SOURCE
+#include "config.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -26,7 +27,12 @@
 #include <termios.h>
 #include <unistd.h>
 #include <assert.h>
+#if (READLINE == GNU)
 #include <readline/readline.h>
+#else
+#include <editline/readline.h>
+#endif
+
 #include <sys/stat.h>
 #include <time.h>
 #include <fcntl.h>
@@ -195,6 +201,7 @@ void running_for_first_time (void) {
   }
 }
 
+#ifdef ENABLE_LIBCONFIG
 void parse_config_val (config_t *conf, char **s, char *param_name, const char *default_name, const char *path) {
   static char buf[1000]; 
   int l = 0;
@@ -267,6 +274,11 @@ void parse_config (void) {
     printf ("[%s] created\n", downloads_directory);
   }
 }
+#else
+void parse_config (void) {
+  printf ("libconfig not enabled\n");
+}
+#endif
 
 void inner_main (void) {
   loop ();
@@ -321,7 +333,7 @@ void print_backtrace (void) {
 
 void sig_handler (int signum) {
   set_terminal_attributes ();
-  printf ("signal %d received\n", signum);
+  printf ("Signal %d received\n", signum);
   print_backtrace ();
 }
 

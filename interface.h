@@ -59,4 +59,5 @@ void print_date_full (long t);
 void print_date (long t);
 
 void update_prompt (void);
+void set_interface_callbacks (void);
 #endif

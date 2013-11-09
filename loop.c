@@ -17,14 +17,20 @@
     Copyright Vitaly Valtman 2013
 */
 #define READLINE_CALLBACKS
+#include "config.h"
 
 #include <assert.h>
 #include <stdio.h>
 
 #include <stdlib.h>
 #include <string.h>
+#ifdef READLINE_GNU
 #include <readline/readline.h>
 #include <readline/history.h>
+#else
+#include <editline/readline.h>
+#include <editline/history.h>
+#endif
 
 #include <errno.h>
 #include <poll.h>
@@ -51,11 +57,12 @@ extern int unknown_user_list_pos;
 extern int unknown_user_list[];
 
 int unread_messages;
+void got_it (char *line, int len);
 void net_loop (int flags, int (*is_end)(void)) {
   while (!is_end ()) {
     struct pollfd fds[101];
     int cc = 0;
-    if (flags & 1) {
+    if (flags & 3) {
       fds[0].fd = 0;
       fds[0].events = POLLIN;
       cc ++;
@@ -70,9 +77,16 @@ void net_loop (int flags, int (*is_end)(void)) {
       continue;
     }
     work_timers ();
-    if ((flags & 1) && (fds[0].revents & POLLIN)) {
+    if ((flags & 3) && (fds[0].revents & POLLIN)) {
       unread_messages = 0;
-      rl_callback_read_char ();
+      if (flags & 1) {
+        rl_callback_read_char ();
+      } else {
+        char *line = 0;        
+        size_t len = 0;
+        assert (getline (&line, &len, stdin) >= 0);
+        got_it (line, strlen (line));
+      }
     }
     connections_poll_result (fds + cc, x - cc);
     if (unknown_user_list_pos) {
@@ -86,9 +100,10 @@ char **_s;
 size_t *_l;
 int got_it_ok;
 
-void got_it (char *line) {
-  *_s = strdup (line);
-  *_l = strlen (line);
+void got_it (char *line, int len) {
+  line[-- len] = 0; // delete end of line
+  *_s = line;
+  *_l = len;  
   got_it_ok = 1;
 }
 
@@ -97,12 +112,13 @@ int is_got_it (void) {
 }
 
 int net_getline (char **s, size_t *l) {
-  rl_already_prompted = 1;
+  fflush (stdout);
+//  rl_already_prompted = 1;
   got_it_ok = 0;
   _s = s;
   _l = l;
-  rl_callback_handler_install (0, got_it);
-  net_loop (1, is_got_it);
+//  rl_callback_handler_install (0, got_it);
+  net_loop (2, is_got_it);
   return 0;
 }
 
@@ -411,8 +427,7 @@ int new_dc_num;
 int loop (void) {
   on_start ();
   read_auth_file ();
-  readline_active = 1;
-  rl_set_prompt ("");
+  update_prompt ();
 
   assert (DC_list[dc_working_num]);
   if (auth_state == 0) {
@@ -534,12 +549,11 @@ int loop (void) {
   fflush (stdout);
   fflush (stderr);
 
-  rl_callback_handler_install (get_default_prompt (), interpreter);
-  rl_attempted_completion_function = (CPPFunction *) complete_text;
-  rl_completion_entry_function = complete_none;
-
   read_state_file ();
   read_secret_chat_file ();
+
+  set_interface_callbacks ();
+
   do_get_difference ();
   net_loop (0, dgot);
   do_get_dialog_list ();

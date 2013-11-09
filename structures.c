@@ -16,6 +16,9 @@
 
     Copyright Vitaly Valtman 2013
 */
+
+#include "config.h"
+
 #include <assert.h>
 #include <string.h>
 #include "structures.h"
