@@ -261,6 +261,7 @@ char *commands[] = {
   "status_online",
   "status_offline",
   "contacts_search",
+  "quit",
   0 };
 
 int commands_flags[] = {
@@ -294,6 +295,7 @@ int commands_flags[] = {
   07,
   0724,
   0724,
+  07,
   07,
   07,
   07,
@@ -807,6 +809,8 @@ void interpreter (char *line UU) {
       RET;
     }
     do_contacts_search (100, s);
+  } else if (IS_WORD ("quit")) {
+    exit (0);
   }
 #undef IS_WORD
 #undef RET
