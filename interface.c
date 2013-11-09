@@ -258,6 +258,9 @@ char *commands[] = {
   "global_search",
   "chat_add_user",
   "chat_del_user",
+  "status_online",
+  "status_offline",
+  "contacts_search",
   0 };
 
 int commands_flags[] = {
@@ -291,6 +294,9 @@ int commands_flags[] = {
   07,
   0724,
   0724,
+  07,
+  07,
+  07,
 };
 
 int get_complete_mode (void) {
@@ -789,6 +795,18 @@ void interpreter (char *line UU) {
     do_create_secret_chat (id);
   } else if (IS_WORD ("suggested_contacts")) {
     do_get_suggested ();
+  } else if (IS_WORD ("status_online")) {
+    do_update_status (1);
+  } else if (IS_WORD ("status_offline")) {
+    do_update_status (0);
+  } else if (IS_WORD ("contacts_search")) {
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty search query\n");
+      RET;
+    }
+    do_contacts_search (100, s);
   }
 #undef IS_WORD
 #undef RET

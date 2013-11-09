@@ -1988,6 +1988,46 @@ void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
 }
 /* }}} */
 
+/* {{{ Contacts search */
+int contacts_search_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_contacts_found);
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  int i;
+  for (i = 0; i < n; i++) {
+    assert (fetch_int () == (int)CODE_contact_found);
+    fetch_int ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  print_start ();
+  push_color (COLOR_YELLOW);
+  for (i = 0; i < n; i++) {
+    struct user *U = fetch_alloc_user ();
+    printf ("User ");
+    push_color  (COLOR_RED);
+    printf ("%s %s", U->first_name, U->last_name); 
+    pop_color ();
+    printf (". Phone %s\n", U->phone);
+  }
+  pop_color ();
+  print_end ();
+  return 0;
+}
+
+struct query_methods contacts_search_methods = {
+  .on_answer = contacts_search_on_answer
+};
+
+void do_contacts_search (int limit, const char *s) {
+  clear_packet ();
+  out_int (CODE_contacts_search);
+  out_string (s);
+  out_int (limit);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &contacts_search_methods, 0);
+}
+/* }}} */
+
 /* {{{ Encr accept */
 int send_encr_accept_on_answer (struct query *q UU) {
   struct secret_chat *E = fetch_alloc_encrypted_chat ();
@@ -2499,3 +2539,19 @@ void do_create_secret_chat (peer_id_t id) {
   do_create_encr_chat_request (&P->encr_chat); 
 }
 /* }}} */
+
+int update_status_on_answer (struct query *q UU) {
+  fetch_bool ();
+  return 0;
+}
+
+struct query_methods update_status_methods = {
+  .on_answer = update_status_on_answer
+};
+
+void do_update_status (int online UU) {
+  clear_packet ();
+  out_int (CODE_account_update_status);
+  out_int (online ? CODE_bool_false : CODE_bool_true);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &update_status_methods, 0);
+}

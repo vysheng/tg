@@ -105,5 +105,7 @@ void do_visualize_key (peer_id_t id);
 void do_create_keys_end (struct secret_chat *U);
 void do_add_user_to_chat (peer_id_t chat_id, peer_id_t id, int limit);
 void do_del_user_from_chat (peer_id_t chat_id, peer_id_t id);
+void do_update_status (int online UU);
+void do_contacts_search (int limit, const char *s);
 
 #endif
