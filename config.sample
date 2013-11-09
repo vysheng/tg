@@ -1,0 +1,22 @@
+# This is my real config
+# Feel free to edit it
+
+default_profile = "tele2"
+
+mts = {
+  test = false
+  config_directory = ".telegram/mts"
+  msg_num = true
+}
+
+tele2 = {
+  test = false
+  config_directory = ".telegram/tele2"
+  msg_num = true
+}
+
+test = {
+  test = true
+  config_directory = ".telegram/test"
+  msg_num = true
+}
