@@ -738,7 +738,8 @@ int msg_send_encr_on_answer (struct query *q UU) {
 }
 
 int msg_send_on_answer (struct query *q UU) {
-  assert (fetch_int () == (int)CODE_messages_sent_message);
+  unsigned x = fetch_int ();
+  assert (x == CODE_messages_sent_message || x == CODE_messages_sent_message_link);
   int id = fetch_int (); // id
   fetch_date ();
   fetch_pts ();
@@ -746,6 +747,45 @@ int msg_send_on_answer (struct query *q UU) {
   struct message *M = q->extra;
   M->id = id;
   message_insert (M);
+  if (x == CODE_messages_sent_message_link) {
+    assert (fetch_int () == CODE_vector);
+    int n = fetch_int ();
+    int i;
+    unsigned a, b;
+    for (i = 0; i < n; i++) {
+      assert (fetch_int () == (int)CODE_contacts_link);
+      a = fetch_int ();
+      assert (a == CODE_contacts_my_link_empty || a == CODE_contacts_my_link_requested || a == CODE_contacts_my_link_contact);
+      if (a == CODE_contacts_my_link_requested) {
+        fetch_bool ();
+      }
+      b = fetch_int ();
+      assert (b == CODE_contacts_foreign_link_unknown || b == CODE_contacts_foreign_link_requested || b == CODE_contacts_foreign_link_mutual);
+      if (b == CODE_contacts_foreign_link_requested) {
+        fetch_bool ();
+      }
+      struct user *U = fetch_alloc_user ();
+  
+      U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
+      if (a == CODE_contacts_my_link_contact) {
+        U->flags |= FLAG_USER_IN_CONTACT; 
+      }
+      U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
+      if (b == CODE_contacts_foreign_link_mutual) {
+        U->flags |= FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT; 
+      }
+      if (b == CODE_contacts_foreign_link_requested) {
+        U->flags |= FLAG_USER_OUT_CONTACT;
+      }
+      print_start ();
+      push_color (COLOR_YELLOW);
+      printf ("Link with user ");
+      print_user_name (U->id, (void *)U);
+      printf (" changed\n");
+      pop_color ();
+      print_end ();
+    }
+  }
   logprintf ("Sent: id = %d\n", id);
   return 0;
 }
