@@ -38,7 +38,9 @@
 #include <fcntl.h>
 #include <execinfo.h>
 #include <signal.h>
+#ifdef ENABLE_LIBCONFIG
 #include <libconfig.h>
+#endif
 
 #include "loop.h"
 #include "mtproto-client.h"
