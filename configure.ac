@@ -24,6 +24,14 @@ AC_CHECK_LIB([readline], [rl_save_prompt],
   ]
 )
 
+AC_CHECK_LIB([rt], [clock_gettime], 
+  [
+    [ EXTRA_LIBS+=" -lrt" ; ]
+  ],
+  [
+  ]
+)
+
 AC_MSG_CHECKING([Checking for libconfig])
 AC_ARG_ENABLE(libconfig,[--enable-libconfig/--disable-libconfig],
   [ 

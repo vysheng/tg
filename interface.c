@@ -30,8 +30,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #else
-#include <editline/readline.h>
-#include <editline/history.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #endif
 
 #include "include.h"
@@ -48,6 +48,7 @@ int unread_messages;
 int msg_num_mode;
 
 int in_readline;
+int readline_active;
 
 long long cur_uploading_bytes;
 long long cur_uploaded_bytes;
@@ -236,7 +237,9 @@ void set_prompt (const char *s) {
 void update_prompt (void) {
   print_start ();
   set_prompt (get_default_prompt ());
-  rl_redisplay ();
+  if (readline_active) {
+    rl_redisplay ();
+  }
   print_end ();
 }
 

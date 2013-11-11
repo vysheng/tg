@@ -44,6 +44,7 @@
 
 #include "loop.h"
 #include "mtproto-client.h"
+#include "interface.h"
 
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
@@ -163,7 +164,7 @@ void running_for_first_time (void) {
   assert (asprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE) >= 0);
   config_filename = make_full_path (config_filename);
 
-  struct stat *config_file_stat = NULL;
+  static struct stat config_file_stat;
   int config_file_fd;
   char *config_directory = get_config_directory ();
   //char *downloads_directory = get_downloads_directory ();
@@ -173,15 +174,11 @@ void running_for_first_time (void) {
   }
 
   // see if config file is there
-  if (stat (config_filename, config_file_stat) != 0) {
+  if (stat (config_filename, &config_file_stat) != 0) {
     // config file missing, so touch it
     config_file_fd = open (config_filename, O_CREAT | O_RDWR, 0600);
     if (config_file_fd == -1)  {
       perror ("open[config_file]");
-      exit (EXIT_FAILURE);
-    }
-    if (fchmod (config_file_fd, CONFIG_DIRECTORY_MODE) != 0) {
-      perror ("fchmod[" CONFIG_FILE "]");
       exit (EXIT_FAILURE);
     }
     if (write (config_file_fd, DEFAULT_CONFIG_CONTENTS, strlen (DEFAULT_CONFIG_CONTENTS)) <= 0) {

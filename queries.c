@@ -64,7 +64,7 @@ struct tree_query *queries_tree;
 
 double get_double_time (void) {
   struct timespec tv;
-  clock_gettime (CLOCK_REALTIME, &tv);
+  my_clock_gettime (CLOCK_REALTIME, &tv);
   return tv.tv_sec + 1e-9 * tv.tv_nsec;
 }
 
@@ -179,7 +179,7 @@ void query_error (long long id) {
   }
 }
 
-#define MAX_PACKED_SIZE (1 << 20)
+#define MAX_PACKED_SIZE (1 << 24)
 static int packed_buffer[MAX_PACKED_SIZE / 4];
 
 void query_result (long long id UU) {

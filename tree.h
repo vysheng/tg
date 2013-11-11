@@ -21,7 +21,9 @@
 #include <stdio.h>
 
 #include <memory.h>
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 #include <assert.h>
 
 #define DEFINE_TREE(X_NAME, X_TYPE, X_CMP, X_UNSET) \

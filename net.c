@@ -37,6 +37,10 @@
 #include "tree.h"
 #include "interface.h"
 
+#ifdef __MACH__
+#define POLLRDHUP 0
+#endif
+
 DEFINE_TREE(int,int,int_cmp,0)
 
 int verbosity;
