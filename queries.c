@@ -64,7 +64,7 @@ struct tree_query *queries_tree;
 
 double get_double_time (void) {
   struct timespec tv;
-  clock_gettime (CLOCK_REALTIME, &tv);
+  my_clock_gettime (CLOCK_REALTIME, &tv);
   return tv.tv_sec + 1e-9 * tv.tv_nsec;
 }
 

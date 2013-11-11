@@ -385,4 +385,10 @@ static inline void hexdump_in (void) {
 static inline void hexdump_out (void) {
   hexdump (packet_buffer, packet_ptr);
 }
+
+#ifdef __MACH__
+#define CLOCK_REALTIME 0
+#define CLOCK_MONOTONIC 1
+#endif
+void my_clock_gettime (int clock_id, struct timespec *T);
 #endif

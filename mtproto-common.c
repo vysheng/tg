@@ -36,6 +36,13 @@
 
 #include "mtproto-common.h"
 #include "interface.h"
+#include "include.h"
+
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 
 int __packet_buffer[PACKET_BUFFER_SIZE], *packet_ptr;
 int *packet_buffer = __packet_buffer + 16;
@@ -78,13 +85,28 @@ int get_random_bytes (void *buf, int n) {
   return r;
 }
 
+void my_clock_gettime (int clock_id UU, struct timespec *T) {
+#ifdef __MACH__
+  // We are ignoring MONOTONIC and hope time doesn't go back to often
+  clock_serv_t cclock;
+  mach_timespec_t mts;
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+  clock_get_time(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
+  T->tv_sec = mts.tv_sec;
+  T->tv_nsec = mts.tv_nsec;
+#else
+  assert (clock_gettime(clock_id, T) >= 0);
+#endif
+}
+
 
 void prng_seed (const char *password_filename, int password_length) {
   unsigned char *a = calloc (64 + password_length, 1);
   assert (a != NULL);
   long long r = rdtsc ();
   struct timespec T;
-  assert (clock_gettime(CLOCK_REALTIME, &T) >= 0);
+  my_clock_gettime (CLOCK_REALTIME, &T);
   memcpy (a, &T.tv_sec, 4);
   memcpy (a+4, &T.tv_nsec, 4);
   memcpy (a+8, &r, 8);

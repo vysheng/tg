@@ -28,8 +28,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #else
-#include <editline/readline.h>
-#include <editline/history.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #endif
 
 #include <errno.h>

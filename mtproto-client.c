@@ -72,13 +72,8 @@ long long precise_time;
 long long precise_time_rdtsc;
 double get_utime (int clock_id) {
   struct timespec T;
-  #if _POSIX_TIMERS
-  assert (clock_gettime (clock_id, &T) >= 0);
+  my_clock_gettime (clock_id, &T);
   double res = T.tv_sec + (double) T.tv_nsec * 1e-9;
-  #else
-  #error "No high-precision clock"
-  double res = time ();
-  #endif
   if (clock_id == CLOCK_REALTIME) {
     precise_time = (long long) (res * (1LL << 32));
     precise_time_rdtsc = rdtsc ();
@@ -835,6 +830,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       peer_id_t user_id = MK_USER (fetch_int ());
       peer_t *UC = user_chat_get (user_id);
+      fetch_date ();
       if (UC) {
         struct user *U = &UC->user;
         
@@ -852,6 +848,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           U->photo_small.dc = -2;
         } else {
           assert (y == CODE_user_profile_photo);
+          fetch_long (); // photo_id
           fetch_file_location (&U->photo_small);
           fetch_file_location (&U->photo_big);
         }
@@ -865,6 +862,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           fetch_file_location (&t);
         }
       }
+      fetch_bool ();
     }
     break;
   case CODE_update_restore_messages:
@@ -1412,25 +1410,35 @@ int rpc_execute (struct connection *c, int op, int len) {
     logprintf ( "have %d Response bytes\n", Response_len);
   }
 
+#ifndef __MACH__
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+#endif
   int o = c_state;
   if (GET_DC(c)->flags & 1) { o = st_authorized;}
   switch (o) {
   case st_reqpq_sent:
     process_respq_answer (c, Response/* + 8*/, Response_len/* - 12*/);
+#ifndef __MACH__
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+#endif
     return 0;
   case st_reqdh_sent:
     process_dh_answer (c, Response/* + 8*/, Response_len/* - 12*/);
+#ifndef __MACH__
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+#endif
     return 0;
   case st_client_dh_sent:
     process_auth_complete (c, Response/* + 8*/, Response_len/* - 12*/);
+#ifndef __MACH__
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+#endif
     return 0;
   case st_authorized:
     process_rpc_message (c, (void *)(Response/* + 8*/), Response_len/* - 12*/);
+#ifndef __MACH__
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+#endif
     return 0;
   default:
     logprintf ( "fatal: cannot receive answer in state %d\n", c_state);
@@ -1456,7 +1464,9 @@ int tc_becomes_ready (struct connection *c) {
   assert (write_out (c, &byte, 1) == 1);
   flush_out (c);
   
+#ifndef __MACH__
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+#endif
   int o = c_state;
   if (GET_DC(c)->flags & 1) { o = st_authorized; }
   switch (o) {
