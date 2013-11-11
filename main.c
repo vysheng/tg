@@ -72,6 +72,7 @@ char *state_file_name;
 char *secret_chat_file_name;
 char *downloads_directory;
 char *config_directory;
+int binlog_enabled;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -268,6 +269,9 @@ void parse_config (void) {
   parse_config_val (&conf, &state_file_name, "state_file", STATE_FILE, config_directory);
   parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
+  
+  strcpy (buf + l, "binlog_enabled");
+  config_lookup_bool (&conf, buf, &binlog_enabled);
   
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
     printf ("[%s] created\n", config_directory);
