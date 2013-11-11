@@ -179,7 +179,7 @@ void query_error (long long id) {
   }
 }
 
-#define MAX_PACKED_SIZE (1 << 20)
+#define MAX_PACKED_SIZE (1 << 24)
 static int packed_buffer[MAX_PACKED_SIZE / 4];
 
 void query_result (long long id UU) {

@@ -456,8 +456,10 @@ void fetch_photo_size (struct photo_size *S) {
       S->size = fetch_int ();
     } else {
       S->size = prefetch_strlen ();
-      S->data = malloc (S->size);
-      memcpy (S->data, fetch_str (S->size), S->size);
+//      S->data = malloc (S->size);
+//      assert (S->data);
+      fetch_str (S->size);
+//      memcpy (S->data, fetch_str (S->size), S->size);
     }
   }
 }

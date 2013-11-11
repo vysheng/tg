@@ -1207,7 +1207,7 @@ void work_rpc_result (struct connection *c UU, long long msg_id UU) {
   }
 }
 
-#define MAX_PACKED_SIZE (1 << 20)
+#define MAX_PACKED_SIZE (1 << 24)
 void work_packed (struct connection *c, long long msg_id) {
   assert (fetch_int () == CODE_gzip_packed);
   static int in_gzip;
