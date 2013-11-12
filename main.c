@@ -276,6 +276,10 @@ void parse_config (void) {
 #else
 void parse_config (void) {
   printf ("libconfig not enabled\n");
+  assert (asprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE) >= 0);
+  assert (asprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE) >= 0);
+  assert (asprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE) >= 0);
+  assert (asprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY) >= 0);
 }
 #endif
 
