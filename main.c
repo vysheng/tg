@@ -55,6 +55,7 @@
 #define STATE_FILE "state"
 #define SECRET_CHAT_FILE "secret"
 #define DOWNLOADS_DIRECTORY "downloads"
+#define BINLOG_FILE "binlog"
 
 #define CONFIG_DIRECTORY_MODE 0700
 
@@ -266,6 +267,7 @@ void parse_config (void) {
   parse_config_val (&conf, &state_file_name, "state_file", STATE_FILE, config_directory);
   parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
+  parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
   
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
