@@ -1489,7 +1489,6 @@ void do_forward_message (peer_id_t id, int n) {
     return;
   }
   clear_packet ();
-  out_int (CODE_invoke_with_layer9);
   out_int (CODE_messages_forward_message);
   out_peer_id (id);
   out_int (n);
@@ -2408,7 +2407,7 @@ struct query_methods get_difference_methods = {
 void do_get_difference (void) {
   difference_got = 0;
   clear_packet ();
-  out_int (CODE_invoke_with_layer9);
+  out_int (CODE_invoke_with_layer10);
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
