@@ -74,6 +74,7 @@ char *state_file_name;
 char *secret_chat_file_name;
 char *downloads_directory;
 char *config_directory;
+char *binlog_file_name;
 int binlog_enabled;
 
 void set_default_username (const char *s) {
@@ -147,6 +148,10 @@ char *get_secret_chat_filename (void) {
 
 char *get_downloads_directory (void) {
   return downloads_directory;
+}
+
+char *get_binlog_file_name (void) {
+  return binlog_file_name;
 }
 
 char *make_full_path (char *s) {
@@ -286,6 +291,7 @@ void parse_config (void) {
   assert (asprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE) >= 0);
   assert (asprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE) >= 0);
   assert (asprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY) >= 0);
+  assert (asprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE) >= 0);
 }
 #endif
 
