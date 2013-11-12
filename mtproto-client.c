@@ -1088,6 +1088,45 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       print_end ();
     }
     break;
+  case CODE_update_chat_participant_add:
+    {
+      peer_id_t chat_id = MK_CHAT (fetch_int ());
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_id_t inviter_id = MK_USER (fetch_int ());
+      fetch_int (); // version
+
+      print_start ();
+      push_color (COLOR_YELLOW);
+      print_date (time (0));
+      printf (" Chat ");
+      print_chat_name (chat_id, user_chat_get (chat_id));
+      printf (": user ");
+      print_user_name (user_id, user_chat_get (user_id));
+      printf (" added by user ");
+      print_user_name (inviter_id, user_chat_get (inviter_id));
+      printf ("\n");
+      pop_color ();
+      print_end ();
+    }
+    break;
+  case CODE_update_chat_participant_delete:
+    {
+      peer_id_t chat_id = MK_CHAT (fetch_int ());
+      peer_id_t user_id = MK_USER (fetch_int ());
+      fetch_int (); // version
+
+      print_start ();
+      push_color (COLOR_YELLOW);
+      print_date (time (0));
+      printf (" Chat ");
+      print_chat_name (chat_id, user_chat_get (chat_id));
+      printf (": user ");
+      print_user_name (user_id, user_chat_get (user_id));
+      printf (" deleted\n");
+      pop_color ();
+      print_end ();
+    }
+    break;
   default:
     logprintf ("Unknown update type %08x\n", op);
   }
@@ -1273,6 +1312,7 @@ void work_detained_info (struct connection *c UU, long long msg_id UU) {
 
 void work_updates_to_long (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_updates_too_long);
+  logprintf ("updates to long... Getting difference\n");
   do_get_difference ();
 }
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {

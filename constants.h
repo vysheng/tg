@@ -203,6 +203,8 @@
 #define CODE_dc_option 0x2ec2a43c
 #define CODE_config 0x232d5905
 #define CODE_nearest_dc 0x8e1a1775
+#define CODE_help_app_update 0x8987f311
+#define CODE_help_no_app_update 0xc45a6536
 #define CODE_help_invite_text 0x18cb9f78
 #define CODE_messages_stated_messages_links 0x3e74f5c6
 #define CODE_messages_stated_message_link 0xa9af2881
@@ -254,6 +256,8 @@
 #define CODE_messages_sent_encrypted_file 0x9493ff32
 #define CODE_input_file_big 0xfa4f0bb5
 #define CODE_input_encrypted_file_big_uploaded 0x2dc173c8
+#define CODE_update_chat_participant_add 0x3a0eeb22
+#define CODE_update_chat_participant_delete 0x6e5f8c22
 #define CODE_invoke_after_msg 0xcb9f372d
 #define CODE_invoke_after_msgs 0x3dc4b4f0
 #define CODE_invoke_with_layer1 0x53835315
@@ -315,6 +319,7 @@
 #define CODE_upload_get_file 0xe3a6cfb5
 #define CODE_help_get_config 0xc4f9186b
 #define CODE_help_get_nearest_dc 0x1fb33026
+#define CODE_help_get_app_update 0xc812ac7e
 #define CODE_help_save_app_log 0x6f02f748
 #define CODE_help_get_invite_text 0xa4a95186
 #define CODE_photos_get_user_photos 0xb7ee553c
@@ -352,4 +357,5 @@
 #define CODE_upload_save_big_file_part 0xde7b673d
 #define CODE_init_connection 0x69796de9
 #define CODE_invoke_with_layer9 0x76715a63
+#define CODE_invoke_with_layer10 0x39620c41
 #endif
