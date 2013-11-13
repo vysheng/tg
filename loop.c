@@ -46,12 +46,14 @@
 #include "queries.h"
 #include "telegram.h"
 #include "loop.h"
+#include "binlog.h"
 
 extern char *default_username;
 extern char *auth_token;
 extern int test_dc;
 void set_default_username (const char *s);
 int default_dc_num;
+extern int binlog_enabled;
 
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
@@ -426,6 +428,9 @@ int readline_active;
 int new_dc_num;
 int loop (void) {
   on_start ();
+  if (binlog_enabled) {
+    replay_log ();
+  }
   read_auth_file ();
   update_prompt ();
 

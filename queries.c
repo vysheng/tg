@@ -302,6 +302,23 @@ void out_random (int n) {
 
 /* {{{ Get config */
 
+void fetch_dc_option (void) {
+  assert (fetch_int () == CODE_dc_option);
+  int id = fetch_int ();
+  int l1 = prefetch_strlen ();
+  char *name = fetch_str (l1);
+  int l2 = prefetch_strlen ();
+  char *ip = fetch_str (l2);
+  int port = fetch_int ();
+  if (verbosity) {
+    logprintf ( "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
+  }
+  if (!DC_list[id]) {
+    alloc_dc (id, strndup (ip, l2), port);
+    new_dc_num ++;
+  }
+}
+
 int help_get_config_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_config);
   fetch_int ();
@@ -318,20 +335,7 @@ int help_get_config_on_answer (struct query *q UU) {
   assert (n <= 10);
   int i;
   for (i = 0; i < n; i++) {
-    assert (fetch_int () == CODE_dc_option);
-    int id = fetch_int ();
-    int l1 = prefetch_strlen ();
-    char *name = fetch_str (l1);
-    int l2 = prefetch_strlen ();
-    char *ip = fetch_str (l2);
-    int port = fetch_int ();
-    if (verbosity) {
-      logprintf ( "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
-    }
-    if (!DC_list[id]) {
-      alloc_dc (id, strndup (ip, l2), port);
-      new_dc_num ++;
-    }
+    fetch_dc_option ();
   }
   max_chat_size = fetch_int ();
   if (verbosity >= 2) {

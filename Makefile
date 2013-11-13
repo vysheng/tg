@@ -10,10 +10,10 @@ EXTRA_LIBS= -lreadline -lrt -lconfig
 LOCAL_LDFLAGS=-lm -lcrypto -lz -lssl -rdynamic ${EXTRA_LIBS}
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 
-HEADERS= ${srcdir}/constants.h  ${srcdir}/include.h  ${srcdir}/interface.h  ${srcdir}/LICENSE.h  ${srcdir}/loop.h  ${srcdir}/mtproto-client.h  ${srcdir}/mtproto-common.h  ${srcdir}/net.h  ${srcdir}/no-preview.h  ${srcdir}/queries.h  ${srcdir}/structures.h  ${srcdir}/telegram.h  ${srcdir}/tree.h ${srcdir}/config.h
+HEADERS= ${srcdir}/constants.h  ${srcdir}/include.h  ${srcdir}/interface.h  ${srcdir}/LICENSE.h  ${srcdir}/loop.h  ${srcdir}/mtproto-client.h  ${srcdir}/mtproto-common.h  ${srcdir}/net.h  ${srcdir}/no-preview.h  ${srcdir}/queries.h  ${srcdir}/structures.h  ${srcdir}/telegram.h  ${srcdir}/tree.h ${srcdir}/config.h ${srcdir}/binlog.h
 INCLUDE=-I. -I${srcdir}
 CC=gcc
-OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o
+OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o binlog.o
 
 .SUFFIXES:
 
