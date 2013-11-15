@@ -111,5 +111,6 @@ void do_contacts_search (int limit, const char *s);
 
 // For binlog
 
+int get_dh_config_on_answer (struct query *q);
 void fetch_dc_option (void);
 #endif

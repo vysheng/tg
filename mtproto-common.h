@@ -307,6 +307,53 @@ static inline char *fetch_str_dup (void) {
   return s;
 }
 
+static inline int fetch_update_str (char **s) {
+  if (!*s) {
+    *s = fetch_str_dup ();
+    return 1;
+  }
+  int l = prefetch_strlen ();
+  char *r = fetch_str (l);
+  if (memcmp (*s, r, l) || (*s)[l]) {
+    free (*s);
+    *s = malloc (l + 1);
+    memcpy (*s, r, l);
+    (*s)[l] = 0;
+    return 1;
+  }
+  return 0;
+}
+
+static inline int fetch_update_int (int *value) {
+  if (*value == *in_ptr) {
+    in_ptr ++;
+    return 0;
+  } else {
+    *value = *(in_ptr ++);
+    return 1;
+  }
+}
+
+static inline int fetch_update_long (long long *value) {
+  if (*value == *(long long *)in_ptr) {
+    in_ptr += 2;
+    return 0;
+  } else {
+    *value = *(long long *)(in_ptr);
+    in_ptr += 2;
+    return 1;
+  }
+}
+
+static inline int set_update_int (int *value, int new_value) {
+  if (*value == new_value) {
+    return 0;
+  } else {
+    *value = new_value;
+    return 1;
+  }
+}
+
 static inline void fetch_skip (int n) {
   in_ptr += n;
 }

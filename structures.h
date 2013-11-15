@@ -26,6 +26,7 @@ typedef struct { int type; int id; } peer_id_t;
 #define FLAG_DELETED 2
 #define FLAG_FORBIDDEN 4
 #define FLAG_HAS_PHOTO 8
+#define FLAG_CREATED 16
 
 #define FLAG_USER_SELF 128
 #define FLAG_USER_FOREIGN 256
@@ -138,6 +139,7 @@ struct user {
   int flags;
   struct message *last;
   char *print_name;
+  int structure_version;
   struct file_location photo_big;
   struct file_location photo_small;
   struct photo photo;
@@ -162,6 +164,7 @@ struct chat {
   int flags;
   struct message *last;
   char *print_title;
+  int structure_version;
   struct file_location photo_big;
   struct file_location photo_small;
   struct photo photo;
@@ -186,6 +189,7 @@ struct secret_chat {
   int flags;
   struct message *last;
   char *print_name;
+  int structure_version;
   struct file_location photo_big;
   struct file_location photo_small;
   struct photo photo;
@@ -208,6 +212,7 @@ typedef union peer {
     int flags;
     struct message *last;
     char *print_name;
+    int structure_version;
     struct file_location photo_big;
     struct file_location photo_small;
     struct photo photo;
@@ -314,9 +319,9 @@ struct message {
   };
 };
 
-void fetch_file_location (struct file_location *loc);
-void fetch_user_status (struct user_status *S);
-void fetch_user (struct user *U);
+int fetch_file_location (struct file_location *loc);
+int fetch_user_status (struct user_status *S);
+int fetch_user (struct user *U);
 struct user *fetch_alloc_user (void);
 struct user *fetch_alloc_user_full (void);
 struct chat *fetch_alloc_chat (void);
@@ -332,6 +337,8 @@ peer_id_t fetch_peer_id (void);
 
 void free_user (struct user *U);
 void free_chat (struct chat *U);
+
+char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 
 int print_stat (char *s, int len);
 peer_t *user_chat_get (peer_id_t id);
