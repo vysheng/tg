@@ -240,6 +240,7 @@ struct connection *create_connection (const char *host, int port, struct session
   struct pollfd s;
   s.fd = fd;
   s.events = POLLOUT | POLLERR | POLLRDHUP | POLLHUP;
+  errno = 0;
   
   while (poll (&s, 1, 10000) <= 0 || !(s.revents & POLLOUT)) {
     if (errno == EINTR) { continue; }
@@ -247,7 +248,7 @@ struct connection *create_connection (const char *host, int port, struct session
       logprintf ("Problems in poll: %m\n");
       exit (1);
     }
-    logprintf ("Connect timeout\n");
+    logprintf ("Connect with %s:%d timeout\n", host, port);
     close (fd);
     free (c);
     return 0;

@@ -1284,7 +1284,7 @@ void send_part (struct send_file *f) {
     cur_uploading_bytes -= f->size;
     update_prompt ();
     clear_packet ();
-    assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_thumb_video);
+    assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_thumb_video || f->media_type == CODE_input_media_uploaded_audio || f->media_type == CODE_input_media_uploaded_document || f->media_type == CODE_input_media_uploaded_thumb_document);
     if (!f->encr) {
       out_int (CODE_messages_send_media);
       out_peer_id (f->to_id);
@@ -1302,7 +1302,7 @@ void send_part (struct send_file *f) {
       if (f->size < (16 << 20)) {
         out_string ("");
       }
-      if (f->media_type == CODE_input_media_uploaded_thumb_video) {
+      if (f->media_type == CODE_input_media_uploaded_thumb_video || f->media_type == CODE_input_media_uploaded_thumb_document) {
         out_int (CODE_input_file);
         out_long (f->thumb_id);
         out_int (1);
@@ -1314,6 +1314,14 @@ void send_part (struct send_file *f) {
         out_int (100);
         out_int (100);
       }
+      if (f->media_type == CODE_input_media_uploaded_document || f->media_type == CODE_input_media_uploaded_thumb_document) {
+        out_string (s + 1);
+        out_string ("text");
+      }
+      if (f->media_type == CODE_input_media_uploaded_audio) {
+        out_int (60);
+      }
+
       out_long (-lrand48 () * (1ll << 32) - lrand48 ());
       send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
     } else {
@@ -1336,18 +1344,37 @@ void send_part (struct send_file *f) {
       if (f->media_type == CODE_input_media_uploaded_photo) {
         out_int (CODE_decrypted_message_media_photo);
         M->media.type = CODE_decrypted_message_media_photo;
-      } else {
+      } else if (f->media_type == CODE_input_media_uploaded_video) {
         out_int (CODE_decrypted_message_media_video);
         M->media.type = CODE_decrypted_message_media_video;
+      } else if (f->media_type == CODE_input_media_uploaded_audio) {
+        out_int (CODE_decrypted_message_media_audio);
+        M->media.type = CODE_decrypted_message_media_audio;
+      } else if (f->media_type == CODE_input_media_uploaded_document) {
+        out_int (CODE_decrypted_message_media_document);
+        M->media.type = CODE_decrypted_message_media_document;;
+      } else {
+        assert (0);
       }
-      out_cstring ((void *)thumb_file, thumb_file_size);
-      out_int (90);
-      out_int (90);
+      if (f->media_type != CODE_input_media_uploaded_audio) {
+        out_cstring ((void *)thumb_file, thumb_file_size);
+        out_int (90);
+        out_int (90);
+      }
       if (f->media_type == CODE_input_media_uploaded_video) {
         out_int (0);
       }
-      out_int (100);
-      out_int (100);
+      if (f->media_type == CODE_input_media_uploaded_document) {
+        out_string (f->file_name);
+        out_string ("text");
+      }
+      if (f->media_type == CODE_input_media_uploaded_audio) {
+        out_int (60);
+      }
+      if (f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_photo) {
+        out_int (100);
+        out_int (100);
+      }
       out_int (f->size);
       out_cstring ((void *)f->key, 32);
       out_cstring ((void *)f->init_iv, 32);
@@ -1455,6 +1482,9 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   }
   if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
     f->media_type = CODE_input_media_uploaded_thumb_video;
+    send_file_thumb (f);
+  } else if (f->media_type == CODE_input_media_uploaded_document && !f->encr) {
+    f->media_type = CODE_input_media_uploaded_thumb_document;
     send_file_thumb (f);
   } else {
     send_part (f);

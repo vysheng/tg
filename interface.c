@@ -278,6 +278,14 @@ char *commands[] = {
   "status_offline",
   "contacts_search",
   "quit",
+  "send_audio",
+  "load_audio",
+  "view_audio",
+  "send_document",
+  "load_document_thumb",
+  "view_document_thumb",
+  "load_document",
+  "view_document",
   0 };
 
 int commands_flags[] = {
@@ -315,6 +323,10 @@ int commands_flags[] = {
   07,
   07,
   07,
+  0732,
+  07,
+  07,
+  0732,
 };
 
 int get_complete_mode (void) {
@@ -822,6 +834,110 @@ void interpreter (char *line UU) {
       RET;
     }
     do_contacts_search (100, s);
+  } else if (IS_WORD("send_audio")) {
+    GET_PEER;
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
+    }
+    do_send_photo (CODE_input_media_uploaded_audio, id, strndup (s, t));
+  } else if (IS_WORD("send_document")) {
+    GET_PEER;
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
+    }
+    do_send_photo (CODE_input_media_uploaded_document, id, strndup (s, t));
+  } else if (IS_WORD ("load_audio")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_audio) {
+      do_load_video (&M->media.video, 1);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_audio) {
+      do_load_encr_video (&M->media.encr_video, 1);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
+    }
+  } else if (IS_WORD ("view_audio")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_audio) {
+      do_load_video (&M->media.video, 2);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_audio) {
+      do_load_encr_video (&M->media.encr_video, 2);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
+    }
+  } else if (IS_WORD ("load_document_thumb")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
+      do_load_video_thumb (&M->media.video, 1);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
+    }
+  } else if (IS_WORD ("view_document_thumb")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
+      do_load_video_thumb (&M->media.video, 2);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
+    }
+  } else if (IS_WORD ("load_document")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
+      do_load_video (&M->media.video, 1);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_document) {
+      do_load_encr_video (&M->media.encr_video, 1);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
+    }
+  } else if (IS_WORD ("view_document")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    struct message *M = message_get (num);
+    if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
+      do_load_video (&M->media.video, 2);
+    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_document) {
+      do_load_encr_video (&M->media.encr_video, 2);
+    } else {
+      printf ("Bad msg id\n");
+      RET;
+    }
   } else if (IS_WORD ("quit")) {
     exit (0);
   }
@@ -933,11 +1049,27 @@ void print_media (struct message_media *M) {
     case CODE_message_media_video:
       printf ("[video]");
       return;
+    case CODE_message_media_audio:
+      printf ("[audio]");
+      return;
+    case CODE_message_media_document:
+      if (M->document.mime_type && M->document.caption) {
+        printf ("[document %s: type %s]", M->document.caption, M->document.mime_type);
+      } else {
+        printf ("[document]");
+      }
+      return;
     case CODE_decrypted_message_media_photo:
        printf ("[photo]");
       return;
     case CODE_decrypted_message_media_video:
       printf ("[video]");
+      return;
+    case CODE_decrypted_message_media_audio:
+      printf ("[audio]");
+      return;
+    case CODE_decrypted_message_media_document:
+      printf ("[document]");
       return;
     case CODE_message_media_geo:
       printf ("[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
@@ -1055,7 +1187,11 @@ void print_service_message (struct message *M) {
   print_date (M->date);
   pop_color ();
   printf (" ");
-  print_chat_name (M->to_id, user_chat_get (M->to_id));
+  if (get_peer_type (M->to_id) == PEER_CHAT) {
+    print_chat_name (M->to_id, user_chat_get (M->to_id));
+  } else {
+    print_encr_chat_name (M->to_id, user_chat_get (M->to_id));
+  }
   printf (" ");
   print_user_name (M->from_id, user_chat_get (M->from_id));
  
@@ -1085,6 +1221,9 @@ void print_service_message (struct message *M) {
     printf (" deleted user ");
     print_user_name (set_peer_id (PEER_USER, M->action.user), user_chat_get (set_peer_id (PEER_USER, M->action.user)));
     printf ("\n");
+    break;
+  case CODE_decrypted_message_action_set_message_t_t_l:
+    printf (" set ttl to %d seconds. Unsupported yet\n", M->action.ttl);
     break;
   default:
     assert (0);

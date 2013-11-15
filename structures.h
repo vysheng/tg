@@ -76,10 +76,10 @@ struct encr_photo {
   int size;
   int key_fingerprint;
 
-  int w;
-  int h;
   unsigned char *key;
   unsigned char *iv;
+  int w;
+  int h;
 };
 
 struct encr_video {
@@ -89,11 +89,36 @@ struct encr_video {
   int size;
   int key_fingerprint;
   
+  unsigned char *key;
+  unsigned char *iv;
   int w;
   int h;
+  int duration;
+};
+
+struct encr_audio {
+  long long id;
+  long long access_hash;
+  int dc_id;
+  int size;
+  int key_fingerprint;
+  
   unsigned char *key;
   unsigned char *iv;
   int duration;
+};
+
+struct encr_document {
+  long long id;
+  long long access_hash;
+  int dc_id;
+  int size;
+  int key_fingerprint;
+  
+  unsigned char *key;
+  unsigned char *iv;
+  char *file_name;
+  char *mime_type;
 };
 
 struct encr_file {
@@ -197,13 +222,35 @@ struct video {
   long long access_hash;
   int user_id;
   int date;
+  int size;
+  int dc_id;
+  struct photo_size thumb;
   char *caption;
   int duration;
-  int size;
-  struct photo_size thumb;
-  int dc_id;
   int w;
   int h;
+};
+
+struct audio {
+  long long id;
+  long long access_hash;
+  int user_id;
+  int date;
+  int size;
+  int dc_id;
+  int duration;
+};
+
+struct document {
+  long long id;
+  long long access_hash;
+  int user_id;
+  int date;
+  int size;
+  int dc_id;
+  struct photo_size thumb;
+  char *caption;
+  char *mime_type;
 };
 
 struct message_action {
@@ -217,6 +264,7 @@ struct message_action {
     char *new_title;
     struct photo photo;
     int user;
+    int ttl;
   };
 };
 
@@ -225,6 +273,8 @@ struct message_media {
   union {
     struct photo photo;
     struct video video;
+    struct audio audio;
+    struct document document;
     struct geo geo;
     struct {
       char *phone;
@@ -234,6 +284,8 @@ struct message_media {
     };
     struct encr_photo encr_photo;
     struct encr_video encr_video;
+    struct encr_audio encr_audio;
+    struct encr_document encr_document;
     struct encr_file encr_file;
     void *data;
   };
