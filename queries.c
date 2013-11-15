@@ -44,6 +44,7 @@
 #include <openssl/md5.h>
 
 #include "no-preview.h"
+#include "binlog.h"
 
 #define sha1 SHA1
 
@@ -54,6 +55,8 @@ long long cur_uploading_bytes;
 long long cur_uploaded_bytes;
 long long cur_downloading_bytes;
 long long cur_downloaded_bytes;
+
+extern int binlog_enabled;
 
 void out_peer_id (peer_id_t id);
 #define QUERY_TIMEOUT 6.0
@@ -303,6 +306,7 @@ void out_random (int n) {
 /* {{{ Get config */
 
 void fetch_dc_option (void) {
+  int *start = in_ptr;
   assert (fetch_int () == CODE_dc_option);
   int id = fetch_int ();
   int l1 = prefetch_strlen ();
@@ -316,6 +320,9 @@ void fetch_dc_option (void) {
   if (!DC_list[id]) {
     alloc_dc (id, strndup (ip, l2), port);
     new_dc_num ++;
+    if (binlog_enabled) {
+      add_log_event (start, 4 * (in_ptr - start));
+    }
   }
 }
 
@@ -424,6 +431,13 @@ void do_send_code (const char *user) {
     dc_create_session (DC_working);
   }
   dc_working_num = want_dc_num;
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (8);
+    ev[0] = LOG_DEFAULT_DC;
+    ev[1] = dc_working_num;
+    add_log_event (ev, 8);
+  }
+
   logprintf ("send_code: dc_num = %d\n", dc_working_num);
   want_dc_num = 0;
   clear_packet ();
@@ -463,11 +477,27 @@ int check_phone_on_error (struct query *q UU, int error_code, int l, char *error
     dc_working_num = i;
     DC_working = DC_list[i];
     write_auth_file ();
+
+    if (binlog_enabled) {
+      int *ev = alloc_log_event (8);
+      ev[0] = LOG_DEFAULT_DC;
+      ev[1] = i;
+      add_log_event (ev, 8);
+    }
+
     check_phone_result = 1;
   } else if (l >= s2 && !memcmp (error, "NETWORK_MIGRATE_", s2)) {
     int i = error[s2] - '0';
     assert (DC_list[i]);
     dc_working_num = i;
+
+    if (binlog_enabled) {
+      int *ev = alloc_log_event (8);
+      ev[0] = LOG_DEFAULT_DC;
+      ev[1] = i;
+      add_log_event (ev, 8);
+    }
+
     DC_working = DC_list[i];
     write_auth_file ();
     check_phone_result = 1;
@@ -536,6 +566,7 @@ int do_get_nearest_dc (void) {
 
 /* {{{ Sign in / Sign up */
 int sign_in_ok;
+int our_id;
 int sign_in_is_ok (void) {
   return sign_in_ok;
 }
@@ -546,11 +577,28 @@ int sign_in_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   int expires = fetch_int ();
   fetch_user (&User);
+  if (!our_id) {
+    our_id = get_peer_id (User.id);
+      
+    if (binlog_enabled) {
+      int *ev = alloc_log_event (8);
+      ev[0] = LOG_OUR_ID;
+      ev[1] = our_id;
+      add_log_event (ev, 8);
+    }
+  }
   sign_in_ok = 1;
   if (verbosity) {
     logprintf ( "authorized successfully: name = '%s %s', phone = '%s', expires = %d\n", User.first_name, User.last_name, User.phone, (int)(expires - get_double_time ()));
   }
   DC_working->has_auth = 1;
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (8);
+    ev[0] = LOG_DC_SIGNED;
+    ev[1] = DC_working->id;
+    add_log_event (ev, 8);
+  }
+
   return 0;
 }
 
@@ -734,7 +782,7 @@ void encr_finish (struct secret_chat *E) {
 /* {{{ Seng msg (plain text) */
 int msg_send_encr_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_messages_sent_encrypted_message);
-  logprintf ("Sent\n");
+  rprintf ("Sent\n");
   struct message *M = q->extra;
   M->date = fetch_int ();
   message_insert (M);
@@ -790,7 +838,7 @@ int msg_send_on_answer (struct query *q UU) {
       print_end ();
     }
   }
-  logprintf ("Sent: id = %d\n", id);
+  rprintf ("Sent: id = %d\n", id);
   return 0;
 }
 
@@ -2113,6 +2161,8 @@ int send_encr_request_on_answer (struct query *q UU) {
     printf ("\n");
     pop_color ();
     print_end ();
+
+    assert (E->state == sc_waiting);
   }
   return 0;
 }
@@ -2156,10 +2206,18 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   sha1 ((void *)E->key, 256, sha_buffer);
   E->key_fingerprint = *(long long *)(sha_buffer + 12);
 
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (8 + 8 + 256);
+    ev[0] = LOG_ENCR_CHAT_KEY;
+    ev[1] = get_peer_id (E->id);
+    *(long long *)(ev + 2) = E->key_fingerprint;
+    memcpy (ev + 4, E->key, 256);
+    add_log_event (ev, 8 + 8 + 256);
+  }
+
   clear_packet ();
   out_int (CODE_messages_accept_encryption);
   out_int (CODE_input_encrypted_chat);
-  logprintf ("id = %d\n", get_peer_id (E->id));
   out_int (get_peer_id (E->id));
   out_long (E->access_hash);
   
@@ -2175,15 +2233,22 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   BN_clear_free (g_a);
   BN_clear_free (p);
   BN_clear_free (r);
+
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (16 + 512);
+    ev[0] = LOG_ENCR_CHAT_SEND_ACCEPT;
+    ev[1] = get_peer_id (E->id);
+    *(long long *)(ev + 2) = E->key_fingerprint;
+    memcpy (ev + 4, E->key, 256);
+    memcpy (ev + 68, buf, 256);
+    add_log_event (ev, 16 + 512);
+  }
   
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E);
 }
 
 void do_create_keys_end (struct secret_chat *U) {
-  if (!encr_prime) {
-    rprintf (COLOR_YELLOW "Something failed in bad moment. Did not fail\n"COLOR_NORMAL);
-    return;
-  }
+  assert (encr_prime);
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
   assert (g_b);
   if (!ctx) {
@@ -2212,6 +2277,15 @@ void do_create_keys_end (struct secret_chat *U) {
   BN_clear_free (g_b);
   BN_clear_free (r);
   BN_clear_free (a);
+
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (8 + 8 + 256);
+    ev[0] = LOG_ENCR_CHAT_KEY;
+    ev[1] = get_peer_id (U->id);
+    *(long long *)(ev + 2) = U->key_fingerprint;
+    memcpy (ev + 4, U->key, 256);
+    add_log_event (ev, 8 + 8 + 256);
+  }
 }
 
 void do_send_create_encr_chat (struct secret_chat *E, unsigned char *random) {
@@ -2264,20 +2338,36 @@ void do_send_create_encr_chat (struct secret_chat *E, unsigned char *random) {
   BN_clear_free (p);
   BN_clear_free (r);
 
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (12 + 256);
+    ev[0] = LOG_ENCR_CHAT_SEND_CREATE;
+    ev[1] = get_peer_id (E->id);
+    ev[2] = E->user_id;
+    memcpy (ev + 3, E->key, 256);
+    add_log_event (ev, 12 + 256);
+  }
+
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_request_methods, E);
 }
 
 int get_dh_config_on_answer (struct query *q UU) {
+  int *start = in_ptr;
   unsigned x = fetch_int ();
-  assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified);
-  if (x == CODE_messages_dh_config)  {
+  assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified || LOG_DH_CONFIG);
+  if (x == CODE_messages_dh_config || x == LOG_DH_CONFIG)  {
     encr_root = fetch_int ();
     if (encr_prime) { free (encr_prime); }
     int l = prefetch_strlen ();
     assert (l == 256);
     encr_prime = (void *)fetch_str_dup ();
     encr_param_version = fetch_int ();
+    if (binlog_enabled) {
+      *start = LOG_DH_CONFIG;
+      add_log_event (start, 4 * (in_ptr - start));
+      *start = CODE_messages_dh_config;
+    }
   }
+  if (x == LOG_DH_CONFIG) { return 0; }
   int l = prefetch_strlen ();
   assert (l == 256);
   unsigned char *random = (void *)fetch_str_dup ();
@@ -2411,7 +2501,7 @@ struct query_methods get_difference_methods = {
 void do_get_difference (void) {
   difference_got = 0;
   clear_packet ();
-  out_int (CODE_invoke_with_layer10);
+  out_int (CODE_invoke_with_layer9);
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -2568,6 +2658,7 @@ void do_create_secret_chat (peer_id_t id) {
   peer_t *U = user_chat_get (id);
   if (!U) { 
     rprintf ("Can not create chat with unknown user\n");
+    return;
   }
 
   peer_t *P = malloc (sizeof (*P));

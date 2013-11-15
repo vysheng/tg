@@ -160,6 +160,7 @@ void write_dc (int auth_file_fd, struct dc *DC) {
 
 int our_id;
 void write_auth_file (void) {
+  if (binlog_enabled) { return; }
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
   assert (auth_file_fd >= 0);
   int x = DC_SERIALIZED_MAGIC_V2;
@@ -216,6 +217,7 @@ void empty_auth_file (void) {
 
 int need_dc_list_update;
 void read_auth_file (void) {
+  if (binlog_enabled) { return; }
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
   if (auth_file_fd < 0) {
     empty_auth_file ();
@@ -308,6 +310,7 @@ extern unsigned char *encr_prime;
 extern int encr_param_version;
 
 void read_secret_chat_file (void) {
+  if (binlog_enabled) { return; }
   int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
   if (fd < 0) {
     return;
@@ -364,6 +367,7 @@ void read_secret_chat_file (void) {
 }
 
 void write_secret_chat_file (void) {
+  if (binlog_enabled) { return; }
   int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
   if (fd < 0) {
     return;
@@ -430,12 +434,15 @@ int loop (void) {
   on_start ();
   if (binlog_enabled) {
     replay_log ();
+    write_binlog ();
+  } else {
+    read_auth_file ();
   }
-  read_auth_file ();
   update_prompt ();
 
   assert (DC_list[dc_working_num]);
-  if (auth_state == 0) {
+  if (!DC_working || !DC_working->auth_key_id) {
+//  if (auth_state == 0) {
     DC_working = DC_list[dc_working_num];
     assert (!DC_working->auth_key_id);
     dc_authorize (DC_working);
@@ -459,7 +466,7 @@ int loop (void) {
     write_auth_file ();
   }
 
-  if (auth_state == 100) {
+  if (auth_state == 100 || !(DC_working->has_auth)) {
     if (!default_username) {
       size_t size = 0;
       char *user = 0;
@@ -546,6 +553,12 @@ int loop (void) {
     do_export_auth (i);
     do_import_auth (i);
     DC_list[i]->has_auth = 1;
+    if (binlog_enabled) {
+      int *ev = alloc_log_event (8);
+      ev[0] = LOG_DC_SIGNED;
+      ev[1] = i;
+      add_log_event (ev, 8);
+    }
     write_auth_file ();
   }
   write_auth_file ();

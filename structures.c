@@ -30,6 +30,7 @@
 #include <openssl/aes.h>
 #include <openssl/sha.h>
 #include "queries.h"
+#include "binlog.h"
 
 #define sha1 SHA1
 
@@ -40,24 +41,37 @@ int peer_num;
 int encr_chats_allocated;
 int geo_chats_allocated;
 
-void fetch_file_location (struct file_location *loc) {
-  int x = fetch_int ();
-  if (x == CODE_file_location_unavailable) {
-    loc->dc = -1;
-    loc->volume = fetch_long ();
-    loc->local_id = fetch_int ();
-    loc->secret = fetch_long ();
-  } else {
-    assert (x == CODE_file_location);
-    loc->dc = fetch_int ();;
-    loc->volume = fetch_long ();
-    loc->local_id = fetch_int ();
-    loc->secret = fetch_long ();
+extern int binlog_enabled;
+
+void fetch_add_alloc_log_event (void *obj, int (*f)(void *)) {
+  int *start = in_ptr;
+  int r = f (obj);
+  if (binlog_enabled && r) {
+    add_log_event (start, 4 * (in_ptr - start));
   }
 }
 
-void fetch_user_status (struct user_status *S) {
+int fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
+  int new = 0;
+  if (x == CODE_file_location_unavailable) {
+    new |= set_update_int (&loc->dc, -1);
+    new |= fetch_update_long (&loc->volume);
+    new |= fetch_update_int (&loc->local_id);
+    new |= fetch_update_long (&loc->secret);
+  } else {
+    assert (x == CODE_file_location);
+    new |= fetch_update_int (&loc->dc);
+    new |= fetch_update_long (&loc->volume);
+    new |= fetch_update_int (&loc->local_id);
+    new |= fetch_update_long (&loc->secret);
+  }
+  return new;
+}
+
+int fetch_user_status (struct user_status *S) {
+  int x = fetch_int ();
+  int old = S->online;
   switch (x) {
   case CODE_user_status_empty:
     S->online = 0;
@@ -73,6 +87,7 @@ void fetch_user_status (struct user_status *S) {
   default:
     assert (0);
   }
+  return (old == S->online);
 }
 
 int our_id;
@@ -134,72 +149,83 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
   return strdup (s);
 }
 
-void fetch_user (struct user *U) {
+int fetch_user (struct user *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
   U->id = MK_USER (fetch_int ());
-  U->flags &= ~(FLAG_EMPTY | FLAG_DELETED | FLAG_USER_SELF | FLAG_USER_FOREIGN | FLAG_USER_CONTACT);
+  if ((U->flags & FLAG_CREATED) && x == CODE_user_empty) {
+    return 0;
+  }
+  int old_flags = U->flags;
+  U->flags &= ~(FLAG_EMPTY | FLAG_DELETED | FLAG_USER_SELF | FLAG_USER_FOREIGN | FLAG_USER_CONTACT | FLAG_CREATED);
   if (x == CODE_user_empty) {
     U->flags |= FLAG_EMPTY;
-    return;
+    return 0;
   }
+  U->flags |= FLAG_CREATED;
   if (x == CODE_user_self) {
     assert (!our_id || (our_id == get_peer_id (U->id)));
     if (!our_id) {
       our_id = get_peer_id (U->id);
       write_auth_file ();
+      
+      if (binlog_enabled) {
+        int *ev = alloc_log_event (8);
+        ev[0] = LOG_OUR_ID;
+        ev[1] = our_id;
+        add_log_event (ev, 8);
+      }
     }
   }
-  if (U->first_name) { free (U->first_name); }
-  if (U->last_name) { free (U->last_name); }
-  if (U->print_name) { free (U->print_name); }
-  U->first_name = fetch_str_dup ();
-  U->last_name = fetch_str_dup ();
-
-  U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+  int need_update = 0;
+  need_update |= fetch_update_str (&U->first_name);
+  need_update |= fetch_update_str (&U->last_name);
+  if (need_update) {
+    if (U->print_name) { free (U->print_name); }
+    U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+  }
   if (x == CODE_user_deleted) {
     U->flags |= FLAG_DELETED;
-    return;
-  }
-  if (x == CODE_user_self) {
-    U->flags |= FLAG_USER_SELF;
   } else {
-    U->access_hash = fetch_long ();
-  }
-  if (x == CODE_user_foreign) {
-    U->flags |= FLAG_USER_FOREIGN;
-    U->phone = 0;
-  } else {
-    if (U->phone) { free (U->phone); }
-    U->phone = fetch_str_dup ();
-  }
-  //logprintf ("name = %s, surname = %s, phone = %s\n", U->first_name, U->last_name, U->phone);
-  unsigned y = fetch_int ();
-  //fprintf (stderr, "y = 0x%08x\n", y);
-  if (y == CODE_user_profile_photo_empty) {
-    U->photo_small.dc = -2;
-    U->photo_big.dc = -2;
-  } else {
-    assert (y == CODE_user_profile_photo || y == 0x990d1493);
-    if (y == CODE_user_profile_photo) {
-      fetch_long ();
+    if (x == CODE_user_self) {
+      U->flags |= FLAG_USER_SELF;
+    } else {
+      need_update |= fetch_update_long (&U->access_hash);
     }
-    fetch_file_location (&U->photo_small);
-    fetch_file_location (&U->photo_big);
+    if (x == CODE_user_foreign) {
+      U->flags |= FLAG_USER_FOREIGN;
+    } else {
+      need_update |= fetch_update_str (&U->phone);
+    }
+    unsigned y = fetch_int ();
+    if (y == CODE_user_profile_photo_empty) {
+      need_update |= set_update_int (&U->photo_small.dc, -2);
+      need_update |= set_update_int (&U->photo_big.dc, -2);
+    } else {
+      assert (y == CODE_user_profile_photo);
+      fetch_long ();
+      need_update |= fetch_file_location (&U->photo_small);
+      need_update |= fetch_file_location (&U->photo_big);
+    }
+    fetch_user_status (&U->status);
+    if (x == CODE_user_self) {
+      fetch_bool ();
+    }
+    if (x == CODE_user_contact) {
+      U->flags |= FLAG_USER_CONTACT;
+    }
   }
-  fetch_user_status (&U->status);
-  if (x == CODE_user_self) {
-    fetch_bool ();
-  }
-  if (x == CODE_user_contact) {
-    U->flags |= FLAG_USER_CONTACT;
-  }
+  need_update |= (old_flags != U->flags);
+  return need_update;
 }
 
 void fetch_encrypted_chat (struct secret_chat *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_encrypted_chat_empty || x == CODE_encrypted_chat_waiting || x == CODE_encrypted_chat_requested ||  x == CODE_encrypted_chat || x == CODE_encrypted_chat_discarded);
   U->id = MK_ENCR_CHAT (fetch_int ());
+  if ((U->flags & FLAG_CREATED) && x == CODE_encrypted_chat_empty) {
+    return;
+  }
   U->flags &= ~(FLAG_EMPTY | FLAG_DELETED);
   enum secret_chat_state old_state = U->state;
   if (x == CODE_encrypted_chat_empty) {
@@ -210,11 +236,18 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     }
     return;
   }
+  U->flags |= FLAG_CREATED;
   if (x == CODE_encrypted_chat_discarded) {
     U->state = sc_deleted;
     U->flags |= FLAG_DELETED;
     if (U->state != old_state) {
       write_secret_chat_file ();
+      if (binlog_enabled) {
+        int *ev = alloc_log_event (8);
+        ev[0] = LOG_ENCR_CHAT_DELETED;
+        ev[1] = get_peer_id (U->id);
+        add_log_event (ev, 8);
+      }
     }
     return;
   }
@@ -222,19 +255,31 @@ void fetch_encrypted_chat (struct secret_chat *U) {
   U->date = fetch_int ();
   U->admin_id = fetch_int ();
   U->user_id = fetch_int () + U->admin_id - our_id;
-  if (U->print_name) { free (U->print_name); }
-  
-  peer_t *P = user_chat_get (MK_USER (U->user_id));
-  if (P) {
-    U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
-  } else {
-    static char buf[100];
-    sprintf (buf, "user#%d", U->user_id);
-    U->print_name = create_print_name (U->id, "!", buf, 0, 0);
+  if (!U->print_name) {  
+    peer_t *P = user_chat_get (MK_USER (U->user_id));
+    if (P) {
+      U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
+    } else {
+      static char buf[100];
+      sprintf (buf, "user#%d", U->user_id);
+      U->print_name = create_print_name (U->id, "!", buf, 0, 0);
+    }
   }
 
   if (x == CODE_encrypted_chat_waiting) {
     U->state = sc_waiting;
+    if (old_state != sc_waiting) {
+      if (binlog_enabled) {
+        int *ev = alloc_log_event (28);
+        ev[0] = LOG_ENCR_CHAT_WAITING;
+        ev[1] = get_peer_id (U->id);
+        ev[2] = U->date;
+        ev[3] = U->admin_id;
+        ev[4] = U->user_id;
+        *(long long *)(ev + 5) = U->access_hash;
+        add_log_event (ev, 28);
+      }
+    }
   } else if (x == CODE_encrypted_chat_requested) {
     U->state = sc_request;
     if (!U->g_key) {
@@ -258,6 +303,18 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       memcpy (U->nonce + 256 - l, s, l);
     } else {
       memcpy (U->nonce, s +  (l - 256), 256);
+    }
+    if (old_state != sc_request) {
+      if (binlog_enabled) {
+        int *ev = alloc_log_event (28);
+        ev[0] = LOG_ENCR_CHAT_REQUESTED;
+        ev[1] = get_peer_id (U->id);
+        ev[2] = U->date;
+        ev[3] = U->admin_id;
+        ev[4] = U->user_id;
+        *(long long *)(ev + 5) = U->access_hash;
+        add_log_event (ev, 28);
+      }
     }
   } else {
     U->state = sc_ok;
@@ -290,6 +347,18 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     }
     if (old_state == sc_waiting) {
       do_create_keys_end (U);
+    }
+    free (U->g_key);
+    U->g_key = 0;
+    free (U->nonce);
+    U->nonce = 0;
+    if (old_state != sc_ok) {
+      if (binlog_enabled) {
+        int *ev = alloc_log_event (8);
+        ev[0] = LOG_ENCR_CHAT_OK;
+        ev[1] = get_peer_id (U->id);
+        add_log_event (ev, 8);
+      }
     }
   }
   if (U->state != old_state) {
@@ -941,13 +1010,13 @@ struct user *fetch_alloc_user (void) {
   prefetch_data (data, 8);
   peer_t *U = user_chat_get (MK_USER (data[1]));
   if (U) {
-    fetch_user (&U->user);
+    fetch_add_alloc_log_event (&U->user, (void *)fetch_user);
     return &U->user;
   } else {
     users_allocated ++;
     U = malloc (sizeof (*U));
     memset (U, 0, sizeof (*U));
-    fetch_user (&U->user);
+    fetch_add_alloc_log_event (&U->user, (void *)fetch_user);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     Peers[peer_num ++] = U;
     return &U->user;
@@ -1343,7 +1412,7 @@ int print_stat (char *s, int len) {
 }
 
 peer_t *user_chat_get (peer_id_t id) {
-  peer_t U;
+  static peer_t U;
   U.id = id;
   return tree_lookup_peer (peer_tree, &U);
 }

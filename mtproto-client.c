@@ -44,6 +44,7 @@
 #include "loop.h"
 #include "interface.h"
 #include "structures.h"
+#include "binlog.h"
 
 #define sha1 SHA1
 
@@ -57,6 +58,7 @@ enum dc_state c_state;
 char nonce[256];
 char new_nonce[256];
 char server_nonce[256];
+extern int binlog_enabled;
 
 int rpc_execute (struct connection *c, int op, int len);
 int rpc_becomes_ready (struct connection *c);
@@ -509,6 +511,13 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   sha1 (tmp, 41, sha1_buffer);
   assert (!memcmp (packet + 56, sha1_buffer + 4, 16));
   GET_DC(c)->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
+/*  if (binlog_enabled) {
+    int *ev = alloc_log_event (16);
+    ev[0] = LOG_DC_SALT;
+    ev[1] = GET_DC(c)->id;
+    *(long long *)(ev + 2) = GET_DC(c)->server_salt;
+    add_log_event (ev, 16);
+  }*/
   if (verbosity >= 3) {
     logprintf ( "auth_key_id=%016llx\n", GET_DC(c)->auth_key_id);
   }
@@ -525,6 +534,15 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   auth_success ++;
   GET_DC(c)->flags |= 1;
   write_auth_file ();
+  if (binlog_enabled) {
+    int *ev = alloc_log_event (8 + 8 + 256);
+    ev[0] = LOG_AUTH_KEY;
+    ev[1] = GET_DC(c)->id;
+    *(long long *)(ev + 2) = GET_DC(c)->auth_key_id;
+    memcpy (ev + 4, GET_DC(c)->auth_key, 256);
+    add_log_event (ev, 8 + 8 + 256);
+  }
+  
   return 1;
 }
 
@@ -559,7 +577,7 @@ void init_enc_msg (struct session *S, int useful) {
   struct dc *DC = S->dc;
   assert (DC->auth_key_id);
   enc_msg.auth_key_id = DC->auth_key_id;
-  assert (DC->server_salt);
+//  assert (DC->server_salt);
   enc_msg.server_salt = DC->server_salt;
   if (!S->session_id) {
     assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
@@ -1213,6 +1231,14 @@ void work_new_session_created (struct connection *c, long long msg_id UU) {
   //DC->session_id = fetch_long ();
   fetch_long (); // unique_id
   GET_DC(c)->server_salt = fetch_long ();
+  
+/*  if (binlog_enabled) {
+    int *ev = alloc_log_event (16);
+    ev[0] = LOG_DC_SALT;
+    ev[1] = GET_DC(c)->id;
+    *(long long *)(ev + 2) = GET_DC(c)->server_salt;
+    add_log_event (ev, 16);
+  }*/
 }
 
 void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
@@ -1294,6 +1320,13 @@ void work_bad_server_salt (struct connection *c UU, long long msg_id UU) {
   fetch_int (); // error_code
   long long new_server_salt = fetch_long ();
   GET_DC(c)->server_salt = new_server_salt;
+/*  if (binlog_enabled) {
+    int *ev = alloc_log_event (16);
+    ev[0] = LOG_DC_SALT;
+    ev[1] = GET_DC(c)->id;
+    *(long long *)(ev + 2) = GET_DC(c)->server_salt;
+    add_log_event (ev, 16);
+  }*/
 }
 
 void work_pong (struct connection *c UU, long long msg_id UU) {
@@ -1389,6 +1422,13 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   if (DC->server_salt != enc->server_salt) {
     DC->server_salt = enc->server_salt;
     write_auth_file ();
+/*    if (binlog_enabled) {
+      int *ev = alloc_log_event (16);
+      ev[0] = LOG_DC_SALT;
+      ev[1] = DC->id;
+      *(long long *)(ev + 2) = DC->server_salt;
+      add_log_event (ev, 16);
+    }*/
   }
   
   int this_server_time = enc->msg_id >> 32LL;
@@ -1475,7 +1515,11 @@ int rpc_execute (struct connection *c, int op, int len) {
 #endif
     return 0;
   case st_authorized:
-    process_rpc_message (c, (void *)(Response/* + 8*/), Response_len/* - 12*/);
+    if (op < 0 && op >= -999) {
+      logprintf ("Server error %d\n", op);
+    } else {
+      process_rpc_message (c, (void *)(Response/* + 8*/), Response_len/* - 12*/);
+    }
 #ifndef __MACH__
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
