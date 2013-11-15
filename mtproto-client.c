@@ -876,6 +876,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         if (y == CODE_user_profile_photo_empty) {
         } else {
           assert (y == CODE_user_profile_photo);
+          fetch_long (); // photo_id
           fetch_file_location (&t);
           fetch_file_location (&t);
         }

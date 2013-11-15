@@ -827,6 +827,7 @@ void interpreter (char *line UU) {
   }
 #undef IS_WORD
 #undef RET
+  update_prompt ();
   in_readline = 0;
 }
 
