@@ -76,6 +76,7 @@ char *downloads_directory;
 char *config_directory;
 char *binlog_file_name;
 int binlog_enabled;
+extern int log_level;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -260,6 +261,9 @@ void parse_config (void) {
   strcpy (buf + l, "test");
   config_lookup_bool (&conf, buf, &test_dc);
   
+  strcpy (buf + l, "log_level");
+  config_lookup_int (&conf, buf, &log_level);
+  
   if (!msg_num_mode) {
     strcpy (buf + l, "msg_num");
     config_lookup_bool (&conf, buf, &msg_num_mode);
@@ -300,7 +304,7 @@ void inner_main (void) {
 }
 
 void usage (void) {
-  printf ("%s [-u username] [-h] [-k public key name] [-N] [-v]\n", PROGNAME);
+  printf ("%s [-u username] [-h] [-k public key name] [-N] [-v] [-l log_level]\n", PROGNAME);
   exit (1);
 }
 
@@ -310,7 +314,7 @@ extern int default_dc_num;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -330,6 +334,9 @@ void args_parse (int argc, char **argv) {
     case 'p':
       prefix = strdup (optarg);
       assert (strlen (prefix) <= 100);
+      break;
+    case 'l':
+      log_level = atoi (optarg);
       break;
     case 'h':
     default:
@@ -356,6 +363,8 @@ void sig_handler (int signum) {
 int main (int argc, char **argv) {
   signal (SIGSEGV, sig_handler);
   signal (SIGABRT, sig_handler);
+
+  log_level = 10;
   
   args_parse (argc, argv);
   printf (

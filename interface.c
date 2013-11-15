@@ -50,6 +50,8 @@ int msg_num_mode;
 int in_readline;
 int readline_active;
 
+int log_level;
+
 long long cur_uploading_bytes;
 long long cur_uploaded_bytes;
 long long cur_downloading_bytes;
@@ -278,6 +280,7 @@ char *commands[] = {
   "status_offline",
   "contacts_search",
   "quit",
+  "set",
   0 };
 
 int commands_flags[] = {
@@ -311,6 +314,7 @@ int commands_flags[] = {
   07,
   0724,
   0724,
+  07,
   07,
   07,
   07,
@@ -769,6 +773,13 @@ void interpreter (char *line UU) {
       "rename_contact <user> <first-name> <last-name> - tries to rename contact. If you have another device it will be a fight\n"
       "suggested_contacts - print info about contacts, you have max common friends\n"
       "visualize_key <secret_chat> - prints visualization of encryption key. You should compare it to your partner's one\n"
+      "set <param> <param-value>. Possible <param> values are:\n"
+      "\tdebug_verbosity - just as it sounds. Debug verbosity\n"
+      "\tlog_level - level of logging of new events. Lower is less verbose:\n"
+      "\t\tLevel 1: prints info about read messages\n"
+      "\t\tLevel 2: prints line, when somebody is typing in chat\n"
+      "\t\tLevel 3: prints line, when somebody changes online status\n"
+      "\tmsg_num - enables/disables numeration of messages\n"
       );
     pop_color ();
   } else if (IS_WORD ("show_license")) {
@@ -822,6 +833,20 @@ void interpreter (char *line UU) {
       RET;
     }
     do_contacts_search (100, s);
+  } else if (IS_WORD ("set")) {
+    command = next_token (&l);
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    if (IS_WORD ("debug_verbosity")) {
+      verbosity = num;
+    } else if (IS_WORD ("log_level")) {
+      log_level = num;
+    } else if (IS_WORD ("msg_num")) {
+      msg_num_mode = num;
+    }
   } else if (IS_WORD ("quit")) {
     exit (0);
   }
