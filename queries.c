@@ -303,6 +303,28 @@ void out_random (int n) {
   out_cstring (buf, n);
 }
 
+int allow_send_linux_version;
+void do_insert_header (void) {
+  out_int (CODE_invoke_with_layer9);
+  out_int (CODE_init_connection);
+  out_int (TG_APP_ID);
+  if (allow_send_linux_version) {
+    struct utsname st;
+    uname (&st);
+    out_string (st.machine);
+    static char buf[1000000];
+    sprintf (buf, "%s %s %s", st.sysname, st.release, st.version);
+    out_string (buf);
+    out_string (TG_VERSION " (build " TG_BUILD ")");
+    out_string ("En");
+  } else { 
+    out_string ("x86");
+    out_string ("Linux");
+    out_string (TG_VERSION);
+    out_string ("en");
+  }
+}
+
 /* {{{ Get config */
 
 void fetch_dc_option (void) {
@@ -413,7 +435,7 @@ void do_send_code (const char *user) {
   suser = strdup (user);
   want_dc_num = 0;
   clear_packet ();
-  out_int (CODE_invoke_with_layer6);
+  do_insert_header ();
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -441,7 +463,7 @@ void do_send_code (const char *user) {
   logprintf ("send_code: dc_num = %d\n", dc_working_num);
   want_dc_num = 0;
   clear_packet ();
-  out_int (CODE_invoke_with_layer6);
+  do_insert_header ();
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -2501,24 +2523,7 @@ struct query_methods get_difference_methods = {
 void do_get_difference (void) {
   difference_got = 0;
   clear_packet ();
-  out_int (CODE_invoke_with_layer9);
-  out_int (CODE_init_connection);
-  out_int (TG_APP_ID);
-  if (allow_send_linux_version) {
-    struct utsname st;
-    uname (&st);
-    out_string (st.machine);
-    static char buf[1000000];
-    sprintf (buf, "%s %s %s", st.sysname, st.release, st.version);
-    out_string (buf);
-    out_string (TG_VERSION " (build " TG_BUILD ")");
-    out_string ("En");
-  } else { 
-    out_string ("x86");
-    out_string ("Linux");
-    out_string (TG_VERSION);
-    out_string ("en");
-  }
+  do_insert_header ();
   if (seq > 0) {
     out_int (CODE_updates_get_difference);
     out_int (pts);
