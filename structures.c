@@ -202,8 +202,10 @@ int fetch_user (struct user *U) {
       need_update |= set_update_int (&U->photo_small.dc, -2);
       need_update |= set_update_int (&U->photo_big.dc, -2);
     } else {
-      assert (y == CODE_user_profile_photo);
-      fetch_long ();
+      assert (y == CODE_user_profile_photo || y == CODE_user_profile_photo_old);
+      if (y == CODE_user_profile_photo) {
+        fetch_long ();
+      }
       need_update |= fetch_file_location (&U->photo_small);
       need_update |= fetch_file_location (&U->photo_big);
     }
@@ -396,6 +398,7 @@ void fetch_user_full (struct user *U) {
     free_photo (&U->photo);
   }
   fetch_photo (&U->photo);
+  U->flags |= FLAG_HAS_PHOTO;
   fetch_notify_settings ();
   U->blocked = fetch_int ();
   if (U->real_first_name) { free (U->real_first_name); }

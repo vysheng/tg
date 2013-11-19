@@ -51,6 +51,7 @@
 #include "mtproto-common.h"
 
 #define MAX_NET_RES        (1L << 16)
+extern int log_level;
 
 int verbosity;
 int auth_success;
@@ -739,26 +740,30 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         }
       }
       fetch_pts ();
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" %d messages marked as read\n", n);
-      pop_color ();
-      print_end ();
+      if (log_level >= 1) {
+        print_start ();
+        push_color (COLOR_YELLOW);
+        print_date (time (0));
+        printf (" %d messages marked as read\n", n);
+        pop_color ();
+        print_end ();
+      }
     }
     break;
   case CODE_update_user_typing:
     {
       peer_id_t id = MK_USER (fetch_int ());
       peer_t *U = user_chat_get (id);
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" User ");
-      print_user_name (id, U);
-      printf (" is typing....\n");
-      pop_color ();
-      print_end ();
+      if (log_level >= 2) {
+        print_start ();
+        push_color (COLOR_YELLOW);
+        print_date (time (0));
+        printf (" User ");
+        print_user_name (id, U);
+        printf (" is typing....\n");
+        pop_color ();
+        print_end ();
+      }
     }
     break;
   case CODE_update_chat_user_typing:
@@ -767,16 +772,18 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t id = MK_USER (fetch_int ());
       peer_t *C = user_chat_get (chat_id);
       peer_t *U = user_chat_get (id);
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" User ");
-      print_user_name (id, U);
-      printf (" is typing in chat ");
-      print_chat_name (chat_id, C);
-      printf ("....\n");
-      pop_color ();
-      print_end ();
+      if (log_level >= 2) {
+        print_start ();
+        push_color (COLOR_YELLOW);
+        print_date (time (0));
+        printf (" User ");
+        print_user_name (id, U);
+        printf (" is typing in chat ");
+        print_chat_name (chat_id, C);
+        printf ("....\n");
+        pop_color ();
+        print_end ();
+      }
     }
     break;
   case CODE_update_user_status:
@@ -785,15 +792,17 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *U = user_chat_get (user_id);
       if (U) {
         fetch_user_status (&U->user.status);
-        print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" User ");
-        print_user_name (user_id, U);
-        printf (" is now ");
-        printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
-        pop_color ();
-        print_end ();
+        if (log_level >= 3) {
+          print_start ();
+          push_color (COLOR_YELLOW);
+          print_date (time (0));
+          printf (" User ");
+          print_user_name (user_id, U);
+          printf (" is now ");
+          printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
+          pop_color ();
+          print_end ();
+        }
       } else {
         struct user_status t;
         fetch_user_status (&t);
@@ -876,6 +885,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         if (y == CODE_user_profile_photo_empty) {
         } else {
           assert (y == CODE_user_profile_photo);
+          fetch_long (); // photo_id
           fetch_file_location (&t);
           fetch_file_location (&t);
         }
@@ -1096,14 +1106,16 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           M = M->next;
         }
       }
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Encrypted chat ");
-      print_encr_chat_name_full (id, user_chat_get (id));
-      printf (": %d messages marked read \n", x);
-      pop_color ();
-      print_end ();
+      if (log_level >= 1) {
+        print_start ();
+        push_color (COLOR_YELLOW);
+        print_date (time (0));
+        printf (" Encrypted chat ");
+        print_encr_chat_name_full (id, user_chat_get (id));
+        printf (": %d messages marked read \n", x);
+        pop_color ();
+        print_end ();
+      }
     }
     break;
   case CODE_update_chat_participant_add:
