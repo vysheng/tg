@@ -305,7 +305,7 @@ void out_random (int n) {
 
 int allow_send_linux_version;
 void do_insert_header (void) {
-  out_int (CODE_invoke_with_layer9);
+  out_int (CODE_invoke_with_layer10);
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
