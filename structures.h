@@ -22,7 +22,8 @@
 #include <assert.h>
 typedef struct { int type; int id; } peer_id_t;
 
-#define FLAG_EMPTY 1
+//#define FLAG_EMPTY 1
+#define FLAG_MESSAGE_EMPTY 1
 #define FLAG_DELETED 2
 #define FLAG_FORBIDDEN 4
 #define FLAG_HAS_PHOTO 8
@@ -117,6 +118,7 @@ struct user {
   int structure_version;
   struct file_location photo_big;
   struct file_location photo_small;
+  long long photo_id;
   struct photo photo;
   char *first_name;
   char *last_name;
@@ -296,6 +298,9 @@ void message_insert (struct message *M);
 void free_photo (struct photo *P);
 void fetch_photo (struct photo *P);
 void insert_encrypted_chat (peer_t *P);
+void insert_user (peer_t *P);
+void fetch_photo (struct photo *P);
+void free_photo (struct photo *P);
 
 #define PEER_USER 1
 #define PEER_CHAT 2

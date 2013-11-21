@@ -916,14 +916,20 @@ void hexdump (int *in_ptr, int *in_end) {
 }
 
 void logprintf (const char *format, ...) {
-  print_start ();
+  int x = 0;
+  if (!prompt_was) {
+    x = 1;
+    print_start ();
+  }
   printf (COLOR_GREY " *** ");
   va_list ap;
   va_start (ap, format);
   vfprintf (stdout, format, ap);
   va_end (ap);
   printf (COLOR_NORMAL);
-  print_end ();
+  if (x) {
+    print_end ();
+  }
 }
 
 int color_stack_pos;
@@ -1007,8 +1013,10 @@ void print_user_name (peer_id_t id, peer_t *U) {
     if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
       push_color (COLOR_REDB);
     }
-    if ((U->flags & FLAG_DELETED) || (U->flags & FLAG_EMPTY)) {
+    if ((U->flags & FLAG_DELETED)) {
       printf ("deleted user#%d", get_peer_id (id));
+    } else if (!(U->flags & FLAG_CREATED)) {
+      printf ("empty user#%d", get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
       printf ("%s", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
@@ -1123,7 +1131,7 @@ peer_id_t last_from_id;
 peer_id_t last_to_id;
 
 void print_message (struct message *M) {
-  if (M->flags & (FLAG_EMPTY | FLAG_DELETED)) {
+  if (M->flags & (FLAG_MESSAGE_EMPTY | FLAG_DELETED)) {
     return;
   }
   if (M->service) {

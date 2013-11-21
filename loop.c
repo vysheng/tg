@@ -57,6 +57,7 @@ extern int binlog_enabled;
 
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
+int register_mode;
 
 int unread_messages;
 void got_it (char *line, int len);
@@ -483,7 +484,7 @@ int loop (void) {
     int res = do_auth_check_phone (default_username);
     assert (res >= 0);
     logprintf ("%s\n", res > 0 ? "phone registered" : "phone not registered");
-    if (res > 0) {
+    if (res > 0 && !register_mode) {
       do_send_code (default_username);
       char *code = 0;
       size_t size = 0;
@@ -552,13 +553,7 @@ int loop (void) {
   for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->has_auth) {
     do_export_auth (i);
     do_import_auth (i);
-    DC_list[i]->has_auth = 1;
-    if (binlog_enabled) {
-      int *ev = alloc_log_event (8);
-      ev[0] = LOG_DC_SIGNED;
-      ev[1] = i;
-      add_log_event (ev, 8);
-    }
+    bl_do_dc_signed (i);
     write_auth_file ();
   }
   write_auth_file ();

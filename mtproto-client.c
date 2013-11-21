@@ -61,6 +61,11 @@ char new_nonce[256];
 char server_nonce[256];
 extern int binlog_enabled;
 
+
+int total_packets_sent;
+long long total_data_sent;
+
+
 int rpc_execute (struct connection *c, int op, int len);
 int rpc_becomes_ready (struct connection *c);
 int rpc_close (struct connection *c);
@@ -183,6 +188,9 @@ int rpc_send_packet (struct connection *c) {
   write_out (c, &unenc_msg_header, 20);
   write_out (c, packet_buffer, len);
   flush_out (c);
+
+  total_packets_sent ++;
+  total_data_sent += total_len;
   return 1;
 }
 
@@ -198,6 +206,9 @@ int rpc_send_message (struct connection *c, void *data, int len) {
   c->out_packet_num ++;
   write_out (c, data, len);
   flush_out (c);
+
+  total_packets_sent ++;
+  total_data_sent += total_len;
   return 1;
 }
 
@@ -506,19 +517,16 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   static unsigned char tmp[44], sha1_buffer[20];
   memcpy (tmp, new_nonce, 32);
   tmp[32] = 1;
+  //GET_DC(c)->auth_key_id = *(long long *)(sha1_buffer + 12);
+
+  bl_do_set_auth_key_id (GET_DC(c)->id, (unsigned char *)GET_DC(c)->auth_key);
   sha1 ((unsigned char *)GET_DC(c)->auth_key, 256, sha1_buffer);
-  GET_DC(c)->auth_key_id = *(long long *)(sha1_buffer + 12);
+
   memcpy (tmp + 33, sha1_buffer, 8);
   sha1 (tmp, 41, sha1_buffer);
   assert (!memcmp (packet + 56, sha1_buffer + 4, 16));
   GET_DC(c)->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
-/*  if (binlog_enabled) {
-    int *ev = alloc_log_event (16);
-    ev[0] = LOG_DC_SALT;
-    ev[1] = GET_DC(c)->id;
-    *(long long *)(ev + 2) = GET_DC(c)->server_salt;
-    add_log_event (ev, 16);
-  }*/
+  
   if (verbosity >= 3) {
     logprintf ( "auth_key_id=%016llx\n", GET_DC(c)->auth_key_id);
   }
@@ -535,14 +543,6 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   auth_success ++;
   GET_DC(c)->flags |= 1;
   write_auth_file ();
-  if (binlog_enabled) {
-    int *ev = alloc_log_event (8 + 8 + 256);
-    ev[0] = LOG_AUTH_KEY;
-    ev[1] = GET_DC(c)->id;
-    *(long long *)(ev + 2) = GET_DC(c)->auth_key_id;
-    memcpy (ev + 4, GET_DC(c)->auth_key, 256);
-    add_log_event (ev, 8 + 8 + 256);
-  }
   
   return 1;
 }
@@ -825,25 +825,12 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         if (U->print_name) { free (U->print_name); }
         U->first_name = fetch_str_dup ();
         U->last_name = fetch_str_dup ();
+        U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
         printf (" changed name to ");
         print_user_name (user_id, UC);
         printf ("\n");
         pop_color ();
         print_end ();
-        if (!strlen (U->first_name)) {
-          if (!strlen (U->last_name)) {
-            U->print_name = strdup ("none");
-          } else {
-            U->print_name = strdup (U->last_name);
-          }
-        } else {
-          if (!strlen (U->last_name)) {
-            U->print_name = strdup (U->first_name);
-          } else {
-            U->print_name = malloc (strlen (U->first_name) + strlen (U->last_name) + 2);
-            sprintf (U->print_name, "%s_%s", U->first_name, U->last_name);
-          }
-        }
       } else {
         int l;
         l = prefetch_strlen ();
@@ -871,11 +858,12 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         print_end ();
         unsigned y = fetch_int ();
         if (y == CODE_user_profile_photo_empty) {
+          U->photo_id = 0;
           U->photo_big.dc = -2;
           U->photo_small.dc = -2;
         } else {
           assert (y == CODE_user_profile_photo);
-          fetch_long (); // photo_id
+          U->photo_id = fetch_long ();
           fetch_file_location (&U->photo_small);
           fetch_file_location (&U->photo_big);
         }
@@ -1031,12 +1019,14 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_encryption:
     {
       struct secret_chat *E = fetch_alloc_encrypted_chat ();
+      if (verbosity >= 2) {
+        logprintf ("Secret chat state = %d\n", E->state);
+      }
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       switch (E->state) {
       case sc_none:
-        assert (0);
         break;
       case sc_waiting:
         printf (" Encrypted chat ");
@@ -1159,6 +1149,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   default:
     logprintf ("Unknown update type %08x\n", op);
+    ;
   }
 }
 
@@ -1244,13 +1235,6 @@ void work_new_session_created (struct connection *c, long long msg_id UU) {
   fetch_long (); // unique_id
   GET_DC(c)->server_salt = fetch_long ();
   
-/*  if (binlog_enabled) {
-    int *ev = alloc_log_event (16);
-    ev[0] = LOG_DC_SALT;
-    ev[1] = GET_DC(c)->id;
-    *(long long *)(ev + 2) = GET_DC(c)->server_salt;
-    add_log_event (ev, 16);
-  }*/
 }
 
 void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
@@ -1332,13 +1316,6 @@ void work_bad_server_salt (struct connection *c UU, long long msg_id UU) {
   fetch_int (); // error_code
   long long new_server_salt = fetch_long ();
   GET_DC(c)->server_salt = new_server_salt;
-/*  if (binlog_enabled) {
-    int *ev = alloc_log_event (16);
-    ev[0] = LOG_DC_SALT;
-    ev[1] = GET_DC(c)->id;
-    *(long long *)(ev + 2) = GET_DC(c)->server_salt;
-    add_log_event (ev, 16);
-  }*/
 }
 
 void work_pong (struct connection *c UU, long long msg_id UU) {
@@ -1434,13 +1411,6 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   if (DC->server_salt != enc->server_salt) {
     DC->server_salt = enc->server_salt;
     write_auth_file ();
-/*    if (binlog_enabled) {
-      int *ev = alloc_log_event (16);
-      ev[0] = LOG_DC_SALT;
-      ev[1] = DC->id;
-      *(long long *)(ev + 2) = DC->server_salt;
-      add_log_event (ev, 16);
-    }*/
   }
   
   int this_server_time = enc->msg_id >> 32LL;

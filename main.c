@@ -312,9 +312,10 @@ extern char *rsa_public_key_name;
 extern int verbosity;
 extern int default_dc_num;
 
+int register_mode;
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:R")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -337,6 +338,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'l':
       log_level = atoi (optarg);
+      break;
+    case 'R':
+      register_mode = 1;
       break;
     case 'h':
     default:
