@@ -260,6 +260,7 @@ void read_auth_file (void) {
 int pts, qts, seq, last_date;
 
 void read_state_file (void) {
+  if (binlog_enabled) { return; }
   int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
   if (state_file_fd < 0) {
     return;
@@ -282,6 +283,7 @@ void read_state_file (void) {
 }
 
 void write_state_file (void) {
+  if (binlog_enabled) { return; }
   static int wseq;
   static int wpts;
   static int wqts;

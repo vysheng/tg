@@ -22,6 +22,11 @@ int *rptr;
 int *wptr;
 extern int test_dc;
 
+extern int pts;
+extern int qts;
+extern int last_date;
+extern int seq;
+
 #define MAX_LOG_EVENT_SIZE (1 << 17)
 
 char *get_binlog_file_name (void);
@@ -522,9 +527,25 @@ void replay_log_event (void) {
       P->flags |= FLAG_CREATED;
     }
     break;
+  case CODE_binlog_set_pts:
+    rptr ++;
+    pts = *(rptr ++);
+    break;
+  case CODE_binlog_set_qts:
+    rptr ++;
+    qts = *(rptr ++);
+    break;
+  case CODE_binlog_set_date:
+    rptr ++;
+    last_date = *(rptr ++);
+    break;
+  case CODE_binlog_set_seq:
+    rptr ++;
+    seq = *(rptr ++);
+    break;
   case CODE_update_user_photo:
   case CODE_update_user_name:
-    work_update (0, 0);
+    work_update_binlog ();
     rptr = in_ptr;
     break;
   default:
@@ -904,4 +925,32 @@ void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned
   memcpy (ev + 3, random, 256);
   memcpy (ev + 67, g_a, 256);
   add_log_event (ev, 524);
+}
+
+void bl_do_set_pts (int pts) {
+  int *ev = alloc_log_event (8);
+  ev[0] = CODE_binlog_set_pts;
+  ev[1] = pts;
+  add_log_event (ev, 8);
+}
+
+void bl_do_set_qts (int qts) {
+  int *ev = alloc_log_event (8);
+  ev[0] = CODE_binlog_set_qts;
+  ev[1] = qts;
+  add_log_event (ev, 8);
+}
+
+void bl_do_set_date (int date) {
+  int *ev = alloc_log_event (8);
+  ev[0] = CODE_binlog_set_date;
+  ev[1] = date;
+  add_log_event (ev, 8);
+}
+
+void bl_do_set_seq (int seq) {
+  int *ev = alloc_log_event (8);
+  ev[0] = CODE_binlog_set_seq;
+  ev[1] = seq;
+  add_log_event (ev, 8);
 }

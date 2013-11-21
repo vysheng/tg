@@ -24,4 +24,5 @@ void on_start (void);
 long long encrypt_send_message (struct connection *c, int *msg, int msg_ints, int useful);
 void dc_authorize (struct dc *DC);
 void work_update (struct connection *c, long long msg_id);
+void work_update_binlog (void);
 #endif

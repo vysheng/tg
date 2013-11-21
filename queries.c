@@ -2409,17 +2409,19 @@ int difference_got;
 int seq, pts, qts, last_date;
 int get_state_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_updates_state);
-  pts = fetch_int ();
-  qts = fetch_int ();
-  last_date = fetch_int ();
-  seq = fetch_int ();
+  bl_do_set_pts (fetch_int ());
+  bl_do_set_qts (fetch_int ());
+  bl_do_set_date (fetch_int ());
+  bl_do_set_seq (fetch_int ());
   unread_messages = fetch_int ();
   write_state_file ();
   difference_got = 1;
   return 0;
 }
 
+int get_difference_active;
 int get_difference_on_answer (struct query *q UU) {
+  get_difference_active = 0;
   unsigned x = fetch_int ();
   if (x == CODE_updates_difference_empty) {
     fetch_date ();
@@ -2463,10 +2465,10 @@ int get_difference_on_answer (struct query *q UU) {
       fetch_alloc_user ();
     }
     assert (fetch_int () == (int)CODE_updates_state);
-    pts = fetch_int ();
-    qts = fetch_int ();
-    last_date = fetch_int ();
-    seq = fetch_int ();
+    bl_do_set_pts (fetch_int ());
+    bl_do_set_qts (fetch_int ());
+    bl_do_set_date (fetch_int ());
+    bl_do_set_seq (fetch_int ());
     unread_messages = fetch_int ();
     write_state_file ();
     for (i = 0; i < ml_pos; i++) {
@@ -2492,6 +2494,7 @@ struct query_methods get_difference_methods = {
 };
 
 void do_get_difference (void) {
+  get_difference_active = 1;
   difference_got = 0;
   clear_packet ();
   do_insert_header ();

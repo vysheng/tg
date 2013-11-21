@@ -36,6 +36,10 @@
 #define CODE_binlog_set_encr_chat_key 0x179df2d4
 #define CODE_binlog_set_dh_params 0x20ba46bc
 #define CODE_binlog_encr_chat_init 0x939cd1c7
+#define CODE_binlog_set_pts 0x844e4c1c
+#define CODE_binlog_set_qts 0x3cf22b79
+#define CODE_binlog_set_date 0x33dfe392
+#define CODE_binlog_set_seq 0xb9294837
 
 void *alloc_log_event (int l);
 void replay_log (void);
@@ -69,4 +73,9 @@ void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned
 void bl_do_dc_signed (int id);
 void bl_do_set_working_dc (int num);
 void bl_do_set_dh_params (int root, unsigned char prime[], int version);
+
+void bl_do_set_pts (int pts);
+void bl_do_set_qts (int qts);
+void bl_do_set_seq (int seq);
+void bl_do_set_date (int date);
 #endif

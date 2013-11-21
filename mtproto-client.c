@@ -669,6 +669,7 @@ void fetch_pts (void) {
   } else {
     pts ++;
   }
+  bl_do_set_pts (pts);
 }
 
 void fetch_qts (void) {
@@ -685,12 +686,14 @@ void fetch_qts (void) {
   } else {
     qts ++;
   }
+  bl_do_set_qts (qts);
 }
 
 void fetch_date (void) {
   int p = fetch_int ();
   if (p > last_date) {
     last_date = p;
+    bl_do_set_date (last_date);
   }
 }
 
@@ -699,9 +702,72 @@ void fetch_seq (void) {
   if (x > seq + 1) {
     logprintf ("Hole in seq: seq = %d, x = %d\n", seq, x);
     //do_get_difference ();
+    //seq = x;
+  } else if (x == seq + 1) {
     seq = x;
-  } else if (x >= seq + 1) {
-    seq = x;
+    bl_do_set_seq (seq);
+  }
+}
+
+void work_update_binlog (void) {
+  unsigned op = fetch_int ();
+  switch (op) {
+  case CODE_update_user_name:
+    {
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *UC = user_chat_get (user_id);
+      if (UC) {
+        struct user *U = &UC->user;
+        if (U->first_name) { free (U->first_name); }
+        if (U->last_name) { free (U->last_name); }
+        if (U->print_name) { free (U->print_name); }
+        U->first_name = fetch_str_dup ();
+        U->last_name = fetch_str_dup ();
+        U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+      } else {
+        int l;
+        l = prefetch_strlen ();
+        fetch_str (l);
+        l = prefetch_strlen ();
+        fetch_str (l);
+      }
+    }
+    break;
+  case CODE_update_user_photo:
+    {
+      peer_id_t user_id = MK_USER (fetch_int ());
+      peer_t *UC = user_chat_get (user_id);
+      fetch_date ();
+      if (UC) {
+        struct user *U = &UC->user;
+        
+        unsigned y = fetch_int ();
+        if (y == CODE_user_profile_photo_empty) {
+          U->photo_id = 0;
+          U->photo_big.dc = -2;
+          U->photo_small.dc = -2;
+        } else {
+          assert (y == CODE_user_profile_photo);
+          U->photo_id = fetch_long ();
+          fetch_file_location (&U->photo_small);
+          fetch_file_location (&U->photo_big);
+        }
+      } else {
+        struct file_location t;
+        unsigned y = fetch_int ();
+        if (y == CODE_user_profile_photo_empty) {
+        } else {
+          assert (y == CODE_user_profile_photo);
+          fetch_long (); // photo_id
+          fetch_file_location (&t);
+          fetch_file_location (&t);
+        }
+      }
+      fetch_bool ();
+    }
+    break;
+  default:
+    assert (0);
   }
 }
 
