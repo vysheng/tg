@@ -628,6 +628,34 @@ void fetch_video (struct video *V) {
   V->h = fetch_int ();
 }
 
+void fetch_audio (struct audio *V) {
+  memset (V, 0, sizeof (*V));
+  unsigned x = fetch_int ();
+  V->id = fetch_long ();
+  if (x == CODE_audio_empty) { return; }
+  V->access_hash = fetch_long ();
+  V->user_id = fetch_int ();
+  V->date = fetch_int ();
+  V->duration = fetch_int ();
+  V->size = fetch_int ();
+  V->dc_id = fetch_int ();
+}
+
+void fetch_document (struct document *V) {
+  memset (V, 0, sizeof (*V));
+  unsigned x = fetch_int ();
+  V->id = fetch_long ();
+  if (x == CODE_document_empty) { return; }
+  V->access_hash = fetch_long ();
+  V->user_id = fetch_int ();
+  V->date = fetch_int ();
+  V->caption = fetch_str_dup ();
+  V->mime_type = fetch_str_dup ();
+  V->size = fetch_int ();
+  fetch_photo_size (&V->thumb);
+  V->dc_id = fetch_int ();
+}
+
 void fetch_message_action (struct message_action *M) {
   memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
@@ -700,6 +728,12 @@ void fetch_message_media (struct message_media *M) {
   case CODE_message_media_video:
     fetch_video (&M->video);
     break;
+  case CODE_message_media_audio:
+    fetch_audio (&M->audio);
+    break;
+  case CODE_message_media_document:
+    fetch_document (&M->document);
+    break;
   case CODE_message_media_geo:
     fetch_geo (&M->geo);
     break;
@@ -761,10 +795,63 @@ void fetch_message_media_encrypted (struct message_media *M) {
     fetch_str (l); // thumb
     fetch_int (); // thumb_w
     fetch_int (); // thumb_h
+    M->encr_video.duration = fetch_int ();
     M->encr_video.w = fetch_int ();
     M->encr_video.h = fetch_int ();
     M->encr_video.size = fetch_int ();
-    M->encr_video.duration = fetch_int ();
+    
+    l = prefetch_strlen  ();
+    assert (l > 0);
+    M->encr_video.key = malloc (32);
+    memset (M->encr_photo.key, 0, 32);
+    if (l <= 32) {
+      memcpy (M->encr_video.key + (32 - l), fetch_str (l), l);
+    } else {
+      memcpy (M->encr_video.key, fetch_str (l) + (l - 32), 32);
+    }
+    M->encr_video.iv = malloc (32);
+    l = prefetch_strlen  ();
+    assert (l > 0);
+    memset (M->encr_video.iv, 0, 32);
+    if (l <= 32) {
+      memcpy (M->encr_video.iv + (32 - l), fetch_str (l), l);
+    } else {
+      memcpy (M->encr_video.iv, fetch_str (l) + (l - 32), 32);
+    }
+    break;
+  case CODE_decrypted_message_media_audio:
+    M->type = x;
+    M->encr_audio.duration = fetch_int ();
+    M->encr_audio.size = fetch_int ();
+    
+    l = prefetch_strlen  ();
+    assert (l > 0);
+    M->encr_video.key = malloc (32);
+    memset (M->encr_photo.key, 0, 32);
+    if (l <= 32) {
+      memcpy (M->encr_video.key + (32 - l), fetch_str (l), l);
+    } else {
+      memcpy (M->encr_video.key, fetch_str (l) + (l - 32), 32);
+    }
+    M->encr_video.iv = malloc (32);
+    l = prefetch_strlen  ();
+    assert (l > 0);
+    memset (M->encr_video.iv, 0, 32);
+    if (l <= 32) {
+      memcpy (M->encr_video.iv + (32 - l), fetch_str (l), l);
+    } else {
+      memcpy (M->encr_video.iv, fetch_str (l) + (l - 32), 32);
+    }
+    break;
+  case CODE_decrypted_message_media_document:
+    M->type = x;
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    fetch_int (); // thumb_w
+    fetch_int (); // thumb_h
+    M->encr_document.file_name = fetch_str_dup ();
+    M->encr_document.mime_type = fetch_str_dup ();
+    M->encr_video.size = fetch_int ();
     
     l = prefetch_strlen  ();
     assert (l > 0);
@@ -943,6 +1030,7 @@ void fetch_encrypted_message (struct message *M) {
   unsigned sx = x;
   M->id = fetch_long ();
   peer_id_t chat = MK_ENCR_CHAT (fetch_int ());
+  M->from_id = MK_USER (our_id);
   M->to_id = chat;
   peer_t *P = user_chat_get (chat);
   M->flags &= ~(FLAG_MESSAGE_EMPTY | FLAG_DELETED);
@@ -989,7 +1077,9 @@ void fetch_encrypted_message (struct message *M) {
       fetch_message_media_encrypted (&M->media);
     } else {
       assert (fetch_int () == (int)CODE_decrypted_message_action_set_message_t_t_l);
+      M->action.type = CODE_decrypted_message_action_set_message_t_t_l;
       P->encr_chat.ttl = fetch_int ();
+      M->action.ttl = P->encr_chat.ttl;
       M->service = 1;
     }
     in_ptr = save_in_ptr;
@@ -1146,10 +1236,18 @@ void free_video (struct video *V) {
   free_photo_size (&V->thumb);
 }
 
+void free_document (struct document *D) {
+  if (!D->access_hash) { return; }
+  free (D->caption);
+  free (D->mime_type);
+  free_photo_size (&D->thumb);
+}
+
 void free_message_media (struct message_media *M) {
   switch (M->type) {
   case CODE_message_media_empty:
   case CODE_message_media_geo:
+  case CODE_message_media_audio:
     return;
   case CODE_message_media_photo:
     free_photo (&M->photo);
@@ -1162,16 +1260,18 @@ void free_message_media (struct message_media *M) {
     free (M->first_name);
     free (M->last_name);
     return;
+  case CODE_message_media_document:
+    free_document (&M->document);
+    return;
   case CODE_message_media_unsupported:
     free (M->data);
     return;
   case CODE_decrypted_message_media_photo:
+  case CODE_decrypted_message_media_video:
+  case CODE_decrypted_message_media_audio:
+  case CODE_decrypted_message_media_document:
     free (M->encr_photo.key);
     free (M->encr_photo.iv);
-    return;
-  case CODE_decrypted_message_media_video:
-    free (M->encr_video.key);
-    free (M->encr_video.iv);
     return;
   case 0:
     break;
