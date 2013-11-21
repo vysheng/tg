@@ -465,9 +465,9 @@ void replay_log_event (void) {
       if (!U->nonce) {
         U->nonce = malloc (256);
       }
-      memcpy (rptr, U->g_key, 256);
+      memcpy (U->g_key, rptr, 256);
       rptr += 64;
-      memcpy (rptr, U->nonce, 256);
+      memcpy (U->nonce, rptr, 256);
       rptr += 64;
       U->key_fingerprint = *(long long *)rptr;
       rptr += 2;
@@ -835,7 +835,6 @@ void bl_do_encr_chat_requested (struct secret_chat *U, long long access_hash, in
   ev[4] = date;
   ev[5] = admin_id;
   ev[6] = user_id;
-  logprintf ("user_id = %d, admin_id = %d, our_id = %d\n", user_id, admin_id, our_id);
   memcpy (ev + 7, g_key, 256);
   memcpy (ev + 7 + 64, nonce, 256);
   add_log_event (ev, 540);
