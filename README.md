@@ -45,9 +45,9 @@ By default public key is stored in the same folder named tg.pub:
 
 Client support TAB completion and command history.
   
-#### Supported commands
+### Supported commands
 
-## Messaging
+#### Messaging
 
 
 * **msg** \<peer\> Text - sends message to this peer
@@ -56,7 +56,7 @@ Client support TAB completion and command history.
 * **rename_contact** \<user\> \<first-name\> \<last-name\> - tries to rename contact. If you have another device it will be a fight
 * **mark_read** \<peer\> - mark read all received messages with peer
 
-## Multimedia
+#### Multimedia
 
 * **send_photo** \<peer\> \<photo-file-name\> - sends photo to peer
 * **send_video** \<peer\> \<video-file-name\> - sends video to peer
@@ -65,24 +65,24 @@ Client support TAB completion and command history.
 * **view_photo**/view_video/view_video_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
 
 
-## Group chat options
+#### Group chat options
 
 * **chat_info** \<chat\> - prints info about chat
 * **chat_add_user** \<chat\> \<user\> - add user to chat
 * **chat_del_user** \<chat\> \<user\> - remove user from chat
 * **rename_chat** \<chat\> \<new-name\>
 
-## Search
+#### Search
 
 * **search** \<peer\> pattern - searches pattern in messages with peer
 * **global_search** pattern - searches pattern in all messages
 
-## Secret chat
+#### Secret chat
 
 * **create_secret_chat** \<user\> - creates secret chat with this user
 * **visualize_key** \<secret_chat\> - prints visualization of encryption key. You should compare it to your partner's one
 
-## Stats and various info
+#### Stats and various info
 
 * **user_info** \<user\> - prints info about user
 * **history** \<peer\> [limit] - prints history (and marks it as read). Default limit = 40
