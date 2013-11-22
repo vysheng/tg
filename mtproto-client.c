@@ -977,20 +977,28 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_chat_participants:
     {
-      assert (fetch_int () == CODE_chat_participants);
+      unsigned x = fetch_int ();
+      assert (x == CODE_chat_participants || x == CODE_chat_participants_forbidden);
       peer_id_t chat_id = MK_CHAT (fetch_int ());
-      fetch_int (); // admin_id
-      assert (fetch_int () == CODE_vector);
-      int n = fetch_int ();
-      fetch_skip (n * 4);
-      fetch_int (); // version
+      int n = 0;
+      if (x == CODE_chat_participants) {
+        fetch_int (); // admin_id
+        assert (fetch_int () == CODE_vector);
+        int n = fetch_int ();
+        fetch_skip (n * 4);
+        fetch_int (); // version
+      }
       peer_t *C = user_chat_get (chat_id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Chat ");
       print_chat_name (chat_id, C);
-      printf (" changed list: now %d members\n", n);
+      if (x == CODE_chat_participants) {
+        printf (" changed list: now %d members\n", n);
+      } else {
+        printf (" changed list, but we are forbidden to know about it (Why this update even was sent to us?\n");
+      }
       pop_color ();
       print_end ();
     }
