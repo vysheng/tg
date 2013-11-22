@@ -56,6 +56,8 @@ By default public key is stored in the same folder named tg.pub:
 * **chat_info** \<chat\> - prints info about chat
 * **user_info** \<user\> - prints info about user
 * **fwd** \<user\> \<msg-seqno\> - forward message to user. You can see message numbers starting client with -N
+* **chat_add_user** \<chat\> \<user\> - add user to chat
+* **chat_del_user** \<chat\> \<user\> - remove user from chat
 * **rename_chat** \<chat\> \<new-name\>
 * **load_photo**/load_video/load_video_thumb \<msg-seqno\> - loads photo/video to download dir
 * **view_photo**/view_video/view_video_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
