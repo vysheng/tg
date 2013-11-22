@@ -40,6 +40,13 @@
 #define CODE_binlog_set_qts 0x3cf22b79
 #define CODE_binlog_set_date 0x33dfe392
 #define CODE_binlog_set_seq 0xb9294837
+#define CODE_binlog_chat_create 0xbaa75791
+#define CODE_binlog_chat_change_flags 0x1e494031
+#define CODE_binlog_set_chat_title 0x7dd9bea8
+#define CODE_binlog_set_chat_photo 0xb4ea1fd2
+#define CODE_binlog_set_chat_date 0x78d1114e
+#define CODE_binlog_set_chat_version 0xa5d3504f
+
 
 void *alloc_log_event (int l);
 void replay_log (void);
@@ -78,4 +85,12 @@ void bl_do_set_pts (int pts);
 void bl_do_set_qts (int qts);
 void bl_do_set_seq (int seq);
 void bl_do_set_date (int date);
+
+void bl_do_create_chat (struct chat *C, int y, const char *s, int l, int users_num, int date, int version, struct file_location *big, struct file_location *small);
+void bl_do_chat_forbid (struct chat *C, int on);
+void bl_do_set_chat_title (struct chat *C, const char *s, int l);
+void bl_do_set_chat_photo (struct chat *C, struct file_location *big, struct file_location *small);
+void bl_do_set_chat_date (struct chat *C, int date);
+void bl_do_set_chat_set_in_chat (struct chat *C, int on);
+void bl_do_set_chat_version (struct chat *C, int version, int user_num);
 #endif

@@ -543,6 +543,79 @@ void replay_log_event (void) {
     rptr ++;
     seq = *(rptr ++);
     break;
+  case CODE_binlog_chat_create:
+    in_ptr ++;
+    {
+      peer_id_t id = MK_CHAT (fetch_int ());
+      peer_t *_C = user_chat_get (id);
+      if (!_C) {
+        _C = malloc (sizeof (*_C));
+        memset (_C, 0, sizeof (*_C));
+        _C->id = id;
+        insert_chat (_C);
+      } else {
+        assert (!(_C->flags & FLAG_CREATED));
+      }
+      struct chat *C = &_C->chat;
+      C->flags = FLAG_CREATED | fetch_int ();
+      C->title = fetch_str_dup ();
+      C->print_title = create_print_name (id, C->title, 0, 0, 0);
+      C->users_num = fetch_int ();
+      C->date = fetch_int ();
+      C->version = fetch_int ();
+      fetch_data (&C->photo_big, sizeof (struct file_location));
+      fetch_data (&C->photo_small, sizeof (struct file_location));
+    };
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_chat_change_flags:
+    rptr ++;
+    {
+      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
+      assert (C && (C->flags & FLAG_CREATED));
+      C->flags |= *(rptr ++);
+      C->flags &= ~*(rptr ++);
+    };
+    break;
+  case CODE_binlog_set_chat_title:
+    in_ptr ++;
+    {
+      peer_t *_C = user_chat_get (MK_CHAT (fetch_int ()));
+      assert (_C && (_C->flags & FLAG_CREATED));
+      struct chat *C = &_C->chat;
+      if (C->title) { free (C->title); }
+      C->title = fetch_str_dup ();
+      C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
+    };
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_set_chat_photo:
+    in_ptr ++;
+    {
+      peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+      assert (C && (C->flags & FLAG_CREATED));
+      fetch_data (&C->photo_big, sizeof (struct file_location));
+      fetch_data (&C->photo_small, sizeof (struct file_location));
+    };
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_set_chat_date:
+    rptr ++;
+    {
+      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
+      assert (C && (C->flags & FLAG_CREATED));
+      C->chat.date = *(rptr ++);
+    };
+    break;
+  case CODE_binlog_set_chat_version:
+    rptr ++;
+    {
+      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
+      assert (C && (C->flags & FLAG_CREATED));
+      C->chat.version = *(rptr ++);
+      C->chat.users_num = *(rptr ++);
+    };
+    break;
   case CODE_update_user_photo:
   case CODE_update_user_name:
     work_update_binlog ();
@@ -953,4 +1026,97 @@ void bl_do_set_seq (int seq) {
   ev[0] = CODE_binlog_set_seq;
   ev[1] = seq;
   add_log_event (ev, 8);
+}
+
+void bl_do_create_chat (struct chat *C, int y, const char *s, int l, int users_num, int date, int version, struct file_location *big, struct file_location *small) {
+  clear_packet ();
+  out_int (CODE_binlog_chat_create);
+  out_int (get_peer_id (C->id));
+  out_int (y);
+  out_cstring (s, l);
+  out_int (users_num);
+  out_int (date);
+  out_int (version);
+  out_data (big, sizeof (struct file_location));
+  out_data (small, sizeof (struct file_location));
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_chat_forbid (struct chat *C, int on) {
+  if (on) {
+    if (C->flags & FLAG_FORBIDDEN) { return; }
+    int *ev = alloc_log_event (16);
+    ev[0] = CODE_binlog_chat_change_flags;
+    ev[1] = get_peer_id (C->id);
+    ev[2] = FLAG_FORBIDDEN;
+    ev[3] = 0;
+    add_log_event (ev, 16);
+  } else {
+    if (!(C->flags & FLAG_FORBIDDEN)) { return; }
+    int *ev = alloc_log_event (16);
+    ev[0] = CODE_binlog_chat_change_flags;
+    ev[1] = get_peer_id (C->id);
+    ev[2] = 0;
+    ev[3] = FLAG_FORBIDDEN;
+    add_log_event (ev, 16);
+  }
+}
+
+void bl_do_set_chat_title (struct chat *C, const char *s, int l) {
+  if (C->title && (int)strlen (C->title) == l && !strncmp (C->title, s, l)) { return; }
+  clear_packet ();
+  out_int (CODE_binlog_set_chat_title);
+  out_int (get_peer_id (C->id));
+  out_cstring (s, l);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_set_chat_photo (struct chat *C, struct file_location *big, struct file_location *small) {
+  if (!memcmp (&C->photo_small, small, sizeof (struct file_location)) &&
+      !memcmp (&C->photo_big, big, sizeof (struct file_location))) { return; }
+  clear_packet ();
+  out_int (CODE_binlog_set_chat_photo);
+  out_int (get_peer_id (C->id));
+  out_data (big, sizeof (struct file_location));
+  out_data (small, sizeof (struct file_location));
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_set_chat_date (struct chat *C, int date) {
+  if (C->date == date) { return; }
+  int *ev = alloc_log_event (12);
+  ev[0] = CODE_binlog_set_chat_date;
+  ev[1] = get_peer_id (C->id);
+  ev[2] = date;
+  add_log_event (ev, 12);
+}
+
+void bl_do_set_chat_set_in_chat (struct chat *C, int on) {
+  if (on) {
+    if (C->flags & FLAG_CHAT_IN_CHAT) { return; }
+    int *ev = alloc_log_event (16);
+    ev[0] = CODE_binlog_chat_change_flags;
+    ev[1] = get_peer_id (C->id);
+    ev[2] = FLAG_CHAT_IN_CHAT;
+    ev[3] = 0;
+    add_log_event (ev, 16);
+  } else {
+    if (!(C->flags & FLAG_CHAT_IN_CHAT)) { return; }
+    int *ev = alloc_log_event (16);
+    ev[0] = CODE_binlog_chat_change_flags;
+    ev[1] = get_peer_id (C->id);
+    ev[2] = 0;
+    ev[3] = FLAG_CHAT_IN_CHAT;
+    add_log_event (ev, 16);
+  }
+}
+
+void bl_do_set_chat_version (struct chat *C, int version, int user_num) {
+  if (C->version >= version) { return; }
+  int *ev = alloc_log_event (16);
+  ev[0] = CODE_binlog_set_chat_version;
+  ev[1] = get_peer_id (C->id);
+  ev[2] = version;
+  ev[3] = user_num;
+  add_log_event (ev, 16);
 }

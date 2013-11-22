@@ -351,6 +351,7 @@ void free_photo (struct photo *P);
 void fetch_photo (struct photo *P);
 void insert_encrypted_chat (peer_t *P);
 void insert_user (peer_t *P);
+void insert_chat (peer_t *P);
 void fetch_photo (struct photo *P);
 void free_photo (struct photo *P);
 

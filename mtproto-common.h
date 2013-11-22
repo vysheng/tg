@@ -249,7 +249,7 @@ static inline void clear_packet (void) {
 
 void out_cstring (const char *str, long len);
 void out_cstring_careful (const char *str, long len);
-void out_data (const char *data, long len);
+void out_data (const void *data, long len);
 
 static inline void out_string (const char *str) {
   out_cstring (str, strlen (str));
@@ -392,6 +392,12 @@ static inline int prefetch_int (void) {
 
 static inline void prefetch_data (void *data, int size) {
   memcpy (data, in_ptr, size);
+}
+
+static inline void fetch_data (void *data, int size) {
+  memcpy (data, in_ptr, size);
+  assert (!(size & 3));
+  in_ptr += (size >> 2);
 }
 
 static inline long long fetch_long (void) {

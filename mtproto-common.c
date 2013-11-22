@@ -221,7 +221,7 @@ void out_cstring_careful (const char *str, long len) {
 }
 
 
-void out_data (const char *data, long len) {
+void out_data (const void *data, long len) {
   assert (len >= 0 && len < (1 << 24) && !(len & 3));
   assert ((char *) packet_ptr + len + 8 < (char *) (packet_buffer + PACKET_BUFFER_SIZE));
   memcpy (packet_ptr, data, len);

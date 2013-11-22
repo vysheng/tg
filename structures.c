@@ -414,37 +414,81 @@ void fetch_chat (struct chat *C) {
   if (x == CODE_chat_empty) {
     return;
   }
-  C->flags |= FLAG_CREATED;
-  C->flags &= ~(FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
-  if (x == CODE_chat_forbidden) {
-    C->flags |= FLAG_FORBIDDEN;
-  }
-  if (C->title) { free (C->title); }
-  if (C->print_title) { free (C->print_title); }
-  C->title = fetch_str_dup ();
-  C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
-  if (x == CODE_chat) {
-    unsigned y = fetch_int ();
-    if (y == CODE_chat_photo_empty) {
-      C->photo_small.dc = -2;
-      C->photo_big.dc = -2;
+  int new = !(C->flags & FLAG_CREATED);
+  if (new) {
+    int y = 0;
+    if (x == CODE_chat_forbidden) {
+      y |= FLAG_FORBIDDEN;
+    }
+    int l = prefetch_strlen ();
+    char *s = fetch_str (l);
+
+    struct file_location small;
+    struct file_location big;
+    memset (&small, 0, sizeof (small));
+    memset (&big, 0, sizeof (big));
+    int users_num = -1;
+    int date = 0;
+    int version = -1;
+
+    if (x == CODE_chat) {
+      unsigned y = fetch_int ();
+      if (y == CODE_chat_photo_empty) {
+        small.dc = -2;
+        big.dc = -2;
+      } else {
+        assert (y == CODE_chat_photo);
+        fetch_file_location (&small);
+        fetch_file_location (&big);
+      }
+      users_num = fetch_int ();
+      date = fetch_int ();
+      if (fetch_bool ()) {
+        y |= FLAG_CHAT_IN_CHAT;
+      }
+      version = fetch_int ();
     } else {
-      assert (y == CODE_chat_photo);
-      fetch_file_location (&C->photo_small);
-      fetch_file_location (&C->photo_big);
+      small.dc = -2;
+      big.dc = -2;
+      users_num = -1;
+      date = fetch_int ();
+      version = -1;
     }
-    C->users_num = fetch_int ();
-    C->date = fetch_int ();
-    if (fetch_int () == (int)CODE_bool_true) {
-      C->flags |= FLAG_CHAT_IN_CHAT;
-    }
-    C->version = fetch_int ();
+
+    bl_do_create_chat (C, y, s, l, users_num, date, version, &big, &small);
   } else {
-    C->photo_small.dc = -2;
-    C->photo_big.dc = -2;
-    C->users_num = -1;
-    C->date = fetch_int ();
-    C->version = -1;
+    if (x == CODE_chat_forbidden) {
+      bl_do_chat_forbid (C, 1);
+    } else {
+      bl_do_chat_forbid (C, 0);
+    }
+    int l = prefetch_strlen ();
+    char *s = fetch_str (l);
+    bl_do_set_chat_title (C, s, l);
+    
+    struct file_location small;
+    struct file_location big;
+    memset (&small, 0, sizeof (small));
+    memset (&big, 0, sizeof (big));
+    
+    if (x == CODE_chat) {
+      unsigned y = fetch_int ();
+      if (y == CODE_chat_photo_empty) {
+        small.dc = -2;
+        big.dc = -2;
+      } else {
+        assert (y == CODE_chat_photo);
+        fetch_file_location (&small);
+        fetch_file_location (&big);
+      }
+      bl_do_set_chat_photo (C, &big, &small);
+      int users_num = fetch_int ();
+      bl_do_set_chat_date (C, fetch_int ());
+      bl_do_set_chat_set_in_chat (C, fetch_bool ());
+      bl_do_set_chat_version (C, users_num, fetch_int ());
+    } else {
+      bl_do_set_chat_date (C, fetch_int ());
+    }
   }
 }
 
@@ -662,6 +706,17 @@ void fetch_message_action (struct message_action *M) {
   M->type = x;
   switch (x) {
   case CODE_message_action_empty:
+    break;
+  case CODE_message_action_geo_chat_create:
+    {
+      int l = prefetch_strlen (); // title
+      char *s = fetch_str (l);
+      int l2 = prefetch_strlen (); // checkin
+      char *s2 = fetch_str (l2);
+      logprintf ("Message action: Created geochat %.*s in address %.*s\n", l, s, l2, s2);
+    }
+    break;
+  case CODE_message_action_geo_chat_checkin:
     break;
   case CODE_message_action_chat_create:
     M->title = fetch_str_dup ();
@@ -1185,6 +1240,12 @@ void insert_user (peer_t *P) {
   Peers[peer_num ++] = P;
 }
 
+void insert_chat (peer_t *P) {
+  chats_allocated ++;
+  peer_tree = tree_insert_peer (peer_tree, P, lrand48 ());
+  Peers[peer_num ++] = P;
+}
+
 struct user *fetch_alloc_user_full (void) {
   int data[3];
   prefetch_data (data, 12);
@@ -1505,18 +1566,16 @@ struct chat *fetch_alloc_chat (void) {
   int data[2];
   prefetch_data (data, 8);
   peer_t *U = user_chat_get (MK_CHAT (data[1]));
-  if (U) {
-    fetch_chat (&U->chat);
-    return &U->chat;
-  } else {
+  if (!U) {
     chats_allocated ++;
     U = malloc (sizeof (*U));
     memset (U, 0, sizeof (*U));
-    fetch_chat (&U->chat);
+    U->id = MK_CHAT (data[1]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     Peers[peer_num ++] = U;
-    return &U->chat;
   }
+  fetch_chat (&U->chat);
+  return &U->chat;
 }
 
 struct chat *fetch_alloc_chat_full (void) {

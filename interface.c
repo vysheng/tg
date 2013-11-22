@@ -1237,6 +1237,12 @@ void print_service_message (struct message *M) {
   case CODE_message_action_empty:
     printf ("\n");
     break;
+  case CODE_message_action_geo_chat_create:
+    printf ("Created geo chat\n");
+    break;
+  case CODE_message_action_geo_chat_checkin:
+    printf ("Checkin in geochat\n");
+    break;
   case CODE_message_action_chat_create:
     printf (" created chat %s. %d users\n", M->action.title, M->action.user_num);
     break;
