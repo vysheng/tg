@@ -42,6 +42,8 @@ If you manage to launch it on other UNIX, please let me know.
 By default public key is stored in the same folder named tg.pub:
 
     ./telegram -k tg.pub
+
+Client support TAB completion and command history.
   
 #### Supported commands:
 
