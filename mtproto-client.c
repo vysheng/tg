@@ -1431,9 +1431,16 @@ void work_pong (struct connection *c UU, long long msg_id UU) {
   fetch_long (); // ping_id
 }
 
-void work_detained_info (struct connection *c UU, long long msg_id UU) {
-  assert (fetch_int () == CODE_msg_detained_info);
+void work_detailed_info (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == CODE_msg_detailed_info);
   fetch_long (); // msg_id
+  fetch_long (); // answer_msg_id
+  fetch_int (); // bytes
+  fetch_int (); // status
+}
+
+void work_new_detailed_info (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == CODE_msg_detailed_info);
   fetch_long (); // answer_msg_id
   fetch_int (); // bytes
   fetch_int (); // status
@@ -1484,8 +1491,11 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   case CODE_pong:
     work_pong (c, msg_id);
     return;
-  case CODE_msg_detained_info:
-    work_detained_info (c, msg_id);
+  case CODE_msg_detailed_info:
+    work_detailed_info (c, msg_id);
+    return;
+  case CODE_msg_new_detailed_info:
+    work_new_detailed_info (c, msg_id);
     return;
   case CODE_updates_too_long:
     work_updates_to_long (c, msg_id);

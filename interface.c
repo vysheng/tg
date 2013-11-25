@@ -43,7 +43,7 @@
 
 #include "mtproto-common.h"
 
-#define ALLOW_MULT 1
+//#define ALLOW_MULT 1
 char *default_prompt = "> ";
 
 int unread_messages;
