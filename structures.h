@@ -172,7 +172,9 @@ struct chat {
   struct photo photo;
   char *title;
   int users_num;
-  struct chat_user *users;
+  int user_list_size;
+  int user_list_version;
+  struct chat_user *user_list;
   int date;
   int version;
   int admin_id;

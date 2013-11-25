@@ -34,14 +34,33 @@
 
 #define sha1 SHA1
 
+static int id_cmp (struct message *M1, struct message *M2);
+#define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
+DEFINE_TREE(peer,peer_t *,peer_cmp,0)
+DEFINE_TREE(message,struct message *,id_cmp,0)
+
+
+struct message message_list = {
+  .next_use = &message_list,
+  .prev_use = &message_list
+};
+
+struct tree_peer *peer_tree;
+struct tree_message *message_tree;
+
+int users_allocated;
+int chats_allocated;
+int messages_allocated;
+
+int our_id;
 int verbosity;
 peer_t *Peers[MAX_USER_NUM];
-
 int peer_num;
 int encr_chats_allocated;
 int geo_chats_allocated;
-
 extern int binlog_enabled;
+
+
 void fetch_skip_photo (void);
 
 #define code_assert(x) if (!(x)) { logprintf ("Can not parse at line %d\n", __LINE__); assert (0); return -1; }
@@ -97,8 +116,6 @@ int fetch_user_status (struct user_status *S) {
   }
   return 0;
 }
-
-int our_id;
 
 char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4) {
   const char *d[4];
@@ -516,35 +533,32 @@ void fetch_chat_full (struct chat *C) {
   assert (x == CODE_messages_chat_full);
   assert (fetch_int () == CODE_chat_full); 
   C->id = MK_CHAT (fetch_int ());
-  C->flags &= ~(FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
-  C->flags |= FLAG_CREATED;
+  //C->flags &= ~(FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
+  //C->flags |= FLAG_CREATED;
   x = fetch_int ();
+  int version = 0;
+  struct chat_user *users = 0;
+  int users_num = 0;
+  int admin_id = 0;
+
   if (x == CODE_chat_participants) {
     assert (fetch_int () == get_peer_id (C->id));
-    C->admin_id =  fetch_int ();
+    admin_id =  fetch_int ();
     assert (fetch_int () == CODE_vector);
-    if (C->users) {
-      free (C->users);
-    }
-    C->users_num = fetch_int ();
-    C->users = malloc (sizeof (struct chat_user) * C->users_num);
+    users_num = fetch_int ();
+    users = malloc (sizeof (struct chat_user) * users_num);
     int i;
     for (i = 0; i < C->users_num; i++) {
       assert (fetch_int () == (int)CODE_chat_participant);
-      C->users[i].user_id = fetch_int ();
-      C->users[i].inviter_id = fetch_int ();
-      C->users[i].date = fetch_int ();
+      users[i].user_id = fetch_int ();
+      users[i].inviter_id = fetch_int ();
+      users[i].date = fetch_int ();
     }
-    C->version = fetch_int ();
-  } else {
-    C->flags |= FLAG_FORBIDDEN;
-    assert (x == CODE_chat_participants_forbidden);
+    version = fetch_int ();
   }
-  if (C->flags & FLAG_HAS_PHOTO) {
-    free_photo (&C->photo);
-  }
-  fetch_photo (&C->photo);
-  C->flags |= FLAG_HAS_PHOTO;
+  int *start = in_ptr;
+  fetch_skip_photo ();
+  int *end = in_ptr;
   fetch_notify_settings ();
 
   int n, i;
@@ -558,6 +572,14 @@ void fetch_chat_full (struct chat *C) {
   for (i = 0; i < n; i++) {
     fetch_alloc_user ();
   }
+  if (admin_id) {
+    bl_do_set_chat_admin (C, admin_id);
+  }
+  if (version > 0) {
+    bl_do_set_chat_participants (C, version, users_num, users);
+    free (users);
+  }
+  bl_do_set_chat_full_photo (C, start, 4 * (end - start));
 }
 
 void fetch_photo_size (struct photo_size *S) {
@@ -1019,8 +1041,8 @@ void fetch_geo_message (struct message *M) {
   }
 }
 
-int *decr_ptr;
-int *decr_end;
+static int *decr_ptr;
+static int *decr_end;
 
 int decrypt_encrypted_message (struct secret_chat *E) {
   int *msg_key = decr_ptr;
@@ -1179,22 +1201,6 @@ static int id_cmp (struct message *M1, struct message *M2) {
   else if (M1->id > M2->id) { return 1; }
   else { return 0; }
 }
-
-#define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
-
-DEFINE_TREE(peer,peer_t *,peer_cmp,0)
-DEFINE_TREE(message,struct message *,id_cmp,0)
-struct tree_peer *peer_tree;
-struct tree_message *message_tree;
-
-int users_allocated;
-int chats_allocated;
-int messages_allocated;
-
-struct message message_list = {
-  .next_use = &message_list,
-  .prev_use = &message_list
-};
 
 struct user *fetch_alloc_user (void) {
   int data[2];

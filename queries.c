@@ -1618,14 +1618,14 @@ int chat_info_on_answer (struct query *q UU) {
   print_chat_name (U->id, U);
   printf (" members:\n");
   int i;
-  for (i = 0; i < C->users_num; i++) {
+  for (i = 0; i < C->user_list_size; i++) {
     printf ("\t\t");
-    print_user_name (MK_USER (C->users[i].user_id), user_chat_get (MK_USER (C->users[i].user_id)));
+    print_user_name (MK_USER (C->user_list[i].user_id), user_chat_get (MK_USER (C->user_list[i].user_id)));
     printf (" invited by ");
-    print_user_name (MK_USER (C->users[i].inviter_id), user_chat_get (MK_USER (C->users[i].inviter_id)));
+    print_user_name (MK_USER (C->user_list[i].inviter_id), user_chat_get (MK_USER (C->user_list[i].inviter_id)));
     printf (" at ");
-    print_date_full (C->users[i].date);
-    if (C->users[i].user_id == C->admin_id) {
+    print_date_full (C->user_list[i].date);
+    if (C->user_list[i].user_id == C->admin_id) {
       printf (" admin");
     }
     printf ("\n");
@@ -2424,8 +2424,8 @@ int get_difference_on_answer (struct query *q UU) {
   get_difference_active = 0;
   unsigned x = fetch_int ();
   if (x == CODE_updates_difference_empty) {
-    fetch_date ();
-    fetch_seq ();
+    bl_do_set_date (fetch_int ());
+    bl_do_set_seq (fetch_int ());
     difference_got = 1;
   } else if (x == CODE_updates_difference || x == CODE_updates_difference_slice) {
     int n, i;

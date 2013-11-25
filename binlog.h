@@ -46,7 +46,11 @@
 #define CODE_binlog_set_chat_photo 0xb4ea1fd2
 #define CODE_binlog_set_chat_date 0x78d1114e
 #define CODE_binlog_set_chat_version 0xa5d3504f
-
+#define CODE_binlog_set_chat_admin 0x1e7cea04
+#define CODE_binlog_set_chat_participants 0x3a29d335
+#define CODE_binlog_chat_full_photo 0x6cca6629
+#define CODE_binlog_add_chat_participant 0x63345108
+#define CODE_binlog_del_chat_participant 0x82d1f0ee
 
 void *alloc_log_event (int l);
 void replay_log (void);
@@ -93,4 +97,9 @@ void bl_do_set_chat_photo (struct chat *C, struct file_location *big, struct fil
 void bl_do_set_chat_date (struct chat *C, int date);
 void bl_do_set_chat_set_in_chat (struct chat *C, int on);
 void bl_do_set_chat_version (struct chat *C, int version, int user_num);
+void bl_do_set_chat_admin (struct chat *C, int admin);
+void bl_do_set_chat_participants (struct chat *C, int version, int user_num, struct chat_user *users);
+void bl_do_set_chat_full_photo (struct chat *U, const int *start, int len);
+void bl_do_chat_add_user (struct chat *C, int version, int user, int inviter, int date);
+void bl_do_chat_del_user (struct chat *C, int version, int user);
 #endif

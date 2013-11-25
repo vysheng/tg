@@ -701,7 +701,7 @@ void fetch_seq (void) {
   int x = fetch_int ();
   if (x > seq + 1) {
     logprintf ("Hole in seq: seq = %d, x = %d\n", seq, x);
-    //do_get_difference ();
+    do_get_difference ();
     //seq = x;
   } else if (x == seq + 1) {
     seq = x;
@@ -879,19 +879,18 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       peer_id_t user_id = MK_USER (fetch_int ());
       peer_t *UC = user_chat_get (user_id);
-      if (UC) {
+      if (UC && (UC->flags & FLAG_CREATED)) {
+        int l1 = prefetch_strlen ();
+        char *f = fetch_str (l1);
+        int l2 = prefetch_strlen ();
+        char *l = fetch_str (l2);
         struct user *U = &UC->user;
+        bl_do_set_user_name (U, f, l1, l, l2);
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
         printf (" User ");
         print_user_name (user_id, UC);
-        if (U->first_name) { free (U->first_name); }
-        if (U->last_name) { free (U->last_name); }
-        if (U->print_name) { free (U->print_name); }
-        U->first_name = fetch_str_dup ();
-        U->last_name = fetch_str_dup ();
-        U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
         printf (" changed name to ");
         print_user_name (user_id, UC);
         printf ("\n");
@@ -911,8 +910,25 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t user_id = MK_USER (fetch_int ());
       peer_t *UC = user_chat_get (user_id);
       fetch_date ();
-      if (UC) {
+      if (UC && (UC->flags & FLAG_CREATED)) {
         struct user *U = &UC->user;
+        unsigned y = fetch_int ();
+        long long photo_id;
+        struct file_location big;
+        struct file_location small;
+        memset (&big, 0, sizeof (big));
+        memset (&small, 0, sizeof (small));
+        if (y == CODE_user_profile_photo_empty) {
+          photo_id = 0;
+          big.dc = -2;
+          small.dc = -2;
+        } else {
+          assert (y == CODE_user_profile_photo);
+          photo_id = fetch_long ();
+          fetch_file_location (&small);
+          fetch_file_location (&big);
+        }
+        bl_do_set_user_profile_photo (U, photo_id, &big, &small);
         
         print_start ();
         push_color (COLOR_YELLOW);
@@ -922,17 +938,6 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         printf (" updated profile photo\n");
         pop_color ();
         print_end ();
-        unsigned y = fetch_int ();
-        if (y == CODE_user_profile_photo_empty) {
-          U->photo_id = 0;
-          U->photo_big.dc = -2;
-          U->photo_small.dc = -2;
-        } else {
-          assert (y == CODE_user_profile_photo);
-          U->photo_id = fetch_long ();
-          fetch_file_location (&U->photo_small);
-          fetch_file_location (&U->photo_big);
-        }
       } else {
         struct file_location t;
         unsigned y = fetch_int ();
@@ -981,14 +986,32 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       assert (x == CODE_chat_participants || x == CODE_chat_participants_forbidden);
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       int n = 0;
-      if (x == CODE_chat_participants) {
-        fetch_int (); // admin_id
-        assert (fetch_int () == CODE_vector);
-        int n = fetch_int ();
-        fetch_skip (n * 4);
-        fetch_int (); // version
-      }
       peer_t *C = user_chat_get (chat_id);
+      if (C && (C->flags & FLAG_CREATED)) {
+        if (x == CODE_chat_participants) {
+          bl_do_set_chat_admin (&C->chat, fetch_int ());
+          assert (fetch_int () == CODE_vector);
+          n = fetch_int ();
+          struct chat_user *users = malloc (12 * n);
+          int i;
+          for (i = 0; i < n; i++) {
+            assert (fetch_int () == (int)CODE_chat_participant);
+            users[i].user_id = fetch_int ();
+            users[i].inviter_id = fetch_int ();
+            users[i].date = fetch_int ();
+          }
+          int version = fetch_int (); 
+          bl_do_set_chat_participants (&C->chat, version, n, users);
+        }
+      } else {
+        if (x == CODE_chat_participants) {
+          fetch_int (); // admin_id
+          assert (fetch_int () == CODE_vector);
+          n = fetch_int ();
+          fetch_skip (n * 4);
+          fetch_int (); // version
+        }
+      }
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
@@ -1187,7 +1210,12 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       peer_id_t user_id = MK_USER (fetch_int ());
       peer_id_t inviter_id = MK_USER (fetch_int ());
-      fetch_int (); // version
+      int  version = fetch_int (); 
+      
+      peer_t *C = user_chat_get (chat_id);
+      if (C && (C->flags & FLAG_CREATED)) {
+        bl_do_chat_add_user (&C->chat, version, get_peer_id (user_id), get_peer_id (inviter_id), time (0));
+      }
 
       print_start ();
       push_color (COLOR_YELLOW);
@@ -1207,7 +1235,12 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       peer_id_t user_id = MK_USER (fetch_int ());
-      fetch_int (); // version
+      int version = fetch_int ();
+      
+      peer_t *C = user_chat_get (chat_id);
+      if (C && (C->flags & FLAG_CREATED)) {
+        bl_do_chat_del_user (&C->chat, version, get_peer_id (user_id));
+      }
 
       print_start ();
       push_color (COLOR_YELLOW);
