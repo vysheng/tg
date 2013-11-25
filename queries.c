@@ -50,6 +50,7 @@
 
 char *get_downloads_directory (void);
 int verbosity;
+extern int offline_mode;
 
 long long cur_uploading_bytes;
 long long cur_uploaded_bytes;
@@ -1080,7 +1081,7 @@ void do_get_local_history (peer_id_t id, int limit) {
 }
 
 void do_get_history (peer_id_t id, int limit) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+  if (get_peer_type (id) == PEER_ENCR_CHAT || offline_mode) {
     do_get_local_history (id, limit);
     do_mark_read (id);
     return;
@@ -1609,8 +1610,7 @@ void do_rename_chat (peer_id_t id, char *name) {
 /* }}} */
 
 /* {{{ Chat info */
-int chat_info_on_answer (struct query *q UU) {
-  struct chat *C = fetch_alloc_chat_full ();
+void print_chat_info (struct chat *C) {
   peer_t *U = (void *)C;
   print_start ();
   push_color (COLOR_YELLOW);
@@ -1632,6 +1632,11 @@ int chat_info_on_answer (struct query *q UU) {
   }
   pop_color ();
   print_end ();
+}
+
+int chat_info_on_answer (struct query *q UU) {
+  struct chat *C = fetch_alloc_chat_full ();
+  print_chat_info (C);
   return 0;
 }
 
@@ -1640,6 +1645,15 @@ struct query_methods chat_info_methods = {
 };
 
 void do_get_chat_info (peer_id_t id) {
+  if (offline_mode) {
+    peer_t *C = user_chat_get (id);
+    if (!C) {
+      rprintf ("No such chat\n");
+    } else {
+      print_chat_info (&C->chat);
+    }
+    return;
+  }
   clear_packet ();
   out_int (CODE_messages_get_full_chat);
   assert (get_peer_type (id) == PEER_CHAT);
@@ -1649,8 +1663,8 @@ void do_get_chat_info (peer_id_t id) {
 /* }}} */
 
 /* {{{ User info */
-int user_info_on_answer (struct query *q UU) {
-  struct user *U = fetch_alloc_user_full ();
+
+void print_user_info (struct user *U) {
   peer_t *C = (void *)U;
   print_start ();
   push_color (COLOR_YELLOW);
@@ -1668,6 +1682,11 @@ int user_info_on_answer (struct query *q UU) {
   }
   pop_color ();
   print_end ();
+}
+
+int user_info_on_answer (struct query *q UU) {
+  struct user *U = fetch_alloc_user_full ();
+  print_user_info (U);
   return 0;
 }
 
@@ -1676,6 +1695,15 @@ struct query_methods user_info_methods = {
 };
 
 void do_get_user_info (peer_id_t id) {
+  if (offline_mode) {
+    peer_t *C = user_chat_get (id);
+    if (!C) {
+      rprintf ("No such user\n");
+    } else {
+      print_user_info (&C->user);
+    }
+    return;
+  }
   clear_packet ();
   out_int (CODE_users_get_full_user);
   assert (get_peer_type (id) == PEER_USER);

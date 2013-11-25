@@ -42,6 +42,8 @@
 #include "structures.h"
 
 #include "mtproto-common.h"
+
+#define ALLOW_MULT 1
 char *default_prompt = "> ";
 
 int unread_messages;
@@ -493,13 +495,24 @@ char **complete_text (char *text, int start UU, int end UU) {
   return (char **) rl_completion_matches (text, command_generator);
 }
 
-void work_modifier (const char *s UU) {
+int offline_mode;
+int count = 1;
+void work_modifier (const char *s, int l) {
+  if (is_same_word (s, l, "[offline]")) {
+    offline_mode = 1;
+  }
+#ifdef ALLOW_MULT
+  if (sscanf (s, "[x%d]", &count) >= 1) {
+  }
+#endif
 }
 
 void interpreter (char *line UU) {
   line_ptr = line;
   assert (!in_readline);
   in_readline = 1;
+  offline_mode = 0;
+  count = 1;
   if (!line) { 
     in_readline = 0;
     return; 
@@ -514,12 +527,20 @@ void interpreter (char *line UU) {
     command = next_token (&l);
     if (!command) { in_readline = 0; return; }
     if (*command == '[' && command[l - 1] == ']') {
-      work_modifier (command);
+      work_modifier (command, l);
     } else {
       break;
     }
   }
 
+  int _;
+  char *save = line_ptr;
+  int ll = l;
+  char *cs = command;
+  for (_ = 0; _ < count; _ ++) {
+    line_ptr = save;
+    l = ll;
+    command = cs;
 #define IS_WORD(s) is_same_word (command, l, (s))
 #define RET in_readline = 0; return; 
 
@@ -969,6 +990,7 @@ void interpreter (char *line UU) {
     }
   } else if (IS_WORD ("quit")) {
     exit (0);
+  }
   }
 #undef IS_WORD
 #undef RET

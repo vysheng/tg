@@ -135,6 +135,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
     s++;
   }
   s = buf;
+  int fl = strlen (s);
   int cc = 0;
   while (1) {
     int ok = 1;
@@ -149,17 +150,15 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
       break;
     }
     cc ++;
-    assert (cc <= 99);
+    assert (cc <= 9999);
     if (cc == 1) {
       int l = strlen (s);
       s[l + 2] = 0;
       s[l] = '#';
       s[l + 1] = '1';
-    } else if (cc == 10) {
-      int l = strlen (s);
-      s[l + 1] = 0;
-      s[l] = '0';
-      s[l - 1] = '1';
+    } else if (cc == 10 || cc == 100 || cc == 1000) {
+//      int l = strlen (s);
+      sprintf (s + fl, "#%d", cc);
     } else {
       int l = strlen (s);
       s[l - 1] ++;
@@ -548,7 +547,7 @@ void fetch_chat_full (struct chat *C) {
     users_num = fetch_int ();
     users = malloc (sizeof (struct chat_user) * users_num);
     int i;
-    for (i = 0; i < C->users_num; i++) {
+    for (i = 0; i < users_num; i++) {
       assert (fetch_int () == (int)CODE_chat_participant);
       users[i].user_id = fetch_int ();
       users[i].inviter_id = fetch_int ();
