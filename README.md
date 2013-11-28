@@ -10,6 +10,15 @@ Documentation for MTproto protocol is available here: http://core.telegram.org/m
 
 ### Installation
 
+Clone GitHub Repository
+
+    $ git clone https://github.com/vysheng/tg.git && cd tg
+    
+or download and extrac zip
+
+    $ wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
+    $ tar xzf tg-master.zip && cd tg-master
+    
 #### Linux
 
 Just run
