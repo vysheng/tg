@@ -226,7 +226,7 @@ long long compute_rsa_key_fingerprint (RSA *key);
 extern int *packet_buffer;
 extern int *packet_ptr;
 
-static inline void out_ints (int *what, int len) {
+static inline void out_ints (const int *what, int len) {
   assert (packet_ptr + len <= packet_buffer + PACKET_BUFFER_SIZE);
   memcpy (packet_ptr, what, len * 4);
   packet_ptr += len;

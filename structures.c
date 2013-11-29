@@ -47,6 +47,7 @@ struct message message_list = {
 
 struct tree_peer *peer_tree;
 struct tree_message *message_tree;
+struct tree_message *message_unsent_tree;
 
 int users_allocated;
 int chats_allocated;
@@ -121,6 +122,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
   const char *d[4];
   d[0] = a1; d[1] = a2; d[2] = a3; d[3] = a4;
   static char buf[10000];
+  buf[0] = 0;
   int i;
   int p = 0;
   for (i = 0; i < 4; i++) {
@@ -141,6 +143,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
     int ok = 1;
     int i;
     for (i = 0; i < peer_num; i++) {
+      assert (Peers[i]);
       if (cmp_peer_id (Peers[i]->id, id) && Peers[i]->print_name && !strcmp (Peers[i]->print_name, s)) {
         ok = 0;
         break;
@@ -151,24 +154,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
     }
     cc ++;
     assert (cc <= 9999);
-    if (cc == 1) {
-      int l = strlen (s);
-      s[l + 2] = 0;
-      s[l] = '#';
-      s[l + 1] = '1';
-    } else if (cc == 10 || cc == 100 || cc == 1000) {
-//      int l = strlen (s);
-      sprintf (s + fl, "#%d", cc);
-    } else {
-      int l = strlen (s);
-      s[l - 1] ++;
-      int cc = l - 1;
-      while (s[cc] > '9') {
-        s[cc] = '0';
-        s[cc - 1] ++;
-        cc --;
-      }
-    }
+    sprintf (s + fl, "#%d", cc);
   }
   return strdup (s);
 }
@@ -320,6 +306,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
+    if (l != 256) { logprintf ("l = %d\n", l); }
     if (l < 256) {
       memcpy (g_key + 256 - l, s, l);
     } else {
@@ -328,6 +315,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     
     l = prefetch_strlen ();
     s = fetch_str (l);
+    if (l != 256) { logprintf ("l = %d\n", l); }
     if (l < 256) {
       memcpy (nonce + 256 - l, s, l);
     } else {
@@ -369,6 +357,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
+    if (l != 256) { logprintf ("l = %d\n", l); }
     if (l < 256) {
       memcpy (g_key + 256 - l, s, l);
     } else {
@@ -377,6 +366,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     
     l = prefetch_strlen ();
     s = fetch_str (l);
+    if (l != 256) { logprintf ("l = %d\n", l); }
     if (l < 256) {
       memcpy (nonce + 256 - l, s, l);
     } else {
@@ -635,7 +625,7 @@ void fetch_skip_geo (void) {
   unsigned x = fetch_int ();
   assert (x == CODE_geo_point || x == CODE_geo_point_empty);
   if (x == CODE_geo_point) {
-    in_ptr += 2;
+    in_ptr += 4;
   }
 }
 
@@ -693,6 +683,18 @@ void fetch_video (struct video *V) {
   V->h = fetch_int ();
 }
 
+void fetch_skip_video (void) {
+  unsigned x = fetch_int ();
+  fetch_long ();
+  if (x == CODE_video_empty) { return; }
+  fetch_skip (4);
+  int l = prefetch_strlen ();
+  fetch_str (l);
+  fetch_skip (2);
+  fetch_skip_photo_size ();
+  fetch_skip (3);
+}
+
 void fetch_audio (struct audio *V) {
   memset (V, 0, sizeof (*V));
   unsigned x = fetch_int ();
@@ -704,6 +706,13 @@ void fetch_audio (struct audio *V) {
   V->duration = fetch_int ();
   V->size = fetch_int ();
   V->dc_id = fetch_int ();
+}
+
+void fetch_skip_audio (void) {
+  unsigned x = fetch_int ();
+  fetch_skip (2);
+  if (x == CODE_audio_empty) { return; }
+  fetch_skip (7);
 }
 
 void fetch_document (struct document *V) {
@@ -719,6 +728,20 @@ void fetch_document (struct document *V) {
   V->size = fetch_int ();
   fetch_photo_size (&V->thumb);
   V->dc_id = fetch_int ();
+}
+
+void fetch_skip_document (void) {
+  unsigned x = fetch_int ();
+  fetch_skip (2);
+  if (x == CODE_document_empty) { return; }
+  fetch_skip (4);
+  int l = prefetch_strlen ();
+  fetch_str (l);
+  l = prefetch_strlen ();
+  fetch_str (l);
+  fetch_skip (1);
+  fetch_skip_photo_size ();
+  fetch_skip (1);
 }
 
 void fetch_message_action (struct message_action *M) {
@@ -765,30 +788,104 @@ void fetch_message_action (struct message_action *M) {
   }
 }
 
+void fetch_skip_message_action (void) {
+  unsigned x = fetch_int ();
+  int l;
+  switch (x) {
+  case CODE_message_action_empty:
+    break;
+  case CODE_message_action_geo_chat_create:
+    {
+      l = prefetch_strlen ();
+      fetch_str (l);
+      l = prefetch_strlen ();
+      fetch_str (l);
+    }
+    break;
+  case CODE_message_action_geo_chat_checkin:
+    break;
+  case CODE_message_action_chat_create:
+    l = prefetch_strlen ();
+    fetch_str (l);
+    assert (fetch_int () == (int)CODE_vector);
+    l = fetch_int ();
+    fetch_skip (l);
+    break;
+  case CODE_message_action_chat_edit_title:
+    l = prefetch_strlen ();
+    fetch_str (l);
+    break;
+  case CODE_message_action_chat_edit_photo:
+    fetch_skip_photo ();
+    break;
+  case CODE_message_action_chat_delete_photo:
+    break;
+  case CODE_message_action_chat_add_user:
+    fetch_int ();
+    break;
+  case CODE_message_action_chat_delete_user:
+    fetch_int ();
+    break;
+  default:
+    assert (0);
+  }
+}
+
 void fetch_message_short (struct message *M) {
-  memset (M, 0, sizeof (*M));
-  M->id = fetch_int ();
-  M->to_id = MK_USER (our_id);
-  M->from_id = MK_USER (fetch_int ());
-  M->message = fetch_str_dup ();
-  fetch_pts ();
-  M->date = fetch_int ();
-  fetch_seq ();
-  M->media.type = CODE_message_media_empty;
-  M->unread = 1;
+  int new = !(M->flags & FLAG_CREATED);
+
+  if (new) {
+    int id = fetch_int ();
+    int from_id = fetch_int ();
+    int to_id = our_id;
+    int l = prefetch_strlen ();
+    char *s = fetch_str (l);
+    
+    fetch_pts ();
+    
+    int date = fetch_int ();
+    fetch_seq ();
+
+    bl_do_create_message_text (id, from_id, PEER_USER, to_id, date, l, s);
+  } else {
+    fetch_int (); // id
+    fetch_int (); // from_id
+    int l = prefetch_strlen (); 
+    fetch_str (l); // text
+    
+    fetch_pts ();
+    fetch_int ();
+    fetch_seq ();
+  }
 }
 
 void fetch_message_short_chat (struct message *M) {
-  memset (M, 0, sizeof (*M));
-  M->id = fetch_int ();
-  M->from_id = MK_USER (fetch_int ());
-  M->to_id = MK_CHAT (fetch_int ());
-  M->message = fetch_str_dup ();
-  fetch_pts ();
-  M->date = fetch_int ();
-  fetch_seq ();
-  M->media.type = CODE_message_media_empty;
-  M->unread = 1;
+  int new = !(M->flags & FLAG_CREATED);
+
+  if (new) {
+    int id = fetch_int ();
+    int from_id = fetch_int ();
+    int to_id = fetch_int ();
+    int l = prefetch_strlen ();
+    char *s = fetch_str (l);
+    
+    fetch_pts ();
+    
+    int date = fetch_int ();
+    fetch_seq ();
+
+    bl_do_create_message_text (id, from_id, PEER_CHAT, to_id, date, l, s);
+  } else {
+    fetch_int (); // id
+    fetch_int (); // from_id
+    fetch_int (); // to_id
+    int l = prefetch_strlen (); 
+    fetch_str (l); // text
+    
+    fetch_pts ();
+    fetch_int ();
+    fetch_seq ();
+  }
 }
 
 
@@ -824,6 +921,124 @@ void fetch_message_media (struct message_media *M) {
     break;
   default:
     logprintf ("type = 0x%08x\n", M->type);
+    assert (0);
+  }
+}
+
+void fetch_skip_message_media (void) {
+  unsigned x = fetch_int ();
+  switch (x) {
+  case CODE_message_media_empty:
+    break;
+  case CODE_message_media_photo:
+    fetch_skip_photo ();
+    break;
+  case CODE_message_media_video:
+    fetch_skip_video ();
+    break;
+  case CODE_message_media_audio:
+    fetch_skip_audio ();
+    break;
+  case CODE_message_media_document:
+    fetch_skip_document ();
+    break;
+  case CODE_message_media_geo:
+    fetch_skip_geo ();
+    break;
+  case CODE_message_media_contact:
+    {
+      int l;
+      l = prefetch_strlen ();
+      fetch_str (l);
+      l = prefetch_strlen ();
+      fetch_str (l);
+      l = prefetch_strlen ();
+      fetch_str (l);
+      fetch_int ();
+    }
+    break;
+  case CODE_message_media_unsupported:
+    {
+      int l = prefetch_strlen ();
+      fetch_str (l);
+    }
+    break;
+  default:
+    logprintf ("type = 0x%08x\n", x);
+    assert (0);
+  }
+}
+
+void fetch_skip_message_media_encrypted (void) {
+  unsigned x = fetch_int ();
+  int l;
+  switch (x) {
+  case CODE_decrypted_message_media_empty:
+    break;
+  case CODE_decrypted_message_media_photo:
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    fetch_skip (5);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    break;
+  case CODE_decrypted_message_media_video:
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+
+    fetch_skip (6);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    break;
+  case CODE_decrypted_message_media_audio:
+    fetch_skip (2);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    break;
+  case CODE_decrypted_message_media_document:
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+
+    fetch_skip (2);
+    
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    fetch_skip (1);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    
+    l = prefetch_strlen  ();
+    fetch_str (l);
+    break;
+  case CODE_decrypted_message_media_geo_point:
+    fetch_skip (4);
+    break;
+  case CODE_decrypted_message_media_contact:
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    l = prefetch_strlen ();
+    fetch_str (l); // thumb
+    fetch_skip (1);
+    break;
+  default:
+    logprintf ("type = 0x%08x\n", x);
     assert (0);
   }
 }
@@ -977,7 +1192,32 @@ void fetch_message_media_encrypted (struct message_media *M) {
     M->user_id = fetch_int ();
     break;
   default:
-    logprintf ("type = 0x%08x\n", M->type);
+    logprintf ("type = 0x%08x\n", x);
+    assert (0);
+  }
+}
+
+void fetch_skip_message_action_encrypted (void) {
+  unsigned x = fetch_int ();
+  switch (x) {
+  case CODE_decrypted_message_action_set_message_t_t_l:
+    fetch_skip (1);
+    break;
+  default:
+    logprintf ("x = 0x%08x\n", x);
+    assert (0);
+  }
+}
+
+void fetch_message_action_encrypted (struct message_action *M) {
+  unsigned x = fetch_int ();
+  switch (x) {
+  case CODE_decrypted_message_action_set_message_t_t_l:
+    M->type = x;
+    M->ttl = fetch_int ();
+    break;
+  default:
+    logprintf ("x = 0x%08x\n", x);
     assert (0);
   }
 }
@@ -993,30 +1233,54 @@ peer_id_t fetch_peer_id (void) {
 }
 
 void fetch_message (struct message *M) {
-  memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
   assert (x == CODE_message_empty || x == CODE_message || x == CODE_message_forwarded || x == CODE_message_service);
-  M->id = fetch_int ();
+  int id = fetch_int ();
+  assert (M->id == id);
   if (x == CODE_message_empty) {
-    M->flags |= 1;
     return;
   }
+  int fwd_from_id = 0;
+  int fwd_date = 0;
+
   if (x == CODE_message_forwarded) {
-    M->fwd_from_id = MK_USER (fetch_int ());
-    M->fwd_date = fetch_int ();
+    fwd_from_id = fetch_int ();
+    fwd_date = fetch_int ();
   }
-  M->from_id = MK_USER (fetch_int ());
-  M->to_id = fetch_peer_id ();
-  M->out = fetch_bool ();
-  M->unread = fetch_bool ();
-  M->date = fetch_int ();
+  int from_id = fetch_int ();
+  peer_id_t to_id = fetch_peer_id ();
+
+  fetch_bool (); // out.
+
+  int unread = fetch_bool ();
+  int date = fetch_int ();
+
+  int new = !(M->flags & FLAG_CREATED);
+
   if (x == CODE_message_service) {
-    M->service = 1;
-    fetch_message_action (&M->action);
+    int *start = in_ptr;
+    fetch_skip_message_action ();
+    if (new) {
+      if (fwd_from_id) {
+        bl_do_create_message_service_fwd (id, from_id, get_peer_type (to_id), get_peer_id (to_id), date, fwd_from_id, fwd_date, start, (in_ptr - start));
+      } else {
+        bl_do_create_message_service (id, from_id, get_peer_type (to_id), get_peer_id (to_id), date, start, (in_ptr - start));
+      }
+    }
   } else {
-    M->message = fetch_str_dup ();
-    fetch_message_media (&M->media);
+    int l = prefetch_strlen ();
+    char *s = fetch_str (l);
+    int *start = in_ptr;
+    fetch_skip_message_media ();
+    if (new) {
+      if (fwd_from_id) {
+        bl_do_create_message_media_fwd (id, from_id, get_peer_type (to_id), get_peer_id (to_id), date, fwd_from_id, fwd_date, l, s, start, in_ptr - start);
+      } else {
+        bl_do_create_message_media (id, from_id, get_peer_type (to_id), get_peer_id (to_id), date, l, s, start, in_ptr - start);
+      }
+    }
   }
+  bl_do_set_unread (M, unread);
 }
 
 void fetch_geo_message (struct message *M) {
@@ -1100,29 +1364,26 @@ int decrypt_encrypted_message (struct secret_chat *E) {
 }
 
 void fetch_encrypted_message (struct message *M) {
-  memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
   assert (x == CODE_encrypted_message || x == CODE_encrypted_message_service);
   unsigned sx = x;
-  M->id = fetch_long ();
-  peer_id_t chat = MK_ENCR_CHAT (fetch_int ());
-  M->from_id = MK_USER (our_id);
-  M->to_id = chat;
+  int new = !(M->flags & FLAG_CREATED);
+  long long id = fetch_long ();
+  int to_id = fetch_int ();
+  peer_id_t chat = MK_ENCR_CHAT (to_id);
+  int date = fetch_int ();
+  
   peer_t *P = user_chat_get (chat);
-  M->flags &= ~(FLAG_MESSAGE_EMPTY | FLAG_DELETED);
-  M->flags |= FLAG_ENCRYPTED;
   if (!P) {
     logprintf ("Encrypted message to unknown chat. Dropping\n");
     M->flags |= FLAG_MESSAGE_EMPTY;
   }
-  M->date = fetch_int ();
 
 
   int len = prefetch_strlen ();
   assert ((len & 15) == 8);
   decr_ptr = (void *)fetch_str (len);
   decr_end = decr_ptr + (len / 4);
-  M->flags |= FLAG_ENCRYPTED;
   int ok = 0;
   if (P) {
     if (*(long long *)decr_ptr != P->encr_chat.key_fingerprint) {
@@ -1131,32 +1392,39 @@ void fetch_encrypted_message (struct message *M) {
     }
     decr_ptr += 2;
   }
-  if (P && decrypt_encrypted_message (&P->encr_chat) >= 0) {
+  int l = 0;
+  char *s = 0;
+  int *start = 0;
+  int *end = 0;
+  x = 0;
+  if (P && decrypt_encrypted_message (&P->encr_chat) >= 0 && new) {
     ok = 1;
     int *save_in_ptr = in_ptr;
     int *save_in_end = in_end;
     in_ptr = decr_ptr;
-    int l = fetch_int ();
-    in_end = in_ptr + l; 
-    unsigned x = fetch_int ();
+    int ll = fetch_int ();
+    in_end = in_ptr + ll; 
+    x = fetch_int ();
     if (x == CODE_decrypted_message_layer) {
       int layer = fetch_int ();
       assert (layer >= 0);
       x = fetch_int ();
     }
     assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service);
-    assert (M->id = fetch_long ());
-    l = prefetch_strlen ();
-    fetch_str (l); // random_bytes
+    //assert (id == fetch_long ());
+    fetch_long ();
+    ll = prefetch_strlen ();
+    fetch_str (ll); // random_bytes
     if (x == CODE_decrypted_message) {
-      M->message = fetch_str_dup ();
-      fetch_message_media_encrypted (&M->media);
+      l = prefetch_strlen ();
+      s = fetch_str (l);
+      start = in_ptr;
+      fetch_skip_message_media_encrypted ();
+      end = in_ptr;
     } else {
-      assert (fetch_int () == (int)CODE_decrypted_message_action_set_message_t_t_l);
-      M->action.type = CODE_decrypted_message_action_set_message_t_t_l;
-      P->encr_chat.ttl = fetch_int ();
-      M->action.ttl = P->encr_chat.ttl;
-      M->service = 1;
+      start = in_ptr;
+      fetch_skip_message_action_encrypted ();
+      end = in_ptr;
     }
     in_ptr = save_in_ptr;
     in_end = save_in_end;
@@ -1164,7 +1432,11 @@ void fetch_encrypted_message (struct message *M) {
  
   if (sx == CODE_encrypted_message) {
     if (ok) {
-      fetch_encrypted_message_file (&M->media);
+      int *start_file = in_ptr;
+      fetch_skip_encrypted_message_file ();
+      if (x == CODE_decrypted_message) {
+        bl_do_create_message_media_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, l, s, start, end - start, start_file, in_ptr - start_file);
+      }
     } else {
       x = fetch_int ();
       if (x == CODE_encrypted_file) {
@@ -1174,6 +1446,10 @@ void fetch_encrypted_message (struct message *M) {
       }
       M->media.type = CODE_message_media_empty;
     }    
+  } else {
+    if (ok && x == CODE_decrypted_message_service) {
+      bl_do_create_message_service_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, start, end - start);
+    }
   }
 }
 
@@ -1192,6 +1468,15 @@ void fetch_encrypted_message_file (struct message_media *M) {
     M->encr_photo.dc_id = fetch_int ();
     M->encr_photo.key_fingerprint = fetch_int ();
     
+  }
+}
+
+void fetch_skip_encrypted_message_file (void) {
+  unsigned x = fetch_int ();
+  assert (x == CODE_encrypted_file || x == CODE_encrypted_file_empty);
+  if (x == CODE_encrypted_file_empty) {
+  } else {
+    fetch_skip (7);
   }
 }
 
@@ -1424,10 +1709,33 @@ void message_add_peer (struct message *M) {
     peer_tree = tree_insert_peer (peer_tree, P, lrand48 ());
     Peers[peer_num ++] = P;
   }
-  M->next = P->last;
-  if (M->next) { M->next->prev = M; }
-  M->prev = 0;
-  P->last = M;
+  if (!P->last) {
+    P->last = M;
+    M->prev = M->next = 0;
+  } else {
+    if (get_peer_type (P->id) != PEER_ENCR_CHAT) {
+      struct message *N = P->last;
+      struct message *NP = 0;
+      while (N && N->id > M->id) {
+        NP = N;
+        N = N->next;
+      }
+      if (N) { assert (N->id < M->id); }
+      M->next = N;
+      M->prev = NP;
+      if (N) { N->prev = M; }
+      if (NP) { NP->next = M; }
+      else { P->last = M; }
+    } else {
+      struct message *N = P->last;
+      struct message *NP = 0;
+      M->next = N;
+      M->prev = NP;
+      if (N) { N->prev = M; }
+      if (NP) { NP->next = M; }
+      else { P->last = M; }
+    }
+  }
 }
 
 void message_del_peer (struct message *M) {
@@ -1450,26 +1758,19 @@ void message_del_peer (struct message *M) {
 }
 
 struct message *fetch_alloc_message (void) {
-  struct message *M = malloc (sizeof (*M));
-  fetch_message (M);
-  struct message *M1 = tree_lookup_message (message_tree, M);
-  messages_allocated ++;
-  if (M1) {
-    message_del_use (M1);
-    message_del_peer (M1);
-    free_message (M1);
-    memcpy (M1, M, sizeof (*M));
-    free (M);
-    message_add_use (M1);
-    message_add_peer (M1);
-    messages_allocated --;
-    return M1;
-  } else {
-    message_add_use (M);
-    message_add_peer (M);
-    message_tree = tree_insert_message (message_tree, M, lrand48 ());
-    return M;
+  int data[2];
+  prefetch_data (data, 8);
+  struct message *M = message_get (data[1]);
+
+  if (!M) {
+    M = malloc (sizeof (*M));
+    memset (M, 0, sizeof (*M));
+    M->id = data[1];
+    message_insert_tree (M);
+    messages_allocated ++;
   }
+  fetch_message (M);
+  return M;
 }
 
 struct message *fetch_alloc_geo_message (void) {
@@ -1496,75 +1797,53 @@ struct message *fetch_alloc_geo_message (void) {
 }
 
 struct message *fetch_alloc_encrypted_message (void) {
-  struct message *M = malloc (sizeof (*M));
-  fetch_encrypted_message (M);
-  struct message *M1 = tree_lookup_message (message_tree, M);
-  messages_allocated ++;
-  if (M1) {
-    message_del_use (M1);
-    message_del_peer (M1);
-    free_message (M1);
-    memcpy (M1, M, sizeof (*M));
-    free (M);
-    message_add_use (M1);
-    message_add_peer (M1);
-    messages_allocated --;
-    return M1;
-  } else {
-    message_add_use (M);
-    message_add_peer (M);
-    message_tree = tree_insert_message (message_tree, M, lrand48 ());
-    return M;
+  int data[3];
+  prefetch_data (data, 12);
+  struct message *M = message_get (*(long long *)(data + 1));
+
+  if (!M) {
+    M = malloc (sizeof (*M));
+    memset (M, 0, sizeof (*M));
+    M->id = *(long long *)(data + 1);
+    message_insert_tree (M);
+    messages_allocated ++;
+    assert (message_get (M->id) == M);
+    logprintf ("id = %lld\n", M->id);
   }
+  fetch_encrypted_message (M);
+  return M;
 }
 
 struct message *fetch_alloc_message_short (void) {
-  struct message *M = malloc (sizeof (*M));
-  fetch_message_short (M);
-  struct message *M1 = tree_lookup_message (message_tree, M);
-  messages_allocated ++;
-  if (M1) {
-    message_del_use (M1);
-    message_del_peer (M1);
-    free_message (M1);
-    memcpy (M1, M, sizeof (*M));
-    free (M);
-    message_add_use (M1);
-    message_add_peer (M1);
-    messages_allocated --;
-    return M1;
-  } else {
-    message_add_use (M);
-    message_add_peer (M);
-    message_tree = tree_insert_message (message_tree, M, lrand48 ());
-    return M;
+  int data[1];
+  prefetch_data (data, 4);
+  struct message *M = message_get (data[0]);
+
+  if (!M) {
+    M = malloc (sizeof (*M));
+    memset (M, 0, sizeof (*M));
+    M->id = data[0];
+    message_insert_tree (M);
+    messages_allocated ++;
   }
+  fetch_message_short (M);
+  return M;
 }
 
 struct message *fetch_alloc_message_short_chat (void) {
-  struct message *M = malloc (sizeof (*M));
+  int data[1];
+  prefetch_data (data, 4);
+  struct message *M = message_get (data[0]);
+
+  if (!M) {
+    M = malloc (sizeof (*M));
+    memset (M, 0, sizeof (*M));
+    M->id = data[0];
+    message_insert_tree (M);
+    messages_allocated ++;
+  }
   fetch_message_short_chat (M);
-  if (verbosity >= 2) {
-    logprintf ("Read message with id %lld\n", M->id);
-  }
-  struct message *M1 = tree_lookup_message (message_tree, M);
-  messages_allocated ++;
-  if (M1) {
-    message_del_use (M1);
-    message_del_peer (M1);
-    free_message (M1);
-    memcpy (M1, M, sizeof (*M));
-    free (M);
-    message_add_use (M1);
-    message_add_peer (M1);
-    messages_allocated --;
-    return M1;
-  } else {
-    message_add_use (M);
-    message_add_peer (M);
-    message_tree = tree_insert_message (message_tree, M, lrand48 ());
-    return M;
-  }
+  return M;
 }
 
 struct chat *fetch_alloc_chat (void) {
@@ -1640,8 +1919,36 @@ void update_message_id (struct message *M, long long id) {
   message_tree = tree_insert_message (message_tree, M, lrand48 ());
 }
 
+void message_insert_tree (struct message *M) {
+  assert (M->id);
+  message_tree = tree_insert_message (message_tree, M, lrand48 ());
+}
+
+void message_remove_tree (struct message *M) {
+  assert (M->id);
+  message_tree = tree_delete_message (message_tree, M);
+}
+
 void message_insert (struct message *M) {
   message_add_use (M);
   message_add_peer (M);
-  message_tree = tree_insert_message (message_tree, M, lrand48 ());
+}
+
+void message_insert_unsent (struct message *M) {
+  message_unsent_tree = tree_insert_message (message_unsent_tree, M, lrand48 ());
+}
+
+void message_remove_unsent (struct message *M) {
+  message_unsent_tree = tree_delete_message (message_unsent_tree, M);
+}
+
+void __send_msg (struct message *M) {
+  logprintf ("Resending message...\n");
+  print_message (M);
+
+  do_send_msg (M);
+}
+
+void send_all_unsent (void ) {
+  tree_act_message (message_unsent_tree, __send_msg);
 }

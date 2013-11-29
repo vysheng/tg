@@ -51,6 +51,18 @@
 #define CODE_binlog_chat_full_photo 0x6cca6629
 #define CODE_binlog_add_chat_participant 0x63345108
 #define CODE_binlog_del_chat_participant 0x82d1f0ee
+#define CODE_binlog_create_message_text 0x269acd5b
+#define CODE_binlog_create_message_text_fwd 0xa3d864cd
+#define CODE_binlog_create_message_service 0xbbe5e94b
+#define CODE_binlog_create_message_service_fwd 0xea9c57ae
+#define CODE_binlog_create_message_media 0x62a92d19
+#define CODE_binlog_create_message_media_fwd 0xbefdc462
+#define CODE_binlog_send_message_text 0x31cfd652
+#define CODE_binlog_set_unread 0x21d4c909
+#define CODE_binlog_set_message_sent 0xc335282b
+#define CODE_binlog_set_msg_id 0xf3285b6a
+#define CODE_binlog_create_message_media_encr 0x19cd7c9d
+#define CODE_binlog_create_message_service_encr 0x8b4b9395
 
 void *alloc_log_event (int l);
 void replay_log (void);
@@ -102,4 +114,17 @@ void bl_do_set_chat_participants (struct chat *C, int version, int user_num, str
 void bl_do_set_chat_full_photo (struct chat *U, const int *start, int len);
 void bl_do_chat_add_user (struct chat *C, int version, int user, int inviter, int date);
 void bl_do_chat_del_user (struct chat *C, int version, int user);
+
+void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s);
+void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s);
+void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len);
+void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, const int *data, int len);
+void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len);
+void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s, const int *data, int len);
+void bl_do_create_message_media_encr (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len, const int *data2, int len2);
+void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len);
+void bl_do_send_message_text (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s);
+void bl_do_set_unread (struct message *M, int unread);
+void bl_do_set_message_sent (struct message *M);
+void bl_do_set_msg_id (struct message *M, int id);
 #endif

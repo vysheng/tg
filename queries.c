@@ -779,8 +779,9 @@ int msg_send_encr_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_messages_sent_encrypted_message);
   rprintf ("Sent\n");
   struct message *M = q->extra;
-  M->date = fetch_int ();
-  message_insert (M);
+  //M->date = fetch_int ();
+  fetch_int ();
+  bl_do_set_message_sent (M);
   return 0;
 }
 
@@ -788,12 +789,11 @@ int msg_send_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_sent_message || x == CODE_messages_sent_message_link);
   int id = fetch_int (); // id
+  struct message *M = q->extra;
+  bl_do_set_msg_id (M, id);
   fetch_date ();
   fetch_pts ();
   fetch_seq ();
-  struct message *M = q->extra;
-  M->id = id;
-  message_insert (M);
   if (x == CODE_messages_sent_message_link) {
     assert (fetch_int () == CODE_vector);
     int n = fetch_int ();
@@ -834,6 +834,7 @@ int msg_send_on_answer (struct query *q UU) {
     }
   }
   rprintf ("Sent: id = %d\n", id);
+  bl_do_set_message_sent (M);
   return 0;
 }
 
@@ -848,86 +849,62 @@ struct query_methods msg_send_encr_methods = {
 int out_message_num;
 int our_id;
 
-void do_send_encr_message (peer_id_t id, const char *msg, int len) {
-  peer_t *P = user_chat_get (id);
-  if (!P) {
-    logprintf ("Can not send to unknown encrypted chat\n");
-    return;
-  }
-  if (P->encr_chat.state != sc_ok) {
-    logprintf ("Chat is not yet initialized\n");
-    return;
-  }
+void do_send_encr_msg (struct message *M) {
+  peer_t *P = user_chat_get (M->to_id);
+  if (!P || P->encr_chat.state != sc_ok) { return; }
+  
   clear_packet ();
   out_int (CODE_messages_send_encrypted);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (id));
+  out_int (get_peer_id (M->to_id));
   out_long (P->encr_chat.access_hash);
-  if (!out_message_num) {
-    out_message_num = -lrand48 ();
-  }
-  out_long ((--out_message_num) - (4ll << 32));
+  out_long (M->id);
   encr_start ();
-  //out_int (CODE_decrypted_message_layer);
-  //out_int (8);
   out_int (CODE_decrypted_message);
-  out_long ((out_message_num) - (4ll << 32));
+  out_long (M->id);
   static int buf[4];
   int i;
   for (i = 0; i < 3; i++) {
     buf[i] = mrand48 ();
   }
   out_cstring ((void *)buf, 16);
-  out_cstring ((void *)msg, len);
+  out_cstring ((void *)M->message, M->message_len);
   out_int (CODE_decrypted_message_media_empty);
   encr_finish (&P->encr_chat);
   
-  struct message *M = malloc (sizeof (*M));
-  memset (M, 0, sizeof (*M));
-  M->flags = FLAG_ENCRYPTED;
-  M->from_id = MK_USER (our_id);
-  M->to_id = id;
-  M->unread = 1;
-  M->message = malloc (len + 1);
-  memcpy (M->message, msg, len);
-  M->message[len] = 0;
-  M->message_len = len;
-  M->out = 1;
-  M->media.type = CODE_message_media_empty;
-  M->id = (out_message_num) - (4ll << 32);
-  M->date = time (0);
-  
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M);
-  print_message (M);
+}
+
+void do_send_msg (struct message *M) {
+  if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
+    do_send_encr_msg (M);
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_messages_send_message);
+  out_peer_id (M->to_id);
+  out_cstring (M->message, M->message_len);
+  out_long (M->id);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
 }
 
 void do_send_message (peer_id_t id, const char *msg, int len) {
   if (get_peer_type (id) == PEER_ENCR_CHAT) {
-    do_send_encr_message (id, msg, len);
-    return;
+    peer_t *P = user_chat_get (id);
+    if (!P) {
+      logprintf ("Can not send to unknown encrypted chat\n");
+      return;
+    }
+    if (P->encr_chat.state != sc_ok) {
+      logprintf ("Chat is not yet initialized\n");
+      return;
+    }
   }
-  if (!out_message_num) {
-    out_message_num = -lrand48 ();
-  }
-  clear_packet ();
-  out_int (CODE_messages_send_message);
-  struct message *M = malloc (sizeof (*M));
-  memset (M, 0, sizeof (*M));
-  M->from_id = MK_USER (our_id);
-  M->to_id = id;
-  M->unread = 1;
-  out_peer_id (id);
-  M->message = malloc (len + 1);
-  memcpy (M->message, msg, len);
-  M->message[len] = 0;
-  M->message_len = len;
-  M->out = 1;
-  M->media.type = CODE_message_media_empty;
-  M->id = out_message_num;
-  M->date = time (0);
-  out_cstring (msg, len);
-  out_long ((--out_message_num) - (1ll << 32));
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
+  long long t = -lrand48 () * (1ll << 32) - lrand48 ();
+  bl_do_send_message_text (t, our_id, get_peer_type (id), get_peer_id (id), time (0), len, msg);
+  struct message *M = message_get (t);
+  assert (M);
+  do_send_msg (M);
   print_message (M);
 }
 /* }}} */
@@ -1070,6 +1047,7 @@ void do_get_local_history (peer_id_t id, int limit) {
   if (!P || !P->last) { return; }
   struct message *M = P->last;
   int count = 1;
+  assert (!M->prev);
   while (count < limit && M->next) {
     M = M->next;
     count ++;
@@ -2295,6 +2273,9 @@ void do_create_keys_end (struct secret_chat *U) {
   BIGNUM *a = BN_bin2bn ((void *)U->key, 256, 0);
   BN_init (r);
   BN_mod_exp (r, g_b, a, p, ctx); 
+
+  void *t = malloc (256);
+  memcpy (t, U->key, 256);
   
   memset (U->key, 0, sizeof (U->key));
   BN_bn2bin (r, (void *)U->key);
@@ -2306,7 +2287,15 @@ void do_create_keys_end (struct secret_chat *U) {
   static unsigned char sha_buffer[20];
   sha1 ((void *)U->key, 256, sha_buffer);
   long long k = *(long long *)(sha_buffer + 12);
-  assert (k == U->key_fingerprint);
+  if (k != U->key_fingerprint) {
+    logprintf ("version = %d\n", encr_param_version);
+    hexdump ((void *)U->nonce, (void *)(U->nonce + 256));
+    hexdump ((void *)U->g_key, (void *)(U->g_key + 256));
+    hexdump ((void *)U->key, (void *)(U->key + 64));
+    hexdump ((void *)t, (void *)(t + 256));
+    logprintf ("!!Key fingerprint mismatch\n");
+    U->state = sc_deleted;
+  }
   
   BN_clear_free (p);
   BN_clear_free (g_b);

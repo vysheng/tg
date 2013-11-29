@@ -43,7 +43,7 @@
 
 #include "mtproto-common.h"
 
-//#define ALLOW_MULT 1
+#define ALLOW_MULT 1
 char *default_prompt = "> ";
 
 int unread_messages;
@@ -1096,6 +1096,7 @@ void pop_color (void) {
 void print_media (struct message_media *M) {
   switch (M->type) {
     case CODE_message_media_empty:
+    case CODE_decrypted_message_media_empty:
       return;
     case CODE_message_media_photo:
       if (M->photo.caption && strlen (M->photo.caption)) {

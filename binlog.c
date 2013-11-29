@@ -38,6 +38,7 @@ extern int binlog_enabled;
 extern int encr_root;
 extern unsigned char *encr_prime;
 extern int encr_param_version;
+extern int messages_allocated;
 
 int in_replay_log;
 
@@ -53,11 +54,12 @@ void replay_log_event (void) {
   assert (rptr < wptr);
   int op = *rptr;
 
+  if (verbosity >= 2) {
+    logprintf ("log_pos %lld, op 0x%08x\n", binlog_pos, op);
+  }
+
   in_ptr = rptr;
   in_end = wptr;
-  if (verbosity >= 2) {
-    logprintf ("event = 0x%08x. pos = %lld\n", op, binlog_pos);
-  }
   switch (op) {
   case LOG_START:
     rptr ++;
@@ -703,6 +705,319 @@ void replay_log_event (void) {
       C->user_list_version = version;
     }
     break;
+  case CODE_binlog_create_message_text:
+  case CODE_binlog_send_message_text:
+    in_ptr ++;
+    {
+      long long id;
+      if (op == CODE_binlog_create_message_text) {
+        id = fetch_int ();
+      } else {
+        id = fetch_long ();
+      }
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      if (t == PEER_ENCR_CHAT) {
+        M->flags |= FLAG_ENCRYPTED;
+      }
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+      
+      int l = prefetch_strlen ();
+      M->message = malloc (l + 1);
+      memcpy (M->message, fetch_str (l), l);
+      M->message[l] = 0;
+      M->message_len = l;
+
+      if (t == PEER_ENCR_CHAT) {
+        M->media.type = CODE_decrypted_message_media_empty;
+      } else {
+        M->media.type = CODE_message_media_empty;
+      }
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+
+      message_insert (M);
+      if (op == CODE_binlog_send_message_text) {
+        message_insert_unsent (M);
+        M->flags |= FLAG_PENDING;
+      }
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_text_fwd:
+    in_ptr ++;
+    {
+      int id = fetch_int ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+      M->fwd_from_id = MK_USER (fetch_int ());
+      M->fwd_date = fetch_int ();
+      
+      int l = prefetch_strlen ();
+      M->message = malloc (l + 1);
+      memcpy (M->message, fetch_str (l), l);
+      M->message[l] = 0;
+      M->message_len = l;
+      
+      M->media.type = CODE_message_media_empty;
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_media:
+    in_ptr ++;
+    {
+      int id = fetch_int ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+      
+      int l = prefetch_strlen ();
+      M->message = malloc (l + 1);
+      memcpy (M->message, fetch_str (l), l);
+      M->message[l] = 0;
+      M->message_len = l;
+
+      fetch_message_media (&M->media);
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_media_encr:
+    in_ptr ++;
+    {
+      long long id = fetch_long ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+      
+      int l = prefetch_strlen ();
+      M->message = malloc (l + 1);
+      memcpy (M->message, fetch_str (l), l);
+      M->message[l] = 0;
+      M->message_len = l;
+
+      fetch_message_media_encrypted (&M->media);
+      fetch_encrypted_message_file (&M->media);
+
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_media_fwd:
+    in_ptr ++;
+    {
+      int id = fetch_int ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+      M->fwd_from_id = MK_USER (fetch_int ());
+      M->fwd_date = fetch_int ();
+      
+      int l = prefetch_strlen ();
+      M->message = malloc (l + 1);
+      memcpy (M->message, fetch_str (l), l);
+      M->message[l] = 0;
+      M->message_len = l;
+
+      fetch_message_media (&M->media);
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_service:
+    in_ptr ++;
+    {
+      int id = fetch_int ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+
+      fetch_message_action (&M->action);
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+      M->service = 1;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_service_encr:
+    in_ptr ++;
+    {
+      long long id = fetch_long ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+
+      fetch_message_action_encrypted (&M->action); 
+      
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+      M->service = 1;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_create_message_service_fwd:
+    in_ptr ++;
+    {
+      int id = fetch_int ();
+      struct message *M = message_get (id);
+      if (!M) {
+        M = malloc (sizeof (*M));
+        memset (M, 0, sizeof (*M));
+        M->id = id;
+        message_insert_tree (M);
+        messages_allocated ++;
+      } else {
+        assert (!(M->flags & FLAG_CREATED));
+      }
+      M->flags |= FLAG_CREATED;
+      M->from_id = MK_USER (fetch_int ());
+      int t = fetch_int ();
+      M->to_id = set_peer_id (t, fetch_int ());
+      M->date = fetch_int ();
+      M->fwd_from_id = MK_USER (fetch_int ());
+      M->fwd_date = fetch_int ();
+      fetch_message_action (&M->action);
+      M->unread = 1;
+      M->out = get_peer_id (M->from_id) == our_id;
+      M->service = 1;
+
+      message_insert (M);
+    }
+    rptr = in_ptr;
+    break;
+  case CODE_binlog_set_unread:
+    rptr ++;
+    {
+      struct message *M = message_get (*(rptr ++));
+      assert (M);
+      M->unread = 0;
+    }
+    break;
+  case CODE_binlog_set_message_sent:
+    rptr ++;
+    {
+      struct message *M = message_get (*(long long *)rptr);
+      rptr += 2;
+      assert (M);
+      message_remove_unsent (M);
+      M->flags &= ~FLAG_PENDING;
+    }
+    break;
+  case CODE_binlog_set_msg_id:
+    rptr ++;
+    {
+      struct message *M = message_get (*(long long *)rptr);
+      rptr += 2;
+      assert (M);
+      message_remove_tree (M);
+      message_del_peer (M);
+      M->id = *(rptr ++);
+      message_insert_tree (M);
+      message_add_peer (M);
+    }
+    break;
   case CODE_update_user_photo:
   case CODE_update_user_name:
     work_update_binlog ();
@@ -807,6 +1122,7 @@ void add_log_event (const int *data, int len) {
     assert (rptr == wptr);
   }
   if (binlog_enabled) {
+    assert (binlog_fd > 0);
     assert (write (binlog_fd, data, len) == len);
   }
   in_ptr = in;
@@ -1009,6 +1325,7 @@ void bl_do_encr_chat_delete (struct secret_chat *U) {
 }
 
 void bl_do_encr_chat_requested (struct secret_chat *U, long long access_hash, int date, int admin_id, int user_id, unsigned char g_key[], unsigned char nonce[]) {
+  if (U->state != sc_none) { return; }
   int *ev = alloc_log_event (540);
   ev[0] = CODE_binlog_encr_chat_requested;
   ev[1] = get_peer_id (U->id);
@@ -1257,4 +1574,147 @@ void bl_do_chat_del_user (struct chat *C, int version, int user) {
   ev[2] = version;
   ev[3] = user;
   add_log_event (ev, 16);
+}
+
+void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_text);
+  out_int (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_cstring (s, l);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_send_message_text (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s) {
+  clear_packet ();
+  out_int (CODE_binlog_send_message_text);
+  out_long (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_cstring (s, l);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_text_fwd);
+  out_int (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_int (fwd);
+  out_int (fwd_date);
+  out_cstring (s, l);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_media);
+  out_int (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_cstring (s, l);
+  out_ints (data, len);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_media_encr (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len, const int *data2, int len2) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_media_encr);
+  out_long (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_cstring (s, l);
+  out_ints (data, len);
+  out_ints (data2, len2);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s, const int *data, int len) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_media_fwd);
+  out_int (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_int (fwd);
+  out_int (fwd_date);
+  out_cstring (s, l);
+  out_ints (data, len);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_service);
+  out_int (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_ints (data, len);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_service_encr);
+  out_long (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_ints (data, len);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, const int *data, int len) {
+  clear_packet ();
+  out_int (CODE_binlog_create_message_service_fwd);
+  out_int (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_int (fwd);
+  out_int (fwd_date);
+  out_ints (data, len);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_set_unread (struct message *M, int unread) {
+  if (unread || !M->unread) { return; }
+  clear_packet ();
+  out_int (CODE_binlog_set_unread);
+  out_int (M->id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_set_message_sent (struct message *M) {
+  if (!(M->flags & FLAG_PENDING)) { return; }
+  clear_packet ();
+  out_int (CODE_binlog_set_message_sent);
+  out_long (M->id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_set_msg_id (struct message *M, int id) {
+  if (M->id == id) { return; }
+  clear_packet ();
+  out_int (CODE_binlog_set_msg_id);
+  out_long (M->id);
+  out_int (id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }

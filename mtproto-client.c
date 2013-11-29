@@ -789,7 +789,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       int new = fetch_long (); // random_id
       struct message *M = message_get (new);
       if (M) {
-        update_message_id (M, id);
+        bl_do_set_msg_id (M, id);
       }
     }
     break;
@@ -802,7 +802,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         int id = fetch_int ();
         struct message *M = message_get (id);
         if (M) {
-          M->unread = 0;
+          bl_do_set_unread (M, 0);
         }
       }
       fetch_pts ();
@@ -885,7 +885,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         int l2 = prefetch_strlen ();
         char *l = fetch_str (l2);
         struct user *U = &UC->user;
-        bl_do_set_user_name (U, f, l1, l, l2);
+        bl_do_set_user_real_name (U, f, l1, l, l2);
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));

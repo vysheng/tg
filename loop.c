@@ -436,7 +436,10 @@ int new_dc_num;
 int loop (void) {
   on_start ();
   if (binlog_enabled) {
+    double t = get_double_time ();
+    logprintf ("replay log start\n");
     replay_log ();
+    logprintf ("replay log end in %lf seconds\n", get_double_time () - t);
     write_binlog ();
   } else {
     read_auth_file ();
@@ -571,6 +574,8 @@ int loop (void) {
 
   do_get_difference ();
   net_loop (0, dgot);
+  send_all_unsent ();
+
   do_get_dialog_list ();
 
   return main_loop ();

@@ -38,6 +38,7 @@ typedef struct { int type; int id; } peer_id_t;
 #define FLAG_CHAT_IN_CHAT 128
 
 #define FLAG_ENCRYPTED 4096
+#define FLAG_PENDING 8192
 
 struct file_location {
   int dc;
@@ -337,7 +338,15 @@ struct message *fetch_alloc_message_short (void);
 struct message *fetch_alloc_message_short_chat (void);
 struct message *fetch_alloc_encrypted_message (void);
 void fetch_encrypted_message_file (struct message_media *M);
+void fetch_skip_encrypted_message_file (void);
+void fetch_encrypted_message_file (struct message_media *M);
+void fetch_message_action_encrypted (struct message_action *M);
 peer_id_t fetch_peer_id (void);
+
+void fetch_message_media (struct message_media *M);
+void fetch_message_media_encrypted (struct message_media *M);
+void fetch_message_action (struct message_action *M);
+void message_insert_tree (struct message *M);
 
 void free_user (struct user *U);
 void free_chat (struct chat *U);
@@ -356,6 +365,12 @@ void insert_user (peer_t *P);
 void insert_chat (peer_t *P);
 void fetch_photo (struct photo *P);
 void free_photo (struct photo *P);
+void message_insert_unsent (struct message *M);
+void message_remove_unsent (struct message *M);
+void send_all_unsent (void);
+void message_remove_tree (struct message *M);
+void message_add_peer (struct message *M);
+void message_del_peer (struct message *M);
 
 #define PEER_USER 1
 #define PEER_CHAT 2
