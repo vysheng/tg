@@ -77,6 +77,7 @@ char *config_directory;
 char *binlog_file_name;
 int binlog_enabled;
 extern int log_level;
+int sync_from_start;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -315,7 +316,7 @@ extern int default_dc_num;
 int register_mode;
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:R")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:Rf")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -341,6 +342,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'R':
       register_mode = 1;
+      break;
+    case 'f':
+      sync_from_start = 1;
       break;
     case 'h':
     default:

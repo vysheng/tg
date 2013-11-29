@@ -1,22 +1,66 @@
-# This is my real config
-# Feel free to edit it
+# This is an empty config file
+# Feel free to put something here
 
-default_profile = "tele2";
+default_profile = "binlog";
 
-mts = {
+test_dc1 = {
+  config_directory = ".telegram/test_dc1";
+  test = true;
+  msg_num = true;
+  binlog_enabled = true;
+};
+
+binlog = {
+  config_directory = ".telegram/binlog";
   test = false;
-  config_directory = ".telegram/mts";
+  msg_num = true;
+  binlog_enabled = true;
+  log_level = 2;
+};
+
+binlog_mts = {
+  config_directory = ".telegram/binlog_mts";
+  test = false;
+  msg_num = true;
+  binlog_enabled = true;
+  log_level = 2;
+};
+
+mega = {
+  config_directory = ".telegram/mega";
+  test = false;
+  msg_num = true;
+  binlog_enabled = true;
+  log_level = 2;
+};
+
+new = {
+  config_directory = ".telegram/new";
+  test = false;
   msg_num = true;
 };
 
-tele2 = {
+production = {
+  config_directory = ".telegram/production";
   test = false;
-  config_directory = ".telegram/tele2";
   msg_num = true;
 };
 
 test = {
-  test = true;
   config_directory = ".telegram/test";
+  test = true;
   msg_num = true;
 };
+
+test1 = {
+  config_directory = ".telegram/test1";
+  msg_num = true;
+  binlog_enabled = true;
+};
+
+test2 = {
+  config_directory = ".telegram/test2";
+  msg_num = true;
+  binlog_enabled = true;
+};
+

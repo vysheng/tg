@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -1024,7 +1025,7 @@ void replay_log_event (void) {
     rptr = in_ptr;
     break;
   default:
-    logprintf ("Unknown logevent [0x%08x] 0x%08x [0x%08x]\n", *(rptr - 1), op, *(rptr + 1));
+    logprintf ("Unknown logevent [0x%08x] 0x%08x [0x%08x] at %lld\n", *(rptr - 1), op, *(rptr + 1), binlog_pos);
 
     assert (0);
   }
@@ -1075,8 +1076,8 @@ void replay_log (void) {
       } else {
         int x = wptr - rptr;
         memcpy (binlog_buffer, rptr, 4 * x);
-        wptr -= x;
-        rptr -= x;
+        wptr -= (rptr - binlog_buffer);
+        rptr = binlog_buffer;
       }
       int l = (binlog_buffer + BINLOG_BUFFER_SIZE - wptr) * 4;
       int k = read (fd, wptr, l);
@@ -1103,7 +1104,12 @@ void write_binlog (void) {
     perror ("binlog open");
     exit (2);
   }
-  lseek (binlog_fd, 0, SEEK_END);
+  
+  assert (lseek (binlog_fd, binlog_pos, SEEK_SET) == binlog_pos);
+  if (flock (binlog_fd, LOCK_EX | LOCK_NB) < 0) {
+    perror ("get lock");
+    exit (2);
+  } 
 }
 
 void add_log_event (const int *data, int len) {

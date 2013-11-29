@@ -64,6 +64,7 @@ long long cur_downloading_bytes;
 long long cur_downloaded_bytes;
 
 extern int binlog_enabled;
+extern int sync_from_start;
 
 void out_peer_id (peer_id_t id);
 #define QUERY_TIMEOUT 6.0
@@ -2218,6 +2219,14 @@ BN_CTX *ctx;
 
 void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   int i;
+  int ok = 0;
+  for (i = 0; i < 64; i++) {
+    if (E->key[i]) {
+      ok = 1;
+      break;
+    }
+  }
+  if (ok) { return; } // Already generated key for this chat
   for (i = 0; i < 64; i++) {
     *(((int *)random) + i) ^= mrand48 ();
   }
@@ -2521,7 +2530,10 @@ void do_get_difference (void) {
   difference_got = 0;
   clear_packet ();
   do_insert_header ();
-  if (seq > 0) {
+  if (seq > 0 || sync_from_start) {
+    if (pts == 0) { pts = 1; }
+    if (qts == 0) { qts = 1; }
+    if (last_date == 0) { last_date = 1; }
     out_int (CODE_updates_get_difference);
     out_int (pts);
     out_int (last_date);
