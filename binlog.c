@@ -803,7 +803,7 @@ void add_log_event (const int *data, int len) {
   int *end = in_end;
   replay_log_event ();
   if (rptr != wptr) {
-    logprintf ("Unread %ld ints. Len = %d\n", wptr - rptr, len);
+    logprintf ("Unread %lld ints. Len = %d\n", (long long)(wptr - rptr), len);
     assert (rptr == wptr);
   }
   if (binlog_enabled) {
