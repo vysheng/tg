@@ -48,6 +48,12 @@
 
 #define sha1 SHA1
 
+#ifdef __APPLE__
+#define OPEN_BIN "open %s"
+#else
+#define OPEN_BIN "xdg-open %s"
+#endif
+
 char *get_downloads_directory (void);
 int verbosity;
 extern int offline_mode;
@@ -1777,7 +1783,7 @@ void end_load (struct download *D) {
     logprintf ("Done: %s\n", D->name);
   } else if (D->next == 2) {
     static char buf[1000];
-    sprintf (buf, "xdg-open %s", D->name);
+    sprintf (buf, OPEN_BIN, D->name);
     int x = system (buf);
     if (x < 0) {
       logprintf ("Can not open image viewer: %m\n");
