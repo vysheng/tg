@@ -43,7 +43,7 @@
 
 #include "mtproto-common.h"
 
-#define ALLOW_MULT 1
+//#define ALLOW_MULT 1
 char *default_prompt = "> ";
 
 int unread_messages;
@@ -247,6 +247,11 @@ void update_prompt (void) {
   print_end ();
 }
 
+char *modifiers[] = {
+  "[offline]",
+  0
+};
+
 char *commands[] = {
   "help",
   "msg",
@@ -339,6 +344,8 @@ int commands_flags[] = {
   07,
 };
 
+
+
 int get_complete_mode (void) {
   line_ptr = rl_line_buffer;
   int l = 0;
@@ -347,6 +354,9 @@ int get_complete_mode (void) {
   while (r && r[0] == '[' && r[l - 1] == ']') {
     r = next_token (&l);
     if (!r) { return 0; }
+  }
+  if (*r == '[' && !r[l]) {
+    return 6;
   }
  
   if (!*line_ptr) { return 0; }
@@ -483,6 +493,10 @@ char *command_generator (const char *text, int state) {
     return R;
   case 5:
     index = complete_encr_chat_list (index, text, len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
+    return R;
+  case 6:
+    index = complete_string_list (modifiers, index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   default:
