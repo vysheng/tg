@@ -15,6 +15,10 @@ INCLUDE=-I. -I${srcdir}
 CC=@CC@
 OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o binlog.o
 
+PREFIX?=/usr/local
+INSTALL_BIN=$(PREFIX)/bin
+INSTALL=install
+
 .SUFFIXES:
 
 .SUFFIXES: .c .h .o
@@ -33,3 +37,6 @@ telegram: ${OBJECTS}
 clean:
 	rm -rf *.o telegram > /dev/null || echo "all clean" 
 
+install: all
+	@mkdir -p $(INSTALL_BIN)
+	$(INSTALL) telegram $(INSTALL_BIN)
