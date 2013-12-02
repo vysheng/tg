@@ -272,7 +272,9 @@ void parse_config (void) {
   config_lookup_bool (&conf, buf, &test_dc);
   
   strcpy (buf + l, "log_level");
-  config_lookup_int (&conf, buf, &log_level);
+  long long t = log_level;
+  config_lookup_int (&conf, buf, (void *)&t);
+  log_level = t;
   
   if (!msg_num_mode) {
     strcpy (buf + l, "msg_num");
