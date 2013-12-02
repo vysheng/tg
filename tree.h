@@ -147,6 +147,8 @@ void tree_check_ ## X_NAME (struct tree_ ## X_NAME *T) { \
     assert (T->right->y <= T->y);\
     assert (X_CMP (T->right->x, T->x) > 0); \
   }\
+  tree_check_ ## X_NAME (T->left); \
+  tree_check_ ## X_NAME (T->right); \
 }\
 
 #define int_cmp(a,b) ((a) - (b))

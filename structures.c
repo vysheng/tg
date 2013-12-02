@@ -52,19 +52,27 @@ struct tree_message *message_unsent_tree;
 int users_allocated;
 int chats_allocated;
 int messages_allocated;
-
-int our_id;
-int verbosity;
-peer_t *Peers[MAX_USER_NUM];
 int peer_num;
 int encr_chats_allocated;
 int geo_chats_allocated;
+
+int our_id;
+int verbosity;
+
+peer_t *Peers[MAX_PEER_NUM];
 extern int binlog_enabled;
 
 
 void fetch_skip_photo (void);
 
 #define code_assert(x) if (!(x)) { logprintf ("Can not parse at line %d\n", __LINE__); assert (0); return -1; }
+#define code_try(x) if ((x) == -1) { return -1; }
+
+/*
+ *
+ * Fetch simple structures (immediate fetch into buffer)
+ *
+ */
 
 int fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
@@ -80,18 +88,6 @@ int fetch_file_location (struct file_location *loc) {
     loc->volume = fetch_long ();
     loc->local_id = fetch_int ();
     loc->secret = fetch_long ();
-  }
-  return 0;
-}
-
-int fetch_skip_file_location (void) {
-  int x = fetch_int ();
-  code_assert (x == CODE_file_location_unavailable || x == CODE_file_location);
-
-  if (x == CODE_file_location_unavailable) {
-    in_ptr += 5;
-  } else {
-    in_ptr += 6;
   }
   return 0;
 }
@@ -114,6 +110,33 @@ int fetch_user_status (struct user_status *S) {
     break;
   default:
     assert (0);
+  }
+  return 0;
+}
+
+/*
+ *
+ * Skip simple structures 
+ *
+ */
+
+int fetch_skip_file_location (void) {
+  int x = fetch_int ();
+  code_assert (x == CODE_file_location_unavailable || x == CODE_file_location);
+
+  if (x == CODE_file_location_unavailable) {
+    in_ptr += 5;
+  } else {
+    in_ptr += 6;
+  }
+  return 0;
+}
+
+int fetch_skip_user_status (void) {
+  unsigned x = fetch_int ();
+  code_assert (x == CODE_user_status_empty || x == CODE_user_status_online || x == CODE_user_status_offline);
+  if (x != CODE_user_status_empty) {
+    fetch_int ();
   }
   return 0;
 }
@@ -159,6 +182,12 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
   return strdup (s);
 }
 
+/*
+ *
+ * Fetch with log event
+ *
+ */
+
 long long fetch_user_photo (struct user *U) {
   unsigned x = fetch_int ();
   code_assert (x == CODE_user_profile_photo || x == CODE_user_profile_photo_old || x == CODE_user_profile_photo_empty);
@@ -172,8 +201,8 @@ long long fetch_user_photo (struct user *U) {
   }
   struct file_location big;
   struct file_location small;
-  if (fetch_file_location (&small) < 0) { return -1; }
-  if (fetch_file_location (&big) < 0) { return -1; }
+  code_try (fetch_file_location (&small));
+  code_try (fetch_file_location (&big));
 
   bl_do_set_user_profile_photo (U, photo_id, &big, &small);
   return 0;
@@ -183,9 +212,6 @@ int fetch_user (struct user *U) {
   unsigned x = fetch_int ();
   code_assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
   U->id = MK_USER (fetch_int ());
-  if ((U->flags & FLAG_CREATED) && x == CODE_user_empty) {
-    return 0;
-  }
   if (x == CODE_user_empty) {
     return 0;
   }
@@ -204,8 +230,10 @@ int fetch_user (struct user *U) {
   }
   if (new) {
     int l1 = prefetch_strlen ();
+    code_assert (l1 >= 0);
     char *s1 = fetch_str (l1);
     int l2 = prefetch_strlen ();
+    code_assert (l2 >= 0);
     char *s2 = fetch_str (l2);
     
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
@@ -221,6 +249,7 @@ int fetch_user (struct user *U) {
       char *phone = 0;
       if (x != CODE_user_foreign) {
         phone_len = prefetch_strlen ();
+        code_assert (phone_len >= 0);
         phone = fetch_str (phone_len);
       }
       bl_do_new_user (get_peer_id (U->id), s1, l1, s2, l2, access_token, phone, phone_len, x == CODE_user_contact);
@@ -1496,6 +1525,7 @@ struct user *fetch_alloc_user (void) {
     memset (U, 0, sizeof (*U));
     U->id = MK_USER (data[1]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
+    assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
   }
   fetch_user (&U->user);
@@ -1512,6 +1542,7 @@ struct secret_chat *fetch_alloc_encrypted_chat (void) {
     U->id = MK_ENCR_CHAT (data[1]);
     encr_chats_allocated ++;
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
+    assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
   }
   fetch_encrypted_chat (&U->encr_chat);
@@ -1521,18 +1552,21 @@ struct secret_chat *fetch_alloc_encrypted_chat (void) {
 void insert_encrypted_chat (peer_t *P) {
   encr_chats_allocated ++;
   peer_tree = tree_insert_peer (peer_tree, P, lrand48 ());
+  assert (peer_num < MAX_PEER_NUM);
   Peers[peer_num ++] = P;
 }
 
 void insert_user (peer_t *P) {
   users_allocated ++;
   peer_tree = tree_insert_peer (peer_tree, P, lrand48 ());
+  assert (peer_num < MAX_PEER_NUM);
   Peers[peer_num ++] = P;
 }
 
 void insert_chat (peer_t *P) {
   chats_allocated ++;
   peer_tree = tree_insert_peer (peer_tree, P, lrand48 ());
+  assert (peer_num < MAX_PEER_NUM);
   Peers[peer_num ++] = P;
 }
 
@@ -1550,6 +1584,7 @@ struct user *fetch_alloc_user_full (void) {
     U->id = MK_USER (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     fetch_user_full (&U->user);
+    assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
     return &U->user;
   }
@@ -1707,6 +1742,7 @@ void message_add_peer (struct message *M) {
       break;
     }
     peer_tree = tree_insert_peer (peer_tree, P, lrand48 ());
+    assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = P;
   }
   if (!P->last) {
@@ -1856,6 +1892,7 @@ struct chat *fetch_alloc_chat (void) {
     memset (U, 0, sizeof (*U));
     U->id = MK_CHAT (data[1]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
+    assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
   }
   fetch_chat (&U->chat);
@@ -1876,6 +1913,7 @@ struct chat *fetch_alloc_chat_full (void) {
     U->id = MK_CHAT (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     fetch_chat_full (&U->chat);
+    assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
     return &U->chat;
   }

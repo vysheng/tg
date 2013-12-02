@@ -371,6 +371,7 @@ void send_all_unsent (void);
 void message_remove_tree (struct message *M);
 void message_add_peer (struct message *M);
 void message_del_peer (struct message *M);
+void free_message (struct message *M);
 
 #define PEER_USER 1
 #define PEER_CHAT 2

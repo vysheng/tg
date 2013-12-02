@@ -411,7 +411,7 @@ void hexdump_buf (struct connection_buffer *b) {
 
 void try_rpc_read (struct connection *c) {
   assert (c->in_head);
-  if (verbosity >= 1) {
+  if (verbosity >= 3) {
     hexdump_buf (c->in_head);
   }
 

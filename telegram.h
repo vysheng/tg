@@ -17,5 +17,4 @@
     Copyright Vitaly Valtman 2013
 */
 #define MAX_DC_NUM 9
-#define MAX_USER_NUM 100000
-#define MAX_CHAT_NUM 100000
+#define MAX_PEER_NUM 100000

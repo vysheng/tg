@@ -1284,8 +1284,8 @@ void work_updates (struct connection *c, long long msg_id) {
   for (i = 0; i < n; i++) {
     fetch_alloc_chat ();
   }
-  fetch_date (); // date
-  fetch_seq (); // seq
+  bl_do_set_date (fetch_int ());
+  bl_do_set_seq (fetch_int ());
 }
 
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {

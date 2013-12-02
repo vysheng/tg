@@ -1033,8 +1033,13 @@ void replay_log_event (void) {
       message_remove_tree (M);
       message_del_peer (M);
       M->id = *(rptr ++);
-      message_insert_tree (M);
-      message_add_peer (M);
+      if (message_get (M->id)) {
+        free_message (M);
+        free (M);
+      } else {
+        message_insert_tree (M);
+        message_add_peer (M);
+      }
     }
     break;
   case CODE_update_user_photo:

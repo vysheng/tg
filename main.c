@@ -86,24 +86,33 @@ void set_default_username (const char *s) {
   default_username = strdup (s);
 }
 
+
 /* {{{ TERMINAL */
-tcflag_t old_lflag;
-cc_t old_vtime;
-struct termios term;
+static struct termios term_in, term_out;
+static int term_set_in;
+static int term_set_out;
 
 void get_terminal_attributes (void) {
-  if (tcgetattr (STDIN_FILENO, &term) < 0) {
-    perror ("tcgetattr()");
-    exit (EXIT_FAILURE);
+  if (tcgetattr (STDIN_FILENO, &term_in) < 0) {
+  } else {
+    term_set_in = 1;
   }
-  old_lflag = term.c_lflag;
-  old_vtime = term.c_cc[VTIME];
+  if (tcgetattr (STDOUT_FILENO, &term_out) < 0) {
+  } else {
+    term_set_out = 1;
+  }
 }
 
 void set_terminal_attributes (void) {
-  if (tcsetattr (STDIN_FILENO, 0, &term) < 0) {
-    perror ("tcsetattr()");
-    exit (EXIT_FAILURE);
+  if (term_set_in) {
+    if (tcsetattr (STDIN_FILENO, 0, &term_in) < 0) {
+      perror ("tcsetattr()");
+    }
+  }
+  if (term_set_out) {
+    if (tcsetattr (STDOUT_FILENO, 0, &term_out) < 0) {
+      perror ("tcsetattr()");
+    }
   }
 }
 /* }}} */
