@@ -357,6 +357,9 @@ void args_parse (int argc, char **argv) {
     case 'f':
       sync_from_start = 1;
       break;
+    case 'B':
+      binlog_enabled = 1;
+      break;
     case 'h':
     default:
       usage ();
