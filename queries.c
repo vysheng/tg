@@ -845,8 +845,16 @@ int msg_send_on_answer (struct query *q UU) {
   return 0;
 }
 
+int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
+  logprintf ( "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
+  struct message *M = q->extra;
+  bl_do_delete_msg (M);
+  return 0;
+}
+
 struct query_methods msg_send_methods = {
-  .on_answer = msg_send_on_answer
+  .on_answer = msg_send_on_answer,
+  .on_error = msg_send_on_error
 };
 
 struct query_methods msg_send_encr_methods = {

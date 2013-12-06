@@ -81,6 +81,7 @@
 #define CODE_binlog_set_msg_id 0xf3285b6a
 #define CODE_binlog_create_message_media_encr 0x19cd7c9d
 #define CODE_binlog_create_message_service_encr 0x8b4b9395
+#define CODE_binlog_delete_msg 0xa1d6ab6d
 
 void *alloc_log_event (int l);
 void replay_log (void);
@@ -145,4 +146,5 @@ void bl_do_send_message_text (long long msg_id, int from_id, int to_type, int to
 void bl_do_set_unread (struct message *M, int unread);
 void bl_do_set_message_sent (struct message *M);
 void bl_do_set_msg_id (struct message *M, int id);
+void bl_do_delete_msg (struct message *M);
 #endif

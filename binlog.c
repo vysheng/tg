@@ -1046,6 +1046,22 @@ void replay_log_event (void) {
       }
     }
     break;
+  case CODE_binlog_delete_msg:
+    rptr ++;
+    {
+      struct message *M = message_get (*(long long *)rptr);
+      rptr += 2;
+      assert (M);
+      if (M->flags & FLAG_PENDING) {
+        message_remove_unsent (M);
+        M->flags &= ~FLAG_PENDING;
+      }
+      message_remove_tree (M);
+      message_del_peer (M);
+      free_message (M);
+      free (M);
+    }
+    break;
   case CODE_update_user_photo:
   case CODE_update_user_name:
     work_update_binlog ();
@@ -1749,5 +1765,12 @@ void bl_do_set_msg_id (struct message *M, int id) {
   out_int (CODE_binlog_set_msg_id);
   out_long (M->id);
   out_int (id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_delete_msg (struct message *M) {
+  clear_packet ();
+  out_int (CODE_binlog_delete_msg);
+  out_long (M->id);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }

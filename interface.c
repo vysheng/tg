@@ -63,6 +63,9 @@ char *line_ptr;
 extern peer_t *Peers[];
 extern int peer_num;
 
+int in_chat_mode;
+peer_id_t chat_mode_id;
+
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -204,9 +207,15 @@ peer_id_t next_token_peer (void) {
 }
 
 char *get_default_prompt (void) {
-  static char buf[100];
+  static char buf[1000];
+  int l = 0;
+  if (in_chat_mode) {
+    peer_t *U = user_chat_get (chat_mode_id);
+    assert (U && U->print_name);
+    l += sprintf (buf + l, COLOR_RED "%.*s " COLOR_NORMAL, 100, U->print_name);
+  }
   if (unread_messages || cur_uploading_bytes || cur_downloading_bytes) {
-    int l = sprintf (buf, COLOR_RED "[");
+    l += sprintf (buf + l, COLOR_RED "[");
     int ok = 0;
     if (unread_messages) {
       l += sprintf (buf + l, "%d unread", unread_messages);
@@ -222,11 +231,11 @@ char *get_default_prompt (void) {
       ok = 1;
       l += sprintf (buf + l, "%lld%%Down", 100 * cur_downloaded_bytes / cur_downloading_bytes);
     }
-    sprintf (buf + l, "]" COLOR_NORMAL "%s", default_prompt);
+    l += sprintf (buf + l, "]" COLOR_NORMAL);
     return buf;
-  } else {
-    return default_prompt;
-  }
+  } 
+  l += sprintf (buf + l, "%s", default_prompt);
+  return buf;
 }
 
 char *complete_none (const char *text UU, int state UU) {
@@ -249,6 +258,12 @@ void update_prompt (void) {
 
 char *modifiers[] = {
   "[offline]",
+  0
+};
+
+char *in_chat_commands[] = {
+  "/exit",
+  "/quit",
   0
 };
 
@@ -296,6 +311,7 @@ char *commands[] = {
   "load_document",
   "view_document",
   "set",
+  "chat_with_peer",
   0 };
 
 int commands_flags[] = {
@@ -342,6 +358,7 @@ int commands_flags[] = {
   07,
   07,
   07,
+  072,
 };
 
 
@@ -451,6 +468,12 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
 }
 char *command_generator (const char *text, int state) {  
   static int len, index, mode;
+
+  if (in_chat_mode) {
+    char *R = 0;
+    index = complete_string_list (in_chat_commands, index, text, rl_point, &R);
+    return R;
+  }
  
   char c = 0;
   if (!state) {
@@ -521,10 +544,27 @@ void work_modifier (const char *s, int l) {
 #endif
 }
 
+
+
+void interpreter_chat_mode (char *line) {
+  if (!strncmp (line, "/exit", 5) || !strncmp (line, "/quit", 5)) {
+    in_chat_mode = 0;
+    update_prompt ();
+    return;
+  }
+  do_send_message (chat_mode_id, line, strlen (line));
+}
+
 void interpreter (char *line UU) {
-  line_ptr = line;
   assert (!in_readline);
   in_readline = 1;
+  if (in_chat_mode) {
+    interpreter_chat_mode (line);
+    in_readline = 0;
+    return;
+  }
+
+  line_ptr = line;
   offline_mode = 0;
   count = 1;
   if (!line) { 
@@ -1002,6 +1042,10 @@ void interpreter (char *line UU) {
     } else if (IS_WORD ("msg_num")) {
       msg_num_mode = num;
     }
+  } else if (IS_WORD ("chat_with_peer")) {
+    GET_PEER;
+    in_chat_mode = 1;
+    chat_mode_id = id;
   } else if (IS_WORD ("quit")) {
     exit (0);
   }
