@@ -1030,6 +1030,10 @@ void replay_log_event (void) {
       struct message *M = message_get (*(long long *)rptr);
       rptr += 2;
       assert (M);
+      if (M->flags & FLAG_PENDING) {
+        message_remove_unsent (M);
+        M->flags &= ~FLAG_PENDING;
+      }
       message_remove_tree (M);
       message_del_peer (M);
       M->id = *(rptr ++);

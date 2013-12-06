@@ -562,7 +562,7 @@ void interpreter (char *line UU) {
 #define GET_PEER \
   id = next_token_peer (); \
   if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
-    printf ("Bad user/char id\n"); \
+    printf ("Bad user/chat id\n"); \
     RET; \
   } 
 #define GET_PEER_USER \

@@ -701,7 +701,7 @@ void fetch_seq (void) {
   int x = fetch_int ();
   if (x > seq + 1) {
     logprintf ("Hole in seq: seq = %d, x = %d\n", seq, x);
-    do_get_difference ();
+    //do_get_difference ();
     //seq = x;
   } else if (x == seq + 1) {
     seq = x;
