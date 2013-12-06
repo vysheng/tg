@@ -871,6 +871,7 @@ void interpreter (char *line UU) {
       "\t\tLevel 2: prints line, when somebody is typing in chat\n"
       "\t\tLevel 3: prints line, when somebody changes online status\n"
       "\tmsg_num - enables/disables numeration of messages\n"
+      "chat_with_peer <peer> - starts chat with this peer. Every command after is message to this peer. Type /exit or /quit to end this mode\n"
       );
     pop_color ();
   } else if (IS_WORD ("show_license")) {
