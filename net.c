@@ -21,8 +21,11 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -37,7 +40,7 @@
 #include "tree.h"
 #include "interface.h"
 
-#ifdef __MACH__
+#if defined(__MACH__) || defined(__FreeBSD__)
 #define POLLRDHUP 0
 #endif
 

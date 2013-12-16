@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include <assert.h>
+#define _WITH_GETLINE
 #include <stdio.h>
 
 #include <stdlib.h>

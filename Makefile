@@ -1,13 +1,13 @@
 srcdir=.
 
-CFLAGS=-g -O2
-LDFLAGS=
+CFLAGS=-I/usr/local/include
+LDFLAGS=-L/usr/local/lib
 CPPFLAGS=
 DEFS=-DHAVE_CONFIG_H
-COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
+COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
 
-EXTRA_LIBS= -lreadline -lrt -lconfig
-LOCAL_LDFLAGS=-lm -lcrypto -lz -lssl -rdynamic -ggdb ${EXTRA_LIBS}
+EXTRA_LIBS=
+LOCAL_LDFLAGS=-lm -lcrypto -lz -lssl -rdynamic -ggdb -lconfig -lreadline -lexecinfo ${EXTRA_LIBS}
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 
 HEADERS= ${srcdir}/constants.h  ${srcdir}/include.h  ${srcdir}/interface.h  ${srcdir}/LICENSE.h  ${srcdir}/loop.h  ${srcdir}/mtproto-client.h  ${srcdir}/mtproto-common.h  ${srcdir}/net.h  ${srcdir}/no-preview.h  ${srcdir}/queries.h  ${srcdir}/structures.h  ${srcdir}/telegram.h  ${srcdir}/tree.h ${srcdir}/config.h ${srcdir}/binlog.h
