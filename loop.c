@@ -18,9 +18,9 @@
 */
 #define READLINE_CALLBACKS
 #include "config.h"
+#define _GNU_SOURCE
 
 #include <assert.h>
-#define _WITH_GETLINE
 #include <stdio.h>
 
 #include <stdlib.h>
