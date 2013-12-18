@@ -31,5 +31,5 @@ telegram: ${OBJECTS}
 
 
 clean:
-	rm -rf *.o telegram > /dev/null || echo "all clean" 
+	rm -rf *.o telegram config.log config.status > /dev/null || echo "all clean"
 
