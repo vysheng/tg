@@ -60,6 +60,7 @@ char nonce[256];
 char new_nonce[256];
 char server_nonce[256];
 extern int binlog_enabled;
+extern int disable_auto_accept;
 
 
 int total_packets_sent;
@@ -1148,7 +1149,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       }
       pop_color ();
       print_end ();
-      if (E->state == sc_request) {
+      if (E->state == sc_request && !disable_auto_accept) {
         do_accept_encr_chat_request (E);
       }
       fetch_int (); // date

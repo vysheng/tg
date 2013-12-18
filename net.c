@@ -45,6 +45,7 @@ DEFINE_TREE(int,int,int_cmp,0)
 
 int verbosity;
 extern struct connection_methods auth_methods;
+extern FILE *log_net_f;
 
 void fail_connection (struct connection *c);
 
@@ -348,6 +349,7 @@ void fail_connection (struct connection *c) {
   restart_connection (c);
 }
 
+extern FILE *log_net_f;
 void try_write (struct connection *c) {
   if (verbosity) {
     logprintf ( "try write: fd = %d\n", c->fd);
@@ -355,6 +357,15 @@ void try_write (struct connection *c) {
   int x = 0;
   while (c->out_head) {
     int r = write (c->fd, c->out_head->rptr, c->out_head->wptr - c->out_head->rptr);
+    if (r > 0 && log_net_f) {
+      fprintf (log_net_f, "OUT %s:%d", c->ip, c->port);
+      int i;
+      for (i = 0; i < r; i++) {
+        fprintf (log_net_f, " %02x", *(unsigned char *)(c->out_head->rptr + i));
+      }
+      fprintf (log_net_f, "\n");
+      fflush (log_net_f);
+    }
     if (r >= 0) {
       x += r;
       c->out_head->rptr += r;
@@ -457,6 +468,15 @@ void try_read (struct connection *c) {
   int x = 0;
   while (1) {
     int r = read (c->fd, c->in_tail->wptr, c->in_tail->end - c->in_tail->wptr);
+    if (r > 0 && log_net_f) {
+      fprintf (log_net_f, "IN  %s:%d", c->ip, c->port);
+      int i;
+      for (i = 0; i < r; i++) {
+        fprintf (log_net_f, " %02x", *(unsigned char *)(c->in_tail->wptr + i));
+      }
+      fprintf (log_net_f, "\n");
+      fflush (log_net_f);
+    }
     if (r > 0) {
       c->last_receive_time = get_double_time ();
       stop_ping_timer (c);

@@ -324,10 +324,14 @@ extern char *rsa_public_key_name;
 extern int verbosity;
 extern int default_dc_num;
 
+char *log_net_file;
+FILE *log_net_f;
+
 int register_mode;
+int disable_auto_accept;
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:Rf")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:E")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -359,6 +363,17 @@ void args_parse (int argc, char **argv) {
       break;
     case 'B':
       binlog_enabled = 1;
+      break;
+    case 'L':
+      if (log_net_file) { 
+        usage ();
+      }
+      log_net_file = strdup (optarg);
+      log_net_f = fopen (log_net_file, "a");
+      assert (log_net_f);
+      break;
+    case 'E':
+      disable_auto_accept = 1;
       break;
     case 'h':
     default:

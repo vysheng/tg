@@ -1369,6 +1369,10 @@ void print_message (struct message *M) {
     print_service_message (M);
     return;
   }
+  if (!get_peer_type (M->to_id)) {
+    logprintf ("Bad msg\n");
+    return;
+  }
 
   last_from_id = M->from_id;
   last_to_id = M->to_id;

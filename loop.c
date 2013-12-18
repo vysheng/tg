@@ -104,6 +104,7 @@ size_t *_l;
 int got_it_ok;
 
 void got_it (char *line, int len) {
+  assert (len > 0);
   line[-- len] = 0; // delete end of line
   *_s = line;
   *_l = len;  
