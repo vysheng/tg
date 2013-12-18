@@ -4,7 +4,7 @@ CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 CPPFLAGS=@CPPFLAGS@
 DEFS=@DEFS@
-COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
+COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
 
 EXTRA_LIBS=@EXTRA_LIBS@
 LOCAL_LDFLAGS=-lm -lcrypto -lz -lssl -rdynamic -ggdb -lconfig -lreadline -lexecinfo ${EXTRA_LIBS}

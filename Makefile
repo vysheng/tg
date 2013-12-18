@@ -4,7 +4,7 @@ CFLAGS=-I/usr/local/include
 LDFLAGS=-L/usr/local/lib
 CPPFLAGS=
 DEFS=-DHAVE_CONFIG_H
-COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
+COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
 
 EXTRA_LIBS=
 LOCAL_LDFLAGS=-lm -lcrypto -lz -lssl -rdynamic -ggdb -lconfig -lreadline -lexecinfo ${EXTRA_LIBS}
