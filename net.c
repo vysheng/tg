@@ -42,6 +42,7 @@
 #endif
 
 DEFINE_TREE(int,int,int_cmp,0)
+double get_utime (int clock_id);
 
 int verbosity;
 extern struct connection_methods auth_methods;
@@ -358,7 +359,7 @@ void try_write (struct connection *c) {
   while (c->out_head) {
     int r = write (c->fd, c->out_head->rptr, c->out_head->wptr - c->out_head->rptr);
     if (r > 0 && log_net_f) {
-      fprintf (log_net_f, "%d %d OUT %s:%d", (int)time (0), r, c->ip, c->port);
+      fprintf (log_net_f, "%.02lf %d OUT %s:%d", get_utime (CLOCK_REALTIME), r, c->ip, c->port);
       int i;
       for (i = 0; i < r; i++) {
         fprintf (log_net_f, " %02x", *(unsigned char *)(c->out_head->rptr + i));
@@ -469,7 +470,7 @@ void try_read (struct connection *c) {
   while (1) {
     int r = read (c->fd, c->in_tail->wptr, c->in_tail->end - c->in_tail->wptr);
     if (r > 0 && log_net_f) {
-      fprintf (log_net_f, "%d %d IN %s:%d", (int)time (0), r, c->ip, c->port);
+      fprintf (log_net_f, "%.02lf %d IN %s:%d", get_utime (CLOCK_REALTIME), r, c->ip, c->port);
       int i;
       for (i = 0; i < r; i++) {
         fprintf (log_net_f, " %02x", *(unsigned char *)(c->in_tail->wptr + i));
