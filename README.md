@@ -42,8 +42,11 @@ Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-2829373
 #### FreeBSD
 
 Install these ports:
+
 * devel/libconfig
 * devel/libexecinfo
+
+Then build:
 
     $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure
     $ make
