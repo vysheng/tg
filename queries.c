@@ -1592,7 +1592,7 @@ struct query_methods rename_chat_methods = {
   .on_answer = rename_chat_on_answer
 };
 
-void do_rename_chat (peer_id_t id, char *name) {
+void do_rename_chat (peer_id_t id, char *name UU) {
   clear_packet ();
   out_int (CODE_messages_edit_chat_title);
   assert (get_peer_type (id) == PEER_CHAT);
@@ -2316,7 +2316,8 @@ void do_create_keys_end (struct secret_chat *U) {
     hexdump ((void *)U->g_key, (void *)(U->g_key + 256));
     hexdump ((void *)U->key, (void *)(U->key + 64));
     hexdump ((void *)t, (void *)(t + 256));
-    logprintf ("!!Key fingerprint mismatch\n");
+    hexdump ((void *)sha_buffer, (void *)(sha_buffer + 20));
+    logprintf ("!!Key fingerprint mismatch (my 0x%llx 0x%llx)\n", (unsigned long long)k, (unsigned long long)U->key_fingerprint);
     U->state = sc_deleted;
   }
   

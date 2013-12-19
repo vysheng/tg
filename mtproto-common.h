@@ -304,6 +304,7 @@ static inline char *fetch_str (int len) {
 
 static inline char *fetch_str_dup (void) {
   int l = prefetch_strlen ();
+  assert (l >= 0);
   char *s = malloc (l + 1);
   memcpy (s, fetch_str (l), l);
   s[l] = 0;
@@ -359,6 +360,12 @@ static inline int set_update_int (int *value, int new_value) {
 
 static inline void fetch_skip (int n) {
   in_ptr += n;
+}
+
+static inline void fetch_skip_str (void) {
+  int l = prefetch_strlen ();
+  assert (l >= 0);
+  fetch_str (l);
 }
 
 static __inline__ unsigned long long rdtsc(void) {

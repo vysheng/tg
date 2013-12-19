@@ -205,7 +205,7 @@ int rpc_send_message (struct connection *c, void *data, int len) {
     assert (write_out (c, &total_len, 4) == 4);
   }
   c->out_packet_num ++;
-  write_out (c, data, len);
+  assert (write_out (c, data, len) == len);
   flush_out (c);
 
   total_packets_sent ++;
@@ -726,11 +726,8 @@ void work_update_binlog (void) {
         U->last_name = fetch_str_dup ();
         U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
       } else {
-        int l;
-        l = prefetch_strlen ();
-        fetch_str (l);
-        l = prefetch_strlen ();
-        fetch_str (l);
+        fetch_skip_str ();
+        fetch_skip_str ();
       }
     }
     break;
@@ -778,6 +775,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_new_message:
     {
       struct message *M = fetch_alloc_message ();
+      assert (M);
       fetch_pts ();
       unread_messages ++;
       print_message (M);
@@ -898,11 +896,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         pop_color ();
         print_end ();
       } else {
-        int l;
-        l = prefetch_strlen ();
-        fetch_str (l);
-        l = prefetch_strlen ();
-        fetch_str (l);
+        fetch_skip_str ();
+        fetch_skip_str ();
       }
     }
     break;

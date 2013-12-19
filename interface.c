@@ -264,6 +264,8 @@ char *modifiers[] = {
 char *in_chat_commands[] = {
   "/exit",
   "/quit",
+  "/history",
+  "/read",
   0
 };
 
@@ -550,6 +552,17 @@ void interpreter_chat_mode (char *line) {
   if (!strncmp (line, "/exit", 5) || !strncmp (line, "/quit", 5)) {
     in_chat_mode = 0;
     update_prompt ();
+    return;
+  }
+  if (!strncmp (line, "/history", 8)) {
+    int limit = 40;
+    sscanf  (line, "/history %d", &limit);
+    if (limit < 0 || limit > 1000) { limit = 40; }
+    do_get_history (chat_mode_id, limit);
+    return;
+  }
+  if (!strncmp (line, "/read", 5)) {
+    do_mark_read (chat_mode_id);
     return;
   }
   do_send_message (chat_mode_id, line, strlen (line));
@@ -1153,6 +1166,7 @@ void pop_color (void) {
 }
 
 void print_media (struct message_media *M) {
+  assert (M);
   switch (M->type) {
     case CODE_message_media_empty:
     case CODE_decrypted_message_media_empty:
@@ -1250,6 +1264,7 @@ void print_user_name (peer_id_t id, peer_t *U) {
 }
 
 void print_chat_name (peer_id_t id, peer_t *C) {
+  assert (get_peer_type (id) == PEER_CHAT);
   push_color (COLOR_MAGENTA);
   if (!C) {
     printf ("chat#%d", get_peer_id (id));
@@ -1260,6 +1275,7 @@ void print_chat_name (peer_id_t id, peer_t *C) {
 }
 
 void print_encr_chat_name (peer_id_t id, peer_t *C) {
+  assert (get_peer_type (id) == PEER_ENCR_CHAT);
   push_color (COLOR_MAGENTA);
   if (!C) {
     printf ("encr_chat#%d", get_peer_id (id));
@@ -1270,6 +1286,7 @@ void print_encr_chat_name (peer_id_t id, peer_t *C) {
 }
 
 void print_encr_chat_name_full (peer_id_t id, peer_t *C) {
+  assert (get_peer_type (id) == PEER_ENCR_CHAT);
   push_color (COLOR_MAGENTA);
   if (!C) {
     printf ("encr_chat#%d", get_peer_id (id));
@@ -1297,6 +1314,7 @@ void print_date_full (long t) {
 int our_id;
 
 void print_service_message (struct message *M) {
+  assert (M);
   print_start ();
   push_color (COLOR_GREY);
   
@@ -1310,6 +1328,7 @@ void print_service_message (struct message *M) {
   if (get_peer_type (M->to_id) == PEER_CHAT) {
     print_chat_name (M->to_id, user_chat_get (M->to_id));
   } else {
+    assert (get_peer_type (M->to_id) == PEER_ENCR_CHAT);
     print_encr_chat_name (M->to_id, user_chat_get (M->to_id));
   }
   printf (" ");
@@ -1362,9 +1381,11 @@ peer_id_t last_from_id;
 peer_id_t last_to_id;
 
 void print_message (struct message *M) {
+  assert (M);
   if (M->flags & (FLAG_MESSAGE_EMPTY | FLAG_DELETED)) {
     return;
   }
+  if (!(M->flags & FLAG_CREATED)) { return; }
   if (M->service) {
     print_service_message (M);
     return;
