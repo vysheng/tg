@@ -26,6 +26,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/endian.h>
 #include <sys/types.h>
 #include <aio.h>
 #include <netdb.h>
@@ -34,6 +35,7 @@
 #include <openssl/pem.h>
 #include <openssl/sha.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <zlib.h>
@@ -45,6 +47,10 @@
 #include "interface.h"
 #include "structures.h"
 #include "binlog.h"
+
+#if defined(__FreeBSD__)
+#define __builtin_bswap32(x) bswap32(x)
+#endif
 
 #define sha1 SHA1
 
@@ -1585,7 +1591,7 @@ int rpc_execute (struct connection *c, int op, int len) {
     logprintf ( "have %d Response bytes\n", Response_len);
   }
 
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__FreeBSD__)
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
   int o = c_state;
@@ -1593,19 +1599,19 @@ int rpc_execute (struct connection *c, int op, int len) {
   switch (o) {
   case st_reqpq_sent:
     process_respq_answer (c, Response/* + 8*/, Response_len/* - 12*/);
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__FreeBSD__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_reqdh_sent:
     process_dh_answer (c, Response/* + 8*/, Response_len/* - 12*/);
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__FreeBSD__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_client_dh_sent:
     process_auth_complete (c, Response/* + 8*/, Response_len/* - 12*/);
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__FreeBSD__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
@@ -1615,7 +1621,7 @@ int rpc_execute (struct connection *c, int op, int len) {
     } else {
       process_rpc_message (c, (void *)(Response/* + 8*/), Response_len/* - 12*/);
     }
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__FreeBSD__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
@@ -1643,7 +1649,7 @@ int tc_becomes_ready (struct connection *c) {
   assert (write_out (c, &byte, 1) == 1);
   flush_out (c);
   
-#ifndef __MACH__
+#if !defined(__MACH__) && !defined(__FreeBSD__)
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
   int o = c_state;
