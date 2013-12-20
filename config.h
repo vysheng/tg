@@ -16,6 +16,9 @@
 /* Define to 1 if you have the `edit' library (-ledit). */
 /* #undef HAVE_LIBEDIT */
 
+/* Define to 1 if you have the `execinfo' library (-lexecinfo). */
+/* #undef HAVE_LIBEXECINFO */
+
 /* Define to 1 if you have the `m' library (-lm). */
 #define HAVE_LIBM 1
 

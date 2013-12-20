@@ -12,6 +12,21 @@ AC_CHECK_LIB([crypto], [AES_set_encrypt_key])
 
 EXTRA_LIBS=""
 
+BT=
+AC_CHECK_FUNC([backtrace],
+  [
+    BT=1
+  ],
+  [
+  ]
+)
+
+if test "x$BT" = "x" ; then
+  AC_MSG_RESULT([no])
+  AC_CHECK_LIB([execinfo], [backtrace]) 
+  [ EXTRA_LIBS+=" -lexecinfo" ; ]
+fi
+
 AC_CHECK_LIB([readline], [rl_save_prompt], 
   [
     AC_DEFINE([READLINE_GNU], [1], [Use gnu libreadline])
