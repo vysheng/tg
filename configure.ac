@@ -24,24 +24,24 @@ AC_CHECK_FUNC([backtrace],
 if test "x$BT" = "x" ; then
   AC_MSG_RESULT([no])
   AC_CHECK_LIB([execinfo], [backtrace]) 
-  [ EXTRA_LIBS+=" -lexecinfo" ; ]
+  [ EXTRA_LIBS="${EXTRA_LIBS} -lexecinfo" ; ]
 fi
 
 AC_CHECK_LIB([readline], [rl_save_prompt], 
   [
     AC_DEFINE([READLINE_GNU], [1], [Use gnu libreadline])
-    [ EXTRA_LIBS+=" -lreadline" ; ]
+    [ EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ; ]
   ],
   [
     AC_CHECK_LIB([edit], [rl_set_prompt])
     AC_DEFINE([READLINE_EDIT], [1], [Use libedit])
-    [ EXTRA_LIBS+=" -ledit" ; ]
+    [ EXTRA_LIBS="${EXTRA_LIBS} -ledit" ; ]
   ]
 )
 
 AC_CHECK_LIB([rt], [clock_gettime], 
   [
-    [ EXTRA_LIBS+=" -lrt" ; ]
+    [ EXTRA_LIBS="${EXTRA_LIBS} -lrt" ; ]
   ],
   [
   ]
@@ -55,12 +55,12 @@ AC_ARG_ENABLE(libconfig,[--enable-libconfig/--disable-libconfig],
   else
     AC_MSG_RESULT([enabled])
     AC_CHECK_LIB([config],[config_init],AC_DEFINE(ENABLE_LIBCONFIG,1,[enable libconfig]),AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
-    [EXTRA_LIBS+=" -lconfig" ; ]
+    [EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ; ]
   fi 
   ],[
     AC_MSG_RESULT([enabled])
     AC_CHECK_LIB([config],[config_init],AC_DEFINE(ENABLE_LIBCONFIG,1,[enable libconfig]),AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
-    [EXTRA_LIBS+=" -lconfig" ; ]
+    [EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ; ]
   ])
     
 # Checks for header files.
