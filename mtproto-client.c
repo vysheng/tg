@@ -26,7 +26,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __FreeBSD__
 #include <sys/endian.h>
+#endif
 #include <sys/types.h>
 #include <aio.h>
 #include <netdb.h>
