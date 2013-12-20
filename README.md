@@ -1,4 +1,4 @@
-## Telegram messenger CLI
+## Telegram messenger CLI [![Build Status](https://travis-ci.org/lwhsu/tg.png)](https://travis-ci.org/lwhsu/tg)
 
 Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
 
