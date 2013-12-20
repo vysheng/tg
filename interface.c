@@ -43,7 +43,7 @@
 
 #include "mtproto-common.h"
 
-//#define ALLOW_MULT 1
+#define ALLOW_MULT 1
 char *default_prompt = "> ";
 
 int unread_messages;
@@ -994,7 +994,7 @@ void interpreter (char *line UU) {
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
-      do_load_video_thumb (&M->media.video, 1);
+      do_load_document_thumb (&M->media.document, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -1007,7 +1007,7 @@ void interpreter (char *line UU) {
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
-      do_load_video_thumb (&M->media.video, 2);
+      do_load_document_thumb (&M->media.document, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -1020,7 +1020,7 @@ void interpreter (char *line UU) {
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
-      do_load_video (&M->media.video, 1);
+      do_load_document (&M->media.document, 1);
     } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_document) {
       do_load_encr_video (&M->media.encr_video, 1);
     } else {
@@ -1035,7 +1035,7 @@ void interpreter (char *line UU) {
     }
     struct message *M = message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
-      do_load_video (&M->media.video, 2);
+      do_load_document (&M->media.document, 2);
     } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_document) {
       do_load_encr_video (&M->media.encr_video, 2);
     } else {

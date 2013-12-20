@@ -1758,6 +1758,7 @@ struct download {
   long long id;
   unsigned char *iv;
   unsigned char *key;
+  int type;
 };
 
 
@@ -1861,7 +1862,7 @@ void load_next_part (struct download *D) {
     if (D->iv) {
       out_int (CODE_input_encrypted_file_location);
     } else {
-      out_int (CODE_input_video_file_location);
+      out_int (D->type);
     }
     out_long (D->id);
     out_long (D->access_hash);
@@ -1913,6 +1914,10 @@ void do_load_video_thumb (struct video *video, int next) {
   do_load_photo_size (&video->thumb, next);
 }
 
+void do_load_document_thumb (struct document *video, int next) {
+  do_load_photo_size (&video->thumb, next);
+}
+
 void do_load_video (struct video *V, int next) {
   assert (V);
   assert (next);
@@ -1926,6 +1931,24 @@ void do_load_video (struct video *V, int next) {
   D->next = next;
   D->name = 0;
   D->fd = -1;
+  D->type = CODE_input_video_file_location;
+  load_next_part (D);
+}
+
+void do_load_document (struct document *V, int next) {
+  assert (V);
+  assert (next);
+  struct download *D = malloc (sizeof (*D));
+  memset (D, 0, sizeof (*D));
+  D->offset = 0;
+  D->size = V->size;
+  D->id = V->id;
+  D->access_hash = V->access_hash;
+  D->dc = V->dc_id;
+  D->next = next;
+  D->name = 0;
+  D->fd = -1;
+  D->type = CODE_input_document_file_location;
   load_next_part (D);
 }
 

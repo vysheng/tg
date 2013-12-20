@@ -90,6 +90,8 @@ struct video;
 void do_load_photo (struct photo *photo, int next);
 void do_load_video_thumb (struct video *video, int next);
 void do_load_video (struct video *V, int next);
+void do_load_document (struct document *V, int next);
+void do_load_document_thumb (struct document *video, int next);
 void do_help_get_config (void);
 int do_auth_check_phone (const char *user);
 int do_get_nearest_dc (void);
