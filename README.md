@@ -38,6 +38,18 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
     $ ./configure && make
     
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
+
+#### FreeBSD
+
+Install these ports:
+
+* devel/libconfig
+* devel/libexecinfo
+
+Then build:
+
+    $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure
+    $ make
     
 #### Other UNIX
 
