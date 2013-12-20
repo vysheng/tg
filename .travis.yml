@@ -1,5 +1,14 @@
 language: c
+
 compiler:
   - gcc
   - clang
-script: ./configure && make
+
+install:
+ - apt-get install libconfig8-dev
+ - apt-get install libreadline6-dev
+ - apt-get install libssl-dev
+
+script:
+  - ./configure
+  - make
