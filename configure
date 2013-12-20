@@ -3085,7 +3085,7 @@ _ACEOF
 
 fi
 
-   EXTRA_LIBS+=" -lexecinfo" ;
+   EXTRA_LIBS="${EXTRA_LIBS} -lexecinfo" ;
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rl_save_prompt in -lreadline" >&5
@@ -3129,7 +3129,7 @@ if test "x$ac_cv_lib_readline_rl_save_prompt" = xyes; then :
 
 $as_echo "#define READLINE_GNU 1" >>confdefs.h
 
-     EXTRA_LIBS+=" -lreadline" ;
+     EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ;
 
 else
 
@@ -3181,7 +3181,7 @@ fi
 
 $as_echo "#define READLINE_EDIT 1" >>confdefs.h
 
-     EXTRA_LIBS+=" -ledit" ;
+     EXTRA_LIBS="${EXTRA_LIBS} -ledit" ;
 
 
 fi
@@ -3225,7 +3225,7 @@ fi
 $as_echo "$ac_cv_lib_rt_clock_gettime" >&6; }
 if test "x$ac_cv_lib_rt_clock_gettime" = xyes; then :
 
-     EXTRA_LIBS+=" -lrt" ;
+     EXTRA_LIBS="${EXTRA_LIBS} -lrt" ;
 
 fi
 
@@ -3285,7 +3285,7 @@ else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
-    EXTRA_LIBS+=" -lconfig" ;
+    EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ;
   fi
 
 else
@@ -3336,7 +3336,7 @@ else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
-    EXTRA_LIBS+=" -lconfig" ;
+    EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ;
 
 fi
 
