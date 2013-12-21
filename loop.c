@@ -59,6 +59,8 @@ extern int binlog_enabled;
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
 int register_mode;
+extern int safe_quit;
+extern int queries_num;
 
 int unread_messages;
 void got_it (char *line, int len);
@@ -93,10 +95,15 @@ void net_loop (int flags, int (*is_end)(void)) {
       }
     }
     connections_poll_result (fds + cc, x - cc);
+    if (safe_quit && !queries_num) {
+      printf ("All done. Exit\n");
+      rl_callback_handler_remove ();
+      exit (0);
+    }
     if (unknown_user_list_pos) {
       do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
       unknown_user_list_pos = 0;
-    }
+    }   
   }
 }
 
