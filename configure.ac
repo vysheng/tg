@@ -22,7 +22,6 @@ AC_CHECK_FUNC([backtrace],
 )
 
 if test "x$BT" = "x" ; then
-  AC_MSG_RESULT([no])
   AC_CHECK_LIB([execinfo], [backtrace]) 
   [ EXTRA_LIBS="${EXTRA_LIBS} -lexecinfo" ; ]
 fi
