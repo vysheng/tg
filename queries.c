@@ -2429,6 +2429,10 @@ int get_dh_config_on_answer (struct query *q UU) {
     char *s = fetch_str (l);
     int v = fetch_int ();
     bl_do_set_dh_params (a, (void *)s, v);
+
+    BIGNUM *p = BN_bin2bn ((void *)s, 256, 0);
+    assert (check_DH_params (p, a) >= 0);
+    BN_free (p);
   }
   if (x == LOG_DH_CONFIG) { return 0; }
   int l = prefetch_strlen ();
