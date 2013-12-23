@@ -441,7 +441,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   assert (decrypt_buffer[5] == (int)CODE_server_DH_inner_data);
   assert (!memcmp (decrypt_buffer + 6, nonce, 16));
   assert (!memcmp (decrypt_buffer + 10, server_nonce, 16));
-  assert (decrypt_buffer[14] == 2);
+  int g = decrypt_buffer[14];
   in_ptr = decrypt_buffer + 15;
   in_end = decrypt_buffer + (l >> 2);
   BN_init (&dh_prime);
@@ -469,7 +469,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   out_long (0LL);
   
   BN_init (&dh_g);
-  BN_set_word (&dh_g, 2);
+  BN_set_word (&dh_g, g);
 
   assert (RAND_pseudo_bytes ((unsigned char *)s_power, 256) >= 0);
   BIGNUM *dh_power = BN_new ();

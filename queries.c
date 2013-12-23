@@ -302,8 +302,8 @@ extern struct dc *DC_list[];
 extern struct dc *DC_working;
 
 void out_random (int n) {
-  assert (n <= 16);
-  static char buf[16];
+  assert (n <= 32);
+  static char buf[32];
   int i;
   for (i = 0; i < n; i++) {
     buf[i] = lrand48 () & 255;
@@ -1375,7 +1375,7 @@ void send_part (struct send_file *f) {
       encr_start ();
       out_int (CODE_decrypted_message);
       out_long (r);
-      out_random (16);
+      out_random (15 + 4 * (lrand48 () % 3));
       out_string ("");
       if (f->media_type == CODE_input_media_uploaded_photo) {
         out_int (CODE_decrypted_message_media_photo);
