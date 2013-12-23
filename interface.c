@@ -49,6 +49,8 @@ char *default_prompt = "> ";
 int unread_messages;
 int msg_num_mode;
 
+int safe_quit;
+
 int in_readline;
 int readline_active;
 
@@ -304,6 +306,7 @@ char *commands[] = {
   "status_offline",
   "contacts_search",
   "quit",
+  "safe_quit",
   "send_audio",
   "load_audio",
   "view_audio",
@@ -1062,6 +1065,8 @@ void interpreter (char *line UU) {
     chat_mode_id = id;
   } else if (IS_WORD ("quit")) {
     exit (0);
+  } else if (IS_WORD ("safe_quit")) {
+    safe_quit = 1;
   }
   }
 #undef IS_WORD

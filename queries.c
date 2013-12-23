@@ -66,6 +66,8 @@ long long cur_downloaded_bytes;
 extern int binlog_enabled;
 extern int sync_from_start;
 
+int queries_num;
+
 void out_peer_id (peer_id_t id);
 #define QUERY_TIMEOUT 6.0
 
@@ -150,6 +152,7 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   insert_event_timer (&q->ev);
 
   q->extra = extra;
+  queries_num ++;
   return q;
 }
 
@@ -188,6 +191,7 @@ void query_error (long long id) {
     free (q->data);
     free (q);
   }
+  queries_num --;
 }
 
 #define MAX_PACKED_SIZE (1 << 24)
@@ -255,6 +259,7 @@ void query_result (long long id UU) {
     in_ptr = end;
     in_end = eend;
   }
+  queries_num --;
 } 
 
 #define event_timer_cmp(a,b) ((a)->timeout > (b)->timeout ? 1 : ((a)->timeout < (b)->timeout ? -1 : (memcmp (a, b, sizeof (struct event_timer)))))
