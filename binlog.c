@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <openssl/bn.h>
 
 #include "binlog.h"
 #include "mtproto-common.h"
@@ -525,6 +526,7 @@ void replay_log_event (void) {
       memcpy (encr_prime, rptr, 256);
       rptr += 64;
       encr_param_version = *(rptr ++);
+
     }
     break;
   case CODE_binlog_encr_chat_init:

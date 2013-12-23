@@ -2270,6 +2270,7 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   assert (b);
   BIGNUM *g_a = BN_bin2bn (E->g_key, 256, 0);
   assert (g_a);
+  assert (check_g (g_a) >= 0);
   if (!ctx) {
     ctx = BN_CTX_new ();
     BN_CTX_init (ctx);
@@ -2315,6 +2316,7 @@ void do_create_keys_end (struct secret_chat *U) {
   assert (encr_prime);
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
   assert (g_b);
+  assert (check_g (g_b) >= 0);
   if (!ctx) {
     ctx = BN_CTX_new ();
     BN_CTX_init (ctx);
