@@ -21,7 +21,14 @@ or download and extrac zip
     
 #### Linux
 
-Just run
+Install libs: readline openssl and (if you want to use config) libconfig.
+On ubuntu use: 
+    
+    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev
+On gentoo:
+    
+    $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl
+Then
 
     $ ./configure
     $ make
