@@ -342,14 +342,14 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       memcpy (g_key, s +  (l - 256), 256);
     }
     
-    l = prefetch_strlen ();
+    /*l = prefetch_strlen ();
     s = fetch_str (l);
     if (l != 256) { logprintf ("l = %d\n", l); }
     if (l < 256) {
       memcpy (nonce + 256 - l, s, l);
     } else {
       memcpy (nonce, s +  (l - 256), 256);
-    }
+    }*/
     
     if (x == CODE_encrypted_chat) {
       fetch_long (); // fingerprint
@@ -393,14 +393,14 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       memcpy (g_key, s +  (l - 256), 256);
     }
     
-    l = prefetch_strlen ();
+    /*l = prefetch_strlen ();
     s = fetch_str (l);
     if (l != 256) { logprintf ("l = %d\n", l); }
     if (l < 256) {
       memcpy (nonce + 256 - l, s, l);
     } else {
       memcpy (nonce, s +  (l - 256), 256);
-    }
+    }*/
    
     if (x == CODE_encrypted_chat_requested) {
       return; // Duplicate?

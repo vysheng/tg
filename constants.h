@@ -229,8 +229,8 @@
 #define CODE_update_encrypted_messages_read 0x38fe25b7
 #define CODE_encrypted_chat_empty 0xab7ec0a0
 #define CODE_encrypted_chat_waiting 0x3bf703dc
-#define CODE_encrypted_chat_requested 0xfda9a7b7
-#define CODE_encrypted_chat 0x6601d14f
+#define CODE_encrypted_chat_requested 0xc878527e
+#define CODE_encrypted_chat 0xfa56ce36
 #define CODE_encrypted_chat_discarded 0x13d6dd27
 #define CODE_input_encrypted_chat 0xf141b5e1
 #define CODE_encrypted_file_empty 0xc21f497e
@@ -258,6 +258,7 @@
 #define CODE_input_encrypted_file_big_uploaded 0x2dc173c8
 #define CODE_update_chat_participant_add 0x3a0eeb22
 #define CODE_update_chat_participant_delete 0x6e5f8c22
+#define CODE_update_dc_options 0x8e5e9873
 #define CODE_input_media_uploaded_audio 0x61a6d436
 #define CODE_input_media_audio 0x89938781
 #define CODE_input_media_uploaded_document 0x34e794bd
@@ -377,4 +378,5 @@
 #define CODE_init_connection 0x69796de9
 #define CODE_invoke_with_layer9 0x76715a63
 #define CODE_invoke_with_layer10 0x39620c41
+#define CODE_invoke_with_layer11 0xa6b88fdf
 #endif
