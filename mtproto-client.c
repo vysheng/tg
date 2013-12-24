@@ -462,7 +462,7 @@ int check_DH_params (BIGNUM *p, int g) {
   return 0;
 }
 
-int check_g (BIGNUM *g) {
+int check_g (unsigned char p[256], BIGNUM *g) {
   static unsigned char s[256];
   memset (s, 0, 256);
   assert (BN_num_bytes (g) <= 256);
@@ -484,7 +484,26 @@ int check_g (BIGNUM *g) {
     }
   }
   if (!ok) { return -1; }
+  ok = 0;
+  for (i = 0; i < 64; i++) {
+    if (s[i] < p[i]) { 
+      ok = 1;
+      break;
+    } else if (s[i] > p[i]) {
+      logprintf ("i = %d (%d %d)\n", i, (int)s[i], (int)p[i]);
+      return -1;
+    }
+  }
+  if (!ok) { return -1; }
   return 0;
+}
+
+int check_g_bn (BIGNUM *p, BIGNUM *g) {
+  static unsigned char s[256];
+  memset (s, 0, 256);
+  assert (BN_num_bytes (p) <= 256);
+  BN_bn2bin (p, s);
+  return check_g (s, g);
 }
 
 int process_dh_answer (struct connection *c, char *packet, int len) {
@@ -519,7 +538,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   BN_init (&g_a);
   assert (fetch_bignum (&dh_prime) > 0);
   assert (fetch_bignum (&g_a) > 0);
-  assert (check_g (&g_a) >= 0);
+  assert (check_g_bn (&dh_prime, &g_a) >= 0);
   int server_time = *in_ptr++;
   assert (in_ptr <= in_end);
 

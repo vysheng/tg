@@ -26,6 +26,7 @@ long long encrypt_send_message (struct connection *c, int *msg, int msg_ints, in
 void dc_authorize (struct dc *DC);
 void work_update (struct connection *c, long long msg_id);
 void work_update_binlog (void);
-int check_g (BIGNUM *g);
+int check_g (unsigned char p[256], BIGNUM *g);
+int check_g_bn (BIGNUM *p, BIGNUM *g);
 int check_DH_params (BIGNUM *p, int g);
 #endif

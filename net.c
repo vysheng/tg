@@ -596,7 +596,7 @@ void insert_seqno (struct session *S, int seqno) {
 
 extern struct dc *DC_list[];
 
-struct dc *alloc_dc (int id, char *ip, int port) {
+struct dc *alloc_dc (int id, char *ip, int port UU) {
   assert (!DC_list[id]);
   struct dc *DC = malloc (sizeof (*DC));
   memset (DC, 0, sizeof (*DC));
