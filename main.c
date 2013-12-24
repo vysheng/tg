@@ -78,6 +78,7 @@ char *binlog_file_name;
 int binlog_enabled;
 extern int log_level;
 int sync_from_start;
+int allow_weak_random;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -374,6 +375,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'E':
       disable_auto_accept = 1;
+      break;
+    case 'w':
+      allow_weak_random = 1;
       break;
     case 'h':
     default:

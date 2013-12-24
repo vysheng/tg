@@ -2263,8 +2263,10 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
     }
   }
   if (ok) { return; } // Already generated key for this chat
-  for (i = 0; i < 64; i++) {
-    *(((int *)random) + i) ^= mrand48 ();
+  unsigned char random_here[256];
+  do_rand (random_here, 256);
+  for (i = 0; i < 256; i++) {
+    random[i] ^= random_here[i];
   }
   BIGNUM *b = BN_bin2bn (random, 256, 0);
   assert (b);

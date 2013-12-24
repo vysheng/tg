@@ -69,7 +69,7 @@ char new_nonce[256];
 char server_nonce[256];
 extern int binlog_enabled;
 extern int disable_auto_accept;
-
+extern int allow_weak_random;
 
 int total_packets_sent;
 long long total_data_sent;
@@ -98,6 +98,15 @@ double get_utime (int clock_id) {
   return res;
 }
 
+void do_rand (void *s, int l) {
+  if (RAND_bytes (s, l) < 0) {
+    if (allow_weak_random) {
+      RAND_pseudo_bytes (s, l);
+    } else {
+      assert (0 && "End of random. If you want, you can start with -w");
+    }
+  }
+}
 
 
 #define STATS_BUFF_SIZE        (64 << 10)
@@ -223,7 +232,7 @@ int rpc_send_message (struct connection *c, void *data, int len) {
 
 int send_req_pq_packet (struct connection *c) {
   assert (c_state == st_init);
-  assert (RAND_pseudo_bytes ((unsigned char *) nonce, 16) >= 0);
+  do_rand (nonce, 16);
   unenc_msg_header.out_msg_id = 0;
   clear_packet ();
   out_int (CODE_req_pq);
@@ -371,7 +380,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   //out_int (0x0501);  // q=5
   out_ints ((int *) nonce, 4);
   out_ints ((int *) server_nonce, 4);
-  assert (RAND_pseudo_bytes ((unsigned char *) new_nonce, 32) >= 0);
+  do_rand (new_nonce, 32);
   out_ints ((int *) new_nonce, 8);
   sha1 ((unsigned char *) (packet_buffer + 5), (packet_ptr - packet_buffer - 5) * 4, (unsigned char *) packet_buffer);
 
@@ -564,7 +573,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   BN_init (&dh_g);
   BN_set_word (&dh_g, g);
 
-  assert (RAND_pseudo_bytes ((unsigned char *)s_power, 256) >= 0);
+  do_rand (s_power, 256);
   BIGNUM *dh_power = BN_new ();
   assert (BN_bin2bn ((unsigned char *)s_power, 256, dh_power) == dh_power);
 
@@ -683,7 +692,7 @@ void init_enc_msg (struct session *S, int useful) {
 //  assert (DC->server_salt);
   enc_msg.server_salt = DC->server_salt;
   if (!S->session_id) {
-    assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
+    do_rand (&S->session_id, 8);
   }
   enc_msg.session_id = S->session_id;
   //enc_msg.auth_key_id2 = auth_key_id;
