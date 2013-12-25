@@ -2264,7 +2264,7 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   }
   if (ok) { return; } // Already generated key for this chat
   unsigned char random_here[256];
-  do_rand (random_here, 256);
+  secure_random (random_here, 256);
   for (i = 0; i < 256; i++) {
     random[i] ^= random_here[i];
   }

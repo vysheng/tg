@@ -29,5 +29,5 @@ void work_update_binlog (void);
 int check_g (unsigned char p[256], BIGNUM *g);
 int check_g_bn (BIGNUM *p, BIGNUM *g);
 int check_DH_params (BIGNUM *p, int g);
-void do_rand (void *s, int l);
+void secure_random (void *s, int l);
 #endif
