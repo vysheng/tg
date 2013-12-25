@@ -309,7 +309,6 @@ extern struct dc *DC_working;
 void out_random (int n) {
   assert (n <= 32);
   static char buf[32];
-  int i;
   secure_random (buf, n);
   out_cstring (buf, n);
 }
@@ -770,7 +769,9 @@ void encr_start (void) {
 void encr_finish (struct secret_chat *E) {
   int l = packet_ptr - (encr_extra +  8);
   while (((packet_ptr - encr_extra) - 3) & 3) {  
-    out_rand (4);
+    int t;
+    secure_random (&t, 4);
+    out_int (t);
   }
 
   *encr_extra = ((packet_ptr - encr_extra) - 1) * 4 * 256 + 0xfe;
