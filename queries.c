@@ -310,9 +310,7 @@ void out_random (int n) {
   assert (n <= 32);
   static char buf[32];
   int i;
-  for (i = 0; i < n; i++) {
-    buf[i] = lrand48 () & 255;
-  }
+  secure_random (buf, n);
   out_cstring (buf, n);
 }
 
@@ -771,8 +769,8 @@ void encr_start (void) {
 
 void encr_finish (struct secret_chat *E) {
   int l = packet_ptr - (encr_extra +  8);
-  while (((packet_ptr - encr_extra) - 3) & 3) {
-    out_int (mrand48 ());
+  while (((packet_ptr - encr_extra) - 3) & 3) {  
+    out_rand (4);
   }
 
   *encr_extra = ((packet_ptr - encr_extra) - 1) * 4 * 256 + 0xfe;
@@ -883,10 +881,7 @@ void do_send_encr_msg (struct message *M) {
   out_int (CODE_decrypted_message);
   out_long (M->id);
   static int buf[4];
-  int i;
-  for (i = 0; i < 3; i++) {
-    buf[i] = mrand48 ();
-  }
+  secure_random (buf, 16);
   out_cstring ((void *)buf, 16);
   out_cstring ((void *)M->message, M->message_len);
   out_int (CODE_decrypted_message_media_empty);
@@ -1299,8 +1294,9 @@ void send_part (struct send_file *f) {
     if (f->encr) {
       if (x & 15) {
         assert (f->offset == f->size);
-        while (x & 15) {
-          buf[x ++] = lrand48 () & 255;
+        if (x & 15) {
+          secure_random (buf + x, (-x) & 15);
+          x = (x + 15) & ~15;
         }
       }
       
@@ -1375,7 +1371,7 @@ void send_part (struct send_file *f) {
       peer_t *P = user_chat_get (f->to_id);
       assert (P);
       out_long (P->encr_chat.access_hash);
-      long long r = -lrand48 () * (1ll << 32) - lrand48 ();
+      long long r = -lrand48 () * (1ll << 32) - lrand48 (); 
       out_long (r);
       encr_start ();
       out_int (CODE_decrypted_message);
