@@ -1505,16 +1505,11 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   if (get_peer_type (f->to_id) == PEER_ENCR_CHAT) {
     f->encr = 1;
     f->iv = malloc (32);
-    int i;
-    for (i = 0; i < 8; i++) {
-      ((int *)f->iv)[i] = mrand48 ();
-    }
+    secure_random (f->iv, 32);
     f->init_iv = malloc (32);
     memcpy (f->init_iv, f->iv, 32);
     f->key = malloc (32);
-    for (i = 0; i < 8; i++) {
-      ((int *)f->key)[i] = mrand48 ();
-    }
+    secure_random (f->key, 32);
   }
   if (f->part_size > (512 << 10)) {
     close (fd);
@@ -2362,8 +2357,10 @@ void do_create_keys_end (struct secret_chat *U) {
 void do_send_create_encr_chat (void *x, unsigned char *random) {
   int user_id = (long)x;
   int i;
-  for (i = 0; i < 64; i++) {
-    *(((int *)random) + i) ^= mrand48 ();
+  unsigned char random_here[256];
+  secure_random (random_here, 256);
+  for (i = 0; i < 256; i++) {
+    random[i] ^= random_here[i];
   }
   if (!ctx) {
     ctx = BN_CTX_new ();
