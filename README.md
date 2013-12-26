@@ -14,7 +14,7 @@ Clone GitHub Repository
 
     $ git clone https://github.com/vysheng/tg.git && cd tg
     
-or download and extrac zip
+or download and extract zip
 
     $ wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
     $ tar xzf tg-master.zip && cd tg-master
