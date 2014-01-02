@@ -44,7 +44,8 @@
 #define POLLRDHUP 0
 #endif
 
-DEFINE_TREE(int,int,int_cmp,0)
+#define long_cmp(a,b) ((a) > (b) ? 1 : (a) == (b) ? 0 : -1)
+DEFINE_TREE(long,long long,long_cmp,0)
 double get_utime (int clock_id);
 
 int verbosity;
@@ -208,6 +209,20 @@ void flush_out (struct connection *c UU) {
 struct connection *Connections[MAX_CONNECTIONS];
 int max_connection_fd;
 
+void rotate_port (struct connection *c) {
+  switch (c->port) {
+  case 443:
+    c->port = 80;
+    break;
+  case 80:
+    c->port = 25;
+    break;
+  case 25:
+    c->port = 443;
+    break;
+  }
+}
+
 struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods) {
   struct connection *c = malloc (sizeof (*c));
   memset (c, 0, sizeof (*c));
@@ -332,6 +347,7 @@ void fail_connection (struct connection *c) {
   if (c->state == conn_ready || c->state == conn_connecting) {
     stop_ping_timer (c);
   }
+  rotate_port (c);
   struct connection_buffer *b = c->out_head;
   while (b) {
     struct connection_buffer *d = b;
@@ -349,7 +365,7 @@ void fail_connection (struct connection *c) {
   c->out_bytes = c->in_bytes = 0;
   close (c->fd);
   Connections[c->fd] = 0;
-  logprintf ("Lost connection to server... \n");
+  logprintf ("Lost connection to server... %s:%d\n", c->ip, c->port);
   restart_connection (c);
 }
 
@@ -572,25 +588,26 @@ void connections_poll_result (struct pollfd *fds, int max) {
 int send_all_acks (struct session *S) {
   clear_packet ();
   out_int (CODE_msgs_ack);
-  out_int (tree_count_int (S->ack_tree));
+  out_int (CODE_vector);
+  out_int (tree_count_long (S->ack_tree));
   while (S->ack_tree) {
-    int x = tree_get_min_int (S->ack_tree); 
-    out_int (x);
-    S->ack_tree = tree_delete_int (S->ack_tree, x);
+    long long x = tree_get_min_long (S->ack_tree); 
+    out_long (x);
+    S->ack_tree = tree_delete_long (S->ack_tree, x);
   }
   encrypt_send_message (S->c, packet_buffer, packet_ptr - packet_buffer, 0);
   return 0;
 }
 
-void insert_seqno (struct session *S, int seqno) {
+void insert_msg_id (struct session *S, long long id) {
   if (!S->ack_tree) {
     S->ev.alarm = (void *)send_all_acks;
     S->ev.self = (void *)S;
     S->ev.timeout = get_double_time () + ACK_TIMEOUT;
     insert_event_timer (&S->ev);
   }
-  if (!tree_lookup_int (S->ack_tree, seqno)) {
-    S->ack_tree = tree_insert_int (S->ack_tree, seqno, lrand48 ());
+  if (!tree_lookup_long (S->ack_tree, id)) {
+    S->ack_tree = tree_insert_long (S->ack_tree, id, lrand48 ());
   }
 }
 

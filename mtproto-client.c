@@ -1416,9 +1416,10 @@ void work_container (struct connection *c, long long msg_id UU) {
   int i;
   for (i = 0; i < n; i++) {
     long long id = fetch_long (); 
-    int seqno = fetch_int (); 
-    if (seqno & 1) {
-      insert_seqno (c->session, seqno);
+    //int seqno = fetch_int (); 
+    fetch_int (); // seq_no
+    if (id & 1) {
+      insert_msg_id (c->session, id);
     }
     int bytes = fetch_int ();
     int *t = in_end;
@@ -1537,7 +1538,7 @@ void work_detailed_info (struct connection *c UU, long long msg_id UU) {
 }
 
 void work_new_detailed_info (struct connection *c UU, long long msg_id UU) {
-  assert (fetch_int () == CODE_msg_detailed_info);
+  assert (fetch_int () == (int)CODE_msg_new_detailed_info);
   fetch_long (); // answer_msg_id
   fetch_int (); // bytes
   fetch_int (); // status
@@ -1548,6 +1549,15 @@ void work_updates_to_long (struct connection *c UU, long long msg_id UU) {
   logprintf ("updates to long... Getting difference\n");
   do_get_difference ();
 }
+
+void work_bad_msg_notification (struct connection *c UU, long long msg_id UU) {
+  assert (fetch_int () == (int)CODE_bad_msg_notification);
+  long long m1 = fetch_long ();
+  int s = fetch_int ();
+  int e = fetch_int ();
+  logprintf ("bad_msg_notification: msg_id = %lld, seq = %d, error = %d\n", m1, s, e);
+}
+
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   if (verbosity >= 5) {
     logprintf ("rpc_execute_answer: fd=%d\n", c->fd);
@@ -1597,6 +1607,9 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   case CODE_updates_too_long:
     work_updates_to_long (c, msg_id);
     return;
+  case CODE_bad_msg_notification:
+    work_bad_msg_notification (c, msg_id);
+    return;
   }
   logprintf ( "Unknown message: \n");
   hexdump_in ();
@@ -1629,10 +1642,17 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   
   int this_server_time = enc->msg_id >> 32LL;
   if (!DC->server_time_delta) {
-    DC->server_time_delta = this_server_time - time (0);
+    DC->server_time_delta = this_server_time - get_utime (CLOCK_REALTIME);
     DC->server_time_udelta = this_server_time - get_utime (CLOCK_MONOTONIC);
   }
   double st = get_server_time (DC);
+  if (this_server_time < st - 300 || this_server_time > st + 30) {
+    logprintf ("salt = %lld, session_id = %lld, msg_id = %lld, seq_no = %d, st = %lf, now = %lf\n", enc->server_salt, enc->session_id, enc->msg_id, enc->seq_no, st, get_utime (CLOCK_REALTIME));
+    in_ptr = enc->message;
+    in_end = in_ptr + (enc->msg_len / 4);
+    hexdump_in ();
+  }
+
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);
   //assert (enc->msg_id > server_last_msg_id && (enc->msg_id & 3) == 1);
   if (verbosity >= 1) {
@@ -1651,8 +1671,8 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   in_ptr = enc->message;
   in_end = in_ptr + (enc->msg_len / 4);
  
-  if (enc->seq_no & 1) {
-    insert_seqno (c->session, enc->seq_no);
+  if (enc->msg_id & 1) {
+    insert_msg_id (c->session, enc->msg_id);
   }
   assert (c->session->session_id == enc->session_id);
   rpc_execute_answer (c, enc->msg_id);

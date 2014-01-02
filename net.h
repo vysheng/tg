@@ -30,7 +30,7 @@ struct dc;
 
 #define TG_VERSION "0.01-beta"
 
-#define ACK_TIMEOUT 60
+#define ACK_TIMEOUT 1
 #define MAX_DC_ID 10
 
 enum dc_state {
@@ -57,7 +57,7 @@ struct session {
   long long session_id;
   int seq_no;
   struct connection *c;
-  struct tree_int *ack_tree;
+  struct tree_long *ack_tree;
   struct event_timer ev;
 };
 
@@ -143,7 +143,7 @@ struct connection *create_connection (const char *host, int port, struct session
 int connections_make_poll_array (struct pollfd *fds, int max);
 void connections_poll_result (struct pollfd *fds, int max);
 void dc_create_session (struct dc *DC);
-void insert_seqno (struct session *S, int seqno);
+void insert_msg_id (struct session *S, long long id);
 struct dc *alloc_dc (int id, char *ip, int port);
 
 #define GET_DC(c) (c->session->dc)
