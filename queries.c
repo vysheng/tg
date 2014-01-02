@@ -309,10 +309,7 @@ extern struct dc *DC_working;
 void out_random (int n) {
   assert (n <= 32);
   static char buf[32];
-  int i;
-  for (i = 0; i < n; i++) {
-    buf[i] = lrand48 () & 255;
-  }
+  secure_random (buf, n);
   out_cstring (buf, n);
 }
 
@@ -771,8 +768,10 @@ void encr_start (void) {
 
 void encr_finish (struct secret_chat *E) {
   int l = packet_ptr - (encr_extra +  8);
-  while (((packet_ptr - encr_extra) - 3) & 3) {
-    out_int (mrand48 ());
+  while (((packet_ptr - encr_extra) - 3) & 3) {  
+    int t;
+    secure_random (&t, 4);
+    out_int (t);
   }
 
   *encr_extra = ((packet_ptr - encr_extra) - 1) * 4 * 256 + 0xfe;
@@ -883,10 +882,7 @@ void do_send_encr_msg (struct message *M) {
   out_int (CODE_decrypted_message);
   out_long (M->id);
   static int buf[4];
-  int i;
-  for (i = 0; i < 3; i++) {
-    buf[i] = mrand48 ();
-  }
+  secure_random (buf, 16);
   out_cstring ((void *)buf, 16);
   out_cstring ((void *)M->message, M->message_len);
   out_int (CODE_decrypted_message_media_empty);
@@ -1299,8 +1295,9 @@ void send_part (struct send_file *f) {
     if (f->encr) {
       if (x & 15) {
         assert (f->offset == f->size);
-        while (x & 15) {
-          buf[x ++] = lrand48 () & 255;
+        if (x & 15) {
+          secure_random (buf + x, (-x) & 15);
+          x = (x + 15) & ~15;
         }
       }
       
@@ -1375,7 +1372,7 @@ void send_part (struct send_file *f) {
       peer_t *P = user_chat_get (f->to_id);
       assert (P);
       out_long (P->encr_chat.access_hash);
-      long long r = -lrand48 () * (1ll << 32) - lrand48 ();
+      long long r = -lrand48 () * (1ll << 32) - lrand48 (); 
       out_long (r);
       encr_start ();
       out_int (CODE_decrypted_message);
@@ -1505,16 +1502,11 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   if (get_peer_type (f->to_id) == PEER_ENCR_CHAT) {
     f->encr = 1;
     f->iv = malloc (32);
-    int i;
-    for (i = 0; i < 8; i++) {
-      ((int *)f->iv)[i] = mrand48 ();
-    }
+    secure_random (f->iv, 32);
     f->init_iv = malloc (32);
     memcpy (f->init_iv, f->iv, 32);
     f->key = malloc (32);
-    for (i = 0; i < 8; i++) {
-      ((int *)f->key)[i] = mrand48 ();
-    }
+    secure_random (f->key, 32);
   }
   if (f->part_size > (512 << 10)) {
     close (fd);
@@ -2263,8 +2255,10 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
     }
   }
   if (ok) { return; } // Already generated key for this chat
-  for (i = 0; i < 64; i++) {
-    *(((int *)random) + i) ^= mrand48 ();
+  unsigned char random_here[256];
+  secure_random (random_here, 256);
+  for (i = 0; i < 256; i++) {
+    random[i] ^= random_here[i];
   }
   BIGNUM *b = BN_bin2bn (random, 256, 0);
   assert (b);
@@ -2360,8 +2354,10 @@ void do_create_keys_end (struct secret_chat *U) {
 void do_send_create_encr_chat (void *x, unsigned char *random) {
   int user_id = (long)x;
   int i;
-  for (i = 0; i < 64; i++) {
-    *(((int *)random) + i) ^= mrand48 ();
+  unsigned char random_here[256];
+  secure_random (random_here, 256);
+  for (i = 0; i < 256; i++) {
+    random[i] ^= random_here[i];
   }
   if (!ctx) {
     ctx = BN_CTX_new ();
