@@ -560,7 +560,7 @@ void interpreter_chat_mode (char *line) {
   }
   if (!strncmp (line, "/history", 8)) {
     int limit = 40;
-    sscanf  (line, "/history %d", &limit);
+    sscanf (line, "/history %99d", &limit);
     if (limit < 0 || limit > 1000) { limit = 40; }
     do_get_history (chat_mode_id, limit);
     return;
