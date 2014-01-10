@@ -513,7 +513,7 @@ void replay_log_event (void) {
   case CODE_binlog_set_dh_params:
     rptr ++;
     {
-      if (encr_prime) { tfree_str (encr_prime); }
+      if (encr_prime) { tfree (encr_prime, 256); }
       encr_root = *(rptr ++);
       encr_prime = talloc (256);
       memcpy (encr_prime, rptr, 256);
