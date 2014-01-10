@@ -2329,7 +2329,7 @@ void do_create_keys_end (struct secret_chat *U) {
   ensure_ptr (a);
   ensure (BN_mod_exp (r, g_b, a, p, ctx));
 
-  void *t = talloc (256);
+  unsigned char *t = talloc (256);
   memcpy (t, U->key, 256);
   
   memset (U->key, 0, sizeof (U->key));

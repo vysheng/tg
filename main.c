@@ -180,12 +180,19 @@ char *make_full_path (char *s) {
   return s;
 }
 
-void running_for_first_time (void) {
-  if (sizeof (void) != 1) {
-    logprintf ("sizeof (void) isn't equal 1\n");
-    logprintf ("GNU C compiler extension isn't available?\n");
+void check_type_sizes (void) {
+  if (sizeof (int) != 4u) {
+    logprintf ("sizeof (int) isn't equal 4.\n");
     exit (1);
   }
+  if (sizeof (char) != 1u) {
+    logprintf ("sizeof (char) isn't equal 1.\n");
+    exit (1);
+  }
+}
+
+void running_for_first_time (void) {
+  check_type_sizes ();
   if (config_filename) {
     return; // Do not create custom config file
   }

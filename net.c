@@ -115,7 +115,8 @@ void delete_connection_buffer (struct connection_buffer *b) {
   free (b);
 }
 
-int write_out (struct connection *c, const void *data, int len) {
+int write_out (struct connection *c, const void *_data, int len) {
+  const unsigned char *data = _data;
   if (!len) { return 0; }
   assert (len > 0);
   int x = 0;
@@ -146,7 +147,8 @@ int write_out (struct connection *c, const void *data, int len) {
   return x;
 }
 
-int read_in (struct connection *c, void *data, int len) {
+int read_in (struct connection *c, void *_data, int len) {
+  unsigned char *data = _data;
   if (!len) { return 0; }
   assert (len > 0);
   if (len > c->in_bytes) {
@@ -177,7 +179,8 @@ int read_in (struct connection *c, void *data, int len) {
   return x;
 }
 
-int read_in_lookup (struct connection *c, void *data, int len) {
+int read_in_lookup (struct connection *c, void *_data, int len) {
+  unsigned char *data = _data;
   if (!len || !c->in_bytes) { return 0; }
   assert (len > 0);
   if (len > c->in_bytes) {

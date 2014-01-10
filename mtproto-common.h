@@ -427,7 +427,7 @@ static inline void fetch_ints (void *data, int count) {
   in_ptr += count;
 }
 
-int get_random_bytes (void *buf, int n);
+int get_random_bytes (unsigned char *buf, int n);
 
 int pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
 int pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
