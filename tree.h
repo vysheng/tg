@@ -21,9 +21,7 @@
 #include <stdio.h>
 
 #include <memory.h>
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
+#include <tools.h>
 #include <assert.h>
 
 #define DEFINE_TREE(X_NAME, X_TYPE, X_CMP, X_UNSET) \
@@ -34,7 +32,7 @@ struct tree_ ## X_NAME { \
 };\
 \
 struct tree_ ## X_NAME *new_tree_node_ ## X_NAME (X_TYPE x, int y) {\
-  struct tree_ ## X_NAME *T = malloc (sizeof (*T));\
+  struct tree_ ## X_NAME *T = talloc (sizeof (*T));\
   T->x = x;\
   T->y = y;\
   T->left = T->right = 0;\

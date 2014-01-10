@@ -27,6 +27,10 @@
 #include <fcntl.h>
 #include <sys/utsname.h>
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #include "include.h"
 #include "mtproto-client.h"
 #include "queries.h"
