@@ -1822,11 +1822,16 @@ struct query_methods download_methods = {
 
 void load_next_part (struct download *D) {
   if (!D->offset) {
-    static char buf[1000];
+    static char buf[PATH_MAX];
+    int l;
     if (!D->id) {
-      sprintf (buf, "%s/download_%lld_%d", get_downloads_directory (), D->volume, D->local_id);
+      l = snprintf (buf, sizeof (buf), "%s/download_%lld_%d", get_downloads_directory (), D->volume, D->local_id);
     } else {
-      sprintf (buf, "%s/download_%lld", get_downloads_directory (), D->id);
+      l = snprintf (buf, sizeof (buf), "%s/download_%lld", get_downloads_directory (), D->id);
+    }
+    if (l >= (int) sizeof (buf)) {
+      logprintf ("Download filename is too long");
+      exit (1);
     }
     D->name = tstrdup (buf);
     struct stat st;
