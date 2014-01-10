@@ -103,9 +103,8 @@ void start_fail_timer (struct connection *c) {
 }
 
 struct connection_buffer *new_connection_buffer (int size) {
-  struct connection_buffer *b = malloc (sizeof (*b));
-  memset (b, 0, sizeof (*b));
-  b->start = malloc (size);
+  struct connection_buffer *b = talloc0 (sizeof (*b));
+  b->start = talloc (size);
   b->end = b->start + size;
   b->rptr = b->wptr = b->start;
   return b;
@@ -224,8 +223,7 @@ void rotate_port (struct connection *c) {
 }
 
 struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods) {
-  struct connection *c = malloc (sizeof (*c));
-  memset (c, 0, sizeof (*c));
+  struct connection *c = talloc0 (sizeof (*c));
   int fd = socket (AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
     logprintf ("Can not create socket: %m\n");
@@ -276,7 +274,7 @@ struct connection *create_connection (const char *host, int port, struct session
 
   c->session = session;
   c->fd = fd; 
-  c->ip = strdup (host);
+  c->ip = tstrdup (host);
   c->flags = 0;
   c->state = conn_ready;
   c->methods = methods;
@@ -615,8 +613,7 @@ extern struct dc *DC_list[];
 
 struct dc *alloc_dc (int id, char *ip, int port UU) {
   assert (!DC_list[id]);
-  struct dc *DC = malloc (sizeof (*DC));
-  memset (DC, 0, sizeof (*DC));
+  struct dc *DC = talloc0 (sizeof (*DC));
   DC->id = id;
   DC->ip = ip;
   DC->port = port;
@@ -625,8 +622,7 @@ struct dc *alloc_dc (int id, char *ip, int port UU) {
 }
 
 void dc_create_session (struct dc *DC) {
-  struct session *S = malloc (sizeof (*S));
-  memset (S, 0, sizeof (*S));
+  struct session *S = talloc0 (sizeof (*S));
   assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
   S->dc = DC;
   S->c = create_connection (DC->ip, DC->port, S, &auth_methods);

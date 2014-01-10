@@ -126,10 +126,9 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   if (verbosity) {
     logprintf ( "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
   }
-  struct query *q = malloc (sizeof (*q));
-  memset (q, 0, sizeof (*q));
+  struct query *q = talloc0 (sizeof (*q));
   q->data_len = ints;
-  q->data = malloc (4 * ints);
+  q->data = talloc (4 * ints);
   memcpy (q->data, data, 4 * ints);
   q->msg_id = encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
   q->session = DC->sessions[0];
@@ -436,7 +435,7 @@ char *suser;
 extern int dc_working_num;
 void do_send_code (const char *user) {
   logprintf ("sending code\n");
-  suser = strdup (user);
+  suser = tstrdup (user);
   want_dc_num = 0;
   clear_packet ();
   do_insert_header ();
@@ -527,7 +526,7 @@ struct query_methods check_phone_methods = {
 };
 
 int do_auth_check_phone (const char *user) {
-  suser = strdup (user);
+  suser = tstrdup (user);
   clear_packet ();
   out_int (CODE_auth_check_phone);
   out_string (user);
@@ -1363,8 +1362,7 @@ void send_part (struct send_file *f) {
       out_long (-lrand48 () * (1ll << 32) - lrand48 ());
       send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
     } else {
-      struct message *M = malloc (sizeof (*M));
-      memset (M, 0, sizeof (*M));
+      struct message *M = talloc0 (sizeof (*M));
 
       out_int (CODE_messages_send_encrypted_file);
       out_int (CODE_input_encrypted_chat);
@@ -1446,7 +1444,7 @@ void send_part (struct send_file *f) {
       M->from_id = MK_USER (our_id);
       M->to_id = f->to_id;
       M->unread = 1;
-      M->message = strdup ("");
+      M->message = tstrdup ("");
       M->out = 1;
       M->id = r;
       M->date = time (0);
@@ -1483,8 +1481,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     close (fd);
     return;
   }
-  struct send_file *f = malloc (sizeof (*f));
-  memset (f, 0, sizeof (*f));
+  struct send_file *f = talloc0 (sizeof (*f));
   f->fd = fd;
   f->size = size;
   f->offset = 0;
@@ -1501,11 +1498,11 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   f->file_name = file_name;
   if (get_peer_type (f->to_id) == PEER_ENCR_CHAT) {
     f->encr = 1;
-    f->iv = malloc (32);
+    f->iv = talloc (32);
     secure_random (f->iv, 32);
-    f->init_iv = malloc (32);
+    f->init_iv = talloc (32);
     memcpy (f->init_iv, f->iv, 32);
-    f->key = malloc (32);
+    f->key = talloc (32);
     secure_random (f->key, 32);
   }
   if (f->part_size > (512 << 10)) {
@@ -1831,7 +1828,7 @@ void load_next_part (struct download *D) {
     } else {
       sprintf (buf, "%s/download_%lld", get_downloads_directory (), D->id);
     }
-    D->name = strdup (buf);
+    D->name = tstrdup (buf);
     struct stat st;
     if (stat (buf, &st) >= 0) {
       D->offset = st.st_size;      
@@ -1878,8 +1875,7 @@ void do_load_photo_size (struct photo_size *P, int next) {
   
   assert (P);
   assert (next);
-  struct download *D = malloc (sizeof (*D));
-  memset (D, 0, sizeof (*D));
+  struct download *D = talloc0 (sizeof (*D));
   D->id = 0;
   D->offset = 0;
   D->size = P->size;
@@ -1918,8 +1914,7 @@ void do_load_document_thumb (struct document *video, int next) {
 void do_load_video (struct video *V, int next) {
   assert (V);
   assert (next);
-  struct download *D = malloc (sizeof (*D));
-  memset (D, 0, sizeof (*D));
+  struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
@@ -1935,8 +1930,7 @@ void do_load_video (struct video *V, int next) {
 void do_load_document (struct document *V, int next) {
   assert (V);
   assert (next);
-  struct download *D = malloc (sizeof (*D));
-  memset (D, 0, sizeof (*D));
+  struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
@@ -1952,8 +1946,7 @@ void do_load_document (struct document *V, int next) {
 void do_load_encr_video (struct encr_video *V, int next) {
   assert (V);
   assert (next);
-  struct download *D = malloc (sizeof (*D));
-  memset (D, 0, sizeof (*D));
+  struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
@@ -1963,7 +1956,7 @@ void do_load_encr_video (struct encr_video *V, int next) {
   D->name = 0;
   D->fd = -1;
   D->key = V->key;
-  D->iv = malloc (32);
+  D->iv = talloc (32);
   memcpy (D->iv, V->iv, 32);
   load_next_part (D);
       
@@ -1995,7 +1988,7 @@ int export_auth_on_answer (struct query *q UU) {
     assert (our_id == l);
   }
   l = prefetch_strlen ();
-  char *s = malloc (l);
+  char *s = talloc (l);
   memcpy (s, fetch_str (l), l);
   export_auth_str_len = l;
   export_auth_str = s;
@@ -2261,18 +2254,19 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
     random[i] ^= random_here[i];
   }
   BIGNUM *b = BN_bin2bn (random, 256, 0);
-  assert (b);
+  ensure_ptr (b);
   BIGNUM *g_a = BN_bin2bn (E->g_key, 256, 0);
-  assert (g_a);
+  ensure_ptr (g_a);
   assert (check_g (encr_prime, g_a) >= 0);
   if (!ctx) {
     ctx = BN_CTX_new ();
-    BN_CTX_init (ctx);
+    ensure_ptr (ctx);
   }
   BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  ensure_ptr (p);
   BIGNUM *r = BN_new ();
-  BN_init (r);
-  BN_mod_exp (r, g_a, b, p, ctx); 
+  ensure_ptr (r);
+  ensure (BN_mod_exp (r, g_a, b, p, ctx));
   static unsigned char kk[256];
   memset (kk, 0, sizeof (kk));
   BN_bn2bin (r, kk);
@@ -2290,8 +2284,8 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   out_int (get_peer_id (E->id));
   out_long (E->access_hash);
   
-  BN_set_word (g_a, encr_root);
-  BN_mod_exp (r, g_a, b, p, ctx); 
+  ensure (BN_set_word (g_a, encr_root));
+  ensure (BN_mod_exp (r, g_a, b, p, ctx));
   static unsigned char buf[256];
   memset (buf, 0, sizeof (buf));
   BN_bn2bin (r, buf);
@@ -2309,19 +2303,21 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
 void do_create_keys_end (struct secret_chat *U) {
   assert (encr_prime);
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
-  assert (g_b);
+  ensure_ptr (g_b);
   assert (check_g (encr_prime, g_b) >= 0);
   if (!ctx) {
     ctx = BN_CTX_new ();
-    BN_CTX_init (ctx);
+    ensure_ptr (ctx);
   }
   BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  ensure_ptr (p);
   BIGNUM *r = BN_new ();
+  ensure_ptr (r);
   BIGNUM *a = BN_bin2bn ((void *)U->key, 256, 0);
-  BN_init (r);
-  BN_mod_exp (r, g_b, a, p, ctx); 
+  ensure_ptr (a);
+  ensure (BN_mod_exp (r, g_b, a, p, ctx));
 
-  void *t = malloc (256);
+  void *t = talloc (256);
   memcpy (t, U->key, 256);
   
   memset (U->key, 0, sizeof (U->key));
@@ -2344,6 +2340,9 @@ void do_create_keys_end (struct secret_chat *U) {
     logprintf ("!!Key fingerprint mismatch (my 0x%llx 0x%llx)\n", (unsigned long long)k, (unsigned long long)U->key_fingerprint);
     U->state = sc_deleted;
   }
+
+  memset (t, 0, 256);
+  free (t);
   
   BN_clear_free (p);
   BN_clear_free (g_b);
@@ -2361,21 +2360,24 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
   }
   if (!ctx) {
     ctx = BN_CTX_new ();
-    BN_CTX_init (ctx);
+    ensure_ptr (ctx);
   }
   BIGNUM *a = BN_bin2bn (random, 256, 0);
-  assert (a);
+  ensure_ptr (a);
   BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  ensure_ptr (p);
  
   BIGNUM *g = BN_new ();
-  BN_init (g);
+  ensure_ptr (g);
 
-  BN_set_word (g, encr_root);
+  ensure (BN_set_word (g, encr_root));
 
   BIGNUM *r = BN_new ();
-  BN_init (r);
+  ensure_ptr (r);
 
-  BN_mod_exp (r, g, a, p, ctx); 
+  ensure (BN_mod_exp (r, g, a, p, ctx));
+
+  BN_clear_free (a);
 
   static char g_a[256];
   memset (g_a, 0, 256);
@@ -2428,6 +2430,7 @@ int get_dh_config_on_answer (struct query *q UU) {
     bl_do_set_dh_params (a, (void *)s, v);
 
     BIGNUM *p = BN_bin2bn ((void *)s, 256, 0);
+    ensure_ptr (p);
     assert (check_DH_params (p, a) >= 0);
     BN_free (p);      
   }
@@ -2457,7 +2460,7 @@ void do_accept_encr_chat_request (struct secret_chat *E) {
   out_int (CODE_messages_get_dh_config);
   out_int (encr_param_version);
   out_int (256);
-  void **x = malloc (2 * sizeof (void *));
+  void **x = talloc (2 * sizeof (void *));
   x[0] = do_send_accept_encr_chat;
   x[1] = E;
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x);
@@ -2468,7 +2471,7 @@ void do_create_encr_chat_request (int user_id) {
   out_int (CODE_messages_get_dh_config);
   out_int (encr_param_version);
   out_int (256);
-  void **x = malloc (2 * sizeof (void *));
+  void **x = talloc (2 * sizeof (void *));
   x[0] = do_send_create_encr_chat;
   x[1] = (void *)(long)(user_id);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x);

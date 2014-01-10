@@ -45,6 +45,7 @@
 #include "loop.h"
 #include "mtproto-client.h"
 #include "interface.h"
+#include "tools.h"
 
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
@@ -84,7 +85,7 @@ void set_default_username (const char *s) {
   if (default_username) { 
     free (default_username);
   }
-  default_username = strdup (s);
+  default_username = tstrdup (s);
 }
 
 
@@ -236,13 +237,13 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
     if (path) {
       assert (asprintf (s, "%s/%s", path, r) >= 0);
     } else {
-      *s = strdup (r);
+      *s = tstrdup (r);
     }
   } else {
     if (path) {
       assert (asprintf (s, "%s/%s", path, default_name) >= 0);
     } else {
-      *s  = strdup (default_name);
+      *s  = tstrdup (default_name);
     }
   }
 }
@@ -338,7 +339,7 @@ void args_parse (int argc, char **argv) {
       set_default_username (optarg);
       break;
     case 'k':
-      rsa_public_key_name = strdup (optarg);
+      rsa_public_key_name = tstrdup (optarg);
       break;
     case 'v':
       verbosity ++;
@@ -347,10 +348,10 @@ void args_parse (int argc, char **argv) {
       msg_num_mode ++;
       break;
     case 'c':
-      config_filename = strdup (optarg);
+      config_filename = tstrdup (optarg);
       break;
     case 'p':
-      prefix = strdup (optarg);
+      prefix = tstrdup (optarg);
       assert (strlen (prefix) <= 100);
       break;
     case 'l':
@@ -369,7 +370,7 @@ void args_parse (int argc, char **argv) {
       if (log_net_file) { 
         usage ();
       }
-      log_net_file = strdup (optarg);
+      log_net_file = tstrdup (optarg);
       log_net_f = fopen (log_net_file, "a");
       assert (log_net_f);
       break;

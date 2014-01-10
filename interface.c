@@ -413,7 +413,7 @@ int complete_user_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+    *R = tstrdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -426,7 +426,7 @@ int complete_chat_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+    *R = tstrdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -439,7 +439,7 @@ int complete_encr_chat_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+    *R = tstrdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -452,7 +452,7 @@ int complete_user_chat_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+    *R = tstrdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -465,7 +465,7 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
     index ++;
   }
   if (list[index]) {
-    *R = strdup (list[index]);
+    *R = tstrdup (list[index]);
     return index;
   } else {
     *R = 0;
@@ -1100,7 +1100,7 @@ void print_start (void) {
     rl_replace_line("", 0);
 #else
     assert (rl_end >= 0);
-    saved_line = malloc (rl_end + 1);
+    saved_line = talloc (rl_end + 1);
     memcpy (saved_line, rl_line_buffer, rl_end + 1);
     rl_line_buffer[0] = 0;
     set_prompt ("");

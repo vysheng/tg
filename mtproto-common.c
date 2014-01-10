@@ -102,8 +102,7 @@ void my_clock_gettime (int clock_id UU, struct timespec *T) {
 
 
 void prng_seed (const char *password_filename, int password_length) {
-  unsigned char *a = calloc (64 + password_length, 1);
-  assert (a != NULL);
+  unsigned char *a = talloc0 (64 + password_length);
   long long r = rdtsc ();
   struct timespec T;
   my_clock_gettime (CLOCK_REALTIME, &T);
