@@ -179,7 +179,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
     assert (cc <= 9999);
     sprintf (s + fl, "#%d", cc);
   }
-  return strdup (s);
+  return tstrdup (s);
 }
 
 /*
@@ -564,7 +564,7 @@ void fetch_chat_full (struct chat *C) {
     admin_id =  fetch_int ();
     assert (fetch_int () == CODE_vector);
     users_num = fetch_int ();
-    users = malloc (sizeof (struct chat_user) * users_num);
+    users = talloc (sizeof (struct chat_user) * users_num);
     int i;
     for (i = 0; i < users_num; i++) {
       assert (fetch_int () == (int)CODE_chat_participant);
@@ -613,8 +613,7 @@ void fetch_photo_size (struct photo_size *S) {
       S->size = fetch_int ();
     } else {
       S->size = prefetch_strlen ();
-//      S->data = malloc (S->size);
-//      assert (S->data);
+//      S->data = talloc (S->size);
       fetch_str (S->size);
 //      memcpy (S->data, fetch_str (S->size), S->size);
     }
@@ -671,7 +670,7 @@ void fetch_photo (struct photo *P) {
   fetch_geo (&P->geo);
   assert (fetch_int () == CODE_vector);
   P->sizes_num = fetch_int ();
-  P->sizes = malloc (sizeof (struct photo_size) * P->sizes_num);
+  P->sizes = talloc (sizeof (struct photo_size) * P->sizes_num);
   int i;
   for (i = 0; i < P->sizes_num; i++) {
     fetch_photo_size (&P->sizes[i]);
@@ -795,7 +794,7 @@ void fetch_message_action (struct message_action *M) {
     M->title = fetch_str_dup ();
     assert (fetch_int () == (int)CODE_vector);
     M->user_num = fetch_int ();
-    M->users = malloc (M->user_num * 4);
+    M->users = talloc (M->user_num * 4);
     fetch_ints (M->users, M->user_num);
     break;
   case CODE_message_action_chat_edit_title:
@@ -1092,14 +1091,14 @@ void fetch_message_media_encrypted (struct message_media *M) {
     
     l = prefetch_strlen  ();
     assert (l > 0);
-    M->encr_photo.key = malloc (32);
+    M->encr_photo.key = talloc (32);
     memset (M->encr_photo.key, 0, 32);
     if (l <= 32) {
       memcpy (M->encr_photo.key + (32 - l), fetch_str (l), l);
     } else {
       memcpy (M->encr_photo.key, fetch_str (l) + (l - 32), 32);
     }
-    M->encr_photo.iv = malloc (32);
+    M->encr_photo.iv = talloc (32);
     l = prefetch_strlen  ();
     assert (l > 0);
     memset (M->encr_photo.iv, 0, 32);
@@ -1122,14 +1121,13 @@ void fetch_message_media_encrypted (struct message_media *M) {
     
     l = prefetch_strlen  ();
     assert (l > 0);
-    M->encr_video.key = malloc (32);
-    memset (M->encr_photo.key, 0, 32);
+    M->encr_video.key = talloc0 (32);
     if (l <= 32) {
       memcpy (M->encr_video.key + (32 - l), fetch_str (l), l);
     } else {
       memcpy (M->encr_video.key, fetch_str (l) + (l - 32), 32);
     }
-    M->encr_video.iv = malloc (32);
+    M->encr_video.iv = talloc (32);
     l = prefetch_strlen  ();
     assert (l > 0);
     memset (M->encr_video.iv, 0, 32);
@@ -1146,17 +1144,15 @@ void fetch_message_media_encrypted (struct message_media *M) {
     
     l = prefetch_strlen  ();
     assert (l > 0);
-    M->encr_video.key = malloc (32);
-    memset (M->encr_photo.key, 0, 32);
+    M->encr_video.key = talloc0 (32);
     if (l <= 32) {
       memcpy (M->encr_video.key + (32 - l), fetch_str (l), l);
     } else {
       memcpy (M->encr_video.key, fetch_str (l) + (l - 32), 32);
     }
-    M->encr_video.iv = malloc (32);
+    M->encr_video.iv = talloc0 (32);
     l = prefetch_strlen  ();
     assert (l > 0);
-    memset (M->encr_video.iv, 0, 32);
     if (l <= 32) {
       memcpy (M->encr_video.iv + (32 - l), fetch_str (l), l);
     } else {
@@ -1175,17 +1171,15 @@ void fetch_message_media_encrypted (struct message_media *M) {
     
     l = prefetch_strlen  ();
     assert (l > 0);
-    M->encr_video.key = malloc (32);
-    memset (M->encr_photo.key, 0, 32);
+    M->encr_video.key = talloc0 (32);
     if (l <= 32) {
       memcpy (M->encr_video.key + (32 - l), fetch_str (l), l);
     } else {
       memcpy (M->encr_video.key, fetch_str (l) + (l - 32), 32);
     }
-    M->encr_video.iv = malloc (32);
+    M->encr_video.iv = talloc0 (32);
     l = prefetch_strlen  ();
     assert (l > 0);
-    memset (M->encr_video.iv, 0, 32);
     if (l <= 32) {
       memcpy (M->encr_video.iv + (32 - l), fetch_str (l), l);
     } else {
@@ -1199,12 +1193,12 @@ void fetch_message_media_encrypted (struct message_media *M) {
     fetch_str (l); // thumb
     l = fetch_int ();
     assert (l > 0);
-    M->encr_file.key = malloc (l);
+    M->encr_file.key = talloc (l);
     memcpy (M->encr_file.key, fetch_str (l), l);
     
     l = fetch_int ();
     assert (l > 0);
-    M->encr_file.iv = malloc (l);
+    M->encr_file.iv = talloc (l);
     memcpy (M->encr_file.iv, fetch_str (l), l);
     break;
   */  
@@ -1521,8 +1515,7 @@ struct user *fetch_alloc_user (void) {
   peer_t *U = user_chat_get (MK_USER (data[1]));
   if (!U) {
     users_allocated ++;
-    U = malloc (sizeof (*U));
-    memset (U, 0, sizeof (*U));
+    U = talloc0 (sizeof (*U));
     U->id = MK_USER (data[1]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     assert (peer_num < MAX_PEER_NUM);
@@ -1537,8 +1530,7 @@ struct secret_chat *fetch_alloc_encrypted_chat (void) {
   prefetch_data (data, 8);
   peer_t *U = user_chat_get (MK_ENCR_CHAT (data[1]));
   if (!U) {
-    U = malloc (sizeof (*U));
-    memset (U, 0, sizeof (*U));
+    U = talloc0 (sizeof (*U));
     U->id = MK_ENCR_CHAT (data[1]);
     encr_chats_allocated ++;
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
@@ -1579,8 +1571,7 @@ struct user *fetch_alloc_user_full (void) {
     return &U->user;
   } else {
     users_allocated ++;
-    U = malloc (sizeof (*U));
-    memset (U, 0, sizeof (*U));
+    U = talloc0 (sizeof (*U));
     U->id = MK_USER (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     fetch_user_full (&U->user);
@@ -1724,8 +1715,7 @@ void message_add_peer (struct message *M) {
   }
   peer_t *P = user_chat_get (id);
   if (!P) {
-    P = malloc (sizeof (*P));
-    memset (P, 0, sizeof (*P));
+    P = talloc0 (sizeof (*P));
     P->id = id;
     switch (get_peer_type (id)) {
     case PEER_USER:
@@ -1799,8 +1789,7 @@ struct message *fetch_alloc_message (void) {
   struct message *M = message_get (data[1]);
 
   if (!M) {
-    M = malloc (sizeof (*M));
-    memset (M, 0, sizeof (*M));
+    M = talloc0 (sizeof (*M));
     M->id = data[1];
     message_insert_tree (M);
     messages_allocated ++;
@@ -1810,7 +1799,7 @@ struct message *fetch_alloc_message (void) {
 }
 
 struct message *fetch_alloc_geo_message (void) {
-  struct message *M = malloc (sizeof (*M));
+  struct message *M = talloc (sizeof (*M));
   fetch_geo_message (M);
   struct message *M1 = tree_lookup_message (message_tree, M);
   messages_allocated ++;
@@ -1838,8 +1827,7 @@ struct message *fetch_alloc_encrypted_message (void) {
   struct message *M = message_get (*(long long *)(data + 1));
 
   if (!M) {
-    M = malloc (sizeof (*M));
-    memset (M, 0, sizeof (*M));
+    M = talloc0 (sizeof (*M));
     M->id = *(long long *)(data + 1);
     message_insert_tree (M);
     messages_allocated ++;
@@ -1856,8 +1844,7 @@ struct message *fetch_alloc_message_short (void) {
   struct message *M = message_get (data[0]);
 
   if (!M) {
-    M = malloc (sizeof (*M));
-    memset (M, 0, sizeof (*M));
+    M = talloc0 (sizeof (*M));
     M->id = data[0];
     message_insert_tree (M);
     messages_allocated ++;
@@ -1872,8 +1859,7 @@ struct message *fetch_alloc_message_short_chat (void) {
   struct message *M = message_get (data[0]);
 
   if (!M) {
-    M = malloc (sizeof (*M));
-    memset (M, 0, sizeof (*M));
+    M = talloc0 (sizeof (*M));
     M->id = data[0];
     message_insert_tree (M);
     messages_allocated ++;
@@ -1888,8 +1874,7 @@ struct chat *fetch_alloc_chat (void) {
   peer_t *U = user_chat_get (MK_CHAT (data[1]));
   if (!U) {
     chats_allocated ++;
-    U = malloc (sizeof (*U));
-    memset (U, 0, sizeof (*U));
+    U = talloc0 (sizeof (*U));
     U->id = MK_CHAT (data[1]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     assert (peer_num < MAX_PEER_NUM);
@@ -1908,8 +1893,7 @@ struct chat *fetch_alloc_chat_full (void) {
     return &U->chat;
   } else {
     chats_allocated ++;
-    U = malloc (sizeof (*U));
-    memset (U, 0, sizeof (*U));
+    U = talloc0 (sizeof (*U));
     U->id = MK_CHAT (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
     fetch_chat_full (&U->chat);

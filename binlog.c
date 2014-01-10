@@ -183,7 +183,7 @@ void replay_log_event (void) {
       memcpy (U->key, rptr, 256);
       rptr += 64;
       if (!U->g_key) {
-        U->g_key = malloc (256);
+        U->g_key = talloc (256);
       }
       memcpy (U->g_key, rptr, 256);
       rptr += 64;
@@ -196,8 +196,7 @@ void replay_log_event (void) {
       struct secret_chat *U = (void *)user_chat_get (id);
       assert (!U || !(U->flags & FLAG_CREATED));
       if (!U) {
-        U = malloc (sizeof (peer_t));
-        memset (U, 0, sizeof (peer_t));
+        U = talloc0 (sizeof (peer_t));
         U->id = id;
         insert_encrypted_chat ((void *)U);
       }
@@ -223,8 +222,7 @@ void replay_log_event (void) {
       peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
       struct secret_chat *U = (void *)user_chat_get (id);
       if (!U) {
-        U = malloc (sizeof (peer_t));
-        memset (U, 0, sizeof (peer_t));
+        U = talloc0 (sizeof (peer_t));
         U->id = id;
         insert_encrypted_chat ((void *)U);
       }
@@ -252,8 +250,7 @@ void replay_log_event (void) {
       peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
       struct secret_chat *U = (void *)user_chat_get (id);
       if (!U) {
-        U = malloc (sizeof (peer_t));
-        memset (U, 0, sizeof (peer_t));
+        U = talloc0 (sizeof (peer_t));
         U->id = id;
         insert_encrypted_chat ((void *)U);
       }
@@ -291,8 +288,7 @@ void replay_log_event (void) {
       peer_id_t id = MK_USER (fetch_int ());
       peer_t *_U = user_chat_get (id);
       if (!_U) {
-        _U = malloc (sizeof (*_U));
-        memset (_U, 0, sizeof (*_U));
+        _U = talloc0 (sizeof (*_U));
         _U->id = id;
         insert_user (_U);
       } else {
@@ -418,8 +414,7 @@ void replay_log_event (void) {
       peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
       peer_t *_U = user_chat_get (id);
       if (!_U) {
-        _U = malloc (sizeof (*_U));
-        memset (_U, 0, sizeof (*_U));
+        _U = talloc0 (sizeof (*_U));
         _U->id = id;
         insert_encrypted_chat (_U);
       } else {
@@ -440,8 +435,8 @@ void replay_log_event (void) {
         sprintf (buf, "user#%d", U->user_id);
         U->print_name = create_print_name (id, "!", buf, 0, 0);
       }
-      U->g_key = malloc (256);
-      U->nonce = malloc (256);
+      U->g_key = talloc (256);
+      U->nonce = talloc (256);
       memcpy (U->g_key, rptr, 256);
       rptr += 64;
       memcpy (U->nonce, rptr, 256);
@@ -487,10 +482,10 @@ void replay_log_event (void) {
       assert (_U);
       struct secret_chat *U = &_U->encr_chat;
       if (!U->g_key) {
-        U->g_key = malloc (256);
+        U->g_key = talloc (256);
       }
       if (!U->nonce) {
-        U->nonce = malloc (256);
+        U->nonce = talloc (256);
       }
       memcpy (U->g_key, rptr, 256);
       rptr += 64;
@@ -522,7 +517,7 @@ void replay_log_event (void) {
     {
       if (encr_prime) { free (encr_prime); }
       encr_root = *(rptr ++);
-      encr_prime = malloc (256);
+      encr_prime = talloc (256);
       memcpy (encr_prime, rptr, 256);
       rptr += 64;
       encr_param_version = *(rptr ++);
@@ -532,8 +527,7 @@ void replay_log_event (void) {
   case CODE_binlog_encr_chat_init:
     rptr ++;
     {
-      peer_t *P = malloc (sizeof (*P));
-      memset (P, 0, sizeof (*P));
+      peer_t *P = talloc0 (sizeof (*P));
       P->id = MK_ENCR_CHAT (*(rptr ++));
       assert (!user_chat_get (P->id));
       P->encr_chat.user_id = *(rptr ++);
@@ -544,7 +538,7 @@ void replay_log_event (void) {
       P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
       memcpy (P->encr_chat.key, rptr, 256);
       rptr += 64;
-      P->encr_chat.g_key = malloc (256);
+      P->encr_chat.g_key = talloc (256);
       memcpy (P->encr_chat.g_key, rptr, 256);
       rptr += 64;
       P->flags |= FLAG_CREATED;
@@ -572,8 +566,7 @@ void replay_log_event (void) {
       peer_id_t id = MK_CHAT (fetch_int ());
       peer_t *_C = user_chat_get (id);
       if (!_C) {
-        _C = malloc (sizeof (*_C));
-        memset (_C, 0, sizeof (*_C));
+        _C = talloc0 (sizeof (*_C));
         _C->id = id;
         insert_chat (_C);
       } else {
@@ -655,7 +648,7 @@ void replay_log_event (void) {
       C->chat.user_list_version = *(rptr ++);
       C->chat.user_list_size = *(rptr ++);
       if (C->chat.user_list) { free (C->chat.user_list); }
-      C->chat.user_list = malloc (12 * C->chat.user_list_size);
+      C->chat.user_list = talloc (12 * C->chat.user_list_size);
       memcpy (C->chat.user_list, rptr, 12 * C->chat.user_list_size);
       rptr += 3 * C->chat.user_list_size;
     };
@@ -738,8 +731,7 @@ void replay_log_event (void) {
       }
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -756,7 +748,7 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = malloc (l + 1);
+      M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
       M->message[l] = 0;
       M->message_len = l;
@@ -783,8 +775,7 @@ void replay_log_event (void) {
       int id = fetch_int ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -800,7 +791,7 @@ void replay_log_event (void) {
       M->fwd_date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = malloc (l + 1);
+      M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
       M->message[l] = 0;
       M->message_len = l;
@@ -819,8 +810,7 @@ void replay_log_event (void) {
       int id = fetch_int ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -834,7 +824,7 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = malloc (l + 1);
+      M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
       M->message[l] = 0;
       M->message_len = l;
@@ -853,8 +843,7 @@ void replay_log_event (void) {
       long long id = fetch_long ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -868,7 +857,7 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = malloc (l + 1);
+      M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
       M->message[l] = 0;
       M->message_len = l;
@@ -889,8 +878,7 @@ void replay_log_event (void) {
       int id = fetch_int ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -906,7 +894,7 @@ void replay_log_event (void) {
       M->fwd_date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = malloc (l + 1);
+      M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
       M->message[l] = 0;
       M->message_len = l;
@@ -925,8 +913,7 @@ void replay_log_event (void) {
       int id = fetch_int ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -954,8 +941,7 @@ void replay_log_event (void) {
       long long id = fetch_long ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;
@@ -984,8 +970,7 @@ void replay_log_event (void) {
       int id = fetch_int ();
       struct message *M = message_get (id);
       if (!M) {
-        M = malloc (sizeof (*M));
-        memset (M, 0, sizeof (*M));
+        M = talloc0 (sizeof (*M));
         M->id = id;
         message_insert_tree (M);
         messages_allocated ++;

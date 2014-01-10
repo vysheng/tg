@@ -431,9 +431,9 @@ int check_DH_params (BIGNUM *p, int g) {
   BN_init (&t);
 
   BN_init (&dh_g);
-  BN_set_word (&dh_g, 4 * g);
+  ensure (BN_set_word (&dh_g, 4 * g));
 
-  BN_mod (&t, p, &dh_g, BN_ctx);
+  ensure (BN_mod (&t, p, &dh_g, BN_ctx));
   int x = BN_get_word (&t);
   assert (x >= 0 && x < 4 * g);
 
@@ -463,8 +463,8 @@ int check_DH_params (BIGNUM *p, int g) {
 
   BIGNUM b;
   BN_init (&b);
-  BN_set_word (&b, 2);
-  BN_div (&t, 0, p, &b, BN_ctx);
+  ensure (BN_set_word (&b, 2));
+  ensure (BN_div (&t, 0, p, &b, BN_ctx));
   if (!BN_is_prime (&t, BN_prime_checks, 0, BN_ctx, 0)) { return -1; }
   BN_clear (&b);
   BN_clear (&t);
@@ -571,19 +571,20 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   out_long (0LL);
   
   BN_init (&dh_g);
-  BN_set_word (&dh_g, g);
+  ensure (BN_set_word (&dh_g, g));
 
   secure_random (s_power, 256);
-  BIGNUM *dh_power = BN_new ();
-  assert (BN_bin2bn ((unsigned char *)s_power, 256, dh_power) == dh_power);
+  BIGNUM *dh_power = BN_bin2bn ((unsigned char *)s_power, 256, 0);
+  ensure_ptr (dh_power);
 
   BIGNUM *y = BN_new ();
-  assert (BN_mod_exp (y, &dh_g, dh_power, &dh_prime, BN_ctx) == 1);
+  ensure_ptr (y);
+  ensure (BN_mod_exp (y, &dh_g, dh_power, &dh_prime, BN_ctx));
   out_bignum (y);
   BN_free (y);
 
   BN_init (&auth_key_num);
-  assert (BN_mod_exp (&auth_key_num, &g_a, dh_power, &dh_prime, BN_ctx) == 1);
+  ensure (BN_mod_exp (&auth_key_num, &g_a, dh_power, &dh_prime, BN_ctx));
   l = BN_num_bytes (&auth_key_num);
   assert (l >= 250 && l <= 256);
   assert (BN_bn2bin (&auth_key_num, (unsigned char *)GET_DC(c)->auth_key));
@@ -1098,7 +1099,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           bl_do_set_chat_admin (&C->chat, fetch_int ());
           assert (fetch_int () == CODE_vector);
           n = fetch_int ();
-          struct chat_user *users = malloc (12 * n);
+          struct chat_user *users = talloc (12 * n);
           int i;
           for (i = 0; i < n; i++) {
             assert (fetch_int () == (int)CODE_chat_participant);

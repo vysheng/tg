@@ -200,7 +200,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
   int l = 0;
   assert (read (auth_file_fd, &l, 4) == 4);
   assert (l >= 0);
-  char *ip = malloc (l + 1);
+  char *ip = talloc (l + 1);
   assert (read (auth_file_fd, ip, l) == l);
   ip[l] = 0;
   struct dc *DC = alloc_dc (id, ip, port);
@@ -218,8 +218,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 }
 
 void empty_auth_file (void) {
-  struct dc *DC = alloc_dc (1, strdup (test_dc ? TG_SERVER_TEST : TG_SERVER), 443);
-  assert (DC);
+  alloc_dc (1, tstrdup (test_dc ? TG_SERVER_TEST : TG_SERVER), 443);
   dc_working_num = 1;
   auth_state = 0;
   write_auth_file ();
@@ -338,8 +337,7 @@ void read_secret_chat_file (void) {
   assert (read (fd, &cc, 4) == 4);
   int i;
   for (i = 0; i < cc; i++) {
-    peer_t *P = malloc (sizeof (*P));
-    memset (P, 0, sizeof (*P));
+    peer_t *P = talloc0 (sizeof (*P));
     struct secret_chat *E = &P->encr_chat;
     int t;
     assert (read (fd, &t, 4) == 4);
@@ -347,7 +345,7 @@ void read_secret_chat_file (void) {
     assert (read (fd, &P->flags, 4) == 4);
     assert (read (fd, &t, 4) == 4);
     assert (t > 0);
-    P->print_name = malloc (t + 1);
+    P->print_name = talloc (t + 1);
     assert (read (fd, P->print_name, t) == t);
     P->print_name[t] = 0;
 
@@ -358,9 +356,9 @@ void read_secret_chat_file (void) {
     assert (read (fd, &E->access_hash, 8) == 8);
 
     if (E->state != sc_waiting) {
-      E->g_key = malloc (256);
+      E->g_key = talloc (256);
       assert (read (fd, E->g_key, 256) == 256);
-      E->nonce = malloc (256);
+      E->nonce = talloc (256);
       assert (read (fd, E->nonce, 256) == 256);
     }
     assert (read (fd, E->key, 256) == 256);
@@ -371,7 +369,7 @@ void read_secret_chat_file (void) {
     assert (read (fd, &encr_root, 4) == 4);
     if (encr_root) {
       assert (read (fd, &encr_param_version, 4) == 4);
-      encr_prime = malloc (256);
+      encr_prime = talloc (256);
       assert (read (fd, encr_prime, 256) == 256);
     }
   }
@@ -572,7 +570,6 @@ int loop (void) {
   }
   write_auth_file ();
 
-  fflush (stdin);
   fflush (stdout);
   fflush (stderr);
 

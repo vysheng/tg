@@ -45,6 +45,7 @@
 #include "loop.h"
 #include "mtproto-client.h"
 #include "interface.h"
+#include "tools.h"
 
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
@@ -84,7 +85,7 @@ void set_default_username (const char *s) {
   if (default_username) { 
     free (default_username);
   }
-  default_username = strdup (s);
+  default_username = tstrdup (s);
 }
 
 
@@ -119,26 +120,30 @@ void set_terminal_attributes (void) {
 /* }}} */
 
 char *get_home_directory (void) {
+  static char *home_directory = NULL;
+  if (home_directory != NULL) {
+    return home_directory;
+  }
   struct passwd *current_passwd;
   uid_t user_id;
   setpwent ();
   user_id = getuid ();
   while ((current_passwd = getpwent ())) {
     if (current_passwd->pw_uid == user_id) {
-      return current_passwd->pw_dir;
+      home_directory = tstrdup (current_passwd->pw_dir);
+      break;
     }
   }
-  return "";
+  endpwent ();
+  if (home_directory == NULL) {
+    home_directory = tstrdup (".");
+  }
+  return home_directory;
 }
 
 char *get_config_directory (void) {
   char *config_directory;
-  int length = strlen (get_home_directory ()) + strlen (CONFIG_DIRECTORY) + 2;
-
-  config_directory = (char *) calloc (length, sizeof (char));
-  sprintf (config_directory, "%s/" CONFIG_DIRECTORY,
-     get_home_directory ());
-
+  assert (asprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ()) >= 0);
   return config_directory;
 }
 
@@ -176,6 +181,11 @@ char *make_full_path (char *s) {
 }
 
 void running_for_first_time (void) {
+  if (sizeof (void) != 1) {
+    logprintf ("sizeof (void) isn't equal 1\n");
+    logprintf ("GNU C compiler extension isn't available?\n");
+    exit (1);
+  }
   if (config_filename) {
     return; // Do not create custom config file
   }
@@ -191,6 +201,8 @@ void running_for_first_time (void) {
     printf ("[%s] created\n", config_directory);
   }
 
+  free (config_directory);
+  config_directory = NULL;
   // see if config file is there
   if (stat (config_filename, &config_file_stat) != 0) {
     // config file missing, so touch it
@@ -236,13 +248,13 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
     if (path) {
       assert (asprintf (s, "%s/%s", path, r) >= 0);
     } else {
-      *s = strdup (r);
+      *s = tstrdup (r);
     }
   } else {
     if (path) {
       assert (asprintf (s, "%s/%s", path, default_name) >= 0);
     } else {
-      *s  = strdup (default_name);
+      *s  = tstrdup (default_name);
     }
   }
 }
@@ -338,7 +350,7 @@ void args_parse (int argc, char **argv) {
       set_default_username (optarg);
       break;
     case 'k':
-      rsa_public_key_name = strdup (optarg);
+      rsa_public_key_name = tstrdup (optarg);
       break;
     case 'v':
       verbosity ++;
@@ -347,10 +359,10 @@ void args_parse (int argc, char **argv) {
       msg_num_mode ++;
       break;
     case 'c':
-      config_filename = strdup (optarg);
+      config_filename = tstrdup (optarg);
       break;
     case 'p':
-      prefix = strdup (optarg);
+      prefix = tstrdup (optarg);
       assert (strlen (prefix) <= 100);
       break;
     case 'l':
@@ -369,7 +381,7 @@ void args_parse (int argc, char **argv) {
       if (log_net_file) { 
         usage ();
       }
-      log_net_file = strdup (optarg);
+      log_net_file = tstrdup (optarg);
       log_net_f = fopen (log_net_file, "a");
       assert (log_net_f);
       break;

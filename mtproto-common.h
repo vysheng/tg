@@ -27,6 +27,7 @@
 #include <stdio.h>
 
 #include "interface.h"
+#include "tools.h"
 #include "constants.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
@@ -305,7 +306,7 @@ static inline char *fetch_str (int len) {
 static inline char *fetch_str_dup (void) {
   int l = prefetch_strlen ();
   assert (l >= 0);
-  char *s = malloc (l + 1);
+  char *s = talloc (l + 1);
   memcpy (s, fetch_str (l), l);
   s[l] = 0;
   return s;
@@ -320,7 +321,7 @@ static inline int fetch_update_str (char **s) {
   char *r = fetch_str (l);
   if (memcmp (*s, r, l) || (*s)[l]) {
     free (*s);
-    *s = malloc (l + 1);
+    *s = talloc (l + 1);
     memcpy (*s, r, l);
     (*s)[l] = 0;
     return 1;
