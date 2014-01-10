@@ -52,7 +52,7 @@ long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 BN_CTX *BN_ctx;
 int verbosity;
 
-int get_random_bytes (void *buf, int n) {
+int get_random_bytes (unsigned char *buf, int n) {
   int r = 0, h = open ("/dev/random", O_RDONLY | O_NONBLOCK);
   if (h >= 0) {
     r = read (h, buf, n);

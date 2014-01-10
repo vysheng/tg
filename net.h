@@ -93,10 +93,10 @@ struct dc_serialized {
 };
 
 struct connection_buffer {
-  void *start;
-  void *end;
-  void *rptr;
-  void *wptr;
+  unsigned char *start;
+  unsigned char *end;
+  unsigned char *rptr;
+  unsigned char *wptr;
   struct connection_buffer *next;
 };
 
