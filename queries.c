@@ -20,7 +20,6 @@
 #include <string.h>
 #include <memory.h>
 #include <stdlib.h>
-#include <zlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -215,26 +214,12 @@ void query_result (long long id UU) {
     fetch_int ();
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
-    size_t dl = MAX_PACKED_SIZE;
-
-    z_stream strm;
-    memset (&strm, 0, sizeof (strm));
-    assert (inflateInit2 (&strm, 16 + MAX_WBITS) == Z_OK);
-    strm.avail_in = l;
-    strm.next_in = (void *)s;
-    strm.avail_out = MAX_PACKED_SIZE;
-    strm.next_out = (void *)packed_buffer;
-
-    int err = inflate (&strm, Z_FINISH);
-    if (verbosity) {
-      logprintf ( "inflate error = %d\n", err);
-      logprintf ( "inflated %d bytes\n", (int)strm.total_out);
-    }
+    int total_out = tinflate (s, l, packed_buffer, MAX_PACKED_SIZE);
     end = in_ptr;
     eend = in_end;
-    assert (dl % 4 == 0);
+    //assert (total_out % 4 == 0);
     in_ptr = packed_buffer;
-    in_end = in_ptr + strm.total_out / 4;
+    in_end = in_ptr + total_out / 4;
     if (verbosity >= 4) {
       logprintf ( "Unzipped data: ");
       hexdump_in ();
@@ -2329,7 +2314,7 @@ void do_create_keys_end (struct secret_chat *U) {
   ensure_ptr (a);
   ensure (BN_mod_exp (r, g_b, a, p, ctx));
 
-  void *t = talloc (256);
+  unsigned char *t = talloc (256);
   memcpy (t, U->key, 256);
   
   memset (U->key, 0, sizeof (U->key));

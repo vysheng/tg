@@ -40,7 +40,6 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
-#include <zlib.h>
 
 #include "net.h"
 #include "include.h"
@@ -1493,26 +1492,13 @@ void work_packed (struct connection *c, long long msg_id) {
     
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
-  size_t dl = MAX_PACKED_SIZE;
 
-  z_stream strm;
-  memset (&strm, 0, sizeof (strm));
-  assert (inflateInit2 (&strm, 16 + MAX_WBITS) == Z_OK);
-  strm.avail_in = l;
-  strm.next_in = (void *)s;
-  strm.avail_out = MAX_PACKED_SIZE;
-  strm.next_out = (void *)buf;
-
-  int err = inflate (&strm, Z_FINISH);
-  if (verbosity) {
-    logprintf ( "inflate error = %d\n", err);
-    logprintf ( "inflated %d bytes\n", (int)strm.total_out);
-  }
+  int total_out = tinflate (s, l, buf, MAX_PACKED_SIZE);
   int *end = in_ptr;
   int *eend = in_end;
-  assert (dl % 4 == 0);
+  //assert (total_out % 4 == 0);
   in_ptr = buf;
-  in_end = in_ptr + strm.total_out / 4;
+  in_end = in_ptr + total_out / 4;
   if (verbosity >= 4) {
     logprintf ( "Unzipped data: ");
     hexdump_in ();
