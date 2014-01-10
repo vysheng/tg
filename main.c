@@ -181,6 +181,11 @@ char *make_full_path (char *s) {
 }
 
 void running_for_first_time (void) {
+  if (sizeof (void) != 1) {
+    logprintf ("sizeof (void) isn't equal 1\n");
+    logprintf ("GNU C compiler extension isn't available?\n");
+    exit (1);
+  }
   if (config_filename) {
     return; // Do not create custom config file
   }
