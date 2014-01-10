@@ -22,9 +22,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/err.h>
+#include <zlib.h>
 
 #include "interface.h"
 #include "tools.h"
+
+extern int verbosity;
 
 static void out_of_memory (void) {
   logprintf ("Out of memory\n");
@@ -69,4 +72,27 @@ void ensure_ptr (void *p) {
   if (p == NULL) {
     out_of_memory ();
   }
+}
+
+int tinflate (void *input, int ilen, void *output, int olen) {
+  z_stream strm;
+  memset (&strm, 0, sizeof (strm));
+  assert (inflateInit2 (&strm, 16 + MAX_WBITS) == Z_OK);
+  strm.avail_in = ilen;
+  strm.next_in = input;
+  strm.avail_out = olen ;
+  strm.next_out = output;
+  int err = inflate (&strm, Z_FINISH), total_out = 0;
+  if (err == Z_OK || err == Z_STREAM_END) {
+    total_out = (int) strm.total_out;
+    if (err == Z_STREAM_END && verbosity >= 2) {
+      logprintf ( "inflated %d bytes\n", (int) strm.total_out);
+    }
+  }
+  if (verbosity && err != Z_STREAM_END) {
+    logprintf ( "inflate error = %d\n", err);
+    logprintf ( "inflated %d bytes\n", (int) strm.total_out);
+  }
+  inflateEnd (&strm);
+  return total_out;
 }

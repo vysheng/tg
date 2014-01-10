@@ -24,6 +24,7 @@ void *talloc (size_t size);
 void *trealloc (void *ptr, size_t size);
 void *talloc0 (size_t size);
 char *tstrdup (const char *s);
+int tinflate (void *input, int ilen, void *output, int olen);
 void ensure (int r);
 void ensure_ptr (void *p);
 
