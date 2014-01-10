@@ -570,7 +570,6 @@ int loop (void) {
   }
   write_auth_file ();
 
-  fflush (stdin);
   fflush (stdout);
   fflush (stderr);
 
