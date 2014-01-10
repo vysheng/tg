@@ -1764,12 +1764,15 @@ void end_load (struct download *D) {
   if (D->next == 1) {
     logprintf ("Done: %s\n", D->name);
   } else if (D->next == 2) {
-    static char buf[1000];
-    sprintf (buf, OPEN_BIN, D->name);
-    int x = system (buf);
-    if (x < 0) {
-      logprintf ("Can not open image viewer: %m\n");
-      logprintf ("Image is at %s\n", D->name);
+    static char buf[PATH_MAX];
+    if (snprintf (buf, sizeof (buf), OPEN_BIN, D->name) >= (int) sizeof (buf)) {
+      logprintf ("Open image command buffer overflow\n");
+    } else {
+      int x = system (buf);
+      if (x < 0) {
+        logprintf ("Can not open image viewer: %m\n");
+        logprintf ("Image is at %s\n", D->name);
+      }
     }
   }
   if (D->iv) {
