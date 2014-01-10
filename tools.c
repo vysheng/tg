@@ -31,6 +31,12 @@ static void out_of_memory (void) {
   assert (0 && "Out of memory");
 }
 
+void *trealloc (void *ptr, size_t size) {
+  void *p = realloc (ptr, size);
+  ensure_ptr (p);
+  return p;
+}
+
 void *talloc (size_t size) {
   void *p = malloc (size);
   ensure_ptr (p);

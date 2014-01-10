@@ -685,7 +685,7 @@ void replay_log_event (void) {
         assert (C->user_list[i].user_id != user);
       }
       C->user_list_size ++;
-      C->user_list = realloc (C->user_list, 12 * C->user_list_size);
+      C->user_list = trealloc (C->user_list, 12 * C->user_list_size);
       C->user_list[C->user_list_size - 1].user_id = user;
       C->user_list[C->user_list_size - 1].inviter_id = inviter;
       C->user_list[C->user_list_size - 1].date = date;
@@ -715,7 +715,7 @@ void replay_log_event (void) {
       }
       assert (C->user_list[C->user_list_size - 1].user_id == user);
       C->user_list_size --;
-      C->user_list = realloc (C->user_list, 12 * C->user_list_size);
+      C->user_list = trealloc (C->user_list, 12 * C->user_list_size);
       C->user_list_version = version;
     }
     break;

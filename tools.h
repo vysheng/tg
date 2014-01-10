@@ -21,6 +21,7 @@
 #define __TOOLS_H__
 
 void *talloc (size_t size);
+void *trealloc (void *ptr, size_t size);
 void *talloc0 (size_t size);
 char *tstrdup (const char *s);
 void ensure (int r);
