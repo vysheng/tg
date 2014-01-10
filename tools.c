@@ -56,7 +56,7 @@ int tasprintf (char **res, const char *format, ...) {
   return r;
 }
 
-void tfree (void *ptr, int size) {
+void tfree (void *ptr, int size __attribute__ ((unused))) {
 #ifdef DEBUG
   ptr -= 4;
   assert (*(int *)ptr == (int)((size) ^ 0xbedabeda));
