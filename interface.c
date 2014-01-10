@@ -214,29 +214,29 @@ char *get_default_prompt (void) {
   if (in_chat_mode) {
     peer_t *U = user_chat_get (chat_mode_id);
     assert (U && U->print_name);
-    l += sprintf (buf + l, COLOR_RED "%.*s " COLOR_NORMAL, 100, U->print_name);
+    l += tsnprintf (buf + l, 999 - l, COLOR_RED "%.*s " COLOR_NORMAL, 100, U->print_name);
   }
   if (unread_messages || cur_uploading_bytes || cur_downloading_bytes) {
-    l += sprintf (buf + l, COLOR_RED "[");
+    l += tsnprintf (buf + l, 999 - l, COLOR_RED "[");
     int ok = 0;
     if (unread_messages) {
-      l += sprintf (buf + l, "%d unread", unread_messages);
+      l += tsnprintf (buf + l, 999 - l, "%d unread", unread_messages);
       ok = 1;
     }
     if (cur_uploading_bytes) {
       if (ok) { *(buf + l) = ' '; l ++; }
       ok = 1;
-      l += sprintf (buf + l, "%lld%%Up", 100 * cur_uploaded_bytes / cur_uploading_bytes);
+      l += tsnprintf (buf + l, 999 - l, "%lld%%Up", 100 * cur_uploaded_bytes / cur_uploading_bytes);
     }
     if (cur_downloading_bytes) {
       if (ok) { *(buf + l) = ' '; l ++; }
       ok = 1;
-      l += sprintf (buf + l, "%lld%%Down", 100 * cur_downloaded_bytes / cur_downloading_bytes);
+      l += tsnprintf (buf + l, 999 - l, "%lld%%Down", 100 * cur_downloaded_bytes / cur_downloading_bytes);
     }
-    l += sprintf (buf + l, "]" COLOR_NORMAL);
+    l += tsnprintf (buf + l, 999 - l, "]" COLOR_NORMAL);
     return buf;
   } 
-  l += sprintf (buf + l, "%s", default_prompt);
+  l += tsnprintf (buf + l, 999 - l, "%s", default_prompt);
   return buf;
 }
 
@@ -413,7 +413,7 @@ int complete_user_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = tstrdup (Peers[index]->print_name);
+    *R = strdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -426,7 +426,7 @@ int complete_chat_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = tstrdup (Peers[index]->print_name);
+    *R = strdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -439,7 +439,7 @@ int complete_encr_chat_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = tstrdup (Peers[index]->print_name);
+    *R = strdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -452,7 +452,7 @@ int complete_user_chat_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (index < peer_num) {
-    *R = tstrdup (Peers[index]->print_name);
+    *R = strdup (Peers[index]->print_name);
     return index;
   } else {
     return -1;
@@ -465,7 +465,7 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
     index ++;
   }
   if (list[index]) {
-    *R = tstrdup (list[index]);
+    *R = strdup (list[index]);
     return index;
   } else {
     *R = 0;
@@ -505,7 +505,7 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 1:
-    index = complete_user_list (index, text, len, &R);
+    index = complete_user_list (index, text, len, &R);    
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 2:
@@ -1095,7 +1095,10 @@ void print_start (void) {
   if (readline_active) {
     saved_point = rl_point;
 #ifdef READLINE_GNU
-    saved_line = rl_copy_text(0, rl_end);    
+    saved_line = talloc (rl_end + 1);
+    saved_line[rl_end] = 0;
+    memcpy (saved_line, rl_line_buffer, rl_end);
+
     rl_save_prompt();
     rl_replace_line("", 0);
 #else
@@ -1122,7 +1125,7 @@ void print_end (void) {
 #endif
     rl_point = saved_point;
     rl_redisplay();
-    free(saved_line);
+    tfree_str (saved_line);
   }
   prompt_was = 0;
 }

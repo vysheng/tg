@@ -210,7 +210,7 @@ void replay_log_event (void) {
           U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
         } else {
           static char buf[100];
-          sprintf (buf, "user#%d", U->user_id);
+          tsnprintf (buf, 99, "user#%d", U->user_id);
           U->print_name = create_print_name (U->id, "!", buf, 0, 0);
         }
       }
@@ -266,7 +266,7 @@ void replay_log_event (void) {
           U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
         } else {
           static char buf[100];
-          sprintf (buf, "user#%d", U->user_id);
+          tsnprintf (buf, 99, "user#%d", U->user_id);
           U->print_name = create_print_name (U->id, "!", buf, 0, 0);
         }
       }
@@ -335,7 +335,7 @@ void replay_log_event (void) {
       peer_id_t id = MK_USER (fetch_int ());
       peer_t *U = user_chat_get (id);
       assert (U);
-      if (U->user.phone) { free (U->user.phone); }
+      if (U->user.phone) { tfree_str (U->user.phone); }
       U->user.phone = fetch_str_dup ();
     }
     rptr = in_ptr;
@@ -379,8 +379,8 @@ void replay_log_event (void) {
       peer_id_t id = MK_USER (fetch_int ());
       peer_t *U = user_chat_get (id);
       assert (U);
-      if (U->user.real_first_name) { free (U->user.real_first_name); }
-      if (U->user.real_last_name) { free (U->user.real_last_name); }
+      if (U->user.real_first_name) { tfree_str (U->user.real_first_name); }
+      if (U->user.real_last_name) { tfree_str (U->user.real_last_name); }
       U->user.real_first_name = fetch_str_dup ();
       U->user.real_last_name = fetch_str_dup ();
     }
@@ -397,13 +397,11 @@ void replay_log_event (void) {
       U->flags |= FLAG_DELETED;
       U->state = sc_deleted;
       if (U->nonce) {
-        memset (U->nonce, 0, 256);
-        free (U->nonce);
+        tfree_secure (U->nonce, 256);
         U->nonce = 0;
       }
       if (U->g_key) {
-        memset (U->g_key, 0, 256);
-        free (U->g_key);
+        tfree_secure (U->g_key, 256);
         U->g_key = 0;
       }
     }
@@ -431,8 +429,8 @@ void replay_log_event (void) {
       if (Us) {
         U->print_name = create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
       } else {
-        static char buf[20];
-        sprintf (buf, "user#%d", U->user_id);
+        static char buf[100];
+        tsnprintf (buf, 99, "user#%d", U->user_id);
         U->print_name = create_print_name (id, "!", buf, 0, 0);
       }
       U->g_key = talloc (256);
@@ -515,7 +513,7 @@ void replay_log_event (void) {
   case CODE_binlog_set_dh_params:
     rptr ++;
     {
-      if (encr_prime) { free (encr_prime); }
+      if (encr_prime) { tfree_str (encr_prime); }
       encr_root = *(rptr ++);
       encr_prime = talloc (256);
       memcpy (encr_prime, rptr, 256);
@@ -599,7 +597,7 @@ void replay_log_event (void) {
       peer_t *_C = user_chat_get (MK_CHAT (fetch_int ()));
       assert (_C && (_C->flags & FLAG_CREATED));
       struct chat *C = &_C->chat;
-      if (C->title) { free (C->title); }
+      if (C->title) { tfree_str (C->title); }
       C->title = fetch_str_dup ();
       C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
     };
@@ -646,8 +644,8 @@ void replay_log_event (void) {
       peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
       assert (C && (C->flags & FLAG_CREATED));
       C->chat.user_list_version = *(rptr ++);
+      if (C->chat.user_list) { tfree (C->chat.user_list, 12 * C->chat.user_list_size); }
       C->chat.user_list_size = *(rptr ++);
-      if (C->chat.user_list) { free (C->chat.user_list); }
       C->chat.user_list = talloc (12 * C->chat.user_list_size);
       memcpy (C->chat.user_list, rptr, 12 * C->chat.user_list_size);
       rptr += 3 * C->chat.user_list_size;
@@ -685,7 +683,7 @@ void replay_log_event (void) {
         assert (C->user_list[i].user_id != user);
       }
       C->user_list_size ++;
-      C->user_list = trealloc (C->user_list, 12 * C->user_list_size);
+      C->user_list = trealloc (C->user_list, 12 * C->user_list_size - 12, 12 * C->user_list_size);
       C->user_list[C->user_list_size - 1].user_id = user;
       C->user_list[C->user_list_size - 1].inviter_id = inviter;
       C->user_list[C->user_list_size - 1].date = date;
@@ -715,7 +713,7 @@ void replay_log_event (void) {
       }
       assert (C->user_list[C->user_list_size - 1].user_id == user);
       C->user_list_size --;
-      C->user_list = trealloc (C->user_list, 12 * C->user_list_size);
+      C->user_list = trealloc (C->user_list, 12 * C->user_list_size + 12, 12 * C->user_list_size);
       C->user_list_version = version;
     }
     break;
@@ -1026,7 +1024,7 @@ void replay_log_event (void) {
       M->id = *(rptr ++);
       if (message_get (M->id)) {
         free_message (M);
-        free (M);
+        tfree (M, sizeof (*M));
       } else {
         message_insert_tree (M);
         message_add_peer (M);
@@ -1046,7 +1044,7 @@ void replay_log_event (void) {
       message_remove_tree (M);
       message_del_peer (M);
       free_message (M);
-      free (M);
+      tfree (M, sizeof (*M));
     }
     break;
   case CODE_update_user_photo:

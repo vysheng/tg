@@ -83,7 +83,7 @@ int allow_weak_random;
 
 void set_default_username (const char *s) {
   if (default_username) { 
-    free (default_username);
+    tfree_str (default_username);
   }
   default_username = tstrdup (s);
 }
@@ -143,7 +143,7 @@ char *get_home_directory (void) {
 
 char *get_config_directory (void) {
   char *config_directory;
-  assert (asprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ()) >= 0);
+  tasprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ());
   return config_directory;
 }
 
@@ -174,8 +174,8 @@ char *get_binlog_file_name (void) {
 char *make_full_path (char *s) {
   if (*s != '/') {
     char *t = s;
-    assert (asprintf (&s, "%s/%s", get_home_directory (), s) >= 0);
-    free (t);
+    tasprintf (&s, "%s/%s", get_home_directory (), s);
+    tfree_str (t);
   }
   return s;
 }
@@ -189,7 +189,7 @@ void running_for_first_time (void) {
   if (config_filename) {
     return; // Do not create custom config file
   }
-  assert (asprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE) >= 0);
+  tasprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE);
   config_filename = make_full_path (config_filename);
 
   static struct stat config_file_stat;
@@ -201,7 +201,7 @@ void running_for_first_time (void) {
     printf ("[%s] created\n", config_directory);
   }
 
-  free (config_directory);
+  tfree_str (config_directory);
   config_directory = NULL;
   // see if config file is there
   if (stat (config_filename, &config_file_stat) != 0) {
@@ -246,13 +246,13 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
   config_lookup_string (conf, buf, &r);
   if (r) {
     if (path) {
-      assert (asprintf (s, "%s/%s", path, r) >= 0);
+      tasprintf (s, "%s/%s", path, r);
     } else {
       *s = tstrdup (r);
     }
   } else {
     if (path) {
-      assert (asprintf (s, "%s/%s", path, default_name) >= 0);
+      tasprintf (s, "%s/%s", path, default_name);
     } else {
       *s  = tstrdup (default_name);
     }
@@ -316,11 +316,11 @@ void parse_config (void) {
 #else
 void parse_config (void) {
   printf ("libconfig not enabled\n");
-  assert (asprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE) >= 0);
-  assert (asprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE) >= 0);
-  assert (asprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE) >= 0);
-  assert (asprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY) >= 0);
-  assert (asprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE) >= 0);
+  tasprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE);
+  tasprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE);
+  tasprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE);
+  tasprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY);
+  tasprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE);
 }
 #endif
 

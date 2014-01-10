@@ -111,8 +111,8 @@ struct connection_buffer *new_connection_buffer (int size) {
 }
 
 void delete_connection_buffer (struct connection_buffer *b) {
-  free (b->start);
-  free (b);
+  tfree (b->start, b->end - b->start);
+  tfree (b, sizeof (*b));
 }
 
 int write_out (struct connection *c, const void *data, int len) {
@@ -250,7 +250,7 @@ struct connection *create_connection (const char *host, int port, struct session
     if (errno != EINPROGRESS) {
       logprintf ( "Can not connect to %s:%d %m\n", host, port);
       close (fd);
-      free (c);
+      tfree (c, sizeof (*c));
       return 0;
     }
   }
@@ -268,7 +268,7 @@ struct connection *create_connection (const char *host, int port, struct session
     }
     logprintf ("Connect with %s:%d timeout\n", host, port);
     close (fd);
-    free (c);
+    tfree (c, sizeof (*c));
     return 0;
   }
 

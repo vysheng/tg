@@ -40,7 +40,7 @@ struct tree_ ## X_NAME *new_tree_node_ ## X_NAME (X_TYPE x, int y) {\
 }\
 \
 void delete_tree_node_ ## X_NAME (struct tree_ ## X_NAME *T) {\
-  free (T);\
+  tfree (T, sizeof (*T));\
 }\
 \
 void tree_split_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, struct tree_ ## X_NAME **L, struct tree_ ## X_NAME **R) {\

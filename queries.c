@@ -191,8 +191,8 @@ void query_error (long long id) {
     } else {
       logprintf ( "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
     }
-    free (q->data);
-    free (q);
+    tfree (q->data, q->data_len * 4);
+    tfree (q, sizeof (*q));
   }
   queries_num --;
 }
@@ -255,8 +255,8 @@ void query_result (long long id UU) {
       q->methods->on_answer (q);
       assert (in_ptr == in_end);
     }
-    free (q->data);
-    free (q);
+    tfree (q->data, 4 * q->data_len);
+    tfree (q, sizeof (*q));
   }
   if (end) {
     in_ptr = end;
@@ -326,7 +326,7 @@ void do_insert_header (void) {
     uname (&st);
     out_string (st.machine);
     static char buf[65536];
-    sprintf (buf, "%999s %999s %999s", st.sysname, st.release, st.version);
+    tsnprintf (buf, 65535, "%999s %999s %999s", st.sysname, st.release, st.version);
     out_string (buf);
     out_string (TG_VERSION " (build " TG_BUILD ")");
     out_string ("En");
@@ -399,7 +399,7 @@ int send_code_on_answer (struct query *q UU) {
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
   if (phone_code_hash) {
-    free (phone_code_hash);
+    tfree_str (phone_code_hash);
   }
   phone_code_hash = strndup (s, l);
   want_dc_num = -1;
@@ -933,7 +933,7 @@ void do_send_text (peer_id_t id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
-    free (file_name);
+    tfree_str (file_name);
     return;
   }
   static char buf[(1 << 20) + 1];
@@ -941,12 +941,12 @@ void do_send_text (peer_id_t id, char *file_name) {
   assert (x >= 0);
   if (x == (1 << 20) + 1) {
     rprintf ("Too big file '%s'\n", file_name);
-    free (file_name);
+    tfree_str (file_name);
     close (fd);
   } else {
     buf[x] = 0;
     do_send_message (id, buf, x);
-    free (file_name);
+    tfree_str (file_name);
     close (fd);
   }
 }
@@ -1437,7 +1437,7 @@ void send_part (struct send_file *f) {
       MD5 (str, 64, md5);
       out_int ((*(int *)md5) ^ (*(int *)(md5 + 4)));
 
-      free (f->iv);
+      tfree_secure (f->iv, 32);
       
       M->media.encr_photo.key = f->key;
       M->media.encr_photo.iv = f->init_iv;
@@ -1456,8 +1456,8 @@ void send_part (struct send_file *f) {
       send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M);
 
     }
-    free (f->file_name);
-    free (f);
+    tfree_str (f->file_name);
+    tfree (f, sizeof (*f));
   }
 }
 
@@ -1769,7 +1769,7 @@ void end_load (struct download *D) {
     logprintf ("Done: %s\n", D->name);
   } else if (D->next == 2) {
     static char buf[PATH_MAX];
-    if (snprintf (buf, sizeof (buf), OPEN_BIN, D->name) >= (int) sizeof (buf)) {
+    if (tsnprintf (buf, sizeof (buf), OPEN_BIN, D->name) >= (int) sizeof (buf)) {
       logprintf ("Open image command buffer overflow\n");
     } else {
       int x = system (buf);
@@ -1780,10 +1780,10 @@ void end_load (struct download *D) {
     }
   }
   if (D->iv) {
-    free (D->iv);
+    tfree_secure (D->iv, 32);
   }
-  free (D->name);
-  free (D);
+  tfree_str (D->name);
+  tfree (D, sizeof (*D));
 }
 
 void load_next_part (struct download *D);
@@ -1832,9 +1832,9 @@ void load_next_part (struct download *D) {
     static char buf[PATH_MAX];
     int l;
     if (!D->id) {
-      l = snprintf (buf, sizeof (buf), "%s/download_%lld_%d", get_downloads_directory (), D->volume, D->local_id);
+      l = tsnprintf (buf, sizeof (buf), "%s/download_%lld_%d", get_downloads_directory (), D->volume, D->local_id);
     } else {
-      l = snprintf (buf, sizeof (buf), "%s/download_%lld", get_downloads_directory (), D->id);
+      l = tsnprintf (buf, sizeof (buf), "%s/download_%lld", get_downloads_directory (), D->id);
     }
     if (l >= (int) sizeof (buf)) {
       logprintf ("Download filename is too long");
@@ -2027,7 +2027,7 @@ int import_auth_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   fetch_int (); // expires
   fetch_alloc_user ();
-  free (export_auth_str);
+  tfree_str (export_auth_str);
   export_auth_str = 0;
   return 0;
 }
@@ -2353,8 +2353,7 @@ void do_create_keys_end (struct secret_chat *U) {
     U->state = sc_deleted;
   }
 
-  memset (t, 0, 256);
-  free (t);
+  tfree_secure (t, 256);
   
   BN_clear_free (p);
   BN_clear_free (g_b);
@@ -2432,7 +2431,6 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
 int get_dh_config_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified || LOG_DH_CONFIG);
-  logprintf ("old = %d\n", encr_param_version);
   if (x == CODE_messages_dh_config || x == LOG_DH_CONFIG)  {
     int a = fetch_int ();
     int l = prefetch_strlen ();
@@ -2449,14 +2447,15 @@ int get_dh_config_on_answer (struct query *q UU) {
   if (x == LOG_DH_CONFIG) { return 0; }
   int l = prefetch_strlen ();
   assert (l == 256);
-  unsigned char *random = (void *)fetch_str_dup ();
+  unsigned char *random = talloc (256);
+  memcpy (random, fetch_str (256), 256);
   if (q->extra) {
     void **x = q->extra;
     ((void (*)(void *, void *))(*x))(x[1], random);
-    free (x);
-    free (random);
+    tfree (x, 2 * sizeof (void *));
+    tfree_secure (random, 256);
   } else {
-    free (random);
+    tfree_secure (random, 256);
   }
   return 0;
 }

@@ -510,7 +510,7 @@ int loop (void) {
           break;
         }
         printf ("Invalid code. Try again: ");
-        free (code);
+        tfree_str (code);
       }
       auth_state = 300;
     } else {
@@ -556,7 +556,7 @@ int loop (void) {
           break;
         }
         printf ("Invalid code. Try again: ");
-        free (code);
+        tfree_str (code);
       }
       auth_state = 300;
     }

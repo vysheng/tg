@@ -131,8 +131,7 @@ void prng_seed (const char *password_filename, int password_length) {
   }
   RAND_seed (a, s);
   BN_ctx = BN_CTX_new ();
-  memset (a, 0, s);
-  free (a);
+  tfree_secure (a, 64 + password_length);
 }
 
 int serialize_bignum (BIGNUM *b, char *buffer, int maxlen) {

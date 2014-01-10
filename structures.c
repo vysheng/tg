@@ -150,7 +150,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
   int p = 0;
   for (i = 0; i < 4; i++) {
     if (d[i] && strlen (d[i])) {
-      p += snprintf (buf + p, 9999 - p, "%s%s", p ? "_" : "", d[i]);
+      p += tsnprintf (buf + p, 9999 - p, "%s%s", p ? "_" : "", d[i]);
       assert (p < 9990);
     }
   }
@@ -177,7 +177,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
     }
     cc ++;
     assert (cc <= 9999);
-    sprintf (s + fl, "#%d", cc);
+    tsnprintf (s + fl, 9999 - fl, "#%d", cc);
   }
   return tstrdup (s);
 }
@@ -595,7 +595,7 @@ void fetch_chat_full (struct chat *C) {
   }
   if (version > 0) {
     bl_do_set_chat_participants (C, version, users_num, users);
-    free (users);
+    tfree (users, sizeof (struct chat_user) * users_num);
   }
   bl_do_set_chat_full_photo (C, start, 4 * (end - start));
 }
@@ -945,7 +945,9 @@ void fetch_message_media (struct message_media *M) {
     M->user_id = fetch_int ();
     break;
   case CODE_message_media_unsupported:
-    M->data = fetch_str_dup ();
+    M->data_size = prefetch_strlen ();
+    M->data = talloc (M->data_size);
+    memcpy (M->data, fetch_str (M->data_size), M->data_size);
     break;
   default:
     logprintf ("type = 0x%08x\n", M->type);
@@ -1582,41 +1584,41 @@ struct user *fetch_alloc_user_full (void) {
 }
 
 void free_user (struct user *U) {
-  if (U->first_name) { free (U->first_name); }
-  if (U->last_name) { free (U->last_name); }
-  if (U->print_name) { free (U->print_name); }
-  if (U->phone) { free (U->phone); }
+  if (U->first_name) { tfree_str (U->first_name); }
+  if (U->last_name) { tfree_str (U->last_name); }
+  if (U->print_name) { tfree_str (U->print_name); }
+  if (U->phone) { tfree_str (U->phone); }
 }
 
 void free_photo_size (struct photo_size *S) {
-  free (S->type);
+  tfree_str (S->type);
   if (S->data) {
-    free (S->data);
+    tfree (S->data, S->size);
   }
 }
 
 void free_photo (struct photo *P) {
   if (!P->access_hash) { return; }
-  if (P->caption) { free (P->caption); }
+  if (P->caption) { tfree_str (P->caption); }
   if (P->sizes) {
     int i;
     for (i = 0; i < P->sizes_num; i++) {
       free_photo_size (&P->sizes[i]);
     }
-    free (P->sizes);
+    tfree (P->sizes, sizeof (struct photo_size) * P->sizes_num);
   }
 }
 
 void free_video (struct video *V) {
   if (!V->access_hash) { return; }
-  free (V->caption);
+  tfree_str (V->caption);
   free_photo_size (&V->thumb);
 }
 
 void free_document (struct document *D) {
   if (!D->access_hash) { return; }
-  free (D->caption);
-  free (D->mime_type);
+  tfree_str (D->caption);
+  tfree_str (D->mime_type);
   free_photo_size (&D->thumb);
 }
 
@@ -1633,22 +1635,22 @@ void free_message_media (struct message_media *M) {
     free_video (&M->video);
     return;
   case CODE_message_media_contact:
-    free (M->phone);
-    free (M->first_name);
-    free (M->last_name);
+    tfree_str (M->phone);
+    tfree_str (M->first_name);
+    tfree_str (M->last_name);
     return;
   case CODE_message_media_document:
     free_document (&M->document);
     return;
   case CODE_message_media_unsupported:
-    free (M->data);
+    tfree (M->data, M->data_size);
     return;
   case CODE_decrypted_message_media_photo:
   case CODE_decrypted_message_media_video:
   case CODE_decrypted_message_media_audio:
   case CODE_decrypted_message_media_document:
-    free (M->encr_photo.key);
-    free (M->encr_photo.iv);
+    tfree_secure (M->encr_photo.key, 32);
+    tfree_secure (M->encr_photo.iv, 32);
     return;
   case 0:
     break;
@@ -1663,11 +1665,11 @@ void free_message_action (struct message_action *M) {
   case CODE_message_action_empty:
     break;
   case CODE_message_action_chat_create:
-    free (M->title);
-    free (M->users);
+    tfree_str (M->title);
+    tfree (M->users, M->user_num * 4);
     break;
   case CODE_message_action_chat_edit_title:
-    free (M->new_title);
+    tfree_str (M->new_title);
     break;
   case CODE_message_action_chat_edit_photo:
     free_photo (&M->photo);
@@ -1687,7 +1689,7 @@ void free_message_action (struct message_action *M) {
 
 void free_message (struct message *M) {
   if (!M->service) {
-    if (M->message) { free (M->message); }
+    if (M->message) { tfree_str (M->message); }
     free_message_media (&M->media);
   } else {
     free_message_action (&M->action);
@@ -1808,7 +1810,7 @@ struct message *fetch_alloc_geo_message (void) {
     message_del_peer (M1);
     free_message (M1);
     memcpy (M1, M, sizeof (*M));
-    free (M);
+    tfree (M, sizeof (*M));
     message_add_use (M1);
     message_add_peer (M1);
     messages_allocated --;
@@ -1904,12 +1906,12 @@ struct chat *fetch_alloc_chat_full (void) {
 }
 
 void free_chat (struct chat *U) {
-  if (U->title) { free (U->title); }
-  if (U->print_title) { free (U->print_title); }
+  if (U->title) { tfree_str (U->title); }
+  if (U->print_title) { tfree_str (U->print_title); }
 }
 
 int print_stat (char *s, int len) {
-  return snprintf (s, len, 
+  return tsnprintf (s, len, 
     "users_allocated\t%d\n"
     "chats_allocated\t%d\n"
     "secret_chats_allocated\t%d\n"

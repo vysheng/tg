@@ -298,6 +298,7 @@ struct message_media {
     struct encr_document encr_document;
     struct encr_file encr_file;
     void *data;
+    int data_size;
   };
 };
 

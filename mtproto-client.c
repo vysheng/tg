@@ -830,9 +830,9 @@ void work_update_binlog (void) {
       peer_t *UC = user_chat_get (user_id);
       if (UC) {
         struct user *U = &UC->user;
-        if (U->first_name) { free (U->first_name); }
-        if (U->last_name) { free (U->last_name); }
-        if (U->print_name) { free (U->print_name); }
+        if (U->first_name) { tfree_str (U->first_name); }
+        if (U->last_name) { tfree_str (U->last_name); }
+        if (U->print_name) { tfree_str (U->print_name); }
         U->first_name = fetch_str_dup ();
         U->last_name = fetch_str_dup ();
         U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
@@ -1199,8 +1199,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         s, location);
       pop_color ();
       print_end ();
-      free (s);
-      free (location);
+      tfree_str (s);
+      tfree_str (location);
     }
     break;
   case CODE_update_new_geo_chat_message:

@@ -320,7 +320,7 @@ static inline int fetch_update_str (char **s) {
   int l = prefetch_strlen ();
   char *r = fetch_str (l);
   if (memcmp (*s, r, l) || (*s)[l]) {
-    free (*s);
+    tfree_str (*s);
     *s = talloc (l + 1);
     memcpy (*s, r, l);
     (*s)[l] = 0;
