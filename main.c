@@ -143,12 +143,7 @@ char *get_home_directory (void) {
 
 char *get_config_directory (void) {
   char *config_directory;
-  int length = strlen (get_home_directory ()) + strlen (CONFIG_DIRECTORY) + 2;
-
-  config_directory = (char *) calloc (length, sizeof (char));
-  sprintf (config_directory, "%s/" CONFIG_DIRECTORY,
-     get_home_directory ());
-
+  assert (asprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ()) >= 0);
   return config_directory;
 }
 
@@ -201,6 +196,8 @@ void running_for_first_time (void) {
     printf ("[%s] created\n", config_directory);
   }
 
+  free (config_directory);
+  config_directory = NULL;
   // see if config file is there
   if (stat (config_filename, &config_file_stat) != 0) {
     // config file missing, so touch it
