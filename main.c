@@ -120,16 +120,25 @@ void set_terminal_attributes (void) {
 /* }}} */
 
 char *get_home_directory (void) {
+  static char *home_directory = NULL;
+  if (home_directory != NULL) {
+    return home_directory;
+  }
   struct passwd *current_passwd;
   uid_t user_id;
   setpwent ();
   user_id = getuid ();
   while ((current_passwd = getpwent ())) {
     if (current_passwd->pw_uid == user_id) {
-      return current_passwd->pw_dir;
+      home_directory = tstrdup (current_passwd->pw_dir);
+      break;
     }
   }
-  return "";
+  endpwent ();
+  if (home_directory == NULL) {
+    home_directory = tstrdup (".");
+  }
+  return home_directory;
 }
 
 char *get_config_directory (void) {
