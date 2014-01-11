@@ -35,9 +35,6 @@ void *blocks[MAX_BLOCKS];
 void *free_blocks[MAX_BLOCKS];
 int used_blocks;
 int free_blocks_cnt;
-
-char data[1 << 20];
-void *data_ptr = data;
 #endif
 
 #ifdef DEBUG
