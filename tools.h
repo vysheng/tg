@@ -36,4 +36,7 @@ void tfree_secure (void *ptr, int size);
 int tsnprintf (char *buf, int len, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 int tasprintf (char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
 
+#ifdef DEBUG
+void tcheck (void);
+#endif
 #endif

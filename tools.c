@@ -29,7 +29,25 @@
 #include "interface.h"
 #include "tools.h"
 
+#ifdef DEBUG
+#define MAX_BLOCKS 1000000
+void *blocks[MAX_BLOCKS];
+void *free_blocks[MAX_BLOCKS];
+int used_blocks;
+int free_blocks_cnt;
+
+char data[1 << 20];
+void *data_ptr = data;
+#endif
+
+#ifdef DEBUG
+#define RES_PRE 8
+#define RES_AFTER 8
+#endif
+
 extern int verbosity;
+
+long long total_allocated_bytes;
 
 static void out_of_memory (void) {
   logprintf ("Out of memory\n");
@@ -58,14 +76,32 @@ int tasprintf (char **res, const char *format, ...) {
   return r;
 }
 
+void print_backtrace (void);
 void tfree (void *ptr, int size __attribute__ ((unused))) {
 #ifdef DEBUG
-  ptr -= 4;
+  total_allocated_bytes -= size;
+  ptr -= RES_PRE;
   assert (*(int *)ptr == (int)((size) ^ 0xbedabeda));
-  assert (*(int *)(ptr + 4 + size) == (int)((size) ^ 0x0bed0bed));
-  memset (ptr, 0, size + 8);
-#endif
+  assert (*(int *)(ptr + RES_PRE + size) == (int)((size) ^ 0x7bed7bed));
+  assert (*(int *)(ptr + 4) == size);
+  int block_num = *(int *)(ptr + 4 + RES_PRE + size);
+  if (block_num >= used_blocks) {
+    logprintf ("block_num = %d, used = %d\n", block_num, used_blocks);
+  }
+  assert (block_num < used_blocks);
+  if (block_num < used_blocks - 1) {
+    void *p = blocks[used_blocks - 1];
+    int s = (*(int *)p) ^ 0xbedabeda;
+    *(int *)(p + 4 + RES_PRE + s) = block_num;
+    blocks[block_num] = p;
+  }
+  blocks[--used_blocks] = 0;
+  memset (ptr, 0, size + RES_PRE + RES_AFTER);
+  *(int *)ptr = size + 12;
+  free_blocks[free_blocks_cnt ++] = ptr;
+#else
   free (ptr);
+#endif
 }
 
 void tfree_str (void *ptr) {
@@ -93,11 +129,15 @@ void *trealloc (void *ptr, size_t old_size __attribute__ ((unused)), size_t size
 
 void *talloc (size_t size) {
 #ifdef DEBUG
-  void *p = malloc (size + 8);
+  total_allocated_bytes += size;
+  void *p = malloc (size + RES_PRE + RES_AFTER);
   ensure_ptr (p);
   *(int *)p = size ^ 0xbedabeda;
-  *(int *)(p + 4 + size) = size ^ 0x0bed0bed;
-  return p + 4;
+  *(int *)(p + 4) = size;
+  *(int *)(p + RES_PRE + size) = size ^ 0x7bed7bed;
+  *(int *)(p + RES_AFTER + 4 + size) = used_blocks;
+  blocks[used_blocks ++] = p;
+  return p + 8;
 #else
   void *p = malloc (size);
   ensure_ptr (p);
@@ -162,3 +202,29 @@ int tinflate (void *input, int ilen, void *output, int olen) {
   inflateEnd (&strm);
   return total_out;
 }
+
+#ifdef DEBUG
+void tcheck (void) {
+  int i;
+  for (i = 0; i < used_blocks; i++) {
+    void *ptr = blocks[i];
+    int size = (*(int *)ptr) ^ 0xbedabeda;
+    assert (*(int *)(ptr + 4) == size);
+    assert (*(int *)(ptr + RES_PRE + size) == (size ^ 0x7bed7bed));
+    assert (*(int *)(ptr + RES_PRE + 4 + size) == i);
+  }
+  for (i = 0; i < free_blocks_cnt; i++) {
+    void *ptr = free_blocks[i];
+    int l = *(int *)ptr;
+    int j = 0;
+    for (j = 0; j < l; j++) {
+      if (*(char *)(ptr + 4 + j)) {
+        hexdump (ptr + 8, ptr + 8 + l + ((-l) & 3)); 
+        logprintf ("Used freed memory size = %d. ptr = %p\n", l + 4 - RES_PRE - RES_AFTER, ptr);
+        assert (0);
+      }
+    }
+  }
+  logprintf ("ok. Used_blocks = %d. Free blocks = %d\n", used_blocks, free_blocks_cnt);
+}
+#endif
