@@ -47,6 +47,10 @@
 #include "interface.h"
 #include "tools.h"
 
+#ifdef USE_LUA
+#  include "lua-tg.h"
+#endif
+
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
 
@@ -349,9 +353,12 @@ FILE *log_net_f;
 
 int register_mode;
 int disable_auto_accept;
+
+char *lua_file;
+
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:E")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:Es:")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -398,6 +405,9 @@ void args_parse (int argc, char **argv) {
     case 'w':
       allow_weak_random = 1;
       break;
+    case 's':
+      lua_file = tstrdup (optarg);
+      break;
     case 'h':
     default:
       usage ();
@@ -410,13 +420,13 @@ void print_backtrace (void) {
   void *buffer[255];
   const int calls = backtrace (buffer, sizeof (buffer) / sizeof (void *));
   backtrace_symbols_fd (buffer, calls, 1);
-  exit(EXIT_FAILURE);
 }
 
 void sig_handler (int signum) {
   set_terminal_attributes ();
   printf ("Signal %d received\n", signum);
   print_backtrace ();
+  exit(EXIT_FAILURE);
 }
 
 
@@ -439,6 +449,11 @@ int main (int argc, char **argv) {
 
   get_terminal_attributes ();
 
+  #ifdef USE_LUA
+  if (lua_file) {
+    lua_init (lua_file);
+  }
+  #endif
 
   inner_main ();
   

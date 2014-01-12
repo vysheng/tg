@@ -622,9 +622,21 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 EXTRA_LIBS
 LIBOBJS
+LUA_LIB
 EGREP
 GREP
 CPP
+LUA_INCLUDE
+pkgluaexecdir
+luaexecdir
+pkgluadir
+luadir
+LUA_EXEC_PREFIX
+LUA_PREFIX
+LUA_PLATFORM
+LUA_SHORT_VERSION
+LUA_VERSION
+LUA
 OBJEXT
 EXEEXT
 ac_ct_CC
@@ -674,6 +686,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_libconfig
+enable_liblua
 '
       ac_precious_vars='build_alias
 host_alias
@@ -683,7 +696,10 @@ CFLAGS
 LDFLAGS
 LIBS
 CPPFLAGS
-CPP'
+LUA
+LUA_INCLUDE
+CPP
+LUA_LIB'
 
 
 # Initialize some variables set by options.
@@ -1294,6 +1310,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 --enable-libconfig/--disable-libconfig
+--enable-liblua/--disable-liblua
 
 Some influential environment variables:
   CC          C compiler command
@@ -1303,7 +1320,10 @@ Some influential environment variables:
   LIBS        libraries to pass to the linker, e.g. -l<library>
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
+  LUA         The Lua interpreter, e.g. /usr/bin/lua5.1
+  LUA_INCLUDE The Lua includes, e.g. -I/usr/include/lua5.1
   CPP         C preprocessor
+  LUA_LIB     The Lua library, e.g. -llua5.1
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -2140,6 +2160,217 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 ac_config_headers="$ac_config_headers config.h"
+
+
+# ===========================================================================
+#          http://www.gnu.org/software/autoconf-archive/ax_lua.html
+# ===========================================================================
+#
+# SYNOPSIS
+#
+#   AX_PROG_LUA[([MINIMUM-VERSION], [TOO-BIG-VERSION], [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])]
+#   AX_LUA_HEADERS[([ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])]
+#   AX_LUA_LIBS[([ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])]
+#   AX_LUA_READLINE[([ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])]
+#
+# DESCRIPTION
+#
+#   Detect a Lua interpreter, optionally specifying a minimum and maximum
+#   version number. Set up important Lua paths, such as the directories in
+#   which to install scripts and modules (shared libraries).
+#
+#   Also detect Lua headers and libraries. The Lua version contained in the
+#   header is checked to match the Lua interpreter version exactly. When
+#   searching for Lua libraries, the version number is used as a suffix.
+#   This is done with the goal of supporting multiple Lua installs (5.1 and
+#   5.2 side-by-side).
+#
+#   A note on compatibility with previous versions: This file has been
+#   mostly rewritten for serial 18. Most developers should be able to use
+#   these macros without needing to modify configure.ac. Care has been taken
+#   to preserve each macro's behavior, but there are some differences:
+#
+#   1) AX_WITH_LUA is deprecated; it now expands to the exact same thing as
+#   AX_PROG_LUA with no arguments.
+#
+#   2) AX_LUA_HEADERS now checks that the version number defined in lua.h
+#   matches the interpreter version. AX_LUA_HEADERS_VERSION is therefore
+#   unnecessary, so it is deprecated and does not expand to anything.
+#
+#   3) The configure flag --with-lua-suffix no longer exists; the user
+#   should instead specify the LUA precious variable on the command line.
+#   See the AX_PROG_LUA description for details.
+#
+#   Please read the macro descriptions below for more information.
+#
+#   This file was inspired by Andrew Dalke's and James Henstridge's
+#   python.m4 and Tom Payne's, Matthieu Moy's, and Reuben Thomas's ax_lua.m4
+#   (serial 17). Basically, this file is a mash-up of those two files. I
+#   like to think it combines the best of the two!
+#
+#   AX_PROG_LUA: Search for the Lua interpreter, and set up important Lua
+#   paths. Adds precious variable LUA, which may contain the path of the Lua
+#   interpreter. If LUA is blank, the user's path is searched for an
+#   suitable interpreter.
+#
+#   If MINIMUM-VERSION is supplied, then only Lua interpreters with a
+#   version number greater or equal to MINIMUM-VERSION will be accepted. If
+#   TOO-BIG- VERSION is also supplied, then only Lua interpreters with a
+#   version number greater or equal to MINIMUM-VERSION and less than
+#   TOO-BIG-VERSION will be accepted.
+#
+#   Version comparisons require the AX_COMPARE_VERSION macro, which is
+#   provided by ax_compare_version.m4 from the Autoconf Archive.
+#
+#   The Lua version number, LUA_VERSION, is found from the interpreter, and
+#   substituted. LUA_PLATFORM is also found, but not currently supported (no
+#   standard representation).
+#
+#   Finally, the macro finds four paths:
+#
+#     luadir             Directory to install Lua scripts.
+#     pkgluadir          $luadir/$PACKAGE
+#     luaexecdir         Directory to install Lua modules.
+#     pkgluaexecdir      $luaexecdir/$PACKAGE
+#
+#   These paths a found based on $prefix, $exec_prefix, Lua's package.path,
+#   and package.cpath. The first path of package.path beginning with $prefix
+#   is selected as luadir. The first path of package.cpath beginning with
+#   $exec_prefix is used as luaexecdir. This should work on all reasonable
+#   Lua installations. If a path cannot be determined, a default path is
+#   used. Of course, the user can override these later when invoking make.
+#
+#     luadir             Default: $prefix/share/lua/$LUA_VERSION
+#     luaexecdir         Default: $exec_prefix/lib/lua/$LUA_VERSION
+#
+#   These directories can be used by Automake as install destinations. The
+#   variable name minus 'dir' needs to be used as a prefix to the
+#   appropriate Automake primary, e.g. lua_SCRIPS or luaexec_LIBRARIES.
+#
+#   If an acceptable Lua interpreter is found, then ACTION-IF-FOUND is
+#   performed, otherwise ACTION-IF-NOT-FOUND is preformed. If ACTION-IF-NOT-
+#   FOUND is blank, then it will default to printing an error. To prevent
+#   the default behavior, give ':' as an action.
+#
+#   AX_LUA_HEADERS: Search for Lua headers. Requires that AX_PROG_LUA be
+#   expanded before this macro. Adds precious variable LUA_INCLUDE, which
+#   may contain Lua specific include flags, e.g. -I/usr/include/lua5.1. If
+#   LUA_INCLUDE is blank, then this macro will attempt to find suitable
+#   flags.
+#
+#   LUA_INCLUDE can be used by Automake to compile Lua modules or
+#   executables with embedded interpreters. The *_CPPFLAGS variables should
+#   be used for this purpose, e.g. myprog_CPPFLAGS = $(LUA_INCLUDE).
+#
+#   This macro searches for the header lua.h (and others). The search is
+#   performed with a combination of CPPFLAGS, CPATH, etc, and LUA_INCLUDE.
+#   If the search is unsuccessful, then some common directories are tried.
+#   If the headers are then found, then LUA_INCLUDE is set accordingly.
+#
+#   The paths automatically searched are:
+#
+#     * /usr/include/luaX.Y
+#     * /usr/include/lua/X.Y
+#     * /usr/include/luaXY
+#     * /usr/local/include/luaX.Y
+#     * /usr/local/include/lua/X.Y
+#     * /usr/local/include/luaXY
+#
+#   (Where X.Y is the Lua version number, e.g. 5.1.)
+#
+#   The Lua version number found in the headers is always checked to match
+#   the Lua interpreter's version number. Lua headers with mismatched
+#   version numbers are not accepted.
+#
+#   If headers are found, then ACTION-IF-FOUND is performed, otherwise
+#   ACTION-IF-NOT-FOUND is performed. If ACTION-IF-NOT-FOUND is blank, then
+#   it will default to printing an error. To prevent the default behavior,
+#   set the action to ':'.
+#
+#   AX_LUA_LIBS: Search for Lua libraries. Requires that AX_PROG_LUA be
+#   expanded before this macro. Adds precious variable LUA_LIB, which may
+#   contain Lua specific linker flags, e.g. -llua5.1. If LUA_LIB is blank,
+#   then this macro will attempt to find suitable flags.
+#
+#   LUA_LIB can be used by Automake to link Lua modules or executables with
+#   embedded interpreters. The *_LIBADD and *_LDADD variables should be used
+#   for this purpose, e.g. mymod_LIBADD = $(LUA_LIB).
+#
+#   This macro searches for the Lua library. More technically, it searches
+#   for a library containing the function lua_load. The search is performed
+#   with a combination of LIBS, LIBRARY_PATH, and LUA_LIB.
+#
+#   If the search determines that some linker flags are missing, then those
+#   flags will be added to LUA_LIB.
+#
+#   If libraries are found, then ACTION-IF-FOUND is performed, otherwise
+#   ACTION-IF-NOT-FOUND is performed. If ACTION-IF-NOT-FOUND is blank, then
+#   it will default to printing an error. To prevent the default behavior,
+#   set the action to ':'.
+#
+#   AX_LUA_READLINE: Search for readline headers and libraries. Requires the
+#   AX_LIB_READLINE macro, which is provided by ax_lib_readline.m4 from the
+#   Autoconf Archive.
+#
+#   If a readline compatible library is found, then ACTION-IF-FOUND is
+#   performed, otherwise ACTION-IF-NOT-FOUND is performed.
+#
+# LICENSE
+#
+#   Copyright (c) 2013 Tim Perkins <tprk77@gmail.com>
+#   Copyright (c) 2013 Reuben Thomas <rrt@sc3d.org>
+#
+#   This program is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License as published by the
+#   Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   This program is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+#   Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License along
+#   with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+#   As a special exception, the respective Autoconf Macro's copyright owner
+#   gives unlimited permission to copy, distribute and modify the configure
+#   scripts that are the output of Autoconf when processing the Macro. You
+#   need not follow the terms of the GNU General Public License when using
+#   or distributing such scripts, even though portions of the text of the
+#   Macro appear in them. The GNU General Public License (GPL) does govern
+#   all other use of the material that constitutes the Autoconf Macro.
+#
+#   This special exception to the GPL applies to versions of the Autoconf
+#   Macro released by the Autoconf Archive. When you make and distribute a
+#   modified version of the Autoconf Macro, you may extend this special
+#   exception to the GPL to apply to your modified version as well.
+
+#serial 20
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Checks for programs.
@@ -3038,8 +3269,6 @@ fi
 
 
 if test "x$BT" = "x" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for backtrace in -lexecinfo" >&5
 $as_echo_n "checking for backtrace in -lexecinfo... " >&6; }
 if ${ac_cv_lib_execinfo_backtrace+:} false; then :
@@ -3230,8 +3459,8 @@ if test "x$ac_cv_lib_rt_clock_gettime" = xyes; then :
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Checking for libconfig" >&5
-$as_echo_n "checking Checking for libconfig... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libconfig" >&5
+$as_echo_n "checking for libconfig... " >&6; }
 # Check whether --enable-libconfig was given.
 if test "${enable_libconfig+set}" = set; then :
   enableval=$enable_libconfig;
@@ -3341,7 +3570,8 @@ fi
 fi
 
 
-# Checks for header files.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for liblua" >&5
+$as_echo_n "checking for liblua... " >&6; }
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3739,6 +3969,1342 @@ fi
 done
 
 
+# Check whether --enable-liblua was given.
+if test "${enable_liblua+set}" = set; then :
+  enableval=$enable_liblua;
+  if test "x$enableval" = "xno" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5
+$as_echo "disabled" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: enabled" >&5
+$as_echo "enabled" >&6; }
+
+
+
+
+
+       if test "x$LUA" = 'x'; then :
+  for ac_prog in lua lua5.2 lua5.1 lua50
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_LUA+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $LUA in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_LUA="$LUA" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_LUA="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+LUA=$ac_cv_path_LUA
+if test -n "$LUA"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $LUA" >&5
+$as_echo "$LUA" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$LUA" && break
+done
+test -n "$LUA" || LUA=":"
+
+fi
+    ax_display_LUA='lua'
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $LUA is a Lua interpreter" >&5
+$as_echo_n "checking if $LUA is a Lua interpreter... " >&6; }
+
+    if $LUA -e "print('Hello ' .. _VERSION .. '!')" &>/dev/null; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        as_fn_error $? "not a Lua interpreter" "$LINENO" 5
+
+fi
+
+
+
+  if test "x$LUA" = 'x:'; then :
+
+        as_fn_error $? "No lua found. Try --disable-liblua" "$LINENO" 5
+
+
+else
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA version" >&5
+$as_echo_n "checking for $ax_display_LUA version... " >&6; }
+if ${ax_cv_lua_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   ax_cv_lua_version=`$LUA -e "print(_VERSION)" | \
+          sed "s|^Lua \(.*\)|\1|" | \
+          grep -o "^[0-9]\+\\.[0-9]\+"`
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_version" >&5
+$as_echo "$ax_cv_lua_version" >&6; }
+    if test "x$ax_cv_lua_version" = 'x'; then :
+  as_fn_error $? "invalid Lua version number" "$LINENO" 5
+fi
+    LUA_VERSION=$ax_cv_lua_version
+
+    LUA_SHORT_VERSION=`echo "$LUA_VERSION" | sed 's|\.||'`
+
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA platform" >&5
+$as_echo_n "checking for $ax_display_LUA platform... " >&6; }
+if ${ax_cv_lua_platform+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_lua_platform=`$LUA -e "print('unknown')"`
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_platform" >&5
+$as_echo "$ax_cv_lua_platform" >&6; }
+    LUA_PLATFORM=$ax_cv_lua_platform
+
+
+                    LUA_PREFIX='${prefix}'
+
+    LUA_EXEC_PREFIX='${exec_prefix}'
+
+
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA script directory" >&5
+$as_echo_n "checking for $ax_display_LUA script directory... " >&6; }
+if ${ax_cv_lua_luadir+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   if test "x$prefix" = 'xNONE'; then :
+  ax_lua_prefix=$ac_default_prefix
+else
+  ax_lua_prefix=$prefix
+fi
+
+                ax_cv_lua_luadir="$LUA_PREFIX/share/lua/$LUA_VERSION"
+
+
+
+  ax_lua_prefixed_path=''
+  _ax_package_paths=`$LUA -e 'print(package.path)' 2>/dev/null | sed 's|;|\n|g'`
+    for _ax_package_path in $_ax_package_paths; do
+        _ax_path_parts=`echo "$_ax_package_path" | sed 's|/|\n|g'`
+    _ax_reassembled=''
+    for _ax_path_part in $_ax_path_parts; do
+      echo "$_ax_path_part" | grep '\?' >/dev/null && break
+      _ax_reassembled="$_ax_reassembled/$_ax_path_part"
+    done
+        _ax_package_path=$_ax_reassembled
+    if echo "$_ax_package_path" | grep "^$ax_lua_prefix" >/dev/null; then
+            ax_lua_prefixed_path=$_ax_package_path
+      break
+    fi
+  done
+
+        if test "x$ax_lua_prefixed_path" != 'x'; then :
+             _ax_strip_prefix=`echo "$ax_lua_prefix" | sed 's|.|.|g'`
+          ax_cv_lua_luadir=`echo "$ax_lua_prefixed_path" | \
+            sed "s,^$_ax_strip_prefix,$LUA_PREFIX,"`
+
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_luadir" >&5
+$as_echo "$ax_cv_lua_luadir" >&6; }
+    luadir=$ax_cv_lua_luadir
+
+    pkgluadir=\${luadir}/$PACKAGE
+
+
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA module directory" >&5
+$as_echo_n "checking for $ax_display_LUA module directory... " >&6; }
+if ${ax_cv_lua_luaexecdir+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   if test "x$exec_prefix" = 'xNONE'; then :
+  ax_lua_exec_prefix=$ax_lua_prefix
+else
+  ax_lua_exec_prefix=$exec_prefix
+fi
+
+                ax_cv_lua_luaexecdir="$LUA_EXEC_PREFIX/lib/lua/$LUA_VERSION"
+
+
+
+  ax_lua_prefixed_path=''
+  _ax_package_paths=`$LUA -e 'print(package.cpathd)' 2>/dev/null | sed 's|;|\n|g'`
+    for _ax_package_path in $_ax_package_paths; do
+        _ax_path_parts=`echo "$_ax_package_path" | sed 's|/|\n|g'`
+    _ax_reassembled=''
+    for _ax_path_part in $_ax_path_parts; do
+      echo "$_ax_path_part" | grep '\?' >/dev/null && break
+      _ax_reassembled="$_ax_reassembled/$_ax_path_part"
+    done
+        _ax_package_path=$_ax_reassembled
+    if echo "$_ax_package_path" | grep "^$ax_lua_exec_prefix" >/dev/null; then
+            ax_lua_prefixed_path=$_ax_package_path
+      break
+    fi
+  done
+
+        if test "x$ax_lua_prefixed_path" != 'x'; then :
+             _ax_strip_prefix=`echo "$ax_lua_exec_prefix" | sed 's|.|.|g'`
+          ax_cv_lua_luaexecdir=`echo "$ax_lua_prefixed_path" | \
+            sed "s,^$_ax_strip_prefix,$LUA_EXEC_PREFIX,"`
+
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_luaexecdir" >&5
+$as_echo "$ax_cv_lua_luaexecdir" >&6; }
+    luaexecdir=$ax_cv_lua_luaexecdir
+
+    pkgluaexecdir=\${luaexecdir}/$PACKAGE
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if LUA_VERSION is defined" >&5
+$as_echo_n "checking if LUA_VERSION is defined... " >&6; }
+  if test "x$LUA_VERSION" != 'x'; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      as_fn_error $? "cannot check Lua headers without knowing LUA_VERSION" "$LINENO" 5
+
+fi
+
+
+
+    LUA_SHORT_VERSION=`echo "$LUA_VERSION" | sed 's|\.||'`
+
+
+    _ax_lua_saved_cppflags=$CPPFLAGS
+  CPPFLAGS="$CPPFLAGS $LUA_INCLUDE"
+  for ac_header in lua.h lualib.h lauxlib.h luaconf.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+  CPPFLAGS=$_ax_lua_saved_cppflags
+
+    if test "x$LUA_INCLUDE" = 'x' &&
+         test "x$ac_cv_header_lua_h" != 'xyes'; then :
+         for _ax_include_path in  /usr/include/lua$LUA_VERSION \
+      /usr/include/lua/$LUA_VERSION \
+      /usr/include/lua$LUA_SHORT_VERSION \
+      /usr/local/include/lua$LUA_VERSION \
+      /usr/local/include/lua/$LUA_VERSION \
+      /usr/local/include/lua$LUA_SHORT_VERSION \
+    ; do
+        test ! -d "$_ax_include_path" && continue
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua headers in" >&5
+$as_echo_n "checking for Lua headers in... " >&6; }
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $_ax_include_path" >&5
+$as_echo "$_ax_include_path" >&6; }
+
+        { ac_cv_header_lua_h=; unset ac_cv_header_lua_h;}
+        { ac_cv_header_lualib_h=; unset ac_cv_header_lualib_h;}
+        { ac_cv_header_lauxlib_h=; unset ac_cv_header_lauxlib_h;}
+        { ac_cv_header_luaconf_h=; unset ac_cv_header_luaconf_h;}
+
+        _ax_lua_saved_cppflags=$CPPFLAGS
+        CPPFLAGS="$CPPFLAGS -I$_ax_include_path"
+        for ac_header in lua.h lualib.h lauxlib.h luaconf.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+        CPPFLAGS=$_ax_lua_saved_cppflags
+
+        if test "x$ac_cv_header_lua_h" = 'xyes'; then :
+   LUA_INCLUDE="-I$_ax_include_path"
+            break
+
+fi
+      done
+
+fi
+
+  if test "x$ac_cv_header_lua_h" = 'xyes'; then :
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua header version" >&5
+$as_echo_n "checking for Lua header version... " >&6; }
+if ${ax_cv_lua_header_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   _ax_lua_saved_cppflags=$CPPFLAGS
+          CPPFLAGS="$CPPFLAGS $LUA_INCLUDE"
+          if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "cannot run test program while cross compiling
+See \`config.log' for more details" "$LINENO" 5; }
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <lua.h>
+#include <stdlib.h>
+#include <stdio.h>
+int main(int argc, char ** argv)
+{
+  if(argc > 1) printf("%s", LUA_VERSION);
+  exit(EXIT_SUCCESS);
+}
+
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+   ax_cv_lua_header_version=`./conftest$EXEEXT p | \
+                sed "s|^Lua \(.*\)|\1|" | \
+                grep -o "^[0-9]\+\\.[0-9]\+"`
+
+else
+  ax_cv_lua_header_version='unknown'
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+          CPPFLAGS=$_ax_lua_saved_cppflags
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_header_version" >&5
+$as_echo "$ax_cv_lua_header_version" >&6; }
+
+            { $as_echo "$as_me:${as_lineno-$LINENO}: checking if Lua header version matches $LUA_VERSION" >&5
+$as_echo_n "checking if Lua header version matches $LUA_VERSION... " >&6; }
+      if test "x$ax_cv_lua_header_version" = "x$LUA_VERSION"; then :
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+          ax_header_version_match='yes'
+
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+          ax_header_version_match='no'
+
+fi
+
+fi
+
+    if test "x$ax_header_version_match" != 'xyes' &&
+         test "x$LUA_INCLUDE" != 'x'; then :
+  as_fn_error $? "cannot find headers for specified LUA_INCLUDE" "$LINENO" 5
+fi
+
+    if test "x$ax_header_version_match" = 'xyes'; then :
+
+else
+  as_fn_error $? "No lua headers found. Try --disable-liblua" "$LINENO" 5
+fi
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if LUA_VERSION is defined" >&5
+$as_echo_n "checking if LUA_VERSION is defined... " >&6; }
+  if test "x$LUA_VERSION" != 'x'; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      as_fn_error $? "cannot check Lua libs without knowing LUA_VERSION" "$LINENO" 5
+
+fi
+
+
+
+  if test "x$LUA_LIB" != 'x'; then :
+       _ax_lua_saved_libs=$LIBS
+    LIBS="$LIBS $LUA_LIB"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lua_load" >&5
+$as_echo_n "checking for library containing lua_load... " >&6; }
+if ${ac_cv_search_lua_load+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_load ();
+int
+main ()
+{
+return lua_load ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_lua_load=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_lua_load+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_lua_load+:} false; then :
+
+else
+  ac_cv_search_lua_load=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_lua_load" >&5
+$as_echo "$ac_cv_search_lua_load" >&6; }
+ac_res=$ac_cv_search_lua_load
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  _ax_found_lua_libs='yes'
+else
+  _ax_found_lua_libs='no'
+fi
+
+    LIBS=$_ax_lua_saved_libs
+
+        if test "x$_ax_found_lua_libs" != 'xyes'; then :
+  as_fn_error $? "cannot find libs for specified LUA_LIB" "$LINENO" 5
+fi
+
+else
+       _ax_lua_extra_libs=''
+
+    _ax_lua_saved_libs=$LIBS
+    LIBS="$LIBS $LUA_LIB"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing exp" >&5
+$as_echo_n "checking for library containing exp... " >&6; }
+if ${ac_cv_search_exp+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char exp ();
+int
+main ()
+{
+return exp ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' m; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_exp=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_exp+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_exp+:} false; then :
+
+else
+  ac_cv_search_exp=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_exp" >&5
+$as_echo "$ac_cv_search_exp" >&6; }
+ac_res=$ac_cv_search_exp
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
+$as_echo_n "checking for library containing dlopen... " >&6; }
+if ${ac_cv_search_dlopen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen ();
+int
+main ()
+{
+return dlopen ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' dl; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_dlopen=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_dlopen+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_dlopen+:} false; then :
+
+else
+  ac_cv_search_dlopen=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlopen" >&5
+$as_echo "$ac_cv_search_dlopen" >&6; }
+ac_res=$ac_cv_search_dlopen
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+    LIBS=$_ax_lua_saved_libs
+
+    if test "x$ac_cv_search_exp" != 'xno' &&
+           test "x$ac_cv_search_exp" != 'xnone required'; then :
+  _ax_lua_extra_libs="$_ax_lua_extra_libs $ac_cv_search_exp"
+fi
+
+    if test "x$ac_cv_search_dlopen" != 'xno' &&
+           test "x$ac_cv_search_dlopen" != 'xnone required'; then :
+  _ax_lua_extra_libs="$_ax_lua_extra_libs $ac_cv_search_dlopen"
+fi
+
+        _ax_lua_saved_libs=$LIBS
+    LIBS="$LIBS $LUA_LIB"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lua_load" >&5
+$as_echo_n "checking for library containing lua_load... " >&6; }
+if ${ac_cv_search_lua_load+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_load ();
+int
+main ()
+{
+return lua_load ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' lua$LUA_VERSION lua$LUA_SHORT_VERSION lua; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib $_ax_lua_extra_libs $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_lua_load=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_lua_load+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_lua_load+:} false; then :
+
+else
+  ac_cv_search_lua_load=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_lua_load" >&5
+$as_echo "$ac_cv_search_lua_load" >&6; }
+ac_res=$ac_cv_search_lua_load
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  _ax_found_lua_libs='yes'
+else
+  _ax_found_lua_libs='no'
+fi
+
+    LIBS=$_ax_lua_saved_libs
+
+    if test "x$ac_cv_search_lua_load" != 'xno' &&
+           test "x$ac_cv_search_lua_load" != 'xnone required'; then :
+  LUA_LIB="$ac_cv_search_lua_load $_ax_lua_extra_libs"
+fi
+
+fi
+
+    if test "x$_ax_found_lua_libs" = 'xyes'; then :
+
+else
+  as_fn_error $? "No lua libs found. Try --disable-liblua" "$LINENO" 5
+fi
+
+        EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ;
+        CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ;
+
+$as_echo "#define USE_LUA 1" >>confdefs.h
+
+
+
+fi
+
+  fi
+
+else
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: enabled" >&5
+$as_echo "enabled" >&6; }
+
+
+
+
+
+       if test "x$LUA" = 'x'; then :
+  for ac_prog in lua lua5.2 lua5.1 lua50
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_LUA+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $LUA in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_LUA="$LUA" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_LUA="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+LUA=$ac_cv_path_LUA
+if test -n "$LUA"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $LUA" >&5
+$as_echo "$LUA" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$LUA" && break
+done
+test -n "$LUA" || LUA=":"
+
+fi
+    ax_display_LUA='lua'
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $LUA is a Lua interpreter" >&5
+$as_echo_n "checking if $LUA is a Lua interpreter... " >&6; }
+
+    if $LUA -e "print('Hello ' .. _VERSION .. '!')" &>/dev/null; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        as_fn_error $? "not a Lua interpreter" "$LINENO" 5
+
+fi
+
+
+
+  if test "x$LUA" = 'x:'; then :
+
+        as_fn_error $? "No lua found. Try --disable-liblua" "$LINENO" 5
+
+
+else
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA version" >&5
+$as_echo_n "checking for $ax_display_LUA version... " >&6; }
+if ${ax_cv_lua_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   ax_cv_lua_version=`$LUA -e "print(_VERSION)" | \
+          sed "s|^Lua \(.*\)|\1|" | \
+          grep -o "^[0-9]\+\\.[0-9]\+"`
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_version" >&5
+$as_echo "$ax_cv_lua_version" >&6; }
+    if test "x$ax_cv_lua_version" = 'x'; then :
+  as_fn_error $? "invalid Lua version number" "$LINENO" 5
+fi
+    LUA_VERSION=$ax_cv_lua_version
+
+    LUA_SHORT_VERSION=`echo "$LUA_VERSION" | sed 's|\.||'`
+
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA platform" >&5
+$as_echo_n "checking for $ax_display_LUA platform... " >&6; }
+if ${ax_cv_lua_platform+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_lua_platform=`$LUA -e "print('unknown')"`
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_platform" >&5
+$as_echo "$ax_cv_lua_platform" >&6; }
+    LUA_PLATFORM=$ax_cv_lua_platform
+
+
+                    LUA_PREFIX='${prefix}'
+
+    LUA_EXEC_PREFIX='${exec_prefix}'
+
+
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA script directory" >&5
+$as_echo_n "checking for $ax_display_LUA script directory... " >&6; }
+if ${ax_cv_lua_luadir+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   if test "x$prefix" = 'xNONE'; then :
+  ax_lua_prefix=$ac_default_prefix
+else
+  ax_lua_prefix=$prefix
+fi
+
+                ax_cv_lua_luadir="$LUA_PREFIX/share/lua/$LUA_VERSION"
+
+
+
+  ax_lua_prefixed_path=''
+  _ax_package_paths=`$LUA -e 'print(package.path)' 2>/dev/null | sed 's|;|\n|g'`
+    for _ax_package_path in $_ax_package_paths; do
+        _ax_path_parts=`echo "$_ax_package_path" | sed 's|/|\n|g'`
+    _ax_reassembled=''
+    for _ax_path_part in $_ax_path_parts; do
+      echo "$_ax_path_part" | grep '\?' >/dev/null && break
+      _ax_reassembled="$_ax_reassembled/$_ax_path_part"
+    done
+        _ax_package_path=$_ax_reassembled
+    if echo "$_ax_package_path" | grep "^$ax_lua_prefix" >/dev/null; then
+            ax_lua_prefixed_path=$_ax_package_path
+      break
+    fi
+  done
+
+        if test "x$ax_lua_prefixed_path" != 'x'; then :
+             _ax_strip_prefix=`echo "$ax_lua_prefix" | sed 's|.|.|g'`
+          ax_cv_lua_luadir=`echo "$ax_lua_prefixed_path" | \
+            sed "s,^$_ax_strip_prefix,$LUA_PREFIX,"`
+
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_luadir" >&5
+$as_echo "$ax_cv_lua_luadir" >&6; }
+    luadir=$ax_cv_lua_luadir
+
+    pkgluadir=\${luadir}/$PACKAGE
+
+
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ax_display_LUA module directory" >&5
+$as_echo_n "checking for $ax_display_LUA module directory... " >&6; }
+if ${ax_cv_lua_luaexecdir+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   if test "x$exec_prefix" = 'xNONE'; then :
+  ax_lua_exec_prefix=$ax_lua_prefix
+else
+  ax_lua_exec_prefix=$exec_prefix
+fi
+
+                ax_cv_lua_luaexecdir="$LUA_EXEC_PREFIX/lib/lua/$LUA_VERSION"
+
+
+
+  ax_lua_prefixed_path=''
+  _ax_package_paths=`$LUA -e 'print(package.cpathd)' 2>/dev/null | sed 's|;|\n|g'`
+    for _ax_package_path in $_ax_package_paths; do
+        _ax_path_parts=`echo "$_ax_package_path" | sed 's|/|\n|g'`
+    _ax_reassembled=''
+    for _ax_path_part in $_ax_path_parts; do
+      echo "$_ax_path_part" | grep '\?' >/dev/null && break
+      _ax_reassembled="$_ax_reassembled/$_ax_path_part"
+    done
+        _ax_package_path=$_ax_reassembled
+    if echo "$_ax_package_path" | grep "^$ax_lua_exec_prefix" >/dev/null; then
+            ax_lua_prefixed_path=$_ax_package_path
+      break
+    fi
+  done
+
+        if test "x$ax_lua_prefixed_path" != 'x'; then :
+             _ax_strip_prefix=`echo "$ax_lua_exec_prefix" | sed 's|.|.|g'`
+          ax_cv_lua_luaexecdir=`echo "$ax_lua_prefixed_path" | \
+            sed "s,^$_ax_strip_prefix,$LUA_EXEC_PREFIX,"`
+
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_luaexecdir" >&5
+$as_echo "$ax_cv_lua_luaexecdir" >&6; }
+    luaexecdir=$ax_cv_lua_luaexecdir
+
+    pkgluaexecdir=\${luaexecdir}/$PACKAGE
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if LUA_VERSION is defined" >&5
+$as_echo_n "checking if LUA_VERSION is defined... " >&6; }
+  if test "x$LUA_VERSION" != 'x'; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      as_fn_error $? "cannot check Lua headers without knowing LUA_VERSION" "$LINENO" 5
+
+fi
+
+
+
+    LUA_SHORT_VERSION=`echo "$LUA_VERSION" | sed 's|\.||'`
+
+
+    _ax_lua_saved_cppflags=$CPPFLAGS
+  CPPFLAGS="$CPPFLAGS $LUA_INCLUDE"
+  for ac_header in lua.h lualib.h lauxlib.h luaconf.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+  CPPFLAGS=$_ax_lua_saved_cppflags
+
+    if test "x$LUA_INCLUDE" = 'x' &&
+         test "x$ac_cv_header_lua_h" != 'xyes'; then :
+         for _ax_include_path in  /usr/include/lua$LUA_VERSION \
+      /usr/include/lua/$LUA_VERSION \
+      /usr/include/lua$LUA_SHORT_VERSION \
+      /usr/local/include/lua$LUA_VERSION \
+      /usr/local/include/lua/$LUA_VERSION \
+      /usr/local/include/lua$LUA_SHORT_VERSION \
+    ; do
+        test ! -d "$_ax_include_path" && continue
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua headers in" >&5
+$as_echo_n "checking for Lua headers in... " >&6; }
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $_ax_include_path" >&5
+$as_echo "$_ax_include_path" >&6; }
+
+        { ac_cv_header_lua_h=; unset ac_cv_header_lua_h;}
+        { ac_cv_header_lualib_h=; unset ac_cv_header_lualib_h;}
+        { ac_cv_header_lauxlib_h=; unset ac_cv_header_lauxlib_h;}
+        { ac_cv_header_luaconf_h=; unset ac_cv_header_luaconf_h;}
+
+        _ax_lua_saved_cppflags=$CPPFLAGS
+        CPPFLAGS="$CPPFLAGS -I$_ax_include_path"
+        for ac_header in lua.h lualib.h lauxlib.h luaconf.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+        CPPFLAGS=$_ax_lua_saved_cppflags
+
+        if test "x$ac_cv_header_lua_h" = 'xyes'; then :
+   LUA_INCLUDE="-I$_ax_include_path"
+            break
+
+fi
+      done
+
+fi
+
+  if test "x$ac_cv_header_lua_h" = 'xyes'; then :
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Lua header version" >&5
+$as_echo_n "checking for Lua header version... " >&6; }
+if ${ax_cv_lua_header_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+   _ax_lua_saved_cppflags=$CPPFLAGS
+          CPPFLAGS="$CPPFLAGS $LUA_INCLUDE"
+          if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "cannot run test program while cross compiling
+See \`config.log' for more details" "$LINENO" 5; }
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <lua.h>
+#include <stdlib.h>
+#include <stdio.h>
+int main(int argc, char ** argv)
+{
+  if(argc > 1) printf("%s", LUA_VERSION);
+  exit(EXIT_SUCCESS);
+}
+
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+   ax_cv_lua_header_version=`./conftest$EXEEXT p | \
+                sed "s|^Lua \(.*\)|\1|" | \
+                grep -o "^[0-9]\+\\.[0-9]\+"`
+
+else
+  ax_cv_lua_header_version='unknown'
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+          CPPFLAGS=$_ax_lua_saved_cppflags
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_header_version" >&5
+$as_echo "$ax_cv_lua_header_version" >&6; }
+
+            { $as_echo "$as_me:${as_lineno-$LINENO}: checking if Lua header version matches $LUA_VERSION" >&5
+$as_echo_n "checking if Lua header version matches $LUA_VERSION... " >&6; }
+      if test "x$ax_cv_lua_header_version" = "x$LUA_VERSION"; then :
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+          ax_header_version_match='yes'
+
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+          ax_header_version_match='no'
+
+fi
+
+fi
+
+    if test "x$ax_header_version_match" != 'xyes' &&
+         test "x$LUA_INCLUDE" != 'x'; then :
+  as_fn_error $? "cannot find headers for specified LUA_INCLUDE" "$LINENO" 5
+fi
+
+    if test "x$ax_header_version_match" = 'xyes'; then :
+
+else
+  as_fn_error $? "No lua headers found. Try --disable-liblua" "$LINENO" 5
+fi
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if LUA_VERSION is defined" >&5
+$as_echo_n "checking if LUA_VERSION is defined... " >&6; }
+  if test "x$LUA_VERSION" != 'x'; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      as_fn_error $? "cannot check Lua libs without knowing LUA_VERSION" "$LINENO" 5
+
+fi
+
+
+
+  if test "x$LUA_LIB" != 'x'; then :
+       _ax_lua_saved_libs=$LIBS
+    LIBS="$LIBS $LUA_LIB"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lua_load" >&5
+$as_echo_n "checking for library containing lua_load... " >&6; }
+if ${ac_cv_search_lua_load+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_load ();
+int
+main ()
+{
+return lua_load ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_lua_load=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_lua_load+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_lua_load+:} false; then :
+
+else
+  ac_cv_search_lua_load=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_lua_load" >&5
+$as_echo "$ac_cv_search_lua_load" >&6; }
+ac_res=$ac_cv_search_lua_load
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  _ax_found_lua_libs='yes'
+else
+  _ax_found_lua_libs='no'
+fi
+
+    LIBS=$_ax_lua_saved_libs
+
+        if test "x$_ax_found_lua_libs" != 'xyes'; then :
+  as_fn_error $? "cannot find libs for specified LUA_LIB" "$LINENO" 5
+fi
+
+else
+       _ax_lua_extra_libs=''
+
+    _ax_lua_saved_libs=$LIBS
+    LIBS="$LIBS $LUA_LIB"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing exp" >&5
+$as_echo_n "checking for library containing exp... " >&6; }
+if ${ac_cv_search_exp+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char exp ();
+int
+main ()
+{
+return exp ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' m; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_exp=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_exp+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_exp+:} false; then :
+
+else
+  ac_cv_search_exp=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_exp" >&5
+$as_echo "$ac_cv_search_exp" >&6; }
+ac_res=$ac_cv_search_exp
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
+$as_echo_n "checking for library containing dlopen... " >&6; }
+if ${ac_cv_search_dlopen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen ();
+int
+main ()
+{
+return dlopen ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' dl; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_dlopen=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_dlopen+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_dlopen+:} false; then :
+
+else
+  ac_cv_search_dlopen=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlopen" >&5
+$as_echo "$ac_cv_search_dlopen" >&6; }
+ac_res=$ac_cv_search_dlopen
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+    LIBS=$_ax_lua_saved_libs
+
+    if test "x$ac_cv_search_exp" != 'xno' &&
+           test "x$ac_cv_search_exp" != 'xnone required'; then :
+  _ax_lua_extra_libs="$_ax_lua_extra_libs $ac_cv_search_exp"
+fi
+
+    if test "x$ac_cv_search_dlopen" != 'xno' &&
+           test "x$ac_cv_search_dlopen" != 'xnone required'; then :
+  _ax_lua_extra_libs="$_ax_lua_extra_libs $ac_cv_search_dlopen"
+fi
+
+        _ax_lua_saved_libs=$LIBS
+    LIBS="$LIBS $LUA_LIB"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lua_load" >&5
+$as_echo_n "checking for library containing lua_load... " >&6; }
+if ${ac_cv_search_lua_load+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char lua_load ();
+int
+main ()
+{
+return lua_load ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' lua$LUA_VERSION lua$LUA_SHORT_VERSION lua; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib $_ax_lua_extra_libs $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_lua_load=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_lua_load+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_lua_load+:} false; then :
+
+else
+  ac_cv_search_lua_load=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_lua_load" >&5
+$as_echo "$ac_cv_search_lua_load" >&6; }
+ac_res=$ac_cv_search_lua_load
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  _ax_found_lua_libs='yes'
+else
+  _ax_found_lua_libs='no'
+fi
+
+    LIBS=$_ax_lua_saved_libs
+
+    if test "x$ac_cv_search_lua_load" != 'xno' &&
+           test "x$ac_cv_search_lua_load" != 'xnone required'; then :
+  LUA_LIB="$ac_cv_search_lua_load $_ax_lua_extra_libs"
+fi
+
+fi
+
+    if test "x$_ax_found_lua_libs" = 'xyes'; then :
+
+else
+  as_fn_error $? "No lua libs found. Try --disable-liblua" "$LINENO" 5
+fi
+
+        EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ;
+        CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ;
+
+$as_echo "#define USE_LUA 1" >>confdefs.h
+
+
+
+fi
+
+
+fi
+
+
+# Checks for header files.
 for ac_header in fcntl.h malloc.h stdlib.h string.h sys/socket.h unistd.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`

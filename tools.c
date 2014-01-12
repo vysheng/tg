@@ -78,6 +78,9 @@ void tfree (void *ptr, int size __attribute__ ((unused))) {
 #ifdef DEBUG
   total_allocated_bytes -= size;
   ptr -= RES_PRE;
+  if (size != (int)((*(int *)ptr) ^ 0xbedabeda)) {
+    logprintf ("size = %d, ptr = %d\n", size, (*(int *)ptr) ^ 0xbedabeda);
+  }
   assert (*(int *)ptr == (int)((size) ^ 0xbedabeda));
   assert (*(int *)(ptr + RES_PRE + size) == (int)((size) ^ 0x7bed7bed));
   assert (*(int *)(ptr + 4) == size);

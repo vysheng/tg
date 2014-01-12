@@ -10,6 +10,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
+/* Define to 1 if you have the <lauxlib.h> header file. */
+#define HAVE_LAUXLIB_H 1
+
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #define HAVE_LIBCRYPTO 1
 
@@ -21,6 +24,15 @@
 
 /* Define to 1 if you have the `m' library (-lm). */
 #define HAVE_LIBM 1
+
+/* Define to 1 if you have the <luaconf.h> header file. */
+#define HAVE_LUACONF_H 1
+
+/* Define to 1 if you have the <lualib.h> header file. */
+#define HAVE_LUALIB_H 1
+
+/* Define to 1 if you have the <lua.h> header file. */
+#define HAVE_LUA_H 1
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */
@@ -98,6 +110,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
+
+/* use lua */
+#define USE_LUA 1
 
 /* Define to rpl_malloc if the replacement function should be used. */
 /* #undef malloc */

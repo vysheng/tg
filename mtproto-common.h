@@ -306,10 +306,15 @@ static inline char *fetch_str (int len) {
 static inline char *fetch_str_dup (void) {
   int l = prefetch_strlen ();
   assert (l >= 0);
-  char *s = talloc (l + 1);
-  memcpy (s, fetch_str (l), l);
-  s[l] = 0;
-  return s;
+  int i;
+  char *s = fetch_str (l);
+  for (i = 0; i < l; i++) {
+    if (!s[i]) { break; }
+  }
+  char *r = talloc (i + 1);
+  memcpy (r, s, i);
+  r[i] = 0;
+  return r;
 }
 
 static inline int fetch_update_str (char **s) {
@@ -361,6 +366,7 @@ static inline int set_update_int (int *value, int new_value) {
 
 static inline void fetch_skip (int n) {
   in_ptr += n;
+  assert (in_ptr <= in_end);
 }
 
 static inline void fetch_skip_str (void) {
@@ -382,6 +388,7 @@ static inline long have_prefetch_ints (void) {
 int fetch_bignum (BIGNUM *x);
 
 static inline int fetch_int (void) {
+  assert (in_ptr + 1 <= in_end);
   if (verbosity > 6) {
     logprintf ("fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   }
@@ -392,37 +399,44 @@ static inline int fetch_bool (void) {
   if (verbosity > 6) {
     logprintf ("fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   }
+  assert (in_ptr + 1 <= in_end);
   assert (*(in_ptr) == (int)CODE_bool_true || *(in_ptr) == (int)CODE_bool_false);
   return *(in_ptr ++) == (int)CODE_bool_true;
 }
 
 static inline int prefetch_int (void) {
+  assert (in_ptr < in_end);
   return *(in_ptr);
 }
 
 static inline void prefetch_data (void *data, int size) {
+  assert (in_ptr + (size >> 2) <= in_end);
   memcpy (data, in_ptr, size);
 }
 
 static inline void fetch_data (void *data, int size) {
+  assert (in_ptr + (size >> 2) <= in_end);
   memcpy (data, in_ptr, size);
   assert (!(size & 3));
   in_ptr += (size >> 2);
 }
 
 static inline long long fetch_long (void) {
+  assert (in_ptr + 2 <= in_end);
   long long r = *(long long *)in_ptr;
   in_ptr += 2;
   return r;
 }
 
 static inline double fetch_double (void) {
+  assert (in_ptr + 2 <= in_end);
   double r = *(double *)in_ptr;
   in_ptr += 2;
   return r;
 }
 
 static inline void fetch_ints (void *data, int count) {
+  assert (in_ptr + count <= in_end);
   memcpy (data, in_ptr, 4 * count);
   in_ptr += count;
 }

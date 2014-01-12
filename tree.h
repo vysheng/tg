@@ -24,6 +24,7 @@
 #include <tools.h>
 #include <assert.h>
 
+#pragma pack(push,4)
 #define DEFINE_TREE(X_NAME, X_TYPE, X_CMP, X_UNSET) \
 struct tree_ ## X_NAME { \
   struct tree_ ## X_NAME *left, *right;\
@@ -58,6 +59,7 @@ void tree_split_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, struct tree_ ##
   }\
 }\
 \
+struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, int y) __attribute__ ((warn_unused_result));\
 struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, int y) {\
   if (!T) {\
     return new_tree_node_ ## X_NAME  (x, y);\
@@ -93,6 +95,7 @@ struct tree_ ## X_NAME *tree_merge_ ## X_NAME (struct tree_ ## X_NAME *L, struct
   }\
 }\
 \
+struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) __attribute__ ((warn_unused_result));\
 struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
   assert (T);\
   int c = X_CMP (x, T->x);\
@@ -150,4 +153,5 @@ void tree_check_ ## X_NAME (struct tree_ ## X_NAME *T) { \
 }\
 
 #define int_cmp(a,b) ((a) - (b))
+#pragma pack(pop)
 #endif

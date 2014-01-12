@@ -48,6 +48,7 @@
 #include "telegram.h"
 #include "loop.h"
 #include "binlog.h"
+#include "lua-tg.h"
 
 extern char *default_username;
 extern char *auth_token;
@@ -95,6 +96,9 @@ void net_loop (int flags, int (*is_end)(void)) {
       }
     }
     connections_poll_result (fds + cc, x - cc);
+    #ifdef USE_LUA
+      lua_do_all ();
+    #endif
     if (safe_quit && !queries_num) {
       printf ("All done. Exit\n");
       rl_callback_handler_remove ();
@@ -448,6 +452,9 @@ int loop (void) {
     replay_log ();
     logprintf ("replay log end in %lf seconds\n", get_double_time () - t);
     write_binlog ();
+    #ifdef USE_LUA
+      lua_binlog_end ();
+    #endif
   } else {
     read_auth_file ();
   }
@@ -580,7 +587,11 @@ int loop (void) {
 
   do_get_difference ();
   net_loop (0, dgot);
+  #ifdef USE_LUA
+    lua_diff_end ();
+  #endif
   send_all_unsent ();
+
 
   do_get_dialog_list ();
 
