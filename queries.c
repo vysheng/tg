@@ -1462,6 +1462,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
+    tfree_str (file_name);
     return;
   }
   struct stat buf;
@@ -1469,6 +1470,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   long long size = buf.st_size;
   if (size <= 0) {
     rprintf ("File has zero length\n");
+    tfree_str (file_name);
     close (fd);
     return;
   }
@@ -1483,6 +1485,14 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     f->part_size *= 2;
   }
 
+  if (f->part_size > (512 << 10)) {
+    close (fd);
+    rprintf ("Too big file. Maximal supported size is %d.\n", (512 << 10) * 1000);
+    tfree (f, sizeof (*f));
+    tfree_str (file_name);
+    return;
+  }
+
   f->id = lrand48 () * (1ll << 32) + lrand48 ();
   f->to_id = to_id;
   f->media_type = type;
@@ -1495,11 +1505,6 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     memcpy (f->init_iv, f->iv, 32);
     f->key = talloc (32);
     secure_random (f->key, 32);
-  }
-  if (f->part_size > (512 << 10)) {
-    close (fd);
-    rprintf ("Too big file. Maximal supported size is %d", (512 << 10) * 1000);
-    return;
   }
   if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
     f->media_type = CODE_input_media_uploaded_thumb_video;
