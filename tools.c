@@ -30,6 +30,8 @@
 #include "tools.h"
 
 #ifdef DEBUG
+#define RES_PRE 8
+#define RES_AFTER 8
 #define MAX_BLOCKS 1000000
 void *blocks[MAX_BLOCKS];
 void *free_blocks[MAX_BLOCKS];
@@ -37,18 +39,13 @@ int used_blocks;
 int free_blocks_cnt;
 #endif
 
-#ifdef DEBUG
-#define RES_PRE 8
-#define RES_AFTER 8
-#endif
-
 extern int verbosity;
 
 long long total_allocated_bytes;
 
 static void out_of_memory (void) {
-  logprintf ("Out of memory\n");
-  assert (0 && "Out of memory");
+  fprintf (stderr, "Out of memory\n");
+  exit (1);
 }
 
 int tsnprintf (char *buf, int len, const char *format, ...) {
