@@ -99,15 +99,17 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
   ])
     
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h malloc.h stdlib.h string.h sys/socket.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h malloc.h netdb.h stdlib.h string.h unistd.h arpa/inet.h mach/mach.h netinet/in.h sys/file.h sys/socket.h termios.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
+AC_TYPE_UID_T
+AC_C_INLINE
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([memset select strdup strndup])
+AC_CHECK_FUNCS([alarm endpwent memset memmove mkdir select socket strdup strndup uname])
 
 AC_SUBST(EXTRA_LIBS)
 AC_CONFIG_FILES([Makefile])
