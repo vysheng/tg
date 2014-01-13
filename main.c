@@ -16,8 +16,10 @@
 
     Copyright Vitaly Valtman 2013
 */
-#define _GNU_SOURCE
+
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <stdio.h>
 #include <unistd.h>

@@ -17,6 +17,11 @@
     Copyright Nikolay Durov, Andrey Lopatin 2012-2013
     Copyright Vitaly Valtman 2013
 */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define        _FILE_OFFSET_BITS        64
 
 #include <assert.h>

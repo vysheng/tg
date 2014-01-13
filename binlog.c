@@ -16,7 +16,11 @@
 
     Copyright Vitaly Valtman 2013
 */
+
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
 #ifdef USE_LUA
 # include "lua-tg.h"
 #endif
@@ -100,7 +104,7 @@ void replay_log_event (void) {
       if (verbosity) {
         logprintf ( "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
       }
-      alloc_dc (id, strndup (ip, l2), port);
+      alloc_dc (id, tstrndup (ip, l2), port);
     }
     rptr = in_ptr;
     break;

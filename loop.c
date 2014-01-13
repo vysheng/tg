@@ -16,13 +16,15 @@
 
     Copyright Vitaly Valtman 2013
 */
-#define READLINE_CALLBACKS
+
+#ifdef HAVE_CONFIG_H
 #include "config.h"
-#define _GNU_SOURCE
+#endif
+
+#define READLINE_CALLBACKS
 
 #include <assert.h>
 #include <stdio.h>
-
 #include <stdlib.h>
 #include <string.h>
 #ifdef READLINE_GNU
