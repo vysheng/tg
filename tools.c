@@ -166,6 +166,23 @@ char *tstrdup (const char *s) {
 #endif
 }
 
+char *tstrndup (const char *s, size_t n) {
+#ifdef DEBUG
+  size_t l = 0;
+  for (l = 0; l < n && s[l]; l++) { }
+  char *p = talloc (l + 1);
+  memcpy (p, s, l);
+  p[l] = 0;
+  return p;
+#else
+  char *p = strndup (s, n);
+  if (p == NULL) {
+    out_of_memory ();
+  }
+  return p;
+#endif
+}
+
 void ensure (int r) {
   if (!r) {
     logprintf ("Open SSL error\n");

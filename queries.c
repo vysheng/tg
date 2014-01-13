@@ -386,7 +386,7 @@ int send_code_on_answer (struct query *q UU) {
   if (phone_code_hash) {
     tfree_str (phone_code_hash);
   }
-  phone_code_hash = strndup (s, l);
+  phone_code_hash = tstrndup (s, l);
   want_dc_num = -1;
   return 0;
 }
