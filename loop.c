@@ -22,7 +22,6 @@
 #endif
 
 #define READLINE_CALLBACKS
-#define _GNU_SOURCE
 
 #include <assert.h>
 #include <stdio.h>
