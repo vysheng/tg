@@ -315,8 +315,8 @@ void do_insert_header (void) {
     struct utsname st;
     uname (&st);
     out_string (st.machine);
-    static char buf[65536];
-    tsnprintf (buf, 65535, "%999s %999s %999s", st.sysname, st.release, st.version);
+    static char buf[4096];
+    tsnprintf (buf, sizeof (buf), "%.999s %.999s %.999s\n", st.sysname, st.release, st.version);
     out_string (buf);
     out_string (TG_VERSION " (build " TG_BUILD ")");
     out_string ("En");
