@@ -22,10 +22,15 @@ or download and extract zip
 #### Linux
 
 Install libs: readline openssl and (if you want to use config) libconfig.
-On ubuntu use: 
+On Ubuntu use: 
     
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev
-On gentoo:
+
+On Ubuntu 12.04, you need to install lua5.2:
+
+    $ sudo apt-get install lua5.2 
+
+On Gentoo:
     
     $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl
 Then
