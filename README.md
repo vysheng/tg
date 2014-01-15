@@ -21,13 +21,17 @@ or download and extract zip
     
 #### Linux
 
-Install libs: readline openssl and (if you want to use config) libconfig.
+Install libs: readline openssl and (if you want to use config) libconfig and lublua.
+If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively
 On ubuntu use: 
     
-    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev
+    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 lublua5.2-dev
 On gentoo:
     
-    $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl
+    $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
+    
+Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or linux you have to run ./configure script or you will get some strange compilation error. 
+
 Then
 
     $ ./configure
