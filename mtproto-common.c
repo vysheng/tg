@@ -67,6 +67,9 @@ int get_random_bytes (unsigned char *buf, int n) {
       }
     }
     close (h);
+    if (r < 0) {
+      r = 0;
+    }
   }
 
   if (r < n) {
@@ -105,18 +108,15 @@ void my_clock_gettime (int clock_id UU, struct timespec *T) {
 #endif
 }
 
-
 void prng_seed (const char *password_filename, int password_length) {
   unsigned char *a = talloc0 (64 + password_length);
-  long long r = rdtsc ();
   struct timespec T;
   my_clock_gettime (CLOCK_REALTIME, &T);
   memcpy (a, &T.tv_sec, 4);
-  memcpy (a+4, &T.tv_nsec, 4);
-  memcpy (a+8, &r, 8);
+  memcpy (a + 4, &T.tv_nsec, 4);
   unsigned short p = getpid ();
-  memcpy (a + 16, &p, 2);
-  int s = get_random_bytes (a + 18, 32) + 18;
+  memcpy (a + 8, &p, 2);
+  int s = get_random_bytes (a + 10, 32) + 10;
   if (password_filename) {
     int fd = open (password_filename, O_RDONLY);
     if (fd < 0) {

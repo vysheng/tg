@@ -90,14 +90,13 @@ struct connection_methods auth_methods = {
 };
 
 long long precise_time;
-long long precise_time_rdtsc;
+
 double get_utime (int clock_id) {
   struct timespec T;
   my_clock_gettime (clock_id, &T);
   double res = T.tv_sec + (double) T.tv_nsec * 1e-9;
   if (clock_id == CLOCK_REALTIME) {
     precise_time = (long long) (res * (1LL << 32));
-    precise_time_rdtsc = rdtsc ();
   }
   return res;
 }

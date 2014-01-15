@@ -375,12 +375,6 @@ static inline void fetch_skip_str (void) {
   fetch_str (l);
 }
 
-static __inline__ unsigned long long rdtsc(void) {
-  unsigned hi, lo;
-  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-  return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-
 static inline long have_prefetch_ints (void) {
   return in_end - in_ptr;
 }
