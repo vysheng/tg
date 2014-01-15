@@ -469,12 +469,12 @@ void fetch_chat (struct chat *C) {
     int version = -1;
 
     if (x == CODE_chat) {
-      unsigned y = fetch_int ();
-      if (y == CODE_chat_photo_empty) {
+      unsigned z = fetch_int ();
+      if (z == CODE_chat_photo_empty) {
         small.dc = -2;
         big.dc = -2;
       } else {
-        assert (y == CODE_chat_photo);
+        assert (z == CODE_chat_photo);
         fetch_file_location (&small);
         fetch_file_location (&big);
       }
