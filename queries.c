@@ -1936,6 +1936,22 @@ void do_load_video (struct video *V, int next) {
   load_next_part (D);
 }
 
+void do_load_audio (struct video *V, int next) {
+  assert (V);
+  assert (next);
+  struct download *D = talloc0 (sizeof (*D));
+  D->offset = 0;
+  D->size = V->size;
+  D->id = V->id;
+  D->access_hash = V->access_hash;
+  D->dc = V->dc_id;
+  D->next = next;
+  D->name = 0;
+  D->fd = -1;
+  D->type = CODE_input_audio_file_location;
+  load_next_part (D);
+}
+
 void do_load_document (struct document *V, int next) {
   assert (V);
   assert (next);

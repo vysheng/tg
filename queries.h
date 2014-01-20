@@ -89,6 +89,7 @@ struct photo;
 struct video;
 void do_load_photo (struct photo *photo, int next);
 void do_load_video_thumb (struct video *video, int next);
+void do_load_audio (struct video *V, int next);
 void do_load_video (struct video *V, int next);
 void do_load_document (struct document *V, int next);
 void do_load_document_thumb (struct document *video, int next);
