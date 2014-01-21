@@ -65,6 +65,8 @@ int get_random_bytes (unsigned char *buf, int n) {
       if (verbosity >= 3) {
         logprintf ( "added %d bytes of real entropy to secure random numbers seed\n", r);
       }
+    } else {
+      r = 0;
     }
     close (h);
   }
@@ -76,13 +78,12 @@ int get_random_bytes (unsigned char *buf, int n) {
     }
     int s = read (h, buf + r, n - r);
     close (h);
-    if (s < 0) {
-      return r;
+    if (s > 0) {
+      r += s;
     }
-    r += s;
   }
 
-  if (r >= (int)sizeof (long)) {
+  if (r >= (int) sizeof (long)) {
     *(long *)buf ^= lrand48 ();
     srand48 (*(long *)buf);
   }
@@ -105,38 +106,62 @@ void my_clock_gettime (int clock_id UU, struct timespec *T) {
 #endif
 }
 
+/* RDTSC */
+#if defined(__i386__)
+#define HAVE_RDTSC
+static __inline__ unsigned long long rdtsc (void) {
+  unsigned long long int x;
+  __asm__ volatile ("rdtsc" : "=A" (x));
+  return x;
+}
+#elif defined(__x86_64__)
+#define HAVE_RDTSC
+static __inline__ unsigned long long rdtsc (void) {
+  unsigned hi, lo;
+  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+  return ((unsigned long long) lo) | (((unsigned long long) hi) << 32);
+}
+#endif
 
 void prng_seed (const char *password_filename, int password_length) {
-  unsigned char *a = talloc0 (64 + password_length);
-  long long r = rdtsc ();
   struct timespec T;
   my_clock_gettime (CLOCK_REALTIME, &T);
-  memcpy (a, &T.tv_sec, 4);
-  memcpy (a+4, &T.tv_nsec, 4);
-  memcpy (a+8, &r, 8);
+  RAND_add (&T, sizeof (T), 4.0);
+#ifdef HAVE_RDTSC
+  unsigned long long r = rdtsc ();
+  RAND_add (&r, 8, 4.0);
+#endif
   unsigned short p = getpid ();
-  memcpy (a + 16, &p, 2);
-  int s = get_random_bytes (a + 18, 32) + 18;
-  if (password_filename) {
+  RAND_add (&p, sizeof (p), 0.0);
+  p = getppid ();
+  RAND_add (&p, sizeof (p), 0.0);
+  unsigned char rb[32];
+  int s = get_random_bytes (rb, 32);
+  if (s > 0) {
+    RAND_add (rb, s, s);
+  }
+  memset (rb, 0, sizeof (rb));
+  if (password_filename && password_length > 0) {
     int fd = open (password_filename, O_RDONLY);
     if (fd < 0) {
       logprintf ( "Warning: fail to open password file - \"%s\", %m.\n", password_filename);
     } else {
-      int l = read (fd, a + s, password_length);
+      unsigned char *a = talloc0 (password_length);
+      int l = read (fd, a, password_length);
       if (l < 0) {
         logprintf ( "Warning: fail to read password file - \"%s\", %m.\n", password_filename);
       } else {
         if (verbosity > 0) {
           logprintf ( "read %d bytes from password file.\n", l);
         }
-        s += l;
+        RAND_add (a, l, l);
       }
       close (fd);
+      tfree_secure (a, password_length);
     }
   }
-  RAND_seed (a, s);
   BN_ctx = BN_CTX_new ();
-  tfree_secure (a, 64 + password_length);
+  ensure_ptr (BN_ctx);
 }
 
 int serialize_bignum (BIGNUM *b, char *buffer, int maxlen) {
