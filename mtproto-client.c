@@ -428,6 +428,12 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   return rpc_send_packet (c);
 }
 
+int check_prime (BIGNUM *p) {
+  int r = BN_is_prime (p, BN_prime_checks, 0, BN_ctx, 0);
+  ensure (r >= 0);
+  return r;
+}
+
 int check_DH_params (BIGNUM *p, int g) {
   if (g < 2 || g > 7) { return -1; }
   BIGNUM t;
@@ -440,7 +446,7 @@ int check_DH_params (BIGNUM *p, int g) {
   int x = BN_get_word (&t);
   assert (x >= 0 && x < 4 * g);
 
-  BN_clear (&dh_g);
+  BN_free (&dh_g);
 
   switch (g) {
   case 2:
@@ -462,15 +468,15 @@ int check_DH_params (BIGNUM *p, int g) {
     break;
   }
 
-  if (!BN_is_prime (p, BN_prime_checks, 0, BN_ctx, 0)) { return -1; }
+  if (!check_prime (p)) { return -1; }
 
   BIGNUM b;
   BN_init (&b);
   ensure (BN_set_word (&b, 2));
   ensure (BN_div (&t, 0, p, &b, BN_ctx));
-  if (!BN_is_prime (&t, BN_prime_checks, 0, BN_ctx, 0)) { return -1; }
-  BN_clear (&b);
-  BN_clear (&t);
+  if (!check_prime (&t)) { return -1; }
+  BN_free (&b);
+  BN_free (&t);
   return 0;
 }
 

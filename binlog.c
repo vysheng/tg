@@ -628,6 +628,7 @@ void replay_log_event (void) {
       struct chat *C = &_C->chat;
       if (C->title) { tfree_str (C->title); }
       C->title = fetch_str_dup ();
+      if (C->print_title) { tfree_str (C->print_title); }
       C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
       #ifdef USE_LUA
         lua_chat_update (C);
