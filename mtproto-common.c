@@ -348,6 +348,7 @@ void init_aes_unauth (const char server_nonce[16], const char hidden_client_nonc
   } else {
     AES_set_decrypt_key (aes_key_raw, 32*8, &aes_key);
   }
+  memset (aes_key_raw, 0, sizeof (aes_key_raw));
 }
 
 void init_aes_auth (char auth_key[192], char msg_key[16], int encrypt) {
@@ -387,6 +388,7 @@ void init_aes_auth (char auth_key[192], char msg_key[16], int encrypt) {
   } else {
     AES_set_decrypt_key (aes_key_raw, 32*8, &aes_key);
   }
+  memset (aes_key_raw, 0, sizeof (aes_key_raw));
 }
 
 int pad_aes_encrypt (char *from, int from_len, char *to, int size) {
