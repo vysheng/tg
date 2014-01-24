@@ -1376,6 +1376,7 @@ int decrypt_encrypted_message (struct secret_chat *E) {
   AES_KEY aes_key;
   AES_set_decrypt_key (key, 256, &aes_key);
   AES_ige_encrypt ((void *)decr_ptr, (void *)decr_ptr, 4 * (decr_end - decr_ptr), &aes_key, iv, 0);
+  memset (&aes_key, 0, sizeof (aes_key));
 
   int x = *(decr_ptr);
   if (x < 0 || (x & 3)) {
