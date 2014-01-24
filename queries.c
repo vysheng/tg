@@ -2746,6 +2746,53 @@ void do_create_secret_chat (peer_id_t id) {
 }
 /* }}} */
 
+/* {{{ Delete msg */
+
+int delete_msg_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  fetch_skip (n);
+  logprintf ("Deleted %d messages\n", n);
+  return 0;
+}
+
+struct query_methods delete_msg_methods = {
+  .on_answer = delete_msg_on_answer
+};
+
+void do_delete_msg (long long id) {
+  clear_packet ();
+  out_int (CODE_messages_delete_messages);
+  out_int (CODE_vector);
+  out_int (1);
+  out_int (id);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &delete_msg_methods, 0);
+}
+/* }}} */
+
+/* {{{ Restore msg */
+
+int restore_msg_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  fetch_skip (n);
+  logprintf ("Restored %d messages\n", n);
+  return 0;
+}
+
+struct query_methods restore_msg_methods = {
+  .on_answer = restore_msg_on_answer
+};
+
+void do_restore_msg (long long id) {
+  clear_packet ();
+  out_int (CODE_messages_restore_messages);
+  out_int (CODE_vector);
+  out_int (1);
+  out_int (id);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &restore_msg_methods, 0);
+}
+/* }}} */
 int update_status_on_answer (struct query *q UU) {
   fetch_bool ();
   return 0;

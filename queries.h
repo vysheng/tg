@@ -111,7 +111,8 @@ void do_del_user_from_chat (peer_id_t chat_id, peer_id_t id);
 void do_update_status (int online);
 void do_contacts_search (int limit, const char *s);
 void do_send_msg (struct message *M);
-
+void do_delete_msg (long long id);
+void do_restore_msg (long long id);
 
 // For binlog
 

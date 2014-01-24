@@ -46,7 +46,7 @@
 
 #include "mtproto-common.h"
 
-//#define ALLOW_MULT 1
+#define ALLOW_MULT 1
 char *default_prompt = "> ";
 
 int unread_messages;
@@ -86,14 +86,14 @@ char *next_token (int *l) {
   char *s = line_ptr;
   int in_str = 0;
   while (*line_ptr && (*line_ptr != ' ' || neg || in_str)) {
-    if (*line_ptr == '\\') {
+/*    if (*line_ptr == '\\') {
       neg = 1 - neg;
     } else {
       if (*line_ptr == '"' && !neg) {
         in_str = !in_str;
       }
       neg = 0;
-    }
+    }*/
     line_ptr++;
   }
   *l = line_ptr - s;
@@ -320,6 +320,8 @@ char *commands[] = {
   "view_document",
   "set",
   "chat_with_peer",
+  "delete_msg",
+  "restore_msg",
   0 };
 
 int commands_flags[] = {
@@ -368,6 +370,8 @@ int commands_flags[] = {
   07,
   07,
   072,
+  07,
+  07
 };
 
 
@@ -1067,6 +1071,28 @@ void interpreter (char *line UU) {
     GET_PEER;
     in_chat_mode = 1;
     chat_mode_id = id;
+  } else if (IS_WORD ("delete_msg")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    do_delete_msg (num);
+  } else if (IS_WORD ("restore_msg")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    do_restore_msg (num);
+  } else if (IS_WORD ("delete_restore_msg")) {
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    do_delete_msg (num);
+    do_restore_msg (num);
   } else if (IS_WORD ("quit")) {
     exit (0);
   } else if (IS_WORD ("safe_quit")) {
