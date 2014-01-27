@@ -66,6 +66,7 @@ int ping_alarm (struct connection *c) {
   if (verbosity > 2) {
     logprintf ("ping alarm\n");
   }
+  assert (c->state == conn_ready || c->state == conn_connecting);
   if (get_double_time () - c->last_receive_time > 20 * PING_TIMEOUT) {
     if (verbosity) {
       logprintf ( "fail connection: reason: ping timeout\n");
@@ -97,10 +98,13 @@ void start_ping_timer (struct connection *c) {
 
 void restart_connection (struct connection *c);
 int fail_alarm (void *ev) {
+  ((struct connection *)ev)->in_fail_timer = 0;
   restart_connection (ev);
   return 0;
 }
 void start_fail_timer (struct connection *c) {
+  if (c->in_fail_timer) { return; }
+  c->in_fail_timer = 1;  
   c->ev.timeout = get_double_time () + 10;
   c->ev.alarm = (void *)fail_alarm;
   c->ev.self = c;

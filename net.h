@@ -124,6 +124,7 @@ struct connection {
   int packet_num;
   int out_packet_num;
   int last_connect_time;
+  int in_fail_timer;
   struct connection_methods *methods;
   struct session *session;
   void *extra;
