@@ -35,7 +35,6 @@
 #include <sys/endian.h>
 #endif
 #include <sys/types.h>
-#include <aio.h>
 #include <netdb.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
