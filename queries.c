@@ -746,6 +746,7 @@ char *encrypt_decrypted_message (struct secret_chat *E) {
   AES_KEY aes_key;
   AES_set_encrypt_key (key, 256, &aes_key);
   AES_ige_encrypt ((void *)encr_ptr, (void *)encr_ptr, 4 * (encr_end - encr_ptr), &aes_key, iv, 1);
+  memset (&aes_key, 0, sizeof (aes_key));
 
   return (void *)msg_key;
 }
@@ -1290,15 +1291,14 @@ void send_part (struct send_file *f) {
     if (f->encr) {
       if (x & 15) {
         assert (f->offset == f->size);
-        if (x & 15) {
-          secure_random (buf + x, (-x) & 15);
-          x = (x + 15) & ~15;
-        }
+        secure_random (buf + x, (-x) & 15);
+        x = (x + 15) & ~15;
       }
       
       AES_KEY aes_key;
       AES_set_encrypt_key (f->key, 256, &aes_key);
       AES_ige_encrypt ((void *)buf, (void *)buf, x, &aes_key, f->iv, 1);
+      memset (&aes_key, 0, sizeof (aes_key));
     }
     out_cstring (buf, x);
     if (verbosity >= 2) {
@@ -1803,6 +1803,7 @@ int download_on_answer (struct query *q) {
     AES_KEY aes_key;
     AES_set_decrypt_key (D->key, 256, &aes_key);
     AES_ige_encrypt (ptr, ptr, len, &aes_key, D->iv, 0);
+    memset (&aes_key, 0, sizeof (aes_key));
     if (len > D->size - D->offset) {
       len = D->size - D->offset;
     }

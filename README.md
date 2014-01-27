@@ -25,7 +25,7 @@ Install libs: readline openssl and (if you want to use config) libconfig and lub
 If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively
 On ubuntu use: 
     
-    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 lublua5.2-dev
+    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
 On gentoo:
     
     $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
