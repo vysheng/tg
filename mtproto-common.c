@@ -31,7 +31,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <aio.h>
 #include <netdb.h>
 #include <openssl/bn.h>
 #include <openssl/rand.h>
