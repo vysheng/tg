@@ -35,7 +35,9 @@
 #include <sys/endian.h>
 #endif
 #include <sys/types.h>
+#ifndef __UCLIBC__
 #include <aio.h>
+#endif
 #include <netdb.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
