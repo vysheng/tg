@@ -245,4 +245,19 @@ void tcheck (void) {
   }
   logprintf ("ok. Used_blocks = %d. Free blocks = %d\n", used_blocks, free_blocks_cnt);
 }
+
+void texists (void *ptr, int size) {
+  ptr -= RES_PRE;
+  if (size != (int)((*(int *)ptr) ^ 0xbedabeda)) {
+    logprintf ("size = %d, ptr = %d\n", size, (*(int *)ptr) ^ 0xbedabeda);
+  }
+  assert (*(int *)ptr == (int)((size) ^ 0xbedabeda));
+  assert (*(int *)(ptr + RES_PRE + size) == (int)((size) ^ 0x7bed7bed));
+  assert (*(int *)(ptr + 4) == size);
+  int block_num = *(int *)(ptr + 4 + RES_PRE + size);
+  if (block_num >= used_blocks) {
+    logprintf ("block_num = %d, used = %d\n", block_num, used_blocks);
+  }
+  assert (block_num < used_blocks);
+}
 #endif

@@ -39,5 +39,6 @@ int tasprintf (char **res, const char *format, ...) __attribute__ ((format (prin
 
 #ifdef DEBUG
 void tcheck (void);
+void texists (void *ptr, int size);
 #endif
 #endif

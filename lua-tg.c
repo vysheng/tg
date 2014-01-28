@@ -365,6 +365,13 @@ void lua_do_all (void) {
       do_forward_message (((peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1]);
       p += 2;
       break;
+    case 2:
+      #ifdef DEBUG
+        texists (lua_ptr[p], sizeof (peer_t));
+      #endif
+      do_mark_read (((peer_t *)lua_ptr[p])->id);
+      p += 1;
+      break;
     default:
       assert (0);
     }
@@ -384,6 +391,10 @@ static int send_msg_from_lua (lua_State *L) {
     return 1;
   }
   const char *s = lua_tostring (L, -2);
+  if (!s) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
   const char *msg = lua_tostring (L, -1);
   
   peer_t *P = get_peer (s);
@@ -414,6 +425,10 @@ static int fwd_msg_from_lua (lua_State *L) {
   }
   const char *s = lua_tostring (L, -2);
   long long num = atoll (lua_tostring (L, -1));
+  if (!s) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
   peer_t *P = get_peer (s);
   if (!P) {
     lua_pushboolean (L, 0);
@@ -428,6 +443,34 @@ static int fwd_msg_from_lua (lua_State *L) {
   return 1;
 }
 
+static int mark_read_from_lua (lua_State *L) {
+  if (MAX_LUA_COMMANDS - pos < 4) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  int n = lua_gettop (L);
+  if (n != 1) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  const char *s = lua_tostring (L, -1);
+  if (!s) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  peer_t *P = get_peer (s);
+  if (!P) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  
+  lua_ptr[pos ++] = (void *)1l;
+  lua_ptr[pos ++] = (void *)2l;
+  lua_ptr[pos ++] = P;
+  lua_pushboolean (L, 1);
+  return 1;
+}
+
 void lua_init (const char *file) {
   if (!file) { return; }
   have_file = 1;
@@ -436,6 +479,7 @@ void lua_init (const char *file) {
 
   lua_register (luaState, "send_msg", send_msg_from_lua);
   lua_register (luaState, "fwd_msg", fwd_msg_from_lua);
+  lua_register (luaState, "mark_read", mark_read_from_lua);
 
   int ret = luaL_dofile (luaState, file);
   if (ret) {
