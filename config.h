@@ -4,6 +4,15 @@
 /* enable libconfig */
 #define ENABLE_LIBCONFIG 1
 
+/* Define to 1 if you have the `alarm' function. */
+#define HAVE_ALARM 1
+
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#define HAVE_ARPA_INET_H 1
+
+/* Define to 1 if you have the `endpwent' function. */
+#define HAVE_ENDPWENT 1
+
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
@@ -19,9 +28,6 @@
 /* Define to 1 if you have the `edit' library (-ledit). */
 /* #undef HAVE_LIBEDIT */
 
-/* Define to 1 if you have the `execinfo' library (-lexecinfo). */
-/* #undef HAVE_LIBEXECINFO */
-
 /* Define to 1 if you have the `m' library (-lm). */
 #define HAVE_LIBM 1
 
@@ -34,6 +40,9 @@
 /* Define to 1 if you have the <lua.h> header file. */
 #define HAVE_LUA_H 1
 
+/* Define to 1 if you have the <mach/mach.h> header file. */
+/* #undef HAVE_MACH_MACH_H */
+
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */
 #define HAVE_MALLOC 1
@@ -41,11 +50,23 @@
 /* Define to 1 if you have the <malloc.h> header file. */
 #define HAVE_MALLOC_H 1
 
+/* Define to 1 if you have the `memmove' function. */
+#define HAVE_MEMMOVE 1
+
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the `memset' function. */
 #define HAVE_MEMSET 1
+
+/* Define to 1 if you have the `mkdir' function. */
+#define HAVE_MKDIR 1
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#define HAVE_NETDB_H 1
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#define HAVE_NETINET_IN_H 1
 
 /* Define to 1 if your system has a GNU libc compatible `realloc' function,
    and to 0 otherwise. */
@@ -53,6 +74,9 @@
 
 /* Define to 1 if you have the `select' function. */
 #define HAVE_SELECT 1
+
+/* Define to 1 if you have the `socket' function. */
+#define HAVE_SOCKET 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -72,6 +96,9 @@
 /* Define to 1 if you have the `strndup' function. */
 #define HAVE_STRNDUP 1
 
+/* Define to 1 if you have the <sys/file.h> header file. */
+#define HAVE_SYS_FILE_H 1
+
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #define HAVE_SYS_SOCKET_H 1
 
@@ -80,6 +107,12 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
+
+/* Define to 1 if you have the <termios.h> header file. */
+#define HAVE_TERMIOS_H 1
+
+/* Define to 1 if you have the `uname' function. */
+#define HAVE_UNAME 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
@@ -114,6 +147,15 @@
 /* use lua */
 #define USE_LUA 1
 
+/* Define to `int' if <sys/types.h> doesn't define. */
+/* #undef gid_t */
+
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+/* #undef inline */
+#endif
+
 /* Define to rpl_malloc if the replacement function should be used. */
 /* #undef malloc */
 
@@ -122,3 +164,6 @@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
+
+/* Define to `int' if <sys/types.h> doesn't define. */
+/* #undef uid_t */

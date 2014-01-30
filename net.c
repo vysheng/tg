@@ -45,7 +45,7 @@
 #include "tree.h"
 #include "interface.h"
 
-#if defined(__MACH__) || defined(__FreeBSD__)
+#ifndef POLLRDHUP
 #define POLLRDHUP 0
 #endif
 

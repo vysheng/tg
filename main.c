@@ -418,11 +418,17 @@ void args_parse (int argc, char **argv) {
   }
 }
 
+#ifndef NO_BACKTRACE
 void print_backtrace (void) {
   void *buffer[255];
   const int calls = backtrace (buffer, sizeof (buffer) / sizeof (void *));
   backtrace_symbols_fd (buffer, calls, 1);
 }
+#else
+void print_backtrace (void) {
+  printf ("No libexec. Backtrace disabled\n");
+}
+#endif
 
 void sig_handler (int signum) {
   set_terminal_attributes ();

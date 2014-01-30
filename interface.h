@@ -39,7 +39,6 @@ char **complete_text (char *text, int start, int end);
 void interpreter (char *line);
 
 void rprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
-void iprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void hexdump (int *in_ptr, int *in_end);
 
