@@ -77,7 +77,12 @@ By default public key is stored in the same folder named tg.pub:
 
 Client support TAB completion and command history.
 
-Peer refers to the name of the contact and can be accessed by TAB completion.
+Peer refers to the name of the contact or dialog and can be accessed by TAB completion.
+For user contacts peer name is Name <underscore> Lastname with all spaces changed to underscores.
+For chats it is it's title with all spaces changed to underscores
+For encrypted chats it is <Exlamation mark> <underscore> Name <underscore> Lastname with all spaces changed to underscores. 
+
+If two or more peers have same refers that <sharp>number is added to ther end of it. (for example A_B, A_B#1, A_B#2 and so on)
   
 ### Supported commands
 
