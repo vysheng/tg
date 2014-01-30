@@ -38,7 +38,9 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <fcntl.h>
+#ifndef NO_BACKTRACE
 #include <execinfo.h>
+#endif
 #include <signal.h>
 #ifdef ENABLE_LIBCONFIG
 #include <libconfig.h>
