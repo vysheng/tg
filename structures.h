@@ -374,6 +374,9 @@ void message_add_peer (struct message *M);
 void message_del_peer (struct message *M);
 void free_message (struct message *M);
 void message_del_use (struct message *M);
+void peer_insert_name (peer_t *P);
+void peer_delete_name (peer_t *P);
+peer_t *peer_lookup_name (const char *s);
 
 #define PEER_USER 1
 #define PEER_CHAT 2

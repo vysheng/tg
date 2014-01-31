@@ -840,10 +840,14 @@ void work_update_binlog (void) {
         struct user *U = &UC->user;
         if (U->first_name) { tfree_str (U->first_name); }
         if (U->last_name) { tfree_str (U->last_name); }
-        if (U->print_name) { tfree_str (U->print_name); }
+        if (U->print_name) { 
+          peer_delete_name (UC);
+          tfree_str (U->print_name); 
+        }
         U->first_name = fetch_str_dup ();
         U->last_name = fetch_str_dup ();
         U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+        peer_insert_name ((void *)U);
       } else {
         fetch_skip_str ();
         fetch_skip_str ();

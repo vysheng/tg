@@ -38,7 +38,9 @@
 
 static int id_cmp (struct message *M1, struct message *M2);
 #define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
+#define peer_cmp_name(a,b) (strcmp (a->print_name, b->print_name))
 DEFINE_TREE(peer,peer_t *,peer_cmp,0)
+DEFINE_TREE(peer_by_name,peer_t *,peer_cmp_name,0)
 DEFINE_TREE(message,struct message *,id_cmp,0)
 
 
@@ -48,6 +50,7 @@ struct message message_list = {
 };
 
 struct tree_peer *peer_tree;
+struct tree_peer_by_name *peer_by_name_tree;
 struct tree_message *message_tree;
 struct tree_message *message_unsent_tree;
 
@@ -165,16 +168,8 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
   int fl = strlen (s);
   int cc = 0;
   while (1) {
-    int ok = 1;
-    int i;
-    for (i = 0; i < peer_num; i++) {
-      assert (Peers[i]);
-      if (cmp_peer_id (Peers[i]->id, id) && Peers[i]->print_name && !strcmp (Peers[i]->print_name, s)) {
-        ok = 0;
-        break;
-      }
-    }
-    if (ok) {
+    peer_t *P = peer_lookup_name (s);
+    if (!P || !cmp_peer_id (Peers[i]->id, id)) {
       break;
     }
     cc ++;
@@ -1979,4 +1974,23 @@ void __send_msg (struct message *M) {
 
 void send_all_unsent (void ) {
   tree_act_message (message_unsent_tree, __send_msg);
+}
+
+void peer_insert_name (peer_t *P) {
+  //if (!P->print_name || !strlen (P->print_name)) { return; }
+  //logprintf ("+%s\n", P->print_name);
+  peer_by_name_tree = tree_insert_peer_by_name (peer_by_name_tree, P, lrand48 ());
+}
+
+void peer_delete_name (peer_t *P) {
+  //if (!P->print_name || !strlen (P->print_name)) { return; }
+  //logprintf ("-%s\n", P->print_name);
+  peer_by_name_tree = tree_delete_peer_by_name (peer_by_name_tree, P);
+}
+
+peer_t *peer_lookup_name (const char *s) {
+  static peer_t P;
+  P.print_name = (void *)s;
+  peer_t *R = tree_lookup_peer_by_name (peer_by_name_tree, &P);
+  return R;
 }

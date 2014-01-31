@@ -224,6 +224,7 @@ void replay_log_event (void) {
           tsnprintf (buf, 99, "user#%d", U->user_id);
           U->print_name = create_print_name (U->id, "!", buf, 0, 0);
         }
+        peer_insert_name ((void *)U);
       }
     };
     break;
@@ -280,6 +281,7 @@ void replay_log_event (void) {
           tsnprintf (buf, 99, "user#%d", U->user_id);
           U->print_name = create_print_name (U->id, "!", buf, 0, 0);
         }
+        peer_insert_name ((void *)U);
       }
       rptr += 2;
     };
@@ -315,7 +317,9 @@ void replay_log_event (void) {
       }
       U->first_name = fetch_str_dup ();
       U->last_name = fetch_str_dup ();
+      assert (!U->print_name);
       U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+      peer_insert_name ((void *)U);
       U->access_hash = fetch_long ();
       U->phone = fetch_str_dup ();
       if (fetch_int ()) {
@@ -452,6 +456,7 @@ void replay_log_event (void) {
       U->user_id = *(rptr ++);
 
       peer_t *Us = user_chat_get (MK_USER (U->user_id));
+      assert (!U->print_name);
       if (Us) {
         U->print_name = create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
       } else {
@@ -459,6 +464,7 @@ void replay_log_event (void) {
         tsnprintf (buf, 99, "user#%d", U->user_id);
         U->print_name = create_print_name (id, "!", buf, 0, 0);
       }
+      peer_insert_name ((void *)U);
       U->g_key = talloc (256);
       U->nonce = talloc (256);
       memcpy (U->g_key, rptr, 256);
@@ -559,6 +565,7 @@ void replay_log_event (void) {
       peer_t *Us = user_chat_get (MK_USER (P->encr_chat.user_id));
       assert (Us);
       P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
+      peer_insert_name (P);
       memcpy (P->encr_chat.key, rptr, 256);
       rptr += 64;
       P->encr_chat.g_key = talloc (256);
@@ -598,7 +605,9 @@ void replay_log_event (void) {
       struct chat *C = &_C->chat;
       C->flags = FLAG_CREATED | fetch_int ();
       C->title = fetch_str_dup ();
+      assert (!C->print_title);
       C->print_title = create_print_name (id, C->title, 0, 0, 0);
+      peer_insert_name ((void *)C);
       C->users_num = fetch_int ();
       C->date = fetch_int ();
       C->version = fetch_int ();
@@ -628,8 +637,12 @@ void replay_log_event (void) {
       struct chat *C = &_C->chat;
       if (C->title) { tfree_str (C->title); }
       C->title = fetch_str_dup ();
-      if (C->print_title) { tfree_str (C->print_title); }
+      if (C->print_title) { 
+        peer_delete_name ((void *)C);
+        tfree_str (C->print_title); 
+      }
       C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
+      peer_insert_name ((void *)C);
       #ifdef USE_LUA
         lua_chat_update (C);
       #endif
@@ -1778,7 +1791,6 @@ void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_
   out_ints (data, len);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
-
 void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len) {
   clear_packet ();
   out_int (CODE_binlog_create_message_service_encr);
