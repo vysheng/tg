@@ -355,6 +355,7 @@ void read_secret_chat_file (void) {
     P->print_name = talloc (t + 1);
     assert (read (fd, P->print_name, t) == t);
     P->print_name[t] = 0;
+    peer_insert_name (P);
 
     assert (read (fd, &E->state, 4) == 4);
     assert (read (fd, &E->user_id, 4) == 4);
