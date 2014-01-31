@@ -868,7 +868,7 @@ void interpreter (char *line UU) {
       "msg <peer> Text - sends message to this peer\n"
       "contact_list - prints info about users in your contact list\n"
       "stats - just for debugging \n"
-      "history <peerd> [limit] - prints history (and marks it as read). Default limit = 40\n"
+      "history <peer> [limit] - prints history (and marks it as read). Default limit = 40\n"
       "dialog_list - prints info about your dialogs\n"
       "send_photo <peer> <photo-file-name> - sends photo to peer\n"
       "send_video <peer> <video-file-name> - sends video to peer\n"
