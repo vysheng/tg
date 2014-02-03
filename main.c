@@ -435,14 +435,18 @@ void print_backtrace (void) {
 
 void sig_segv_handler (int signum __attribute__ ((unused))) {
   set_terminal_attributes ();
-  (void) write (1, "SIGSEGV received\n", 18);
+  if (write (1, "SIGSEGV received\n", 18) < 0) { 
+    // Sad thing
+  }
   print_backtrace ();
   exit (EXIT_FAILURE);
 }
 
 void sig_abrt_handler (int signum __attribute__ ((unused))) {
   set_terminal_attributes ();
-  (void) write (1, "SIGABRT received\n", 18);
+  if (write (1, "SIGABRT received\n", 18) < 0) { 
+    // Sad thing
+  }
   print_backtrace ();
   exit (EXIT_FAILURE);
 }
