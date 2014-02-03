@@ -1087,6 +1087,7 @@ void do_get_history (peer_id_t id, int limit) {
 /* }}} */
 
 /* {{{ Get dialogs */
+int dialog_list_got;
 int get_dialogs_on_answer (struct query *q UU) {
   unsigned x = fetch_int (); 
   assert (x == CODE_messages_dialogs || x == CODE_messages_dialogs_slice);
@@ -1147,6 +1148,8 @@ int get_dialogs_on_answer (struct query *q UU) {
   }
   pop_color ();
   print_end ();
+
+  dialog_list_got = 1;
   return 0;
 }
 

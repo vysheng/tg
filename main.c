@@ -358,12 +358,13 @@ FILE *log_net_f;
 
 int register_mode;
 int disable_auto_accept;
+int wait_dialog_list;
 
 char *lua_file;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:Es:")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:Es:wW")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -412,6 +413,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 's':
       lua_file = tstrdup (optarg);
+      break;
+    case 'W':
+      wait_dialog_list = 1;
       break;
     case 'h':
     default:
