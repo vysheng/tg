@@ -10,24 +10,11 @@ AC_PROG_CC
 
 # Checks for libraries.
 AC_CHECK_LIB([m], [sqrt])
+AC_SEARCH_LIBS([clock_gettime], [rt])
+AC_SEARCH_LIBS([backtrace], [execinfo])
+AC_CHECK_LIB([z], [inflate])
 AC_CHECK_LIB([crypto], [AES_set_encrypt_key])
-
 EXTRA_LIBS=""
-
-BT=
-AC_CHECK_FUNC([backtrace],
-  [
-    BT=1
-  ],
-  [
-  ]
-)
-
-if test "x$BT" = "x" ; then
-  AC_CHECK_LIB([execinfo], [backtrace],
-  [ EXTRA_LIBS="${EXTRA_LIBS} -lexecinfo" ; ],
-  [ CFLAGS="${CFLAGS} -DNO_BACKTRACE" ; ])
-fi
 
 AC_CHECK_LIB([readline], [rl_save_prompt], 
   [
@@ -38,14 +25,6 @@ AC_CHECK_LIB([readline], [rl_save_prompt],
     AC_CHECK_LIB([edit], [rl_set_prompt])
     AC_DEFINE([READLINE_EDIT], [1], [Use libedit])
     [ EXTRA_LIBS="${EXTRA_LIBS} -ledit" ; ]
-  ]
-)
-
-AC_CHECK_LIB([rt], [clock_gettime], 
-  [
-    [ EXTRA_LIBS="${EXTRA_LIBS} -lrt" ; ]
-  ],
-  [
   ]
 )
 
@@ -100,7 +79,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
   ])
     
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h malloc.h netdb.h stdlib.h string.h unistd.h arpa/inet.h mach/mach.h netinet/in.h sys/file.h sys/socket.h termios.h])
+AC_CHECK_HEADERS([execinfo.h fcntl.h malloc.h netdb.h stdlib.h string.h unistd.h arpa/inet.h mach/mach.h netinet/in.h sys/file.h sys/socket.h termios.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
