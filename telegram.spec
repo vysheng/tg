@@ -31,7 +31,7 @@ make %{?_smp_mflags}
 %install
 cd %{name}
 cd tg-master
-%{__install} -D -m0550 telegram %{buildroot}/usr/bin/telegram
+%{__install} -D -m0755 telegram %{buildroot}/usr/bin/telegram
 
 %files
 /usr/bin/telegram
