@@ -45,6 +45,7 @@
 #include <netinet/tcp.h>
 #include <poll.h>
 
+#include "telegram.h"
 #include "net.h"
 #include "include.h"
 #include "queries.h"
@@ -126,7 +127,7 @@ int Response_len;
  *
  */
 
-char *rsa_public_key_name = "tg.pub";
+char *rsa_public_key_name; // = "tg.pub";
 RSA *pubKey;
 long long pk_fingerprint;
 
@@ -142,6 +143,10 @@ static int rsa_load_public_key (const char *public_key_name) {
   if (pubKey == NULL) {
     logprintf ( "PEM_read_RSAPublicKey returns NULL.\n");
     return -1;
+  }
+
+  if (verbosity) {
+    logprintf ( "public key '%s' loaded successfully\n", rsa_public_key_name);
   }
 
   return 0;
@@ -1807,12 +1812,16 @@ int auth_is_success (void) {
 void on_start (void) {
   prng_seed (0, 0);
 
-  if (rsa_load_public_key (rsa_public_key_name) < 0) {
-    perror ("rsa_load_public_key");
-    exit (1);
-  }
-  if (verbosity) {
-    logprintf ( "public key '%s' loaded successfully\n", rsa_public_key_name);
+  if (rsa_public_key_name) {
+    if (rsa_load_public_key (rsa_public_key_name) < 0) {
+      perror ("rsa_load_public_key");
+      exit (1);
+    }
+  } else {
+    if (rsa_load_public_key ("tg.pub") < 0 && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
+      perror ("rsa_load_public_key");
+      exit (1);
+    }
   }
   pk_fingerprint = compute_rsa_key_fingerprint (pubKey);
 }

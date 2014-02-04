@@ -18,3 +18,7 @@
 */
 #define MAX_DC_NUM 9
 #define MAX_PEER_NUM 100000
+
+#ifndef PROG_NAME
+#define PROG_NAME "telegram"
+#endif

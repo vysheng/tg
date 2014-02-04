@@ -47,6 +47,7 @@
 #include <libconfig.h>
 #endif
 
+#include "telegram.h"
 #include "loop.h"
 #include "mtproto-client.h"
 #include "interface.h"
@@ -59,7 +60,7 @@
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
 
-#define CONFIG_DIRECTORY ".telegram"
+#define CONFIG_DIRECTORY "." PROG_NAME
 #define CONFIG_FILE "config"
 #define AUTH_KEY_FILE "auth"
 #define STATE_FILE "state"
@@ -208,7 +209,6 @@ void running_for_first_time (void) {
   tasprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE);
   config_filename = make_full_path (config_filename);
 
-  static struct stat config_file_stat;
   int config_file_fd;
   char *config_directory = get_config_directory ();
   //char *downloads_directory = get_downloads_directory ();
@@ -220,7 +220,7 @@ void running_for_first_time (void) {
   tfree_str (config_directory);
   config_directory = NULL;
   // see if config file is there
-  if (stat (config_filename, &config_file_stat) != 0) {
+  if (access (config_filename, R_OK) != 0) {
     // config file missing, so touch it
     config_file_fd = open (config_filename, O_CREAT | O_RDWR, 0600);
     if (config_file_fd == -1)  {
