@@ -35,13 +35,11 @@ AC_ARG_ENABLE(libconfig,[--enable-libconfig/--disable-libconfig],
     AC_MSG_RESULT([disabled])
   else
     AC_MSG_RESULT([enabled])
-    AC_CHECK_LIB([config],[config_init],AC_DEFINE(ENABLE_LIBCONFIG,1,[enable libconfig]),AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
-    [EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ; ]
+    AC_CHECK_LIB([config],[config_init],[],AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
   fi 
   ],[
     AC_MSG_RESULT([enabled])
-    AC_CHECK_LIB([config],[config_init],AC_DEFINE(ENABLE_LIBCONFIG,1,[enable libconfig]),AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
-    [EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ; ]
+    AC_CHECK_LIB([config],[config_init],[],AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
   ])
 
 AC_MSG_CHECKING([for liblua])

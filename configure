@@ -3562,14 +3562,16 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_config_config_init" >&5
 $as_echo "$ac_cv_lib_config_config_init" >&6; }
 if test "x$ac_cv_lib_config_config_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCONFIG 1
+_ACEOF
 
-$as_echo "#define ENABLE_LIBCONFIG 1" >>confdefs.h
+  LIBS="-lconfig $LIBS"
 
 else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
-    EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ;
   fi
 
 else
@@ -3613,14 +3615,16 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_config_config_init" >&5
 $as_echo "$ac_cv_lib_config_config_init" >&6; }
 if test "x$ac_cv_lib_config_config_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCONFIG 1
+_ACEOF
 
-$as_echo "#define ENABLE_LIBCONFIG 1" >>confdefs.h
+  LIBS="-lconfig $LIBS"
 
 else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
-    EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ;
 
 fi
 
