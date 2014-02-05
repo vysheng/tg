@@ -6,7 +6,7 @@ CPPFLAGS=@CPPFLAGS@
 DEFS=@DEFS@
 COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
 
-EXTRA_LIBS=-lssl @LIBS@ @EXTRA_LIBS@
+EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@
 LOCAL_LDFLAGS=-rdynamic -ggdb ${EXTRA_LIBS}
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 
