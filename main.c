@@ -43,7 +43,7 @@
 #include <execinfo.h>
 #endif
 #include <signal.h>
-#ifdef ENABLE_LIBCONFIG
+#ifdef HAVE_LIBCONFIG
 #include <libconfig.h>
 #endif
 
@@ -247,7 +247,7 @@ void running_for_first_time (void) {
   }
 }
 
-#ifdef ENABLE_LIBCONFIG
+#ifdef HAVE_LIBCONFIG
 void parse_config_val (config_t *conf, char **s, char *param_name, const char *default_name, const char *path) {
   static char buf[1000]; 
   int l = 0;
@@ -433,7 +433,9 @@ void print_backtrace (void) {
 }
 #else
 void print_backtrace (void) {
-  write (1, "No libexec. Backtrace disabled\n", 32);
+  if (write (1, "No libexec. Backtrace disabled\n", 32) < 0) {
+    // Sad thing
+  }
 }
 #endif
 
