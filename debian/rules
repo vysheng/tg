@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+VERSION=$(shell dpkg-parsechangelog | sed -n 's/^Version: //p' | cut -f1 -d'-')
+PACKAGE_NAME=$(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
+
+%:
+	dh $@  --with autotools-dev
+
+build-orig:
+	mkdir -p $(PACKAGE_NAME)-$(VERSION)
+	tar --exclude=ax_lua.m4 --exclude=debian --exclude=\.pc	\
+		--exclude=$(PACKAGE_NAME)-$(VERSION) -cf - . \
+		| ( cd $(PACKAGE_NAME)-$(VERSION) && tar xf - )
+	tar -cf ../$(PACKAGE_NAME)_$(VERSION).orig.tar $(PACKAGE_NAME)-$(VERSION)
+	$(RM) -r $(PACKAGE_NAME)-$(VERSION)
+	xz ../$(PACKAGE_NAME)_$(VERSION).orig.tar

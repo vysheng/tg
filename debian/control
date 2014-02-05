@@ -1,0 +1,36 @@
+Source: telegram-cli
+Section: net
+Priority: optional
+Maintainer: Cleto Martín <cleto@debian.org>
+Build-Depends: debhelper (>= 8.0.0),
+               autotools-dev,
+               autoconf-archive,
+               libreadline-dev,
+               libconfig-dev,
+               libssl-dev,
+               lua5.2,
+               liblua5.2-dev
+Standards-Version: 3.9.4
+Homepage: https://github.com/vysheng/tg
+Vcs-Git: git://github.com/vysheng/tg.git
+Vcs-Browser: https://github.com/vysheng/tg
+
+Package: telegram-cli
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Command-line interface for Telegram messenger
+ Telegram messenger is a cloud-based instant messaging designed for
+ smart phones and similar to Whatsapp but more flexible, and
+ powerful. You can send messages, photos, videos and documents to
+ people who are in your phone contacts (and have Telegram). Telegram
+ also supports secret chats whose provide a private (encrypted) way of
+ communication.
+ .
+ This package contains a command-line based client for Telegram with
+ the following features:
+  * Colored terminal messages.
+  * Message management: history, stats, etc.
+  * Group chat: create and manage groups.
+  * Secret chat: secured and encrypted conversations.
+  * Contact management: add/edit/remove contacts.
+  * Multimedia support: send/load photos and videos.
