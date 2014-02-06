@@ -48,6 +48,7 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
     $ brew install libconfig
     $ brew install readline
+    $ brew install lua
     $ export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
     $ export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
     $ ./configure && make
