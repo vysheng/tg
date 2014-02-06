@@ -141,6 +141,9 @@
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "0.1"
 
+/* Use custom prog name */
+/* #undef PROG_NAME */
+
 /* Use libedit */
 /* #undef READLINE_EDIT */
 

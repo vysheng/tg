@@ -75,6 +75,21 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AC_MSG_ERROR([No lua found. Try --disable-liblua])
       ])
   ])
+
+#check for custom prog name
+AC_ARG_WITH(progname,[--with-progname=<name>],
+  [ 
+  if test "x$with_progname" = "xno" ; then
+    AC_MSG_RESULT([default])
+  elif test "x$with_progname" = "xyes" ; then
+    AC_MSG_RESULT([default])
+  else
+    AC_MSG_RESULT(["$with_progname"])
+    AC_DEFINE_UNQUOTED([PROG_NAME], ["$with_progname"], [Use custom prog name])
+  fi
+  ],[
+    AC_MSG_RESULT([default])
+  ])
     
 # Checks for header files.
 AC_CHECK_HEADERS([execinfo.h fcntl.h malloc.h netdb.h stdlib.h string.h unistd.h arpa/inet.h mach/mach.h netinet/in.h sys/file.h sys/socket.h termios.h])
