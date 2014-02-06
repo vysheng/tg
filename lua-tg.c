@@ -20,6 +20,7 @@ lua_State *luaState;
 #include "constants.h"
 #include "tools.h"
 #include "queries.h"
+#include "net.h"
 
 extern int verbosity;
 
@@ -471,6 +472,62 @@ static int mark_read_from_lua (lua_State *L) {
   return 1;
 }
 
+int lua_postpone_alarm (void *self) {
+  int *t = self;
+  
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[1]);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[0]);
+  assert (lua_gettop (luaState) == 2);
+  
+  int r = lua_pcall (luaState, 1, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, t[0]);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, t[1]);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+  tfree (*(void **)(t + 2), sizeof (struct event_timer));
+  tfree (t, 16);
+  return 0;
+}
+
+static int postpone_from_lua (lua_State *L) {
+  int n = lua_gettop (L);
+  if (n != 3) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+
+  double timeout = lua_tonumber (L, -1);
+  if (timeout < 0) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+
+  lua_pop (L, 1);
+  int a1 = luaL_ref (L, LUA_REGISTRYINDEX);
+  int a2 = luaL_ref (L, LUA_REGISTRYINDEX);
+
+  struct event_timer *ev = talloc (sizeof (*ev));
+  int *t = talloc (16);
+  t[0] = a1;
+  t[1] = a2;
+  *(void **)(t + 2) = ev;
+  
+  ev->timeout = get_double_time () + timeout;
+  ev->alarm = (void *)lua_postpone_alarm;
+  ev->self = t;
+  insert_event_timer (ev);
+  
+  lua_pushboolean (L, 1);
+  return 1;
+}
+
 void lua_init (const char *file) {
   if (!file) { return; }
   have_file = 1;
@@ -480,6 +537,7 @@ void lua_init (const char *file) {
   lua_register (luaState, "send_msg", send_msg_from_lua);
   lua_register (luaState, "fwd_msg", fwd_msg_from_lua);
   lua_register (luaState, "mark_read", mark_read_from_lua);
+  lua_register (luaState, "postpone", postpone_from_lua);
 
   int ret = luaL_dofile (luaState, file);
   if (ret) {

@@ -28,7 +28,6 @@
 #include "telegram.h"
 #include "tree.h"
 #include "loop.h"
-#include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <openssl/sha.h>
 #include "queries.h"
