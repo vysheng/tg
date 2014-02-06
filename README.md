@@ -30,6 +30,10 @@ On gentoo:
     
     $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
     
+On Fedora:
+
+    $ sudo yum  install lua-devel, openssl-devel, libconfig-devel, readline-devel
+
 Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or linux you have to run ./configure script or you will get some strange compilation error. 
 
 Then
@@ -44,6 +48,7 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
     $ brew install libconfig
     $ brew install readline
+    $ brew install lua
     $ export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
     $ export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
     $ ./configure && make

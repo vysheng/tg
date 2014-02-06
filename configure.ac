@@ -35,13 +35,11 @@ AC_ARG_ENABLE(libconfig,[--enable-libconfig/--disable-libconfig],
     AC_MSG_RESULT([disabled])
   else
     AC_MSG_RESULT([enabled])
-    AC_CHECK_LIB([config],[config_init],AC_DEFINE(ENABLE_LIBCONFIG,1,[enable libconfig]),AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
-    [EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ; ]
+    AC_CHECK_LIB([config],[config_init],[],AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
   fi 
   ],[
     AC_MSG_RESULT([enabled])
-    AC_CHECK_LIB([config],[config_init],AC_DEFINE(ENABLE_LIBCONFIG,1,[enable libconfig]),AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
-    [EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ; ]
+    AC_CHECK_LIB([config],[config_init],[],AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
   ])
 
 AC_MSG_CHECKING([for liblua])
@@ -76,6 +74,21 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
       [
         AC_MSG_ERROR([No lua found. Try --disable-liblua])
       ])
+  ])
+
+#check for custom prog name
+AC_ARG_WITH(progname,[--with-progname=<name>],
+  [ 
+  if test "x$with_progname" = "xno" ; then
+    AC_MSG_RESULT([default])
+  elif test "x$with_progname" = "xyes" ; then
+    AC_MSG_RESULT([default])
+  else
+    AC_MSG_RESULT(["$with_progname"])
+    AC_DEFINE_UNQUOTED([PROG_NAME], ["$with_progname"], [Use custom prog name])
+  fi
+  ],[
+    AC_MSG_RESULT([default])
   ])
     
 # Checks for header files.

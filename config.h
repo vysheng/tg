@@ -1,9 +1,6 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* enable libconfig */
-#define ENABLE_LIBCONFIG 1
-
 /* Define to 1 if you have the `alarm' function. */
 #define HAVE_ALARM 1
 
@@ -24,6 +21,9 @@
 
 /* Define to 1 if you have the <lauxlib.h> header file. */
 #define HAVE_LAUXLIB_H 1
+
+/* Define to 1 if you have the `config' library (-lconfig). */
+#define HAVE_LIBCONFIG 1
 
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #define HAVE_LIBCRYPTO 1
@@ -140,6 +140,9 @@
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "0.1"
+
+/* Use custom prog name */
+/* #undef PROG_NAME */
 
 /* Use libedit */
 /* #undef READLINE_EDIT */

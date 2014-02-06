@@ -687,6 +687,7 @@ ac_user_opts='
 enable_option_checking
 enable_libconfig
 enable_liblua
+with_progname
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1311,6 +1312,11 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 --enable-libconfig/--disable-libconfig
 --enable-liblua/--disable-liblua
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+--with-progname=<name>
 
 Some influential environment variables:
   CC          C compiler command
@@ -3562,14 +3568,16 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_config_config_init" >&5
 $as_echo "$ac_cv_lib_config_config_init" >&6; }
 if test "x$ac_cv_lib_config_config_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCONFIG 1
+_ACEOF
 
-$as_echo "#define ENABLE_LIBCONFIG 1" >>confdefs.h
+  LIBS="-lconfig $LIBS"
 
 else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
-    EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ;
   fi
 
 else
@@ -3613,14 +3621,16 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_config_config_init" >&5
 $as_echo "$ac_cv_lib_config_config_init" >&6; }
 if test "x$ac_cv_lib_config_config_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCONFIG 1
+_ACEOF
 
-$as_echo "#define ENABLE_LIBCONFIG 1" >>confdefs.h
+  LIBS="-lconfig $LIBS"
 
 else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
-    EXTRA_LIBS="${EXTRA_LIBS} -lconfig" ;
 
 fi
 
@@ -5355,6 +5365,35 @@ $as_echo "#define USE_LUA 1" >>confdefs.h
 
 fi
 
+
+fi
+
+
+#check for custom prog name
+
+# Check whether --with-progname was given.
+if test "${with_progname+set}" = set; then :
+  withval=$with_progname;
+  if test "x$with_progname" = "xno" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: default" >&5
+$as_echo "default" >&6; }
+  elif test "x$with_progname" = "xyes" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: default" >&5
+$as_echo "default" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: \"$with_progname\"" >&5
+$as_echo "\"$with_progname\"" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define PROG_NAME "$with_progname"
+_ACEOF
+
+  fi
+
+else
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: default" >&5
+$as_echo "default" >&6; }
 
 fi
 
