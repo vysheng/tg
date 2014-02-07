@@ -527,6 +527,9 @@ int do_auth_check_phone (const char *user) {
   check_phone_result = -1;
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
   net_loop (0, cr_f);
+  check_phone_result = -1;
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
+  net_loop (0, cr_f);
   return check_phone_result;
 }
 /* }}} */

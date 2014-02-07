@@ -545,13 +545,13 @@ int loop (void) {
         exit (EXIT_SUCCESS);
       }
       char *first_name;
-      printf ("Name: ");
+      printf ("First name: ");
       if (net_getline (&first_name, &size) == -1) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
       char *last_name;
-      printf ("Name: ");
+      printf ("Last name: ");
       if (net_getline (&last_name, &size) == -1) {
         perror ("getline()");
         exit (EXIT_FAILURE);

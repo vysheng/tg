@@ -168,7 +168,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
   int cc = 0;
   while (1) {
     peer_t *P = peer_lookup_name (s);
-    if (!P || !cmp_peer_id (Peers[i]->id, id)) {
+    if (!P || !cmp_peer_id (P->id, id)) {
       break;
     }
     cc ++;
