@@ -76,7 +76,7 @@ If you manage to launch it on other UNIX, please let me know.
 
     ./telegram -k <public-server-key>
     
-By default public key is stored in the same folder named tg.pub:
+By default public key is stored in the same folder named tg.pub or in /etc/telegram/server.pub, if it's not, specify where to find it:
 
     ./telegram -k tg.pub
 
