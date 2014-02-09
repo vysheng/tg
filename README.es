@@ -1,6 +1,6 @@
 ## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)
 
-Interfaz de línea de comandos para: [Telegram](http://telegram.org). Uses readline interface.
+Interfaz de línea de comandos para: [Telegram](http://telegram.org). Usa interfaz readline.
 
 ### Documentación del API y el protocolo
 
@@ -22,9 +22,9 @@ o descarga y descomprime el zip
 #### Linux
 
 Librerías requeridas: readline openssl y (si desea usar config) libconfig y liblua.
-Si no desea usarlo, pase las siguientes opciones --disable-libconfig y --disable-liblua respectivamente.
+Si no deseas usarlo, pasa las siguientes opciones --disable-libconfig y --disable-liblua respectivamente.
 
-En Ubuntu use:
+En Ubuntu usa:
 
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
 
@@ -36,7 +36,7 @@ En Fedora:
 
     $ sudo yum install lua-devel openssl-devel libconfig-devel readline-devel
 
-Por defecto Makefile utiliza liblua5.2 de ubuntu. Si utiliza una versión diferente de liblua o linux que tiene que ejecutar el script ./configure o recibirá un error de compilación extraño.
+Por defecto Makefile utiliza liblua5.2 de ubuntu. Si utilizas una versión diferente de liblua o linux, tienes que ejecutar el script ./configure o recibirás un error de compilación extraño.
 
 Entonces
 
@@ -46,7 +46,7 @@ Entonces
 
 #### Mac OS X
 
-El cliente depende de [librería readline](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) y [libconfig](http://www.hyperrealm.com/libconfig/), las cuales no están incluídas en OS X por defecto. Debe instalar estas librerías de forma manual, usando por ejemplo [Homebrew](http://brew.sh/).
+El cliente depende de [librería readline](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) y [libconfig](http://www.hyperrealm.com/libconfig/), las cuales no están incluídas en OS X por defecto. Debes instalar estas librerías de forma manual, usando por ejemplo [Homebrew](http://brew.sh/).
 
     $ brew install libconfig
     $ brew install readline
@@ -79,7 +79,7 @@ Si logras ejecutarlo en otros UNIX, por favor házmelo saber.
     ./telegram -k <clave-servidor-público>
     
 
-Por defecto la clave pública se almacena en la misma carpeta con el nombre tg.pub o en /etc/telegram/server.pub, si no lo es, indique dónde encontrarlo:
+Por defecto la clave pública se almacena en la misma carpeta con el nombre tg.pub o en /etc/telegram/server.pub, si no lo es, indica dónde encontrarlo:
 
     ./telegram -k tg.pub
 
@@ -90,7 +90,7 @@ Para los contactos de usuario el peer es el Nombre <guión bajo> Apellido con to
 Para los chats es su título con todos los espacios cambiados a guiones bajos.
 Para los chats encriptados es <marca de exclamación> <guión bajo> Nombre <guión bajo> Apellido con todos los espacios cambiados a guiones bajos. 
 
-Si dos o más peers tienen el mismo nombre, una almohadilla yun número es añadido al nombre. (por ejemplo A_B,A_B#1,A_B#2 y así sucesivamente).
+Si dos o más peers tienen el mismo nombre, una almohadilla y un número es añadido al nombre. (por ejemplo A_B,A_B#1,A_B#2 y así sucesivamente).
   
 ### Comandos soportados
 
@@ -98,10 +98,10 @@ Si dos o más peers tienen el mismo nombre, una almohadilla yun número es añad
 
 
 * **msg** \<peer\> texto - envía el mensaje a este usuario.
-* **fwd** \<usuario\> \<numero-mensaje\> - reenviar un mensaje al usuario. Puede ver los número de mensajes iniciando el Cliente con -N
+* **fwd** \<usuario\> \<numero-mensaje\> - reenviar un mensaje al usuario. Puedes ver los número de mensajes iniciando el Cliente con -N.
 * **chat_with_peer** \<peer\> - inicia un chat con este usuario. /exit o /quit para salir de este modo.
 * **add_contact** \<numero-teléfono\> \<nombre\> \<apellido\> - intenta añadir este contacto a la lista de contactos.
-* **rename_contact** \<usuario\> \<nombre\> \<apellido\> - intenta renombrar el contacto. Si tiene otro dispositivo será una pelea.
+* **rename_contact** \<usuario\> \<nombre\> \<apellido\> - intenta renombrar el contacto. Si tienes otro dispositivo será una pelea.
 * **mark_read** \<peer\> - marca todos los mensajes como recibidos de ese usuario.
 
 #### Multimedia
@@ -110,7 +110,7 @@ Si dos o más peers tienen el mismo nombre, una almohadilla yun número es añad
 * **send_video** \<peer\> \<nombre-archivo-video\> - envia un video al usuario.
 * **send_text** \<peer\> \<nombre-archivo-texto> - envia un archivo de texto como un mensaje en plano.
 * **load_photo**/load_video/load_video_thumb \<numero-mensaje\> - carga foto/video indicado del directorio de descarga.
-* **view_photo**/view_video/view_video_thumb \<numero-mensaje\> - carga foto/video indicado del directorio de descarga y lo abre con el vidor por defecto del sistema.
+* **view_photo**/view_video/view_video_thumb \<numero-mensaje\> - carga foto/video indicado del directorio de descarga y lo abre con el visor por defecto del sistema.
 
 
 #### Opciones de chat de grupo
@@ -128,7 +128,7 @@ Si dos o más peers tienen el mismo nombre, una almohadilla yun número es añad
 #### Chat secreto
 
 * **create_secret_chat** \<user\> - crea un chat secreto con el usuario indicado.
-* **visualize_key** \<secret_chat\> - Muestra la clave de cifrado. Debe compararla con la del otro usuario.
+* **visualize_key** \<secret_chat\> - Muestra la clave de cifrado. Debes compararla con la del otro usuario.
 
 #### Estadísticas e información varia.
 
