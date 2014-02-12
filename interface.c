@@ -576,7 +576,9 @@ void interpreter_chat_mode (char *line) {
     do_mark_read (chat_mode_id);
     return;
   }
-  do_send_message (chat_mode_id, line, strlen (line));
+  if (strlen (line)>0) {
+    do_send_message (chat_mode_id, line, strlen (line));
+  }
 }
 
 void interpreter (char *line UU) {
