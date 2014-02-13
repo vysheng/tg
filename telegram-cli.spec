@@ -41,7 +41,7 @@ cd tg-master
 %{_sysconfdir}/telegram/server.pub
 
 %changelog
-* Thu Feb 13 2013 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+* Thu Feb 13 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
 - Adapt spec file to be more compliant with Fedora Packaging Guidelines
 * Tue Feb 4 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 - Add server key to /etc/telegram/
