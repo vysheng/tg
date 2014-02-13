@@ -7,7 +7,8 @@ Packager: 	Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 Group:		Internet/Messaging
 License:	GPL
 URL:		https://github.com/vysheng/tg
-Source:		master.zip
+Source0:	master.zip
+nosource:	0
 
 BuildRequires:	lua-devel, openssl-devel, libconfig-devel, readline-devel, wget
 #Requires:	wget
