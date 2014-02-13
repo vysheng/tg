@@ -1,11 +1,11 @@
 Name:       	telegram-cli
-Version:	Beta
-Release:	2%{?dist}
+Version:	0.01
+Release:	0.3%{?dist}
 Summary:	Private fast and open platform for instant messaging
 
 Packager: 	Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 Group:		Internet/Messaging
-License:	GPL
+License:	GPLv2
 URL:		https://github.com/vysheng/tg
 Source0:	master.zip
 nosource:	0
@@ -33,14 +33,16 @@ make %{?_smp_mflags}
 %install
 cd %{name}
 cd tg-master
-%{__install} -D -m0755 telegram %{buildroot}/usr/bin/telegram
-%{__install} -D -m0644 tg.pub %{buildroot}/etc/telegram/server.pub
+%{__install} -D -m0755 telegram %{buildroot}%{_bindir}/telegram
+%{__install} -D -m0644 tg.pub %{buildroot}%{_sysconfdir}/telegram/server.pub
 
 %files
-/usr/bin/telegram
-/etc/telegram/server.pub
+%{_bindir}/telegram
+%{_sysconfdir}/telegram/server.pub
 
 %changelog
+* Thu Feb 13 2013 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+- Adapt spec file to be more compliant with Fedora Packaging Guidelines
 * Tue Feb 4 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 - Add server key to /etc/telegram/
 * Sat Feb 1 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
