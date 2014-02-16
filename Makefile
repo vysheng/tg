@@ -1,6 +1,6 @@
 srcdir=.
 
-CFLAGS=-g -O2 
+CFLAGS=-g -O2
 LDFLAGS=
 CPPFLAGS=
 DEFS=-DHAVE_CONFIG_H
@@ -14,6 +14,8 @@ HEADERS= ${srcdir}/constants.h  ${srcdir}/include.h  ${srcdir}/interface.h  ${sr
 INCLUDE=-I. -I${srcdir}
 CC=gcc
 OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o binlog.o tools.o lua-tg.o
+
+DESTDIR=/usr/local
 
 .SUFFIXES:
 
@@ -33,3 +35,5 @@ telegram: ${OBJECTS}
 clean:
 	rm -rf *.o telegram config.log config.status > /dev/null || echo "all clean"
 
+install: telegram
+	install -D -m0755 telegram $(DESTDIR)/usr/bin/telegram
