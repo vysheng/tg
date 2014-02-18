@@ -1338,7 +1338,7 @@ void print_encr_chat_name_full (peer_id_t id, peer_t *C) {
 
 static char *monthes[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 void print_date (long t) {
-  struct tm *tm = localtime (&t);
+  struct tm *tm = localtime ((void *)&t);
   if (time (0) - t < 12 * 60 * 60) {
     printf ("[%02d:%02d] ", tm->tm_hour, tm->tm_min);
   } else {
@@ -1347,7 +1347,7 @@ void print_date (long t) {
 }
 
 void print_date_full (long t) {
-  struct tm *tm = localtime (&t);
+  struct tm *tm = localtime ((void *)&t);
   printf ("[%04d/%02d/%02d %02d:%02d:%02d]", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
