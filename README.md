@@ -61,10 +61,11 @@ Install these ports:
 
 * devel/libconfig
 * devel/libexecinfo
+* lang/lua52
 
 Then build:
 
-    $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure
+    $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
     $ make
     
 #### Other UNIX
