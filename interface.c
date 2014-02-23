@@ -560,7 +560,8 @@ void work_modifier (const char *s, int l) {
 
 
 void interpreter_chat_mode (char *line) {
-  if (!strncmp (line, "/exit", 5) || !strncmp (line, "/quit", 5)) {
+  if (line == NULL || /* EOF received */
+          !strncmp (line, "/exit", 5) || !strncmp (line, "/quit", 5)) {
     in_chat_mode = 0;
     update_prompt ();
     return;
@@ -576,7 +577,9 @@ void interpreter_chat_mode (char *line) {
     do_mark_read (chat_mode_id);
     return;
   }
-  do_send_message (chat_mode_id, line, strlen (line));
+  if (strlen (line)>0) {
+    do_send_message (chat_mode_id, line, strlen (line));
+  }
 }
 
 void interpreter (char *line UU) {
@@ -876,9 +879,9 @@ void interpreter (char *line UU) {
       "chat_info <chat> - prints info about chat\n"
       "user_info <user> - prints info about user\n"
       "fwd <user> <msg-seqno> - forward message to user. You can see message numbers starting client with -N\n"
-      "rename_chat <char> <new-name>\n"
-      "load_photo/load_video/load_video_thumb <msg-seqno> - loads photo/video to download dir\n"
-      "view_photo/view_video/view_video_thumb <msg-seqno> - loads photo/video to download dir and starts system default viewer\n"
+      "rename_chat <chat> <new-name>\n"
+      "load_photo/load_video/load_video_thumb <msg-seqno> - loads photo/video to download dir. You can see message numbers starting client with -N\n"
+      "view_photo/view_video/view_video_thumb <msg-seqno> - loads photo/video to download dir and starts system default viewer. You can see message numbers starting client with -N\n"
       "show_license - prints contents of GPLv2\n"
       "search <peer> pattern - searches pattern in messages with peer\n"
       "global_search pattern - searches pattern in all messages\n"
@@ -1336,7 +1339,7 @@ void print_encr_chat_name_full (peer_id_t id, peer_t *C) {
 
 static char *monthes[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 void print_date (long t) {
-  struct tm *tm = localtime (&t);
+  struct tm *tm = localtime ((void *)&t);
   if (time (0) - t < 12 * 60 * 60) {
     printf ("[%02d:%02d] ", tm->tm_hour, tm->tm_min);
   } else {
@@ -1345,7 +1348,7 @@ void print_date (long t) {
 }
 
 void print_date_full (long t) {
-  struct tm *tm = localtime (&t);
+  struct tm *tm = localtime ((void *)&t);
   printf ("[%04d/%02d/%02d %02d:%02d:%02d]", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
