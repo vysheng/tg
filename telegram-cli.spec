@@ -35,12 +35,12 @@ cd %{name}
 cd tg-master
 %{__install} -D -m0755 telegram %{buildroot}%{_bindir}/telegram
 %{__install} -D -m0644 tg.pub %{buildroot}%{_sysconfdir}/telegram/server.pub
-%{__install} -D -m0644 rpm/telegram-cli.repo %{buildroot}%{_sysconfdir}/yum.repos.d/telegram-cli.repo
+#%{__install} -D -m0644 rpm/telegram-cli.repo %{buildroot}%{_sysconfdir}/yum.repos.d/telegram-cli.repo
 
 %files
 %{_bindir}/telegram
 %{_sysconfdir}/telegram/server.pub
-%config %{_sysconfdir}/yum.repos.d/telegram-cli.repo
+#%config %{_sysconfdir}/yum.repos.d/telegram-cli.repo
 
 
 %changelog

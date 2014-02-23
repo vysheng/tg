@@ -1,6 +1,0 @@
-[telegram-cli]
-name=Telegram CLI repo
-baseurl=https://github.com/vysheng/tg/blob/master/rpm/$releasever/
-skip_if_unavailable=True
-gpgcheck=0
-enabled=1
