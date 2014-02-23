@@ -35,12 +35,17 @@ cd %{name}
 cd tg-master
 %{__install} -D -m0755 telegram %{buildroot}%{_bindir}/telegram
 %{__install} -D -m0644 tg.pub %{buildroot}%{_sysconfdir}/telegram/server.pub
+%{__install} -D -m0644 rpm/telegram-cli.repo %{buildroot}%{_sysconfdir}/yum.repos.d/telegram-cli.repo
 
 %files
 %{_bindir}/telegram
 %{_sysconfdir}/telegram/server.pub
+%config %{_sysconfdir}/yum.repos.d/telegram-cli.repo
+
 
 %changelog
+* Sun Feb 23 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+- Add repo definition and increase rpm spec version
 * Thu Feb 13 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
 - Adapt spec file to be more compliant with Fedora Packaging Guidelines
 * Tue Feb 4 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
