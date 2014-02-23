@@ -64,7 +64,7 @@ Instalar estos ports:
 * devel/libconfig
 * devel/libexecinfo
 
-Para entonces Construir usando:
+Para entonces construir usando:
 
     $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure
     $ make
