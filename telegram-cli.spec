@@ -1,5 +1,5 @@
 Name:       	telegram-cli
-Version:	0.01
+Version:	0.02
 Release:	0.3%{?dist}
 Summary:	Private fast and open platform for instant messaging
 
