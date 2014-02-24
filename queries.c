@@ -468,6 +468,38 @@ void do_send_code (const char *user) {
   net_loop (0, code_is_sent);
   assert (want_dc_num == -1);
 }
+
+
+int phone_call_on_answer (struct query *q UU) {
+  fetch_bool ();
+  assert(1);
+  return 0;
+}
+
+int phone_call_on_error (struct query *q UU, int error_code, int l, char *error) {
+  logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
+  assert (0);
+  return 0;
+}
+
+struct query_methods phone_call_methods  = {
+  .on_answer = phone_call_on_answer,
+  .on_error = phone_call_on_error
+};
+
+void do_phone_call (const char *user) {
+  logprintf ("calling user\n");
+  suser = tstrdup (user);
+  want_dc_num = 0;
+  clear_packet ();
+  do_insert_header ();
+  out_int (CODE_auth_send_call);
+  out_string (user);
+  out_string (phone_code_hash);
+
+  logprintf ("do_phone_call: dc_num = %d\n", dc_working_num);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0);
+}
 /* }}} */
 
 /* {{{ Check phone */
