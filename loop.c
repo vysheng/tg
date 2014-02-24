@@ -517,11 +517,17 @@ int loop (void) {
       do_send_code (default_username);
       char *code = 0;
       size_t size = 0;
-      printf ("Code from sms: ");
+      printf ("Code from sms (if you did not receive an SMS and want to be called, type 0): ");
       while (1) {
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
+        }
+        if (*code == '0') {
+          printf ("You typed 0, switching to phone system.\n");
+          do_phone_call (default_username);
+          printf ("Calling you! Code: ");
+          continue;
         }
         if (do_send_code_result (code) >= 0) {
           break;
@@ -563,11 +569,17 @@ int loop (void) {
       DC_working = DC_list[dc_working_num];
       
       do_send_code (default_username);
-      printf ("Code from sms: ");
+      printf ("Code from sms (if you did not receive an SMS and want to be called, type 0): ");
       while (1) {
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
+        }
+        if (*code == '0') {
+          printf ("You typed 0, switching to phone system.\n");
+          do_phone_call (default_username);
+          printf ("Calling you! Code: ");
+          continue;
         }
         if (do_send_code_result_auth (code, first_name, last_name) >= 0) {
           break;
