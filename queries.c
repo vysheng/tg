@@ -472,7 +472,6 @@ void do_send_code (const char *user) {
 
 int phone_call_on_answer (struct query *q UU) {
   fetch_bool ();
-  assert(1);
   return 0;
 }
 
