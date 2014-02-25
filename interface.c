@@ -322,6 +322,7 @@ char *commands[] = {
   "chat_with_peer",
   "delete_msg",
   "restore_msg",
+  "create_group_chat",
   0 };
 
 int commands_flags[] = {
@@ -371,6 +372,7 @@ int commands_flags[] = {
   07,
   072,
   07,
+  072,
   07
 };
 
@@ -888,6 +890,7 @@ void interpreter (char *line UU) {
       "mark_read <peer> - mark read all received messages with peer\n"
       "add_contact <phone-number> <first-name> <last-name> - tries to add contact to contact-list by phone\n"
       "create_secret_chat <user> - creates secret chat with this user\n"
+      "create_group_chat <user> <chat-topic> - creates group chat with this user, add more users with chat_add_user <user>\n"
       "rename_contact <user> <first-name> <last-name> - tries to rename contact. If you have another device it will be a fight\n"
       "suggested_contacts - print info about contacts, you have max common friends\n"
       "visualize_key <secret_chat> - prints visualization of encryption key. You should compare it to your partner's one\n"
@@ -938,6 +941,15 @@ void interpreter (char *line UU) {
   } else if (IS_WORD ("create_secret_chat")) {
     GET_PEER;    
     do_create_secret_chat (id);
+  } else if (IS_WORD ("create_group_chat")) {
+    GET_PEER;
+    int t;
+    char *s = next_token (&t);
+    if (!s) {
+      printf ("Empty chat topic\n");
+      RET;
+    }    
+    do_create_group_chat (id, s);  
   } else if (IS_WORD ("suggested_contacts")) {
     do_get_suggested ();
   } else if (IS_WORD ("status_online")) {
