@@ -131,7 +131,8 @@ int Response_len;
  *
  */
 
-char *rsa_public_key_name; // = "tg.pub";
+#define TG_SERVER_PUBKEY_FILENAME     "tg.pub"
+char *rsa_public_key_name; // = TG_SERVER_PUBKEY_FILENAME;
 RSA *pubKey;
 long long pk_fingerprint;
 
@@ -1824,8 +1825,11 @@ int auth_is_success (void) {
   return auth_success;
 }
 
+
+#define RANDSEED_PASSWORD_FILENAME     NULL
+#define RANDSEED_PASSWORD_LENGTH       0
 void on_start (void) {
-  prng_seed (0, 0);
+  prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
 
   if (rsa_public_key_name) {
     if (rsa_load_public_key (rsa_public_key_name) < 0) {
@@ -1833,7 +1837,8 @@ void on_start (void) {
       exit (1);
     }
   } else {
-    if (rsa_load_public_key ("tg.pub") < 0 && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
+    if (rsa_load_public_key (TG_SERVER_PUBKEY_FILENAME) < 0
+      && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
       perror ("rsa_load_public_key");
       exit (1);
     }
