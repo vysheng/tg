@@ -34,6 +34,9 @@ On Fedora:
 
     $ sudo yum install lua-devel openssl-devel libconfig-devel readline-devel
 
+On ArchLinux:
+    $sudo pacman -S base-devel readline libconfig openssl lua
+
 Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or linux you have to run ./configure script or you will get some strange compilation error. 
 
 Then
