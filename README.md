@@ -65,9 +65,22 @@ Install these ports:
 
 Then build:
 
-    $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
+    $ env CC=clang CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure
     $ make
     
+#### OpenBSD
+
+Install these packages (or *ports*):
+
+* libconfig (*devel/libconfig*)
+* libexecinfo (*devel/libexecinfo*)
+* lua >= 5.2 (*lang/lua/5.2*)
+
+Then build:
+
+    $ CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ./configure
+    $ make
+
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.

@@ -109,6 +109,7 @@
 #     * /usr/include/lua/X.Y
 #     * /usr/include/luaXY
 #     * /usr/local/include/luaX.Y
+#     * /usr/local/include/lua-X.Y
 #     * /usr/local/include/lua/X.Y
 #     * /usr/local/include/luaXY
 #
@@ -182,7 +183,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 20
+#serial 21
 
 dnl =========================================================================
 dnl AX_PROG_LUA([MINIMUM-VERSION], [TOO-BIG-VERSION],
@@ -195,7 +196,7 @@ AC_DEFUN([AX_PROG_LUA],
 
   dnl Find a Lua interpreter.
   m4_define_default([_AX_LUA_INTERPRETER_LIST],
-    [lua lua5.2 lua5.1 lua50])
+    [lua lua5.2 lua52 lua5.1 lua51 lua50])
 
   m4_if([$1], [],
   [ dnl No version check is needed. Find any Lua interpreter.
@@ -259,7 +260,7 @@ AC_DEFUN([AX_PROG_LUA],
     AC_CACHE_CHECK([for $ax_display_LUA version], [ax_cv_lua_version],
       [ ax_cv_lua_version=`$LUA -e "print(_VERSION)" | \
           sed "s|^Lua \(.*\)|\1|" | \
-          grep -o "^@<:@0-9@:>@\+\\.@<:@0-9@:>@\+"`
+          grep -E -o "^@<:@0-9@:>@+\.@<:@0-9@:>@+"`
       ])
     AS_IF([test "x$ax_cv_lua_version" = 'x'],
       [AC_MSG_ERROR([invalid Lua version number])])
@@ -364,7 +365,7 @@ dnl =========================================================================
 AC_DEFUN([_AX_LUA_CHK_VER],
 [
   _ax_test_ver=`$1 -e "print(_VERSION)" 2>/dev/null | \
-    sed "s|^Lua \(.*\)|\1|" | grep -o "^@<:@0-9@:>@\+\\.@<:@0-9@:>@\+"`
+    sed "s|^Lua \(.*\)|\1|" | grep -E -o "^@<:@0-9@:>@+\.@<:@0-9@:>@+"`
   AS_IF([test "x$_ax_test_ver" = 'x'],
     [_ax_test_ver='0'])
   AX_COMPARE_VERSION([$_ax_test_ver], [ge], [$2])
@@ -431,6 +432,7 @@ AC_DEFUN([AX_LUA_HEADERS],
       /usr/include/lua/$LUA_VERSION \
       /usr/include/lua$LUA_SHORT_VERSION \
       /usr/local/include/lua$LUA_VERSION \
+      /usr/local/include/lua-$LUA_VERSION \
       /usr/local/include/lua/$LUA_VERSION \
       /usr/local/include/lua$LUA_SHORT_VERSION \
     ])
@@ -490,7 +492,7 @@ int main(int argc, char ** argv)
             ],
             [ ax_cv_lua_header_version=`./conftest$EXEEXT p | \
                 sed "s|^Lua \(.*\)|\1|" | \
-                grep -o "^@<:@0-9@:>@\+\\.@<:@0-9@:>@\+"`
+                grep -E -o "^@<:@0-9@:>@+\.@<:@0-9@:>@+"`
             ],
             [ax_cv_lua_header_version='unknown'])
           CPPFLAGS=$_ax_lua_saved_cppflags
@@ -575,10 +577,15 @@ AC_DEFUN([AX_LUA_LIBS],
     dnl Try to find the Lua libs.
     _ax_lua_saved_libs=$LIBS
     LIBS="$LIBS $LUA_LIB"
-    AC_SEARCH_LIBS([lua_load], [lua$LUA_VERSION lua$LUA_SHORT_VERSION lua],
-      [_ax_found_lua_libs='yes'],
-      [_ax_found_lua_libs='no'],
-      [$_ax_lua_extra_libs])
+    AC_SEARCH_LIBS([lua_load],
+                   [ lua$LUA_VERSION \
+                     lua$LUA_SHORT_VERSION \
+                     lua-$LUA_VERSION \
+                     lua-$LUA_SHORT_VERSION \
+                     lua],
+                   [_ax_found_lua_libs='yes'],
+                   [_ax_found_lua_libs='no'],
+                   [$_ax_lua_extra_libs])
     LIBS=$_ax_lua_saved_libs
 
     AS_IF([test "x$ac_cv_search_lua_load" != 'xno' &&
