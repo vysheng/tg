@@ -524,7 +524,7 @@ int loop (void) {
           exit (EXIT_FAILURE);
         }
         if (!strcmp (code, "call")) {
-          printf ("You typed 0, switching to phone system.\n");
+          printf ("You typed \"call\", switching to phone system.\n");
           do_phone_call (default_username);
           printf ("Calling you! Code: ");
           continue;
@@ -576,7 +576,7 @@ int loop (void) {
           exit (EXIT_FAILURE);
         }
         if (!strcmp (code, "call")) {
-          printf ("You typed 0, switching to phone system.\n");
+          printf ("You typed \"call\", switching to phone system.\n");
           do_phone_call (default_username);
           printf ("Calling you! Code: ");
           continue;
