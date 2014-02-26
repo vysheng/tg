@@ -55,7 +55,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AX_LUA_HEADERS([],[AC_MSG_ERROR([No lua headers found. Try --disable-liblua])])
         AX_LUA_LIBS([],[AC_MSG_ERROR([No lua libs found. Try --disable-liblua])])
         [EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ; ]
-        [CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ; ]
+        [CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ; ]
         AC_DEFINE(USE_LUA,1,[use lua])
       ],
       [
@@ -69,7 +69,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AX_LUA_HEADERS([],[AC_MSG_ERROR([No lua headers found. Try --disable-liblua])])
         AX_LUA_LIBS([],[AC_MSG_ERROR([No lua libs found. Try --disable-liblua])])
         [EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ; ]
-        [CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ; ]
+        [CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ; ]
         AC_DEFINE(USE_LUA,1,[use lua])
       ],
       [

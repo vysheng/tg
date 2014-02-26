@@ -4755,7 +4755,7 @@ else
 fi
 
         EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ;
-        CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ;
+        CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ;
 
 $as_echo "#define USE_LUA 1" >>confdefs.h
 
@@ -5424,7 +5424,7 @@ else
 fi
 
         EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ;
-        CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ;
+        CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ;
 
 $as_echo "#define USE_LUA 1" >>confdefs.h
 
