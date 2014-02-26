@@ -22,6 +22,7 @@ AC_CHECK_LIB([readline], [rl_save_prompt],
     [ EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ; ]
   ],
   [
+    AC_SEARCH_LIBS([tgetnum], [ncursesw ncurses curses])
     AC_CHECK_LIB([edit], [rl_set_prompt])
     AC_DEFINE([READLINE_EDIT], [1], [Use libedit])
     [ EXTRA_LIBS="${EXTRA_LIBS} -ledit" ; ]

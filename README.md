@@ -78,7 +78,7 @@ Install these packages (or *ports*):
 
 Then build:
 
-    $ CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" LIBS="-lcurses" ./configure
+    $ CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ./configure
     $ make
 
 #### Other UNIX
