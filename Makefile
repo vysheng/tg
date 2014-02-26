@@ -1,12 +1,12 @@
 srcdir=.
 
-CFLAGS=-g -O2 
+CFLAGS=-g -O2 -I/usr/include/lua5.2
 LDFLAGS=
 CPPFLAGS=
 DEFS=-DHAVE_CONFIG_H
 COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated -fno-strict-aliasing -fno-omit-frame-pointer -ggdb
 
-EXTRA_LIBS=-lconfig -lcrypto -lz -lrt -lm   -lreadline -llua 
+EXTRA_LIBS=-lconfig -lcrypto -lz -lm   -lreadline -llua5.2  -ldl
 LOCAL_LDFLAGS=-rdynamic -ggdb ${EXTRA_LIBS}
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 
