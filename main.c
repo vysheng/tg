@@ -95,7 +95,7 @@ extern int log_level;
 int sync_from_start;
 int allow_weak_random;
 #ifdef LIB_TG
-  struct configuration* configuration;
+  struct libcfg* libcfg;
 #endif
 
 void set_default_username (const char *s) {
@@ -465,9 +465,9 @@ void sig_abrt_handler (int signum __attribute__ ((unused))) {
 }
 
 #ifdef LIB_TG
-void initialize_lib_tg (struct configuration* config) {
-  configuration = config;
-  verbosity = configuration->verbosity;
+void initialize_lib_tg (struct libcfg* config) {
+  libcfg = config;
+  verbosity = libcfg->verbosity;
 #else
 int main (int argc, char **argv) {
   signal (SIGSEGV, sig_segv_handler);

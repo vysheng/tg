@@ -810,10 +810,10 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
+      M->text = talloc (l + 1);
+      memcpy (M->text, fetch_str (l), l);
+      M->text[l] = 0;
+      M->text_len = l;
 
       if (t == PEER_ENCR_CHAT) {
         M->media.type = CODE_decrypted_message_media_empty;
@@ -857,10 +857,10 @@ void replay_log_event (void) {
       M->fwd_date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
+      M->text = talloc (l + 1);
+      memcpy (M->text, fetch_str (l), l);
+      M->text[l] = 0;
+      M->text_len = l;
       
       M->media.type = CODE_message_media_empty;
       M->unread = 1;
@@ -893,10 +893,10 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
+      M->text = talloc (l + 1);
+      memcpy (M->text, fetch_str (l), l);
+      M->text[l] = 0;
+      M->text_len = l;
 
       fetch_message_media (&M->media);
       M->unread = 1;
@@ -929,10 +929,10 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
+      M->text = talloc (l + 1);
+      memcpy (M->text, fetch_str (l), l);
+      M->text[l] = 0;
+      M->text_len = l;
 
       fetch_message_media_encrypted (&M->media);
       fetch_encrypted_message_file (&M->media);
@@ -969,10 +969,10 @@ void replay_log_event (void) {
       M->fwd_date = fetch_int ();
       
       int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
+      M->text = talloc (l + 1);
+      memcpy (M->text, fetch_str (l), l);
+      M->text[l] = 0;
+      M->text_len = l;
 
       fetch_message_media (&M->media);
       M->unread = 1;

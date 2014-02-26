@@ -1546,8 +1546,8 @@ void print_message (struct message *M) {
     print_user_name (M->fwd_from_id, user_chat_get (M->fwd_from_id));
     printf ("] ");
   }
-  if (M->message && strlen (M->message)) {
-    printf ("%s", M->message);
+  if (M->text && strlen (M->text)) {
+    printf ("%s", M->text);
   }
   if (M->media.type != CODE_message_media_empty) {
     print_media (&M->media);

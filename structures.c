@@ -1320,8 +1320,8 @@ void fetch_geo_message (struct message *M) {
     M->service = 1;
     fetch_message_action (&M->action);
   } else {
-    M->message = fetch_str_dup ();
-    M->message_len = strlen (M->message);
+    M->text = fetch_str_dup ();
+    M->text_len = strlen (M->text);
     fetch_message_media (&M->media);
   }
 }
@@ -1687,7 +1687,7 @@ void free_message_action (struct message_action *M) {
 
 void free_message (struct message *M) {
   if (!M->service) {
-    if (M->message) { tfree (M->message, M->message_len + 1); }
+    if (M->text) { tfree (M->text, M->text_len + 1); }
     free_message_media (&M->media);
   } else {
     free_message_action (&M->action);

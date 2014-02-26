@@ -318,8 +318,8 @@ struct message {
   union {
     struct message_action action;
     struct {
-      char *message;
-      int message_len;
+      char *text;
+      int text_len;
       struct message_media media;
     };
   };

@@ -53,7 +53,10 @@
 
 #include "no-preview.h"
 #include "binlog.h"
-
+#ifdef LIB_TG
+#  include "libtg.h"
+   extern struct libcfg* libcfg;
+#endif
 #define sha1 SHA1
 
 #ifdef __APPLE__
@@ -912,7 +915,7 @@ void do_send_encr_msg (struct message *M) {
   static int buf[4];
   secure_random (buf, 16);
   out_cstring ((void *)buf, 16);
-  out_cstring ((void *)M->message, M->message_len);
+  out_cstring ((void *)M->text, M->text_len);
   out_int (CODE_decrypted_message_media_empty);
   encr_finish (&P->encr_chat);
   
@@ -927,7 +930,7 @@ void do_send_msg (struct message *M) {
   clear_packet ();
   out_int (CODE_messages_send_message);
   out_peer_id (M->to_id);
-  out_cstring (M->message, M->message_len);
+  out_cstring (M->text, M->text_len);
   out_long (M->id);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
 }
@@ -1123,7 +1126,7 @@ void do_get_history (peer_id_t id, int limit) {
 /* {{{ Get dialogs */
 int dialog_list_got;
 int get_dialogs_on_answer (struct query *q UU) {
-  unsigned x = fetch_int (); 
+  unsigned x = fetch_int ();
   assert (x == CODE_messages_dialogs || x == CODE_messages_dialogs_slice);
   if (x == CODE_messages_dialogs_slice) {
     fetch_int (); // total_count
@@ -1165,6 +1168,10 @@ int get_dialogs_on_answer (struct query *q UU) {
   push_color (COLOR_YELLOW);
   for (i = dl_size - 1; i >= 0; i--) {
     peer_t *UC;
+#ifdef LIB_TG
+    UC = user_chat_get (plist[i]);
+    libcfg->get_chats_callback.function(libcfg->ctx, plist[i], UC);
+#else
     switch (get_peer_type (plist[i])) {
     case PEER_USER:
       UC = user_chat_get (plist[i]);
@@ -1179,6 +1186,7 @@ int get_dialogs_on_answer (struct query *q UU) {
       printf (": %d unread\n", dlist[2 * i + 1]);
       break;
     }
+#endif
   }
   pop_color ();
   print_end ();
@@ -1190,7 +1198,6 @@ int get_dialogs_on_answer (struct query *q UU) {
 struct query_methods get_dialogs_methods = {
   .on_answer = get_dialogs_on_answer,
 };
-
 
 void do_get_dialog_list (void) {
   clear_packet ();
@@ -1477,7 +1484,7 @@ void send_part (struct send_file *f) {
       M->from_id = MK_USER (our_id);
       M->to_id = f->to_id;
       M->unread = 1;
-      M->message = tstrdup ("");
+      M->text = tstrdup ("");
       M->out = 1;
       M->id = r;
       M->date = time (0);

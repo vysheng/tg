@@ -69,7 +69,7 @@ extern int safe_quit;
 extern int queries_num;
 
 #ifdef LIB_TG
-  extern struct configuration* configuration;
+  extern struct libcfg* libcfg;
 #endif
 int unread_messages;
 void got_it (char *line, int len);
@@ -507,7 +507,7 @@ int loop (void) {
 
       if (!user) {
         #ifdef LIB_TG
-          configuration->pfn_ask_username(configuration->context, &user);
+          libcfg->pfn_ask_username(libcfg->ctx, &user);
         #else
         size_t size = 0;
         printf ("Telephone number (with '+' sign): ");         
@@ -528,7 +528,7 @@ int loop (void) {
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
         #ifdef LIB_TG
-          configuration->pfn_ask_code(configuration->context, &code);
+          libcfg->pfn_ask_code(libcfg->ctx, &code);
         #else
         size_t size = 0;
         if (net_getline (&code, &size) == -1) {
@@ -588,7 +588,7 @@ int loop (void) {
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
         #ifdef LIB_TG
-          configuration->pfn_ask_code_register (configuration->context, &code, &first_name, &last_name);
+          libcfg->pfn_ask_code_register (libcfg->ctx, &code, &first_name, &last_name);
         #else
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
@@ -625,7 +625,11 @@ int loop (void) {
   read_state_file ();
   read_secret_chat_file ();
 
-  set_interface_callbacks ();
+  #ifdef LIB_TG
+  #else
+    set_interface_callbacks ();
+  #endif
+
 
   do_get_difference ();
   net_loop (0, dgot);
@@ -642,7 +646,7 @@ int loop (void) {
   }
 
 #ifdef LIB_TG
-  configuration->pfn_connected(configuration->context);
+  libcfg->pfn_connected(libcfg->ctx);
 #endif
 
   return main_loop ();
