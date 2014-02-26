@@ -57,6 +57,10 @@
 #  include "lua-tg.h"
 #endif
 
+#ifdef LIB_TG
+#  include "libtg.h"
+#endif
+
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
 
@@ -90,6 +94,9 @@ int binlog_enabled;
 extern int log_level;
 int sync_from_start;
 int allow_weak_random;
+#ifdef LIB_TG
+  struct configuration* configuration;
+#endif
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -457,6 +464,11 @@ void sig_abrt_handler (int signum __attribute__ ((unused))) {
   exit (EXIT_FAILURE);
 }
 
+#ifdef LIB_TG
+void initialize_lib_tg (struct configuration* config) {
+  configuration = config;
+  verbosity = configuration->verbosity;
+#else
 int main (int argc, char **argv) {
   signal (SIGSEGV, sig_segv_handler);
   signal (SIGABRT, sig_abrt_handler);
@@ -464,6 +476,7 @@ int main (int argc, char **argv) {
   log_level = 10;
   
   args_parse (argc, argv);
+#endif
   printf (
     "Telegram-client version " TG_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
     "Telegram-client comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
@@ -484,5 +497,7 @@ int main (int argc, char **argv) {
 
   inner_main ();
   
+  #ifndef LIB_TG
   return 0;
+  #endif
 }

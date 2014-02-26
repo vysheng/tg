@@ -52,7 +52,9 @@
 #include "loop.h"
 #include "binlog.h"
 #include "lua-tg.h"
-
+#ifdef LIB_TG
+  #include "libtg.h"
+#endif
 extern char *default_username;
 extern char *auth_token;
 extern int test_dc;
@@ -66,6 +68,9 @@ int register_mode;
 extern int safe_quit;
 extern int queries_num;
 
+#ifdef LIB_TG
+  extern struct configuration* configuration;
+#endif
 int unread_messages;
 void got_it (char *line, int len);
 void net_loop (int flags, int (*is_end)(void)) {
@@ -498,15 +503,19 @@ int loop (void) {
 
   if (auth_state == 100 || !(DC_working->has_auth)) {
     if (!default_username) {
-      size_t size = 0;
       char *user = 0;
 
       if (!user) {
+        #ifdef LIB_TG
+          configuration->pfn_ask_username(configuration->context, &user);
+        #else
+        size_t size = 0;
         printf ("Telephone number (with '+' sign): ");         
         if (net_getline (&user, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
         }
+        #endif
         set_default_username (user);
       }
     }
@@ -516,13 +525,17 @@ int loop (void) {
     if (res > 0 && !register_mode) {
       do_send_code (default_username);
       char *code = 0;
-      size_t size = 0;
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
+        #ifdef LIB_TG
+          configuration->pfn_ask_code(configuration->context, &code);
+        #else
+        size_t size = 0;
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
         }
+        #endif
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
           do_phone_call (default_username);
@@ -539,6 +552,9 @@ int loop (void) {
     } else {
       printf ("User is not registered. Do you want to register? [Y/n] ");
       char *code;
+      char *first_name;
+      char *last_name;
+      #ifndef LIB_TG
       size_t size;
       if (net_getline (&code, &size) == -1) {
         perror ("getline()");
@@ -550,18 +566,18 @@ int loop (void) {
         printf ("Then try again\n");
         exit (EXIT_SUCCESS);
       }
-      char *first_name;
+
       printf ("First name: ");
       if (net_getline (&first_name, &size) == -1) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
-      char *last_name;
       printf ("Last name: ");
       if (net_getline (&last_name, &size) == -1) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
+      #endif
 
       int dc_num = do_get_nearest_dc ();
       assert (dc_num >= 0 && dc_num <= MAX_DC_NUM && DC_list[dc_num]);
@@ -571,10 +587,14 @@ int loop (void) {
       do_send_code (default_username);
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
+        #ifdef LIB_TG
+          configuration->pfn_ask_code_register (configuration->context, &code, &first_name, &last_name);
+        #else
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
         }
+        #endif
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
           do_phone_call (default_username);
@@ -620,6 +640,10 @@ int loop (void) {
     dialog_list_got = 0;
     net_loop (0, dlgot);
   }
+
+#ifdef LIB_TG
+  configuration->pfn_connected(configuration->context);
+#endif
 
   return main_loop ();
 }
