@@ -182,7 +182,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 20
+#serial 21
 
 dnl =========================================================================
 dnl AX_PROG_LUA([MINIMUM-VERSION], [TOO-BIG-VERSION],
@@ -195,7 +195,7 @@ AC_DEFUN([AX_PROG_LUA],
 
   dnl Find a Lua interpreter.
   m4_define_default([_AX_LUA_INTERPRETER_LIST],
-    [lua lua5.2 lua5.1 lua50])
+    [lua lua5.2 lua52 lua5.1 lua51 lua50])
 
   m4_if([$1], [],
   [ dnl No version check is needed. Find any Lua interpreter.
@@ -575,10 +575,15 @@ AC_DEFUN([AX_LUA_LIBS],
     dnl Try to find the Lua libs.
     _ax_lua_saved_libs=$LIBS
     LIBS="$LIBS $LUA_LIB"
-    AC_SEARCH_LIBS([lua_load], [lua$LUA_VERSION lua$LUA_SHORT_VERSION lua],
-      [_ax_found_lua_libs='yes'],
-      [_ax_found_lua_libs='no'],
-      [$_ax_lua_extra_libs])
+    AC_SEARCH_LIBS([lua_load],
+                   [ lua$LUA_VERSION \
+                     lua$LUA_SHORT_VERSION \
+                     lua-$LUA_VERSION \
+                     lua-$LUA_SHORT_VERSION \
+                     lua],
+                   [_ax_found_lua_libs='yes'],
+                   [_ax_found_lua_libs='no'],
+                   [$_ax_lua_extra_libs])
     LIBS=$_ax_lua_saved_libs
 
     AS_IF([test "x$ac_cv_search_lua_load" != 'xno' &&
