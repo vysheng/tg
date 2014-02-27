@@ -2279,6 +2279,7 @@ ac_config_headers="$ac_config_headers config.h"
 #     * /usr/include/lua/X.Y
 #     * /usr/include/luaXY
 #     * /usr/local/include/luaX.Y
+#     * /usr/local/include/lua-X.Y
 #     * /usr/local/include/lua/X.Y
 #     * /usr/local/include/luaXY
 #
@@ -2352,7 +2353,7 @@ ac_config_headers="$ac_config_headers config.h"
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 20
+#serial 21
 
 
 
@@ -3170,6 +3171,10 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
+# BSD locations for headers and libraries from packages, Linux locations for self-compiled stuff.
+CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+
 # Checks for libraries.
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sqrt in -lm" >&5
@@ -3465,6 +3470,62 @@ $as_echo "#define READLINE_GNU 1" >>confdefs.h
      EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ;
 
 else
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing tgetnum" >&5
+$as_echo_n "checking for library containing tgetnum... " >&6; }
+if ${ac_cv_search_tgetnum+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char tgetnum ();
+int
+main ()
+{
+return tgetnum ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ncursesw ncurses curses; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_tgetnum=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_tgetnum+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_tgetnum+:} false; then :
+
+else
+  ac_cv_search_tgetnum=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_tgetnum" >&5
+$as_echo "$ac_cv_search_tgetnum" >&6; }
+ac_res=$ac_cv_search_tgetnum
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rl_set_prompt in -ledit" >&5
 $as_echo_n "checking for rl_set_prompt in -ledit... " >&6; }
@@ -4049,7 +4110,7 @@ $as_echo "enabled" >&6; }
 
 
        if test "x$LUA" = 'x'; then :
-  for ac_prog in lua lua5.2 lua5.1 lua50
+  for ac_prog in lua lua5.2 lua52 lua5.1 lua51 lua50
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -4126,7 +4187,7 @@ if ${ax_cv_lua_version+:} false; then :
 else
    ax_cv_lua_version=`$LUA -e "print(_VERSION)" | \
           sed "s|^Lua \(.*\)|\1|" | \
-          grep -o "^[0-9]\+\\.[0-9]\+"`
+          grep -E -o "^[0-9]+\.[0-9]+"`
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_version" >&5
@@ -4290,6 +4351,7 @@ done
       /usr/include/lua/$LUA_VERSION \
       /usr/include/lua$LUA_SHORT_VERSION \
       /usr/local/include/lua$LUA_VERSION \
+      /usr/local/include/lua-$LUA_VERSION \
       /usr/local/include/lua/$LUA_VERSION \
       /usr/local/include/lua$LUA_SHORT_VERSION \
     ; do
@@ -4363,7 +4425,7 @@ _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :
    ax_cv_lua_header_version=`./conftest$EXEEXT p | \
                 sed "s|^Lua \(.*\)|\1|" | \
-                grep -o "^[0-9]\+\\.[0-9]\+"`
+                grep -E -o "^[0-9]+\.[0-9]+"`
 
 else
   ax_cv_lua_header_version='unknown'
@@ -4643,7 +4705,11 @@ return lua_load ();
   return 0;
 }
 _ACEOF
-for ac_lib in '' lua$LUA_VERSION lua$LUA_SHORT_VERSION lua; do
+for ac_lib in ''  lua$LUA_VERSION \
+                     lua$LUA_SHORT_VERSION \
+                     lua-$LUA_VERSION \
+                     lua-$LUA_SHORT_VERSION \
+                     lua; do
   if test -z "$ac_lib"; then
     ac_res="none required"
   else
@@ -4693,7 +4759,7 @@ else
 fi
 
         EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ;
-        CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ;
+        CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ;
 
 $as_echo "#define USE_LUA 1" >>confdefs.h
 
@@ -4713,7 +4779,7 @@ $as_echo "enabled" >&6; }
 
 
        if test "x$LUA" = 'x'; then :
-  for ac_prog in lua lua5.2 lua5.1 lua50
+  for ac_prog in lua lua5.2 lua52 lua5.1 lua51 lua50
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -4790,7 +4856,7 @@ if ${ax_cv_lua_version+:} false; then :
 else
    ax_cv_lua_version=`$LUA -e "print(_VERSION)" | \
           sed "s|^Lua \(.*\)|\1|" | \
-          grep -o "^[0-9]\+\\.[0-9]\+"`
+          grep -E -o "^[0-9]+\.[0-9]+"`
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_lua_version" >&5
@@ -4954,6 +5020,7 @@ done
       /usr/include/lua/$LUA_VERSION \
       /usr/include/lua$LUA_SHORT_VERSION \
       /usr/local/include/lua$LUA_VERSION \
+      /usr/local/include/lua-$LUA_VERSION \
       /usr/local/include/lua/$LUA_VERSION \
       /usr/local/include/lua$LUA_SHORT_VERSION \
     ; do
@@ -5027,7 +5094,7 @@ _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :
    ax_cv_lua_header_version=`./conftest$EXEEXT p | \
                 sed "s|^Lua \(.*\)|\1|" | \
-                grep -o "^[0-9]\+\\.[0-9]\+"`
+                grep -E -o "^[0-9]+\.[0-9]+"`
 
 else
   ax_cv_lua_header_version='unknown'
@@ -5307,7 +5374,11 @@ return lua_load ();
   return 0;
 }
 _ACEOF
-for ac_lib in '' lua$LUA_VERSION lua$LUA_SHORT_VERSION lua; do
+for ac_lib in ''  lua$LUA_VERSION \
+                     lua$LUA_SHORT_VERSION \
+                     lua-$LUA_VERSION \
+                     lua-$LUA_SHORT_VERSION \
+                     lua; do
   if test -z "$ac_lib"; then
     ac_res="none required"
   else
@@ -5357,7 +5428,7 @@ else
 fi
 
         EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ;
-        CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ;
+        CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ;
 
 $as_echo "#define USE_LUA 1" >>confdefs.h
 
