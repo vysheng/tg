@@ -51,6 +51,7 @@ char *default_prompt = "> ";
 
 int unread_messages;
 int msg_num_mode;
+int alert_sound;
 
 int safe_quit;
 
@@ -901,6 +902,7 @@ void interpreter (char *line UU) {
       "\t\tLevel 2: prints line, when somebody is typing in chat\n"
       "\t\tLevel 3: prints line, when somebody changes online status\n"
       "\tmsg_num - enables/disables numeration of messages\n"
+      "\talert - enables/disables alert sound notifications\n"
       "chat_with_peer <peer> - starts chat with this peer. Every command after is message to this peer. Type /exit or /quit to end this mode\n"
       );
     pop_color ();
@@ -1081,6 +1083,8 @@ void interpreter (char *line UU) {
       log_level = num;
     } else if (IS_WORD ("msg_num")) {
       msg_num_mode = num;
+    } else if (IS_WORD ("alert")) {
+      alert_sound = num;
     }
   } else if (IS_WORD ("chat_with_peer")) {
     GET_PEER;
@@ -1483,6 +1487,9 @@ void print_message (struct message *M) {
       } else {
         printf (" »»» ");
       }
+      if (alert_sound) {
+        play_sound();
+      }
     }
   } else if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
     peer_t *P = user_chat_get (M->to_id);
@@ -1516,8 +1523,10 @@ void print_message (struct message *M) {
       } else {
         printf (" »»» ");
       }
+      if (alert_sound) {
+        play_sound();
+      }
     }
-    
   } else {
     assert (get_peer_type (M->to_id) == PEER_CHAT);
     push_color (COLOR_MAGENTA);
@@ -1556,6 +1565,10 @@ void print_message (struct message *M) {
   assert (!color_stack_pos);
   printf ("\n");
   print_end();
+}
+
+void play_sound (void) {
+  printf ("\a");
 }
 
 void set_interface_callbacks (void) {
