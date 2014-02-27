@@ -1,1 +1,5 @@
+telegram
 *.o
+Makefile
+config.log
+config.status
