@@ -8,6 +8,10 @@ m4_include([ax_lua.m4])
 # Checks for programs.
 AC_PROG_CC
 
+# BSD locations for headers and libraries from packages, Linux locations for self-compiled stuff.
+CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+
 # Checks for libraries.
 AC_CHECK_LIB([m], [sqrt])
 AC_SEARCH_LIBS([clock_gettime], [rt])

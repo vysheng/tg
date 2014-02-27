@@ -3171,6 +3171,10 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
+# BSD locations for headers and libraries from packages, Linux locations for self-compiled stuff.
+CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+
 # Checks for libraries.
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sqrt in -lm" >&5
