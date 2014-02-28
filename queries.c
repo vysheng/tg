@@ -1668,7 +1668,11 @@ void print_chat_info (struct chat *C) {
 
 int chat_info_on_answer (struct query *q UU) {
   struct chat *C = fetch_alloc_chat_full ();
+#ifdef LIB_TG
+  libcfg->chat_info_callback.function(libcfg->chat_info_callback.object, C);
+#else
   print_chat_info (C);
+#endif
   return 0;
 }
 
