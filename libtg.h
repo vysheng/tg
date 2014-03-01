@@ -28,6 +28,8 @@ struct libcfg {
   } chat_info_callback;
 };
 
+extern struct dc *DC_working;
+
 void initialize_lib_tg (struct libcfg* config);
 
 #endif // LIBTG_H
