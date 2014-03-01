@@ -625,10 +625,7 @@ int loop (void) {
   read_state_file ();
   read_secret_chat_file ();
 
-  #ifdef LIB_TG
-  #else
-    set_interface_callbacks ();
-  #endif
+  set_interface_callbacks ();
 
 
   do_get_difference ();
