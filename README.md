@@ -24,8 +24,6 @@ or download and extract zip
 Install libs: readline or libedit, openssl and (if you want to use config) libconfig and liblua.
 If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively.
 
-Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or Linux you have to run ./configure script or you will get some strange compilation error. 
-
 On ubuntu use: 
 
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
