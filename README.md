@@ -33,13 +33,15 @@ On gentoo:
     $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
 
 On Fedora:
-d
+
     $ sudo yum install lua-devel openssl-devel libconfig-devel readline-devel
 
 On FreeBSD:
+
     $ pkg install libconfig libexecinfo lua52
 
 On OpenBSD:
+
     $ pkg_add libconfig libexecinfo lua
 
 Then,
