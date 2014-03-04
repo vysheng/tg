@@ -19,13 +19,17 @@ or download and extract zip
     $ wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
     $ unzip tg-master.zip && cd tg-master
 
-#### Linux
+#### Linux and BSDs
 
-Install libs: readline openssl and (if you want to use config) libconfig and liblua.
-If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively
+Install libs: readline or libedit, openssl and (if you want to use config) libconfig and liblua.
+If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively.
+
+Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or Linux you have to run ./configure script or you will get some strange compilation error. 
+
 On ubuntu use: 
 
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
+
 On gentoo:
 
     $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
@@ -34,7 +38,11 @@ On Fedora:
 d
     $ sudo yum install lua-devel openssl-devel libconfig-devel readline-devel
 
-Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or Linux you have to run ./configure script or you will get some strange compilation error. 
+On FreeBSD:
+    $ pkg install libconfig libexecinfo lua52
+
+On OpenBSD:
+    $ pkg_add libconfig libexecinfo lua
 
 Then,
 
@@ -54,7 +62,6 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
-#### FreeBSD
 
 Install these ports:
 
