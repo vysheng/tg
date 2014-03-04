@@ -13,34 +13,33 @@ Documentation for MTproto protocol is available here: http://core.telegram.org/m
 Clone GitHub Repository
 
     $ git clone https://github.com/vysheng/tg.git && cd tg
-    
+
 or download and extract zip
 
     $ wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
     $ unzip tg-master.zip && cd tg-master
-    
+
 #### Linux
 
 Install libs: readline openssl and (if you want to use config) libconfig and liblua.
 If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively
 On ubuntu use: 
-    
+
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
 On gentoo:
-    
-    $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
-    
-On Fedora:
 
+    $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
+
+On Fedora:
+d
     $ sudo yum install lua-devel openssl-devel libconfig-devel readline-devel
 
-Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or linux you have to run ./configure script or you will get some strange compilation error. 
+Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or Linux you have to run ./configure script or you will get some strange compilation error. 
 
-Then
+Then,
 
     $ ./configure
     $ make
-
 
 #### Mac OS X
 
@@ -52,7 +51,7 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
     $ export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
     $ export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
     $ ./configure && make
-    
+
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
 #### FreeBSD
@@ -67,11 +66,10 @@ Then build:
 
     $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
     $ make
-    
+
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
-
 
 ### Usage
 
@@ -94,7 +92,6 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 
 #### Messaging
 
-
 * **msg** \<peer\> Text - sends message to this peer
 * **fwd** \<user\> \<msg-seqno\> - forward message to user. You can see message numbers starting client with -N
 * **chat_with_peer** \<peer\> starts one on one chat session with this peer. /exit or /quit to end this mode.
@@ -109,7 +106,6 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **send_text** \<peer\> \<text-file-name> - sends text file as plain messages
 * **load_photo**/load_video/load_video_thumb \<msg-seqno\> - loads photo/video to download dir
 * **view_photo**/view_video/view_video_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
-
 
 #### Group chat options
 
