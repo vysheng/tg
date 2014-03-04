@@ -1,1 +1,9 @@
+telegram
 *.o
+Makefile
+autom4te.cache
+config.h
+config.log
+config.status
+.idea/
+nbproject/
