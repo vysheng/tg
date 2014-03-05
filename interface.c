@@ -1574,6 +1574,6 @@ void play_sound (void) {
 void set_interface_callbacks (void) {
   readline_active = 1;
   rl_callback_handler_install (get_default_prompt (), interpreter);
-  rl_attempted_completion_function = (CPPFunction *) complete_text;
+  rl_attempted_completion_function = (void *) complete_text;
   rl_completion_entry_function = (void *)complete_none;
 }
