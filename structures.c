@@ -1482,15 +1482,29 @@ void fetch_encrypted_message_file (struct message_media *M) {
   if (x == CODE_encrypted_file_empty) {
     assert (M->type != CODE_decrypted_message_media_photo && M->type != CODE_decrypted_message_media_video);
   } else {
-    assert (M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video);
-    M->encr_photo.id = fetch_long ();
-    M->encr_photo.access_hash = fetch_long ();
-    fetch_int ();
-    //assert (M->encr_photo.size == fetch_int ());
-    //M->encr_photo.size = fetch_int (); // Why it is not the same?
-    M->encr_photo.dc_id = fetch_int ();
-    M->encr_photo.key_fingerprint = fetch_int ();
-    
+    assert (M->type == CODE_decrypted_message_media_document || M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video);
+
+    switch (M->type) {
+      case CODE_decrypted_message_media_document:
+	// Not at all sure these entries are correct.
+	// Especially since values are not fetched into structures rigidly for photo and video.
+        M->encr_document.id = fetch_long();
+        M->encr_document.access_hash = fetch_long();
+        M->encr_document.dc_id = fetch_int();
+        M->encr_document.size = fetch_int();
+        M->encr_document.key_fingerprint = fetch_int();
+        break;
+      case CODE_decrypted_message_media_photo:
+      case CODE_decrypted_message_media_video:
+        M->encr_photo.id = fetch_long ();
+        M->encr_photo.access_hash = fetch_long ();
+        fetch_int ();
+        //assert (M->encr_photo.size == fetch_int ());
+        //M->encr_photo.size = fetch_int (); // Why it is not the same?
+        M->encr_photo.dc_id = fetch_int ();
+        M->encr_photo.key_fingerprint = fetch_int ();
+	break;
+    }
   }
 }
 
