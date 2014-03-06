@@ -1486,8 +1486,12 @@ void fetch_encrypted_message_file (struct message_media *M) {
 
     M->encr_photo.id = fetch_long();
     M->encr_photo.access_hash = fetch_long();
+    if (!M->encr_photo.size) {
+      M->encr_photo.size = fetch_int ();
+    } else {
+      fetch_int ();
+    }
     M->encr_photo.dc_id = fetch_int();
-    M->encr_photo.size = fetch_int();
     M->encr_photo.key_fingerprint = fetch_int();
   }
 }
