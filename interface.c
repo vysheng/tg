@@ -722,9 +722,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
+    if (M && !M->service && M->media.type == CODE_message_media_photo) {
       do_load_photo (&M->media.photo, 1);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_photo) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_photo) {
       do_load_encr_video (&M->media.encr_video, 1); // this is not a bug. 
     } else {
       printf ("Bad msg id\n");
@@ -737,9 +737,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_photo) {
+    if (M && !M->service && M->media.type == CODE_message_media_photo) {
       do_load_photo (&M->media.photo, 2);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_photo) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_photo) {
       do_load_encr_video (&M->media.encr_video, 2); // this is not a bug. 
     } else {
       printf ("Bad msg id\n");
@@ -752,7 +752,7 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+    if (M && !M->service && M->media.type == CODE_message_media_video) {
       do_load_video_thumb (&M->media.video, 1);
     } else {
       printf ("Bad msg id\n");
@@ -765,7 +765,7 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+    if (M && !M->service && M->media.type == CODE_message_media_video) {
       do_load_video_thumb (&M->media.video, 2);
     } else {
       printf ("Bad msg id\n");
@@ -778,9 +778,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+    if (M && !M->service && M->media.type == CODE_message_media_video) {
       do_load_video (&M->media.video, 1);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_video) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_video) {
       do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
@@ -793,9 +793,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_video) {
+    if (M && !M->service && M->media.type == CODE_message_media_video) {
       do_load_video (&M->media.video, 2);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_video) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_video) {
       do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
@@ -991,9 +991,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_audio) {
+    if (M && !M->service && M->media.type == CODE_message_media_audio) {
       do_load_audio (&M->media.video, 1);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_audio) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_audio) {
       do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
@@ -1006,9 +1006,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_audio) {
+    if (M && !M->service && M->media.type == CODE_message_media_audio) {
       do_load_audio (&M->media.video, 2);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_audio) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_audio) {
       do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
@@ -1047,9 +1047,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
+    if (M && !M->service && M->media.type == CODE_message_media_document) {
       do_load_document (&M->media.document, 1);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_document) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_document) {
       do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
@@ -1062,9 +1062,9 @@ void interpreter (char *line UU) {
       RET;
     }
     struct message *M = message_get (num);
-    if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
+    if (M && !M->service && M->media.type == CODE_message_media_document) {
       do_load_document (&M->media.document, 2);
-    } else if (M && !M->service && M->media.type == (int)CODE_decrypted_message_media_document) {
+    } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_document) {
       do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
