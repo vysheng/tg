@@ -3,7 +3,10 @@ our_id = 0
 
 require "scripts.base_functions";
 
-print ("HI, this is lua script")
+print ()
+print (">---> Telegram-CLI Lua Script!")
+print (">---> this script replies to 'ping' with 'pong'")
+print ()
 
 function on_msg_receive (msg)
   if started == 0 then
@@ -39,20 +42,17 @@ function on_our_id (id)
 end
 
 function on_secret_chat_created (peer)
-  --vardump (peer)
 end
 
 function on_user_update (user)
-  --vardump (user)
+    started = 1
 end
 
 function on_chat_update (user)
-  --vardump (user)
 end
 
 function on_get_difference_end ()
 end
 
 function on_binlog_replay_end ()
-  started = 1
 end
