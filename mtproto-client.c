@@ -1382,6 +1382,17 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       print_end ();
     }
     break;
+  case CODE_update_dc_options:
+    {
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      assert (n >= 0);
+      int i;
+      for (i = 0; i < n; i++) {
+        fetch_dc_option ();
+      }
+    }
+    break;
   default:
     logprintf ("Unknown update type %08x\n", op);
     ;
