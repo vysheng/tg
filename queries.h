@@ -64,6 +64,7 @@ void work_timers (void);
 extern struct query_methods help_get_config_methods;
 
 void do_send_code (const char *user);
+void do_phone_call (const char *user);
 int do_send_code_result (const char *code);
 double get_double_time (void);
 
@@ -83,6 +84,7 @@ void do_rename_chat (peer_id_t id, char *name);
 void do_load_encr_video (struct encr_video *V, int next);
 void do_create_encr_chat_request (int user_id);
 void do_create_secret_chat (peer_id_t id);
+void do_create_group_chat (peer_id_t id, char *chat_topic);
 void do_get_suggested (void);
 
 struct photo;

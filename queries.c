@@ -468,6 +468,37 @@ void do_send_code (const char *user) {
   net_loop (0, code_is_sent);
   assert (want_dc_num == -1);
 }
+
+
+int phone_call_on_answer (struct query *q UU) {
+  fetch_bool ();
+  return 0;
+}
+
+int phone_call_on_error (struct query *q UU, int error_code, int l, char *error) {
+  logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
+  assert (0);
+  return 0;
+}
+
+struct query_methods phone_call_methods  = {
+  .on_answer = phone_call_on_answer,
+  .on_error = phone_call_on_error
+};
+
+void do_phone_call (const char *user) {
+  logprintf ("calling user\n");
+  suser = tstrdup (user);
+  want_dc_num = 0;
+  clear_packet ();
+  do_insert_header ();
+  out_int (CODE_auth_send_call);
+  out_string (user);
+  out_string (phone_code_hash);
+
+  logprintf ("do_phone_call: dc_num = %d\n", dc_working_num);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0);
+}
 /* }}} */
 
 /* {{{ Check phone */
@@ -2752,6 +2783,36 @@ void do_create_secret_chat (peer_id_t id) {
   do_create_encr_chat_request (get_peer_id (id)); 
 }
 /* }}} */
+
+/* {{{ Create group chat */
+struct query_methods create_group_chat_methods = {
+  .on_answer = fwd_msg_on_answer
+};
+
+void do_create_group_chat (peer_id_t id, char *chat_topic) {
+  assert (get_peer_type (id) == PEER_USER);
+  peer_t *U = user_chat_get (id);
+  if (!U) { 
+    rprintf ("Can not create chat with unknown user\n");
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_messages_create_chat);
+  out_int (CODE_vector);
+  out_int (1); // Number of users, currently we support only 1 user.
+  if (U && U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (get_peer_id (id));
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (get_peer_id (id));
+  }
+  out_string (chat_topic);
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0);
+}
+/* }}} */
+
 
 /* {{{ Delete msg */
 

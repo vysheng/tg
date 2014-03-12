@@ -31,7 +31,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <sys/endian.h>
 #endif
 #include <sys/types.h>
@@ -56,6 +56,10 @@
 
 #if defined(__FreeBSD__)
 #define __builtin_bswap32(x) bswap32(x)
+#endif
+
+#if defined(__OpenBSD__)
+#define __builtin_bswap32(x) __swap32gen(x)
 #endif
 
 #define sha1 SHA1
@@ -127,7 +131,8 @@ int Response_len;
  *
  */
 
-char *rsa_public_key_name; // = "tg.pub";
+#define TG_SERVER_PUBKEY_FILENAME     "tg.pub"
+char *rsa_public_key_name; // = TG_SERVER_PUBKEY_FILENAME;
 RSA *pubKey;
 long long pk_fingerprint;
 
@@ -1378,6 +1383,17 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       print_end ();
     }
     break;
+  case CODE_update_dc_options:
+    {
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      assert (n >= 0);
+      int i;
+      for (i = 0; i < n; i++) {
+        fetch_dc_option ();
+      }
+    }
+    break;
   default:
     logprintf ("Unknown update type %08x\n", op);
     ;
@@ -1720,7 +1736,7 @@ int rpc_execute (struct connection *c, int op, int len) {
     logprintf ( "have %d Response bytes\n", Response_len);
   }
 
-#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined (__CYGWIN__)
+#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
   int o = c_state;
@@ -1728,19 +1744,19 @@ int rpc_execute (struct connection *c, int op, int len) {
   switch (o) {
   case st_reqpq_sent:
     process_respq_answer (c, Response/* + 8*/, Response_len/* - 12*/);
-#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined (__CYGWIN__)
+#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_reqdh_sent:
     process_dh_answer (c, Response/* + 8*/, Response_len/* - 12*/);
-#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined (__CYGWIN__)
+#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_client_dh_sent:
     process_auth_complete (c, Response/* + 8*/, Response_len/* - 12*/);
-#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined (__CYGWIN__)
+#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
@@ -1750,7 +1766,7 @@ int rpc_execute (struct connection *c, int op, int len) {
     } else {
       process_rpc_message (c, (void *)(Response/* + 8*/), Response_len/* - 12*/);
     }
-#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined (__CYGWIN__)
+#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
     setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
@@ -1778,7 +1794,7 @@ int tc_becomes_ready (struct connection *c) {
   assert (write_out (c, &byte, 1) == 1);
   flush_out (c);
   
-#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined (__CYGWIN__)
+#if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
   int o = c_state;
@@ -1809,8 +1825,11 @@ int auth_is_success (void) {
   return auth_success;
 }
 
+
+#define RANDSEED_PASSWORD_FILENAME     NULL
+#define RANDSEED_PASSWORD_LENGTH       0
 void on_start (void) {
-  prng_seed (0, 0);
+  prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
 
   if (rsa_public_key_name) {
     if (rsa_load_public_key (rsa_public_key_name) < 0) {
@@ -1818,7 +1837,8 @@ void on_start (void) {
       exit (1);
     }
   } else {
-    if (rsa_load_public_key ("tg.pub") < 0 && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
+    if (rsa_load_public_key (TG_SERVER_PUBKEY_FILENAME) < 0
+      && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
       perror ("rsa_load_public_key");
       exit (1);
     }

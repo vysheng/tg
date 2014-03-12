@@ -345,7 +345,26 @@ void inner_main (void) {
 }
 
 void usage (void) {
-  printf ("%s [-u username] [-h] [-k public key name] [-N] [-v] [-l log_level]\n", PROGNAME);
+  printf ("%s Usage\n", PROGNAME);
+
+  printf (" -h                 this help list\n");
+  printf (" -u username        specify username\n");
+  printf (" -k public-key      specify server public key\n");
+  printf (" -v                 verbose\n");
+  printf (" -l [1-3]           log level\n");
+  printf (" -L log-file        log net file\n");
+  printf (" -N                 message num mode\n");
+  printf (" -c config-file     specify config file\n");
+  printf (" -p prefix          specify prefix\n");
+  printf (" -R                 register mode\n");
+  printf (" -f                 sync from start\n");
+  printf (" -B                 enable binlog\n");
+  printf (" -E                 disable auto accept\n");
+  printf (" -w                 allow weak random\n");
+  printf (" -s                 specify lua script\n");
+  printf (" -W                 wait dialog list\n");
+  printf ("\n");
+
   exit (1);
 }
 

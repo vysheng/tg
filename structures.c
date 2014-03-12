@@ -1482,15 +1482,17 @@ void fetch_encrypted_message_file (struct message_media *M) {
   if (x == CODE_encrypted_file_empty) {
     assert (M->type != CODE_decrypted_message_media_photo && M->type != CODE_decrypted_message_media_video);
   } else {
-    assert (M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video);
-    M->encr_photo.id = fetch_long ();
-    M->encr_photo.access_hash = fetch_long ();
-    fetch_int ();
-    //assert (M->encr_photo.size == fetch_int ());
-    //M->encr_photo.size = fetch_int (); // Why it is not the same?
-    M->encr_photo.dc_id = fetch_int ();
-    M->encr_photo.key_fingerprint = fetch_int ();
-    
+    assert (M->type == CODE_decrypted_message_media_document || M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video || M->type == CODE_decrypted_message_media_audio);
+
+    M->encr_photo.id = fetch_long();
+    M->encr_photo.access_hash = fetch_long();
+    if (!M->encr_photo.size) {
+      M->encr_photo.size = fetch_int ();
+    } else {
+      fetch_int ();
+    }
+    M->encr_photo.dc_id = fetch_int();
+    M->encr_photo.key_fingerprint = fetch_int();
   }
 }
 

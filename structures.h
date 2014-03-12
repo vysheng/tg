@@ -264,7 +264,7 @@ struct document {
 };
 
 struct message_action {
-  int type;
+  unsigned type;
   union {
     struct {
       char *title;
@@ -279,7 +279,7 @@ struct message_action {
 };
 
 struct message_media {
-  int type;
+  unsigned type;
   union {
     struct photo photo;
     struct video video;

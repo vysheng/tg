@@ -8,6 +8,10 @@ m4_include([ax_lua.m4])
 # Checks for programs.
 AC_PROG_CC
 
+# BSD locations for headers and libraries from packages, Linux locations for self-compiled stuff.
+CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+
 # Checks for libraries.
 AC_CHECK_LIB([m], [sqrt])
 AC_SEARCH_LIBS([clock_gettime], [rt])
@@ -22,6 +26,7 @@ AC_CHECK_LIB([readline], [rl_save_prompt],
     [ EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ; ]
   ],
   [
+    AC_SEARCH_LIBS([tgetnum], [ncursesw ncurses curses])
     AC_CHECK_LIB([edit], [rl_set_prompt])
     AC_DEFINE([READLINE_EDIT], [1], [Use libedit])
     [ EXTRA_LIBS="${EXTRA_LIBS} -ledit" ; ]
@@ -54,7 +59,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AX_LUA_HEADERS([],[AC_MSG_ERROR([No lua headers found. Try --disable-liblua])])
         AX_LUA_LIBS([],[AC_MSG_ERROR([No lua libs found. Try --disable-liblua])])
         [EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ; ]
-        [CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ; ]
+        [CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ; ]
         AC_DEFINE(USE_LUA,1,[use lua])
       ],
       [
@@ -68,7 +73,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AX_LUA_HEADERS([],[AC_MSG_ERROR([No lua headers found. Try --disable-liblua])])
         AX_LUA_LIBS([],[AC_MSG_ERROR([No lua libs found. Try --disable-liblua])])
         [EXTRA_LIBS="${EXTRA_LIBS} ${LUA_LIB}" ; ]
-        [CFLAGS="${CFLAGS} ${LUA_INCLUDE}" ; ]
+        [CPPFLAGS="${CPPFLAGS} ${LUA_INCLUDE}" ; ]
         AC_DEFINE(USE_LUA,1,[use lua])
       ],
       [
