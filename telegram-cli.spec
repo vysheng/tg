@@ -7,7 +7,7 @@ Packager: 	Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 Group:		Internet/Messaging
 License:	GPLv2
 URL:		https://github.com/vysheng/tg
-Source0:	master.zip
+Source:	master.zip
 nosource:	0
 
 BuildRequires:	lua-devel, openssl-devel, libconfig-devel, readline-devel, wget
@@ -23,8 +23,8 @@ Telegram is an Open Source messaging platform for mobile, desktop focused on pri
 [ -d %{name} ] && rm -Rfv %{name}
 mkdir %{name}
 cd %{name}
-wget -O master.zip https://github.com/vysheng/tg/archive/master.zip
-unzip master.zip
+wget -O %{sources} https://github.com/vysheng/tg/archive/master.zip
+unzip %{sources}
 cd tg-master
 ./configure
 make %{?_smp_mflags}
