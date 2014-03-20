@@ -78,6 +78,7 @@
 #define CODE_input_peer_notify_settings_old 0x3cf4b1be
 #define CODE_peer_notify_settings_old 0xddbcd4a5
 #define CODE_user_profile_photo_old 0x990d1493
+#define CODE_config_old 0x232d5905
 
 #define CODE_msg_new_detailed_info 0x809db6df
 
