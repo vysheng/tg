@@ -117,7 +117,7 @@
 #define CODE_geo_point_empty 0x1117dd5f
 #define CODE_geo_point 0x2049d70c
 #define CODE_auth_checked_phone 0xe300cc3b
-#define CODE_auth_sent_code 0x2215bcbd
+#define CODE_auth_sent_code 0xefed51d9
 #define CODE_auth_authorization 0xf6b673a4
 #define CODE_auth_exported_authorization 0xdf969c2d
 #define CODE_input_notify_peer 0xb8bc5b0c

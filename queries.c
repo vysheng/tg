@@ -384,7 +384,9 @@ void do_help_get_config (void) {
 /* {{{ Send code */
 char *phone_code_hash;
 int send_code_on_answer (struct query *q UU) {
-  assert (fetch_int () == CODE_auth_sent_code);
+  assert (fetch_int () == (int)CODE_auth_sent_code);
+  fetch_bool ();
+  fetch_int (); 
   fetch_bool ();
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
