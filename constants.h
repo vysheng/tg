@@ -201,7 +201,7 @@
 #define CODE_photos_photo 0x20212ca8
 #define CODE_upload_file 0x96a18d5
 #define CODE_dc_option 0x2ec2a43c
-#define CODE_config 0x232d5905
+#define CODE_config 0x2e54dd74
 #define CODE_nearest_dc 0x8e1a1775
 #define CODE_help_app_update 0x8987f311
 #define CODE_help_no_app_update 0xc45a6536
@@ -379,4 +379,5 @@
 #define CODE_invoke_with_layer9 0x76715a63
 #define CODE_invoke_with_layer10 0x39620c41
 #define CODE_invoke_with_layer11 0xa6b88fdf
+#define CODE_invoke_with_layer12 0xdda60d3c
 #endif
