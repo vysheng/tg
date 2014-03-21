@@ -391,14 +391,14 @@ char *phone_code_hash;
 int send_code_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_sent_code);
   fetch_bool ();
-  fetch_int (); 
-  fetch_bool ();
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
   if (phone_code_hash) {
     tfree_str (phone_code_hash);
   }
   phone_code_hash = tstrndup (s, l);
+  fetch_int (); 
+  fetch_bool ();
   want_dc_num = -1;
   return 0;
 }
