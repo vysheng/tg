@@ -33,7 +33,7 @@ make %{?_smp_mflags}
 cd %{name}
 cd tg-master
 %{__install} -D -m0755 telegram %{buildroot}/usr/bin/telegram
-%{__install} -D -m0644 tg.pub %{buildroot}/etc/telegram/server.pub
+%{__install} -D -m0644 tg-server.pub %{buildroot}/etc/telegram/server.pub
 
 %files
 /usr/bin/telegram
