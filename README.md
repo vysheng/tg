@@ -39,6 +39,10 @@ On Fedora:
 On FreeBSD:
 
      pkg install libconfig libexecinfo lua52
+     
+On Arch Linux:
+
+      yaourt -S telegram-git
 
 On OpenBSD:
 
