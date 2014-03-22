@@ -1829,6 +1829,8 @@ int auth_is_success (void) {
 #define RANDSEED_PASSWORD_FILENAME     NULL
 #define RANDSEED_PASSWORD_LENGTH       0
 void on_start (void) {
+  size_t err_accu = 0;
+
   prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
 
   if (rsa_public_key_name) {
@@ -1837,12 +1839,23 @@ void on_start (void) {
       exit (1);
     }
   } else {
-    if (rsa_load_public_key (TG_SERVER_PUBKEY_FILENAME) < 0
-      && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
-      perror ("rsa_load_public_key");
-      exit (1);
+    /* First check under /etc so that packaged versions do not show the bogus
+     * warning of the public key not being found on the *source* root dir
+     * (i.e. TG_SERVER_PUBKEY_FILENAME.
+     */
+    if (rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
+        err_accu = 1;
+    }
+    if (err_accu == 1) {
+      if(rsa_load_public_key (TG_SERVER_PUBKEY_FILENAME) < 0) {
+        perror ("rsa_load_public_key"); 
+        exit (1);
+      } else {            
+         logprintf( "Public key found at %s\n", TG_SERVER_PUBKEY_FILENAME);
+      }
     }
   }
+
   pk_fingerprint = compute_rsa_key_fingerprint (pubKey);
 }
 
