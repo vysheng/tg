@@ -19,7 +19,10 @@
 */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
+#endif
+#ifdef USE_LUA
+# include "lua-tg.h"
 #endif
 
 #define        _FILE_OFFSET_BITS        64
@@ -1000,6 +1003,9 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
           pop_color ();
           print_end ();
+          #ifdef USE_LUA
+            lua_user_status_update (&U->user, &U->user.status.online);
+          #endif
         }
       } else {
         struct user_status t;

@@ -98,6 +98,12 @@ function on_user_update (user)
     vardump (user)
 end
 
+function on_user_status_update (user, online)
+	print (">---> on_user_status_update");
+	vardump (user)
+	vardump (online)
+end
+
 function on_chat_update (user)
     print (">---> on_chat_update");
     vardump (user)
