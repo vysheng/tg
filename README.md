@@ -43,11 +43,15 @@ On FreeBSD:
 On OpenBSD:
 
      pkg_add libconfig libexecinfo lua
-
+     
+     
 Then,
 
      ./configure
      make
+
+On Arch Linux:
+    Telegram can be installed via AUR, the package is called [telegram-git] (https://aur.archlinux.org/packages/telegram-git/)
 
 #### Mac OS X
 
