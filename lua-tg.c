@@ -232,6 +232,19 @@ void push_message (struct message *M) {
   }
 }
 
+void lua_scheduler_end (void) {
+  if (!have_file) { return; }
+  lua_settop (luaState, 0);
+  my_lua_checkstack (luaState, 20);
+  lua_getglobal (luaState, "on_second_scheduler_end");
+  assert (lua_gettop (luaState) == 1);
+
+  int r = lua_pcall (luaState, 0, 0, 0);
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+}
+
 void lua_binlog_end (void) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
