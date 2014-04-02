@@ -294,6 +294,7 @@ void work_timers (void) {
 }
 
 int max_chat_size;
+int max_bcast_size;
 int want_dc_num;
 int new_dc_num;
 extern struct dc *DC_list[];
@@ -308,7 +309,7 @@ void out_random (int n) {
 
 int allow_send_linux_version;
 void do_insert_header (void) {
-  out_int (CODE_invoke_with_layer11);  
+  out_int (CODE_invoke_with_layer12);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -346,7 +347,8 @@ void fetch_dc_option (void) {
 }
 
 int help_get_config_on_answer (struct query *q UU) {
-  assert (fetch_int () == CODE_config);
+  unsigned op = fetch_int ();
+  assert (op == CODE_config || op == CODE_config_old);
   fetch_int ();
 
   unsigned test_mode = fetch_int ();
@@ -364,6 +366,9 @@ int help_get_config_on_answer (struct query *q UU) {
     fetch_dc_option ();
   }
   max_chat_size = fetch_int ();
+  if (op == CODE_config) {
+    max_bcast_size = fetch_int ();
+  }
   if (verbosity >= 2) {
     logprintf ( "chat_size = %d\n", max_chat_size);
   }
@@ -384,7 +389,7 @@ void do_help_get_config (void) {
 /* {{{ Send code */
 char *phone_code_hash;
 int send_code_on_answer (struct query *q UU) {
-  assert (fetch_int () == CODE_auth_sent_code);
+  assert (fetch_int () == (int)CODE_auth_sent_code);
   fetch_bool ();
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
@@ -392,6 +397,8 @@ int send_code_on_answer (struct query *q UU) {
     tfree_str (phone_code_hash);
   }
   phone_code_hash = tstrndup (s, l);
+  fetch_int (); 
+  fetch_bool ();
   want_dc_num = -1;
   return 0;
 }

@@ -131,7 +131,7 @@ int Response_len;
  *
  */
 
-#define TG_SERVER_PUBKEY_FILENAME     "tg.pub"
+#define TG_SERVER_PUBKEY_FILENAME     "tg-server.pub"
 char *rsa_public_key_name; // = TG_SERVER_PUBKEY_FILENAME;
 RSA *pubKey;
 long long pk_fingerprint;

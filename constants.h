@@ -117,7 +117,7 @@
 #define CODE_geo_point_empty 0x1117dd5f
 #define CODE_geo_point 0x2049d70c
 #define CODE_auth_checked_phone 0xe300cc3b
-#define CODE_auth_sent_code 0x2215bcbd
+#define CODE_auth_sent_code 0xefed51d9
 #define CODE_auth_authorization 0xf6b673a4
 #define CODE_auth_exported_authorization 0xdf969c2d
 #define CODE_input_notify_peer 0xb8bc5b0c
@@ -201,7 +201,7 @@
 #define CODE_photos_photo 0x20212ca8
 #define CODE_upload_file 0x96a18d5
 #define CODE_dc_option 0x2ec2a43c
-#define CODE_config 0x232d5905
+#define CODE_config 0x2e54dd74
 #define CODE_nearest_dc 0x8e1a1775
 #define CODE_help_app_update 0x8987f311
 #define CODE_help_no_app_update 0xc45a6536
@@ -379,4 +379,5 @@
 #define CODE_invoke_with_layer9 0x76715a63
 #define CODE_invoke_with_layer10 0x39620c41
 #define CODE_invoke_with_layer11 0xa6b88fdf
+#define CODE_invoke_with_layer12 0xdda60d3c
 #endif

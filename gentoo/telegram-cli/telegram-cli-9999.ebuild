@@ -27,5 +27,5 @@ src_install() {
 	newbin telegram telegram-cli
 
 	insinto /etc/telegram-cli/
-	newins tg.pub server.pub
+	newins tg-server.pub server.pub
 }
