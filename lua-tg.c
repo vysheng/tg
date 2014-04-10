@@ -375,6 +375,10 @@ void lua_do_all (void) {
       tfree_str (lua_ptr[p + 1]);
       p += 2;
       break;
+		case 4:
+			do_send_photo(CODE_input_media_uploaded_photo,((peer_t *)lua_ptr[p])->id, lua_ptr[p + 1]);
+      p += 2;
+      break;
     case 1:
       do_forward_message (((peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1]);
       p += 2;
@@ -423,6 +427,39 @@ static int send_msg_from_lua (lua_State *L) {
   lua_ptr[pos ++] = tstrdup (msg);
   logprintf ("msg = %s\n", msg);
   
+  lua_pushboolean (L, 1);
+  return 1;
+}
+
+static int send_photo_from_lua (lua_State *L) {
+  if (MAX_LUA_COMMANDS - pos < 4) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  int n = lua_gettop (L);
+  if (n != 2) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  const char *s = lua_tostring (L, -2);
+  if (!s) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  const char *filename = lua_tostring (L, -1);
+  
+  peer_t *P = get_peer (s);
+  if (!P) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  
+  lua_ptr[pos ++] = (void *)2l;
+  lua_ptr[pos ++] = (void *)4l;
+  lua_ptr[pos ++] = P;
+  lua_ptr[pos ++] = tstrdup (filename);
+  logprintf ("filename = %s\n", filename);
+
   lua_pushboolean (L, 1);
   return 1;
 }
@@ -549,6 +586,7 @@ void lua_init (const char *file) {
 
   lua_register (luaState, "send_msg", send_msg_from_lua);
   lua_register (luaState, "fwd_msg", fwd_msg_from_lua);
+  lua_register (luaState, "send_photo", send_photo_from_lua);
   lua_register (luaState, "mark_read", mark_read_from_lua);
   lua_register (luaState, "postpone", postpone_from_lua);
 
