@@ -86,6 +86,16 @@ function fromCSV (value)
     return t
 end
 
+function file_exists (name)
+	local f = io.open( name, "r" )
+	if f ~= nil then
+		io.close(f)
+		return true
+	else
+		return false
+	end
+end
+
 -- no need to have all the functions in every script
 function on_msg_receive (msg) end
 function on_our_id (id) end

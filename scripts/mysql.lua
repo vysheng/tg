@@ -6,11 +6,22 @@ print (">---> Telegram-CLI Lua Script!")
 print (">---> read from and write to MySQL database/tables for incoming and outgoing messages")
 print ()
 
+-- check for mysql-conf file
+if not file_exists("./scripts/mysql.conf") then
+	f=io.open( "./scripts/mysql.conf", "w" )
+	f:write( 'db_db = "telegram"\n' )
+	f:write( 'db_user = "telegram"\n' )
+	f:write( 'db_pass = "telegram"\n' )
+	f:write( 'db_host = "127.0.0.1"\n' )
+	f:write( 'db_port = "3306"\n' )
+	f:close()
+end
 
 -- http://www.keplerproject.org/luasql/examples.html
 luasql = require "luasql.mysql"
+dofile "./scripts/mysql.conf"
 env = assert (luasql.mysql())
-con = assert (env:connect("telegram","telegram","telegram","127.0.0.1","3306"))
+con = assert (env:connect( db_db, db_user, db_pass, db_host, db_port ))
 
 res = assert (con:execute[[
 	CREATE TABLE IF NOT EXISTS `users` (

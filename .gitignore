@@ -7,3 +7,4 @@ config.log
 config.status
 .idea/
 nbproject/
+scripts/mysql.conf
