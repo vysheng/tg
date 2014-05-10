@@ -16,6 +16,7 @@ CC=@CC@
 OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o binlog.o tools.o lua-tg.o
 
 DESTDIR=/usr/local
+CONFDIR=/etc
 
 .SUFFIXES:
 
@@ -37,3 +38,8 @@ clean:
 
 install: telegram
 	install -D -m0755 telegram $(DESTDIR)/bin/telegram
+	install -D -m0644 tg-server.pub $(CONFDIR)/telegram/server.pub
+
+uninstall: telegram
+	rm $(DESTDIR)/bin/telegram
+	rm -rf $(CONFDIR)/telegram/
