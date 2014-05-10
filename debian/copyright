@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: telegram-cli
-Source: https://github.com/vysheng/tg
+Source: https://github.com/koter84/tg
 
 Files: *
 Copyright: 2013 Vitaly Valtman

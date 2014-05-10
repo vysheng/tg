@@ -4,11 +4,11 @@
 
 EAPI=5
 
-EGIT_REPO_URI="https://github.com/vysheng/tg.git"
+EGIT_REPO_URI="https://github.com/koter84/tg.git"
 inherit git-2
 IUSE="lua"
 DESCRIPTION="Command line interface client for Telegram"
-HOMEPAGE="https://github.com/vysheng/tg"
+HOMEPAGE="https://github.com/koter84/tg"
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"

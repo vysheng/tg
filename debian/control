@@ -11,9 +11,9 @@ Build-Depends: autoconf-archive,
                libssl-dev,
                lua5.2
 Standards-Version: 3.9.5
-Homepage: https://github.com/vysheng/tg
-Vcs-Git: git://github.com/vysheng/tg.git
-Vcs-Browser: https://github.com/vysheng/tg
+Homepage: https://github.com/koter84/tg
+Vcs-Git: git://github.com/koter84/tg.git
+Vcs-Browser: https://github.com/koter84/tg
 
 Package: telegram-cli
 Architecture: any
