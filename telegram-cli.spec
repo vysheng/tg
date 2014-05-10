@@ -1,12 +1,12 @@
 Name:       	telegram-cli
 Version:	0.1
-Release:	2%{?dist}
+Release:	3%{?dist}
 Summary:	Private fast and open platform for instant messaging
 
 Packager: 	Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 Group:		Internet/Messaging
-License:	GPL
-URL:		https://github.com/vysheng/tg
+License:	GPLv2
+URL:		https://github.com/koter84/tg
 Source:		https://github.com/koter84/tg/archive/master.zip
 
 BuildRequires:	lua-devel, openssl-devel, libconfig-devel, readline-devel
@@ -15,24 +15,38 @@ BuildRequires:	lua-devel, openssl-devel, libconfig-devel, readline-devel
 Telegram is an Open Source messaging platform for mobile, desktop focused on privacy.
 
 %prep
-%setup -n tg-master
-
-%configure
+[ -f %{sources} ] || 	wget -O %{sources} https://github.com/koter84/tg/archive/master.zip
+[ -d %{name} ] && rm -Rfv %{name}
+mkdir %{name}
+cd %{name}
+unzip %{sources}
+cd tg-master
+./configure
+make %{?_smp_mflags}
 
 %build
 %{__make} %{?_smp_mflags}
 
 %install
-make DESTDIR=%{buildroot}/usr install
-%{__install} -D -m0644 tg.pub %{buildroot}%{_sysconfdir}/telegram/server.pub
+cd %{name}
+cd tg-master
+%{__install} -D -m0755 telegram %{buildroot}%{_bindir}/telegram
+%{__install} -D -m0644 tg-server.pub %{buildroot}%{_sysconfdir}/telegram/server.pub
+#%{__install} -D -m0644 rpm/telegram-cli.repo %{buildroot}%{_sysconfdir}/yum.repos.d/telegram-cli.repo
 
 %files
 %{_bindir}/telegram
 %{_sysconfdir}/telegram/server.pub
+#%config %{_sysconfdir}/yum.repos.d/telegram-cli.repo
+
 
 %changelog
+* Sun Feb 23 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+- Add repo definition and increase rpm spec version
 * Sun Feb 16 2014 Iavael (iavaelooeyt@gmail.com)
 - Prettified spec file
+* Thu Feb 13 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+- Adapt spec file to be more compliant with Fedora Packaging Guidelines
 * Tue Feb 4 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 - Add server key to /etc/telegram/
 * Sat Feb 1 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
