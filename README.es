@@ -13,36 +13,45 @@ La documentación del protocolo MTproto está disponible aquí: http://core.tele
 Clona el Repositorio GitHub
 
     $ git clone https://github.com/vysheng/tg.git && cd tg
-    
+
 o descarga y descomprime el zip
 
     $ wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
     $ unzip tg-master.zip && cd tg-master
-    
-#### Linux
+
+#### Linux y BSDs
 
 Librerías requeridas: readline openssl y (si desea usar config) libconfig y liblua.
 Si no desea usarlos, emplee las siguientes opciones --disable-libconfig y --disable-liblua respectivamente.
 
-En Ubuntu utilice:
+En Ubuntu:
 
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
 
 En Gentoo:
-    
+
     $ sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
-    
+
 En Fedora:
 
     $ sudo yum install lua-devel openssl-devel libconfig-devel readline-devel
 
-Por defecto Makefile utiliza liblua5.2 de ubuntu. Si utiliza una versión diferente de liblua o linux, tendrá que ejecutar el script ./configure o recibirá un error de compilación extraño.
+En ArchLinux:
+
+    $ sudo pacman -S base-devel readline libconfig openssl lua
+
+En FreeBSD:
+
+    pkg install libconfig libexecinfo lua52
+
+En OpenBSD:
+
+    pkg_add libconfig libexecinfo lua
 
 A partir de ese punto:
 
     $ ./configure
     $ make
-
 
 #### Mac OS X
 
@@ -54,34 +63,32 @@ El cliente depende de [librería readline](http://cnswww.cns.cwru.edu/php/chet/r
     $ export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
     $ export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
     $ ./configure && make
-    
+
 Gracias a [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) por esta solución.
 
-#### FreeBSD
 
 Instalar estos ports:
 
 * devel/libconfig
 * devel/libexecinfo
+* lang/lua52
 
 Para entonces construir usando:
 
     $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure
     $ make
-    
+
 #### Otros UNIX
 
 Háganos saber si ha logrado ejecutarlo en otros UNIX.
 
-
 ### Uso
 
-    ./telegram -k <clave-servidor-público>
+    ./telegram
     
-
 Por defecto la clave pública se almacena en la misma carpeta con el nombre tg-server.pub o en /etc/telegram/server.pub, si no lo es, indica dónde encontrarlo:
 
-    ./telegram -k tg-server.pub
+    ./telegram -k <public-server-key>
 
 El Cliente soporta completado con TAB e historial de comandos.
 
@@ -95,7 +102,6 @@ Si dos o más peers tienen el mismo nombre, una almohadilla y un número se aña
 ### Comandos
 
 #### Mensajería
-
 
 * **msg** \<peer\> texto - envía el mensaje a este usuario.
 * **fwd** \<usuario\> \<numero-mensaje\> - reenviar un mensaje al usuario. Puedes ver los número de mensajes iniciando el Cliente con -N.
@@ -111,7 +117,6 @@ Si dos o más peers tienen el mismo nombre, una almohadilla y un número se aña
 * **send_text** \<peer\> \<nombre-archivo-texto> - envía un archivo de texto como un mensaje en plano.
 * **load_photo**/load_video/load_video_thumb \<numero-mensaje\> - carga foto/video indicado del directorio de descarga.
 * **view_photo**/view_video/view_video_thumb \<numero-mensaje\> - carga foto/video indicado del directorio de descarga y lo abre con el visor por defecto del sistema.
-
 
 #### Opciones de chat de grupo
 
