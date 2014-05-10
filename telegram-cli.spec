@@ -22,9 +22,10 @@ cd %{name}
 unzip %{sources}
 cd tg-master
 ./configure
-make %{?_smp_mflags}
 
 %build
+cd %{name}
+cd tg-master
 %{__make} %{?_smp_mflags}
 
 %install
@@ -41,11 +42,13 @@ cd tg-master
 
 
 %changelog
-* Sun Feb 23 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+* Sat May 10 2014 Dennis Koot (koter84@gmail.com)
+- Fixed building packages on Fedora
+* Sun Feb 23 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 - Add repo definition and increase rpm spec version
 * Sun Feb 16 2014 Iavael (iavaelooeyt@gmail.com)
 - Prettified spec file
-* Thu Feb 13 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com
+* Thu Feb 13 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 - Adapt spec file to be more compliant with Fedora Packaging Guidelines
 * Tue Feb 4 2014 Pablo Iranzo Gómez (Pablo.Iranzo@gmail.com)
 - Add server key to /etc/telegram/
