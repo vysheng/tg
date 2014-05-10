@@ -34,9 +34,5 @@ clean:
 	rm -rf *.o telegram config.log config.status > /dev/null || echo "all clean"
 
 install: telegram
-	install -D -m0755 telegram $(DESTDIR)/usr/local/bin/telegram
+	install -D -m0755 telegram $(DESTDIR)/usr/bin/telegram
 	install -D -m0644 tg-server.pub $(DESTDIR)/etc/telegram/server.pub
-
-uninstall: telegram
-	rm $(DESTDIR)/usr/local/bin/telegram
-	rm -rf $(DESTDIR)/etc/telegram/
