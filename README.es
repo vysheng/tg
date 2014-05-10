@@ -82,6 +82,16 @@ Para entonces construir usando:
 
 Háganos saber si ha logrado ejecutarlo en otros UNIX.
 
+
+
+
+
+
+
+
+
+
+
 ### Uso
 
     ./telegram

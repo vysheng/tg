@@ -24,7 +24,7 @@ or download and extract zip
 Install libs: readline or libedit, openssl and (if you want to use config) libconfig and liblua.
 If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively.
 
-On Ubuntu:
+On Debian/Ubuntu:
 
     $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
 
@@ -52,6 +52,7 @@ Then, on all Linux and BSDs
 
     $ ./configure
     $ make
+    $ sudo make install
 
 #### Mac OS X
 
@@ -81,6 +82,16 @@ Then build:
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
+
+### Building Packages
+
+On Fedora
+
+    rpmbuild -ba telegram-cli.spec
+
+On Debian/Ubuntu (not working)
+
+    dpkg-buildpackage -B
 
 ### Usage
 
