@@ -320,6 +320,22 @@ void lua_user_update (struct user *U) {
   }
 }
 
+void lua_user_status_update (struct user *U, int *online) {
+  if (!have_file) { return; }
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+  lua_getglobal (luaState, "on_user_status_update");
+  push_peer (U->id, (void *)U);
+  lua_pushnumber(luaState, (lua_Number)*online);
+  assert (lua_gettop (luaState) == 3);
+
+  int r = lua_pcall (luaState, 2, 0, 0);
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+}
+
 void lua_chat_update (struct chat *C) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
