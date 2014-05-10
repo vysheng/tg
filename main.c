@@ -361,7 +361,7 @@ void usage (void) {
   printf (" -B                 enable binlog\n");
   printf (" -E                 disable auto accept\n");
   printf (" -w                 allow weak random\n");
-  printf (" -s                 specify lua script\n");
+  printf (" -s script-file     specify lua script\n");
   printf (" -W                 wait dialog list\n");
   printf ("\n");
 
