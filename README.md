@@ -89,7 +89,7 @@ On Fedora
 
     rpmbuild -ba telegram-cli.spec
 
-On Debian/Ubuntu (not working)
+On Debian/Ubuntu
 
     dpkg-buildpackage -B
 
