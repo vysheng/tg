@@ -92,7 +92,7 @@ int sync_from_start;
 int allow_weak_random;
 
 void set_default_username (const char *s) {
-  if (default_username) { 
+  if (default_username) {
     tfree_str (default_username);
   }
   default_username = tstrdup (s);
@@ -129,11 +129,16 @@ void set_terminal_attributes (void) {
 }
 /* }}} */
 
+int str_nonempty (char *str) {
+  return ((str != NULL) && (strlen(str) > 0));
+}
+
 char *get_home_directory (void) {
   static char *home_directory = NULL;
-  if (home_directory != NULL) {
-    return home_directory;
-  }
+  home_directory = getenv("TELEGRAM_HOME");
+  if (str_nonempty (home_directory)) { return tstrdup (home_directory); }
+  home_directory = getenv("HOME");
+  if (str_nonempty (home_directory)) { return tstrdup (home_directory); }
   struct passwd *current_passwd;
   uid_t user_id;
   setpwent ();
@@ -145,14 +150,14 @@ char *get_home_directory (void) {
     }
   }
   endpwent ();
-  if (home_directory == NULL) {
-    home_directory = tstrdup (".");
-  }
+  if (!str_nonempty (home_directory)) { home_directory = tstrdup ("."); }
   return home_directory;
 }
 
 char *get_config_directory (void) {
   char *config_directory;
+  config_directory = getenv("TELEGRAM_CONFIG_DIR");
+  if (str_nonempty (config_directory)) { return tstrdup (config_directory); }
   tasprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ());
   return config_directory;
 }
@@ -206,11 +211,11 @@ void running_for_first_time (void) {
   if (config_filename) {
     return; // Do not create custom config file
   }
-  tasprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE);
+  char *config_directory = get_config_directory ();
+  tasprintf (&config_filename, "%s/%s", config_directory, CONFIG_FILE);
   config_filename = make_full_path (config_filename);
 
   int config_file_fd;
-  char *config_directory = get_config_directory ();
   //char *downloads_directory = get_downloads_directory ();
 
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
@@ -225,6 +230,7 @@ void running_for_first_time (void) {
     config_file_fd = open (config_filename, O_CREAT | O_RDWR, 0600);
     if (config_file_fd == -1)  {
       perror ("open[config_file]");
+      printf ("I: config_file=[%s]\n", config_filename);
       exit (EXIT_FAILURE);
     }
     if (write (config_file_fd, DEFAULT_CONFIG_CONTENTS, strlen (DEFAULT_CONFIG_CONTENTS)) <= 0) {
@@ -238,7 +244,7 @@ void running_for_first_time (void) {
     close (auth_file_fd);
 
     printf ("[%s] created\n", config_filename);*/
-  
+
     /* create downloads directory */
     /*if (mkdir (downloads_directory, 0755) !=0) {
       perror ("creating download directory");
@@ -249,7 +255,7 @@ void running_for_first_time (void) {
 
 #ifdef HAVE_LIBCONFIG
 void parse_config_val (config_t *conf, char **s, char *param_name, const char *default_name, const char *path) {
-  static char buf[1000]; 
+  static char buf[1000];
   int l = 0;
   if (prefix) {
     l = strlen (prefix);
@@ -277,7 +283,7 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
 
 void parse_config (void) {
   config_filename = make_full_path (config_filename);
-  
+
   config_t conf;
   config_init (&conf);
   if (config_read_file (&conf, config_filename) != CONFIG_TRUE) {
@@ -299,18 +305,21 @@ void parse_config (void) {
   test_dc = 0;
   strcpy (buf + l, "test");
   config_lookup_bool (&conf, buf, &test_dc);
-  
+
   strcpy (buf + l, "log_level");
   long long t = log_level;
   config_lookup_int (&conf, buf, (void *)&t);
   log_level = t;
-  
+
   if (!msg_num_mode) {
     strcpy (buf + l, "msg_num");
     config_lookup_bool (&conf, buf, &msg_num_mode);
   }
 
-  parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
+  // why not get_config_directory? -> parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
+  if (!str_nonempty(config_directory)) {
+    config_directory = get_config_directory ();
+  }
   config_directory = make_full_path (config_directory);
 
   parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
@@ -318,10 +327,10 @@ void parse_config (void) {
   parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
   parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
-  
+
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
-  
+
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
     printf ("[%s] created\n", config_directory);
   }
@@ -417,7 +426,7 @@ void args_parse (int argc, char **argv) {
       binlog_enabled = 1;
       break;
     case 'L':
-      if (log_net_file) { 
+      if (log_net_file) {
         usage ();
       }
       log_net_file = tstrdup (optarg);
@@ -460,7 +469,7 @@ void print_backtrace (void) {
 
 void sig_segv_handler (int signum __attribute__ ((unused))) {
   set_terminal_attributes ();
-  if (write (1, "SIGSEGV received\n", 18) < 0) { 
+  if (write (1, "SIGSEGV received\n", 18) < 0) {
     // Sad thing
   }
   print_backtrace ();
@@ -469,7 +478,7 @@ void sig_segv_handler (int signum __attribute__ ((unused))) {
 
 void sig_abrt_handler (int signum __attribute__ ((unused))) {
   set_terminal_attributes ();
-  if (write (1, "SIGABRT received\n", 18) < 0) { 
+  if (write (1, "SIGABRT received\n", 18) < 0) {
     // Sad thing
   }
   print_backtrace ();
@@ -481,7 +490,7 @@ int main (int argc, char **argv) {
   signal (SIGABRT, sig_abrt_handler);
 
   log_level = 10;
-  
+
   args_parse (argc, argv);
   printf (
     "Telegram-client version " TG_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
@@ -502,6 +511,6 @@ int main (int argc, char **argv) {
   #endif
 
   inner_main ();
-  
+
   return 0;
 }
