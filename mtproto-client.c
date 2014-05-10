@@ -140,7 +140,9 @@ static int rsa_load_public_key (const char *public_key_name) {
   pubKey = NULL;
   FILE *f = fopen (public_key_name, "r");
   if (f == NULL) {
-    logprintf ( "Couldn't open public key file: %s\n", public_key_name);
+    if (verbosity) {
+      logprintf ( "Couldn't open public key file: %s\n", public_key_name);
+    }
     return -1;
   }
   pubKey = PEM_read_RSAPublicKey (f, NULL, NULL, NULL);
