@@ -28,7 +28,7 @@ struct dc;
 #define TG_APP_ID 2899
 #define TG_BUILD "209"
 
-#define TG_VERSION "0.01-beta"
+#define TG_VERSION "0.1"
 
 #define ACK_TIMEOUT 1
 #define MAX_DC_ID 10

@@ -58,7 +58,7 @@
 #endif
 
 #define PROGNAME "telegram-client"
-#define VERSION "0.01"
+#define VERSION "0.1"
 
 #define CONFIG_DIRECTORY "." PROG_NAME
 #define CONFIG_FILE "config"
