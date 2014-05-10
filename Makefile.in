@@ -15,9 +15,6 @@ INCLUDE=-I. -I${srcdir}
 CC=@CC@
 OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o binlog.o tools.o lua-tg.o
 
-DESTDIR=/usr/local
-CONFDIR=/etc
-
 .SUFFIXES:
 
 .SUFFIXES: .c .h .o
@@ -37,9 +34,9 @@ clean:
 	rm -rf *.o telegram config.log config.status > /dev/null || echo "all clean"
 
 install: telegram
-	install -D -m0755 telegram $(DESTDIR)/bin/telegram
-	install -D -m0644 tg-server.pub $(CONFDIR)/telegram/server.pub
+	install -D -m0755 telegram $(DESTDIR)/usr/local/bin/telegram
+	install -D -m0644 tg-server.pub $(CONFDIR)/etc/telegram/server.pub
 
 uninstall: telegram
-	rm $(DESTDIR)/bin/telegram
-	rm -rf $(CONFDIR)/telegram/
+	rm $(DESTDIR)/usr/local/bin/telegram
+	rm -rf $(DESTDIR)/etc/telegram/
