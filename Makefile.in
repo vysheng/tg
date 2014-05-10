@@ -35,7 +35,7 @@ clean:
 
 install: telegram
 	install -D -m0755 telegram $(DESTDIR)/usr/local/bin/telegram
-	install -D -m0644 tg-server.pub $(CONFDIR)/etc/telegram/server.pub
+	install -D -m0644 tg-server.pub $(DESTDIR)/etc/telegram/server.pub
 
 uninstall: telegram
 	rm $(DESTDIR)/usr/local/bin/telegram
