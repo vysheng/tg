@@ -79,11 +79,7 @@ Háganos saber si ha logrado ejecutarlo en otros UNIX.
     ./telegram -k <clave-servidor-público>
     
 
-<<<<<<< HEAD
-Por defecto la clave pública se almacena en la misma carpeta con el nombre tg.pub o en /etc/telegram/server.pub, si no es así, indique la ubicación:
-=======
 Por defecto la clave pública se almacena en la misma carpeta con el nombre tg-server.pub o en /etc/telegram/server.pub, si no lo es, indica dónde encontrarlo:
->>>>>>> 1dad2e89933085ea1e3d9fb1becb1907ce5de55f
 
     ./telegram -k tg-server.pub
 

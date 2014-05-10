@@ -40,14 +40,11 @@ On FreeBSD:
 
      pkg install libconfig libexecinfo lua52
 
-<<<<<<< HEAD
 On ArchLinux:
-    $sudo pacman -S base-devel readline libconfig openssl lua
 
-Default Makefile uses liblua5.2 from ubuntu. If you use different version of liblua or linux you have to run ./configure script or you will get some strange compilation error. 
-=======
+     $sudo pacman -S base-devel readline libconfig openssl lua
+
 On OpenBSD:
->>>>>>> 046b8f7a8aa4e96b9d51aa4bd9664acf0739cf4f
 
      pkg_add libconfig libexecinfo lua
 
