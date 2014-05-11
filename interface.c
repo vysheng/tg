@@ -895,6 +895,7 @@ void interpreter (char *line UU) {
       "rename_contact <user> <first-name> <last-name> - tries to rename contact. If you have another device it will be a fight\n"
       "suggested_contacts - print info about contacts, you have max common friends\n"
       "visualize_key <secret_chat> - prints visualization of encryption key. You should compare it to your partner's one\n"
+      "get <param>. Possible <param> values are the same as for the set command. gets the current value\n"
       "set <param> <param-value>. Possible <param> values are:\n"
       "\tdebug_verbosity - just as it sounds. Debug verbosity\n"
       "\tlog_level - level of logging of new events. Lower is less verbose:\n"
@@ -1069,6 +1070,17 @@ void interpreter (char *line UU) {
     } else {
       printf ("Bad msg id\n");
       RET;
+    }
+  } else if (IS_WORD ("get")) {
+    command = next_token (&l);
+    if (IS_WORD ("debug_verbosity")) {
+      printf("verbosity = %d\n", verbosity);
+    } else if (IS_WORD ("log_level")) {
+      printf("log_level = %d\n", log_level);
+    } else if (IS_WORD ("msg_num")) {
+      printf("msg_num_mode = %d\n", msg_num_mode);
+    } else if (IS_WORD ("alert")) {
+      printf("alert = %d\n", alert_sound);
     }
   } else if (IS_WORD ("set")) {
     command = next_token (&l);

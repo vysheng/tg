@@ -88,6 +88,7 @@ char *config_directory;
 char *binlog_file_name;
 int binlog_enabled;
 extern int log_level;
+extern int alert_sound;
 int sync_from_start;
 int allow_weak_random;
 
@@ -311,6 +312,11 @@ void parse_config (void) {
   config_lookup_int (&conf, buf, (void *)&t);
   log_level = t;
 
+  strcpy (buf + l, "alert");
+  long long s = alert_sound;
+  config_lookup_int (&conf, buf, (void *)&s);
+  alert_sound = s;
+
   if (!msg_num_mode) {
     strcpy (buf + l, "msg_num");
     config_lookup_bool (&conf, buf, &msg_num_mode);
@@ -498,9 +504,10 @@ int main (int argc, char **argv) {
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; type `show_license' for details.\n"
   );
-  running_for_first_time ();
-  parse_config ();
 
+  running_for_first_time ();
+
+  parse_config ();
 
   get_terminal_attributes ();
 
