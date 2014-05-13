@@ -1,18 +1,65 @@
+env:
+#  - TRAVIS_ARCH=i386
+  - TRAVIS_ARCH=amd64
+
+os:
+  - linux
+  - osx
+
 language: c
 
 compiler:
   - gcc
-  - clang
+#  - clang
 
 before_install:
-  - sudo apt-get update
+  - if [ "${TRAVIS_ARCH}" = "" ]; then TRAVIS_ARCH="amd64"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "" ]; then TRAVIS_OS_NAME="linux"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get update; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew update; fi
 
 install:
-  - sudo apt-get install libconfig8-dev
-  - sudo apt-get install libreadline6-dev
-  - sudo apt-get install libssl-dev
-  - sudo apt-get install liblua5.2-dev lua5.2
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get install libconfig8-dev libreadline6-dev libssl-dev liblua5.2-dev lua5.2; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get install autoconf-archive; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install libconfig readline lua; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"; fi
+
+before_script:
+  - gem install travis-artifacts
 
 script:
   - ./configure
   - make
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then dpkg-buildpackage -B; fi
+
+after_success:
+  # travis-artifacts
+  - mkdir artifacts
+  - cp telegram ./artifacts/telegram_${TRAVIS_OS_NAME}_${TRAVIS_ARCH}_${CC}
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then cp ../telegram-cli*.deb ./artifacts/; fi
+  - travis-artifacts upload --target-path ${TRAVIS_BUILD_NUMBER} --path ./artifacts/
+
+after_script:
+  - travis-artifacts upload --target-path ${TRAVIS_BUILD_NUMBER} --path config.log:config_${TRAVIS_OS_NAME}_${TRAVIS_ARCH}_${CC}.log
+
+env:
+  global:
+    - ARTIFACTS_S3_BUCKET=telegram-artifacts
+    - ARTIFACTS_AWS_REGION=eu-west-1
+    # ARTIFACTS_AWS_ACCESS_KEY_ID
+    - secure: "QCNagaugdIPfFc/SoAV3GoQTP2diOcoK4crOL60/Pe5gxPQWBWl+k3r6sOi4ImFZmX/5rtSHuM4tOjnU0cIwvVScwcAu9XBKH5Pxp9Xv820sIoFqn6Y4nzarvQQz1AMrmtpqDhYomL6HWTaf8LH+3Dme5mKKBv4yQZsuUwsa0lo="
+    # ARTIFACTS_AWS_SECRET_ACCESS_KEY
+    - secure: "aWUEMLEfcYCdRHr2Zi4mq+2AGRRi9zNrbpjqaw/2nzB5o2I/8GQ8sTtLzmM3wtmmcLlRFv9g+qI38o0ESrTYIDdHnVt2SkhyRzXpO5bTfwy5jdP8dak/XyJqnPUXyDqjWCVFF2Hy3RG339XuU/pH8BQtZ6XWlyaiAbgxS3ZnvTg="
+    # COVERITY_SCAN_TOKEN
+    - secure: "SLeBZkqD4rO8Gh/KVGL3LckLtSX17PlD0dcHI7g2OJfttLuglYbI0S+tOWXAaHbrQ+tLfanjQ0NEFKgTYhybTqKc9hSgCGo+0QuUfzLRd+zL5SOc6fUrmuJ/sQRKINRIlvkxs5JlE7QBMy3XcFPy/XI0PqRn57kBmuewo0ex5FE="
+
+addons:
+  coverity_scan:
+    project:
+      name: "koter84/tg"
+      description: "Telegram Messenger Command Line Client"
+    notification_email: koter84@gmail.com
+    build_command_prepend:
+    build_command:
+    branch_pattern: coverity_scan
