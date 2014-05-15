@@ -4,7 +4,7 @@ env:
 
 os:
   - linux
-  - osx
+#  - osx
 
 language: c
 
@@ -60,6 +60,6 @@ addons:
       name: "koter84/tg"
       description: "Telegram Messenger Command Line Client"
     notification_email: koter84@gmail.com
-    build_command_prepend:
-    build_command:
-    branch_pattern: coverity_scan
+    build_command_prepend: "./configure"
+    build_command: "make"
+    branch_pattern: master
