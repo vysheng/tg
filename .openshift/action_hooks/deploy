@@ -1,0 +1,19 @@
+#!/bin/bash
+# this script gets run on deploy
+
+cd ${OPENSHIFT_REPO_DIR}
+
+./configure
+make
+rpmbuild -ba telegram-cli.spec
+
+# cp artifacts to build-directory
+# just need a way to decide which one that will/must be
+# maybe sync a small info-file beforehand?
+# this info-file could also be used for the web-frontend
+# info-file contents
+# - build-number	TRAVIS_BUILD_NUMBER
+# - commit		TRAVIS_COMMIT
+# - branch		TRAVIS_BRANCH
+# - tag (v0.2 etc)	TRAVIS_TAG
+
