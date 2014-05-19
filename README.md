@@ -1,4 +1,4 @@
-## Telegram messenger CLI [![Build Status](https://travis-ci.org/koter84/tg.svg?branch=master)](https://travis-ci.org/koter84/tg)
+## Telegram messenger CLI [![Build Status](https://travis-ci.org/koter84/tg.svg?branch=master)](https://travis-ci.org/koter84/tg) [![Coverity Scan](https://scan.coverity.com/projects/2233/badge.svg)](https://scan.coverity.com/projects/2233/)
 
 Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
 
@@ -7,6 +7,14 @@ Command-line interface for [Telegram](http://telegram.org). Uses readline interf
 Documentation for Telegram API is available here: http://core.telegram.org/api
 
 Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
+
+### Download Binaries
+
+After Travis-CI is done testing it uploads it's build artifacts to https://tg-koter84.rhcloud.com
+
+For now there is a Mac OS X and a Ubuntu build environment. The Ubuntu build also generates a installable amd64 .deb file.
+
+On my ToDo-list is building an .rpm on OpenShift, build a Mac OS X package, and maybe put some effort in building 32bit versions.
 
 ### Installation
 
@@ -56,28 +64,13 @@ Then, on all Linux and BSDs
 
 #### Mac OS X
 
-The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually, e.g. using [Homebrew](http://brew.sh/).
+The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. Lua is optional. You have to install these libraries manually, e.g. using [Homebrew](http://brew.sh/).
 
-    $ brew install libconfig
-    $ brew install readline
-    $ brew install lua
-    $ export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
-    $ export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
-    $ ./configure && make
+    $ brew install libconfig readline lua
+    $ ./configure
+    $ make
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
-
-
-Install these ports:
-
-* devel/libconfig
-* devel/libexecinfo
-* lang/lua52
-
-Then build:
-
-    $ env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
-    $ make
 
 #### Other UNIX
 

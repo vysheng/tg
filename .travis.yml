@@ -4,7 +4,7 @@ env:
 
 os:
   - linux
-#  - osx
+  - osx
 
 language: c
 
@@ -15,44 +15,68 @@ compiler:
 before_install:
   - if [ "${TRAVIS_ARCH}" = "" ]; then TRAVIS_ARCH="amd64"; fi
   - if [ "${TRAVIS_OS_NAME}" = "" ]; then TRAVIS_OS_NAME="linux"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get update; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew update; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" = "1" ] && [ [ "${CC}" != "gcc" ] || [ "${TRAVIS_ARCH}" != "amd64" ] || [ "${TRAVIS_OS_NAME}" != "linux" ] ]; then COVERITY_SCAN_BRANCH=0; fi
 
 install:
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get update; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get install libconfig8-dev libreadline6-dev libssl-dev liblua5.2-dev lua5.2; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sudo apt-get install autoconf-archive; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew update; fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install libconfig readline lua; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"; fi
 
 before_script:
-  - gem install travis-artifacts
+  - mkdir ~/artifacts
 
 script:
-  - ./configure
-  - make
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then dpkg-buildpackage -B; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" = "0" ]; then ./configure; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" = "0" ]; then make; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then dpkg-buildpackage -B; fi
+# - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PackageMaker: http://www.osxgnu.org/info/osxpackages.html; fi
 
 after_success:
-  # travis-artifacts
-  - mkdir artifacts
-  - cp telegram ./artifacts/telegram_${TRAVIS_OS_NAME}_${TRAVIS_ARCH}_${CC}
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "gcc" ]; then cp ../telegram-cli*.deb ./artifacts/; fi
-  - travis-artifacts upload --target-path ${TRAVIS_BUILD_NUMBER} --path ./artifacts/
+  - cp config.log ~/artifacts/
+  - cp telegram ~/artifacts/
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then cp ../telegram-cli*.deb ~/artifacts/; fi
+
+after_failure:
+  - cp config.log ~/artifacts/
+
+before_deploy: 
+  - "echo 'Deploy Begin'"
+  - git config --global user.email 'travis@travis-ci.com'
+  - git config --global user.name 'Travis CI'
+  - git config --global push.default matching
+  - git fetch --unshallow
+# ToDo - openshift won't auto-switch to a branch which isn't master... so pushing when not master has no use
+
+deploy:
+  provider: openshift
+  user: koter84@gmail.com
+  password:
+    secure: JmbsfGZPPm42DB9IB0HO4IHpQ79EOv5josbt67WoQDl6LbVmiYHNF5qYT15mJJH8BkDh3V2YfZALv6klwubcDBna3G9eLr6n0cuFxyCjcjRinbyKlBLBGuKJ/czRPtPTRP2RCUFS6YTqUEN22ZpTZntolh3seN/9i7JAW2ZXNrg=
+  app: tg
+  domain: koter84
+  on:
+    repo: koter84/tg
+    all_branches: true
+    condition: "${CC} = gcc"
+    condition: "${TRAVIS_ARCH} = amd64"
+    condition: "${TRAVIS_OS_NAME} = linux"
+
+after_deploy:
+  - "echo 'Deploy End'"
 
 after_script:
-  - travis-artifacts upload --target-path ${TRAVIS_BUILD_NUMBER} --path config.log:config_${TRAVIS_OS_NAME}_${TRAVIS_ARCH}_${CC}.log
-
-env:
-  global:
-    - ARTIFACTS_S3_BUCKET=telegram-artifacts
-    - ARTIFACTS_AWS_REGION=eu-west-1
-    # ARTIFACTS_AWS_ACCESS_KEY_ID
-    - secure: "QCNagaugdIPfFc/SoAV3GoQTP2diOcoK4crOL60/Pe5gxPQWBWl+k3r6sOi4ImFZmX/5rtSHuM4tOjnU0cIwvVScwcAu9XBKH5Pxp9Xv820sIoFqn6Y4nzarvQQz1AMrmtpqDhYomL6HWTaf8LH+3Dme5mKKBv4yQZsuUwsa0lo="
-    # ARTIFACTS_AWS_SECRET_ACCESS_KEY
-    - secure: "aWUEMLEfcYCdRHr2Zi4mq+2AGRRi9zNrbpjqaw/2nzB5o2I/8GQ8sTtLzmM3wtmmcLlRFv9g+qI38o0ESrTYIDdHnVt2SkhyRzXpO5bTfwy5jdP8dak/XyJqnPUXyDqjWCVFF2Hy3RG339XuU/pH8BQtZ6XWlyaiAbgxS3ZnvTg="
-    # COVERITY_SCAN_TOKEN
-    - secure: "SLeBZkqD4rO8Gh/KVGL3LckLtSX17PlD0dcHI7g2OJfttLuglYbI0S+tOWXAaHbrQ+tLfanjQ0NEFKgTYhybTqKc9hSgCGo+0QuUfzLRd+zL5SOc6fUrmuJ/sQRKINRIlvkxs5JlE7QBMy3XcFPy/XI0PqRn57kBmuewo0ex5FE="
+  - for i in {0..22}; do eval $(printf "echo \$id_rsa_%02d\n" $i) >> ~/.ssh/id_rsa_base64; done
+  - base64 --decode ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
+  - chmod 600 ~/.ssh/id_rsa
+  - for i in {0..5}; do eval $(printf "echo \$id_rsa_pub_%02d\n" $i) >> ~/.ssh/id_rsa_base64.pub; done
+  - base64 --decode ~/.ssh/id_rsa_base64.pub > ~/.ssh/id_rsa.pub
+  - chmod 600 ~/.ssh/id_rsa.pub
+  - AUSR="53748f4a4382eca6fc0000ec"
+  - ADIR="app-root/data/${TRAVIS_BUILD_NUMBER}/${TRAVIS_OS_NAME}_${TRAVIS_ARCH}_${CC}"
+  - ssh -oStrictHostKeyChecking=no $AUSR@tg-koter84.rhcloud.com mkdir -p ./$ADIR/
+  - rsync --progress --recursive --stats --human-readable ~/artifacts/ $AUSR@tg-koter84.rhcloud.com:$ADIR/
 
 addons:
   coverity_scan:
@@ -63,3 +87,39 @@ addons:
     build_command_prepend: "./configure"
     build_command: "make"
     branch_pattern: master
+
+env:
+  global:
+    # COVERITY_SCAN_TOKEN
+    - secure: "SLeBZkqD4rO8Gh/KVGL3LckLtSX17PlD0dcHI7g2OJfttLuglYbI0S+tOWXAaHbrQ+tLfanjQ0NEFKgTYhybTqKc9hSgCGo+0QuUfzLRd+zL5SOc6fUrmuJ/sQRKINRIlvkxs5JlE7QBMy3XcFPy/XI0PqRn57kBmuewo0ex5FE="
+    # id_rsa_00-22
+    - secure: "fFZYtPO0tdfqtkCAk/297XPYnYbF7lZJOEHpuqInBKALIuz5cEnunq6JlfOa5Q4jsOOCd5bhMJ4Pkjs/Uo0twZLVxWXSBei4BOajIv5b7v3Dg4eIr5K9OHZ+TCwF3PtKD5YSWKrtTrns51C1pDXlSj9MNzeywzeIvQSdJQoOzQs="
+    - secure: "fG4C62LMkH1pYAnwwziFw5VvuXAKg5ehi02TN5YXCdbD/d0KwbdTHQWSZwQqtBHbV1G2Tt62gmzQkbZghUXz2461W0dW/v/qarVLrZ+kLlAea5iUF6iV0Sy8+6KYuF9cLPhiYBxiVWUjhE1xqdUV918tOaxDhgCdVQZjioQJm04="
+    - secure: "MIHlyjZv6vkX3JWCHLGOpXYJcXB/1eSg9sw3+7qLtqOIdL1bGLUJs6ifgecoRMtEUQrquW87f7jpSgeqKHDTVGciMfHUKZnZR4v+WUAhNC/flMD2vEHF54dsZGMXutyvFBfbiVwz6/g6M9cIz9gQhdDpv/f8mOmT7TQelabv5ag="
+    - secure: "Dgl0xYF2rIs15DTP5LEzUm52RLW0xiPvoAOVNjDIWvplv5J9MZ8gWmezG7ZzDNfQfhFDxU2YtVQTNaBwYcpAUXh5mkL5Rhy2YbCRu7iwFjOS4espNIOEEp/QBs4q9J/5Ab8jQccVbHaYEZAJUpn9i6veWPoJ3zKfpyOmo7u8QGw="
+    - secure: "UGiRvypB28+k2bT+5Fer0fQ5f0GwcDa3xHhkHmCYj1vyPET1tKYmCkA+7Ph2wQyzI8Nd81mXzlR3oxCGvNBZn9jbBrlPfk6STOUnxjx/lXnndceA3/iPICN8rAUXB9KypRLeczhw0wtDY+HDsSoJlI6nGjM6Id+Yuxd9P8wMLDE="
+    - secure: "DV3ZotNSrwJUQ0iVZrzIKvYtbP8IDI3EWI7+9P6T0mcDzr+99LsiKOycgU5vLnw4K3Dgeg/919bluarFqMy8tsbDx9esvqiPVCOH8lQObXlG1pR9yfkp44dDG0b/sNQwxUtkppPPbux/Fbx4v8lK+wENz4o5FLhNuDy95js8HDU="
+    - secure: "YaS12qCoElIff6duzfP0/mXm6Q5syU/Un23CGybKOEEC/oe4Ex20I5VL8Y8k9Ho+AT2hx2YpxMjEkLNshPyciPXHyfz4RseGK8dlt8arcVnXaqdBX3hrIgo94x7i9Rm7/Gd2+wvwLWq3sJuXc5nW2tF5J6RWfcVVRLD/IV+hxE8="
+    - secure: "EAFaW/vdo2v2ehvT5PfAex9jPnE0NhsReSy3nDMld9lpHrXHSyG0vw8pdJRIkynivMZWyFFPRts1/4FSftw7+ZZofFc6lUkBucaMsZ7Y+fU5OJIRR+eBJUiHprMC7ZHm0mKNoaisMAoB3Tm+a1ltP0PzGE2esXEZAuHt/Cu067E="
+    - secure: "CMJ/VzUhDUPHABhKpew0uIx8S+FuncEPGNTBEs6onkgfsfPNT+C3BIug1hkEvZsqpBBcoq1Gp0r94ZOsbhvjqD67UszLqI/LSDoSHOEn/tIUwHu7rdj1MOgln7GccIwv4CnFYWyuq+hXZPy49Ui3WO8P96IDoyM9Wm8LFP0C3KQ="
+    - secure: "RVmB14mHU29DCH3NIVgaadBhEwTlU2JK2In5DAkZqFukLeIeEAUvljc9dcTJ2p0rzu+q/JDqWxcHmSc1NMpRoKEDOiyapoTgrb+cL7XyTMT6nvYZXzyAGo3jDH7yPaq49h2HUJiW13N28JakmzUMpjHUSYQCx+7sR5OsjYJ5dPA="
+    - secure: "fpoFDkS++Og3qQhgktySMxZ71LpSbra5R1ULYmyaO+l0ZFb7N4omA2+b41SAOdnHWIhO+2zlEQA/Rmg+FTpoto5xJJrPe6wQvuyDnQwbUY4QOkNHhBH0MxkTuTBZ1CRTQt1wVZwXskZQwYCbDh6iTGQaIedFqRjNRi+0dQlqwqM="
+    - secure: "avEOUypfWnAF6Y5GaEplGuZFl/T35+/lRBlfBdG9sXRXuN/Fquc7UJ0l504E5tpRSoTlW5lkFf9CaQspUj5EoSaER2PirjUZUrWkbHWiFm31bt6/CIBYwAJXnraUOXKolLdRt4wJYh2Gd/waJO3hKj3L1DNRi2pLOElY2zryQ2k="
+    - secure: "ACO0B4j5tKGkIeulPCouszwSvUV7LZJvKLVNv5k4/QCtpo38E1lZUd10oIFfn5OREffBvX/+IKyRxz4fNPAwxCxPTRnxcUfjXKk6BbVMZ79euE3W2kbTdRLlMFOzCIS84S8IwZcSL41ih46s/aaZeYOSVW4MEKjz6zn4ZIIuQns="
+    - secure: "cSr3yRNNEqCWKtjlX8BsREZHo+fbwp6r1bdTnuDWGNTCLdeDjdlgBxIs0W+Bq+ajn2TRBmnMakEkemBLMEf61vQdQvG8aTZZXzEs+IODu6703YwYwYEmdS+r3h8WQmUxRKMk99ALO2VNubpD8jd8gflL3w0tel/AmkjNwvmPqa4="
+    - secure: "R6JVuGOz/OLPPgTaczuFhC0JnxMqCZodJdDp7ivXKhnjfGIkq/I1lF3cMrQvrMR0MUCxxqlWVfaUEpkjyE5L/ZzjncCO8MU1sErpOeczFJLJa5mgGoj1WVlDMbiS9Ri5hO79jFB4o0OP3uTIGV39bABxXCHOowITFXKjb2cu9C4="
+    - secure: "HK1yXyjZzTHJgUvm1l+c9zkLlG0uuMIl47fuMO+81hUV3Yn4bTD2mLxDRSQAe/WjgD7RHExwBeWSkhcPNg2qXO8p2Di8i8zOzREJ5TdDX7zHgtw35+vfLOTXikyp4YdaLs7dmXasEfYKOX+5GqQ2lt3/RiFgCsgEm764xSgz8Q8="
+    - secure: "KD+PUpStk6NO91XRGklz57wP43oLoC3CppuTSZwYajSjq7wVNHsV4kE9c82Ii8ChZeYpVShyIKXDOeR9tuzLDuTgelKzMcqNSLboRwhyd1jNzLXVg5BfqtjS0zm6iwPGDww8bSQozMAQibXRfalQABRWtCUEumagUgbt7+DBPOA="
+    - secure: "WUkab/1Q9B7u5dwyZ9fH0oh90XKI3iu7aPNw6hVPxeQYe9WCDPztqF1mPbSmpGcJNCDYSBpLKu/5Ul33ksZYYvMLhgAUi9oVVONIdJnJTPUXNzx7qBhNuGqf0JmcXsYe9KdhtlTi0U4xCXmW3GxFBnFqvpC05y5s4iw4faHzVqU="
+    - secure: "PTzWDJU9v24vQmnpfjBYRWxe3xEkjJrlbRB/p48oXIdah7UJizH7TfniPeVPDgdvUpDk4N95+bbrSK1r06LqGnk1yuySKb3fIW5oCbg2Qnur7R41axoBZhubiha40ZW5tlA86GzVfMFAFdFuT+KxR0Oq7Xl5wBKlkEohJAOWI2c="
+    - secure: "Kfcnkg1E/yKDy7m0PfMRHP1iU5JUKHkzrA/qzT8K+kz4SAgka9K5672PS8L693xrId1nD+kkCjFmqwcDit4VrsfS97pagmvekQVwJRID12KD1YkCWbXpWTrRBCrL72ZUjY/lx4jnVCK8Fv9/uzNubTpW1id1l44qsMgDsrpXjQY="
+    - secure: "YNoa4mvhubpAIOEcb1e8Va0qourcVRcjlHRj5qWTw3yBP1fWFZLswyDvhmqlCYFgs1epsmN97GY8hX8NbBRa81Ux53pr3QISAfnpC7EYA/tU1BodN/xP0nlS18KHnDg4H//iIzbkldJkYmfAI+5MaJwKlujzFdpdN05RY7ycycs="
+    - secure: "R14DQfAVNc8zf10S+dxU3AkjFFjJ1hYFnyGRvqAjDH35yLd0ZMVFLPqQCeX7DEMIK3C1GdNQgUa4ux/ChVF9KhzcpjVjbHMH7NOcL7cX5aWyUPxxJ1NeFcLPjY8kmnwOIq7HpDPDxxtXVpf6GY752BL0KDX3/yOrruF4Qr+AnFI="
+    - secure: "IcWwg7C/x2UddU/KP2Uo0M4uOkfWz8WUDaxz/K6ACWuI81cp5DKaPMelGYorb6jGaWpee0AN2E41G8Hv5rlgyONapbi2w25vVSkR+eauRLA7BWMMjGAAxg5ZWW4krJfvFNMGWyPakW9wLZffDhkQvpfheIY2uYtasIHPVV8Ayeo="
+    # id_rsa_pub_00-06
+    - secure: "KOs5kw3ziQLr8/iZ/gXts7IaCHA+7MMmaZ/IMXKh6WIJI4PRLTqHfIH3KPX/VqOf2aDpBMcTWzDeqSngHFKWHKZQjVoETc+FATXdpkCUB7/brJYJmWtlgxGkxpwwhjJ0imBis08nmK6Y9yfoKzoUwD5MEeJH6hZomqohVzGggs0="
+    - secure: "Ra+98giQjz25UsWfB/P6xE+cRp8RGlhfF8d+ddhjQhNO82occzWHTQwWwHukmn+gWu58cQQGdCM3zmT7kmmvlFiQEkJncbiJq/txcJqZqW0UQXJyZVoR/y2jzBWRyV+zJSmLfZkQ7ihtG8kuLabi5Rrsy0JfeuE5IiFpPYGqUOM="
+    - secure: "EBdHmAH8lKEY6bBV0oDg7aXzvLHHyEQrmkaeoUVSJyPkx7h9uw6AevSBjie+4CP964CFoI4x52wgHKsYElgO4PtLPecJBpkukqvN9BjNCU4OzJje0gf4jgYFsfQkHxcWTDGR4WxqADu5rTIsUsgc2bUj9vNi9rRFq/lJX0rKQE8="
+    - secure: "BUEV7ufBw6BKITLr9NXXpHDSjlFmTc0pmHeBNWuMDyQY9hoH/itHKAkU2+nX3DTjOlIUinq0Yx7C1dgTC8oxYJ5JcelgBw0oE386PmY/hGV5cR3PSUCg/bYwrgV6FSpLsyVa7ZliAyAaqlFS5DrrPzPuxY+3s2LObzWdoln3TXA="
+    - secure: "FtGgL3kYH+/Vcf78PuUqJSwLESCDv/cHJJK9mhmPYsfr3BiAC+46shZlKSOi0/X3iUt0zGUcikHJkY2tmOyfzXaYB7ywW5Cfra4BjlTM+nOhdQ3XXhE49c/yOuXVrEEJIYXqbrj4VYK0oEt7qUb47bnwy3/HMQoKcTJ5QIStb44="
+    - secure: "RpUSSGjfffuHErOIe2P9vU6HDP6s5/gsHMahZ7O+y+0zd7c6u2N9jFJFzZD/3L7v8v4fGM2xyKaVvqnd3nJmuI4d83zrnmjJN5BXzyqfv89JXAhAayRU/RImBfNArID7AuRHktUIxdG60GkkrSvfhqkoqUOenXVQRTz4dZhBlvw="
