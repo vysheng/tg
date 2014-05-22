@@ -48,6 +48,9 @@ before_deploy:
   - git config --global push.default matching
   - git fetch --unshallow
 # ToDo - openshift won't auto-switch to a branch which isn't master... so pushing when not master has no use
+  - gem install dpl
+  - find /|grep openshift
+  - wget -O ~/openshift.rb https://raw.githubusercontent.com/travis-ci/dpl/master/lib/dpl/provider/openshift.rb
 
 deploy:
   provider: openshift
