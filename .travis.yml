@@ -49,7 +49,7 @@ before_deploy:
   - git fetch --unshallow
 # ToDo - openshift won't auto-switch to a branch which isn't master... so pushing when not master has no use
   - gem install dpl
-  - wget -O /home/travis/.rvm/gems/ruby-1.9.3-p545/gems/dpl-1.5.9/lib/dpl/provider/openshift.rb https://raw.githubusercontent.com/travis-ci/dpl/master/lib/dpl/provider/openshift.rb
+  - wget -O /home/travis/.rvm/gems/ruby-1.9.3-p545/gems/dpl-1.5.9/lib/dpl/provider/openshift.rb https://raw.githubusercontent.com/koter84/dpl/master/lib/dpl/provider/openshift.rb
 
 deploy:
   provider: openshift
