@@ -64,13 +64,24 @@ Then, on all Linux and BSDs
 
 #### Mac OS X
 
-The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. Lua is optional. You have to install these libraries manually, e.g. using [Homebrew](http://brew.sh/).
+The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. Lua is optional. You have to install these libraries manually. 
+
+Using [Homebrew](http://brew.sh/).
+Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
     $ brew install libconfig readline lua
     $ ./configure
     $ make
 
-Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
+Using MacPorts
+Thanks to [@p3k](https://github.com/vysheng/tg/issues/129) for this solution. [extra-link](https://blog.p3k.org/stories/8350/)
+
+    $ sudo port install libconfig-hr readline lua
+    $ export CFLAGS=-I/opt/local/include
+    $ export LDFLAGS=-L/opt/local/lib
+    $ ./configure
+    $ sed -i.bak 's/-rdynamic //g' Makefile
+    $ make
 
 #### Other UNIX
 
