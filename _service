@@ -1,0 +1,12 @@
+<services>
+  <service name="download_url">
+    <param name="host">github.com</param>
+    <param name="protocol">https</param>
+    <param name="path">/koter84/tg/archive/master.tar.gz</param>
+  </service>
+  <service name="download_url">
+    <param name="host">github.com</param>
+    <param name="protocol">https</param>
+    <param name="path">/koter84/tg/raw/master/telegram-cli.spec</param>
+  </service>
+</services>

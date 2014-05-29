@@ -91,7 +91,7 @@ addons:
     notification_email: koter84@gmail.com
     build_command_prepend: "./configure"
     build_command: "make"
-    branch_pattern: master
+    branch_pattern: coverity_scan
 
 env:
   global:
