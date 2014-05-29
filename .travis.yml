@@ -47,11 +47,6 @@ before_deploy:
   - git config --global user.name 'Travis CI'
   - git config --global push.default matching
   - git fetch --unshallow
-# ToDo - openshift won't auto-switch to a branch which isn't master... so pushing when not master has no use...
-  - gem install dpl
-  - cat /home/travis/.rvm/gems/ruby-1.9.3-p545/gems/dpl-1.5.9/lib/dpl/provider/openshift.rb
-  - wget -O /home/travis/.rvm/gems/ruby-1.9.3-p545/gems/dpl-1.5.9/lib/dpl/provider/openshift.rb https://raw.githubusercontent.com/koter84/dpl/openshift-branch-switch/lib/dpl/provider/openshift.rb
-  - cat /home/travis/.rvm/gems/ruby-1.9.3-p545/gems/dpl-1.5.9/lib/dpl/provider/openshift.rb
 
 deploy:
   provider: openshift
