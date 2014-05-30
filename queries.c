@@ -879,7 +879,9 @@ int msg_send_on_answer (struct query *q UU) {
       print_end ();
     }
   }
-  rprintf ("Sent: id = %d\n", id);
+  if (verbosity) {
+		rprintf ("Sent: id = %d\n", id);
+	}
   bl_do_set_message_sent (M);
   return 0;
 }
@@ -953,7 +955,9 @@ void do_send_message (peer_id_t id, const char *msg, int len) {
   }
   long long t;
   secure_random (&t, 8);
-  logprintf ("t = %lld, len = %d\n", t, len);
+  if (verbosity) {
+		logprintf ("t = %lld, len = %d\n", t, len);
+	}
   bl_do_send_message_text (t, our_id, get_peer_type (id), get_peer_id (id), time (0), len, msg);
   struct message *M = message_get (t);
   assert (M);

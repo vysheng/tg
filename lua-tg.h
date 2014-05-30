@@ -11,6 +11,7 @@ void lua_secret_chat_created (struct secret_chat *U);
 void lua_user_update (struct user *U);
 void lua_chat_update (struct chat *C);
 void lua_binlog_end (void);
+void lua_scheduler_end (void);
 void lua_diff_end (void);
 void lua_do_all (void);
 #endif
