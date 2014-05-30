@@ -87,6 +87,7 @@ char *downloads_directory;
 char *config_directory;
 char *binlog_file_name;
 int binlog_enabled;
+int unread_disabled;
 extern int log_level;
 int sync_from_start;
 int allow_weak_random;
@@ -363,6 +364,7 @@ void usage (void) {
   printf (" -w                 allow weak random\n");
   printf (" -s                 specify lua script\n");
   printf (" -W                 wait dialog list\n");
+  printf (" -y                 disable unread prompt\n");
   printf ("\n");
 
   exit (1);
@@ -383,7 +385,7 @@ char *lua_file;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:Es:wW")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:Es:wW:y")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -415,6 +417,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'B':
       binlog_enabled = 1;
+      break;
+    case 'y':
+      unread_disabled = 1;
       break;
     case 'L':
       if (log_net_file) { 

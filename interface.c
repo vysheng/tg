@@ -49,6 +49,7 @@
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
+extern int unread_disabled;
 int unread_messages;
 int msg_num_mode;
 int alert_sound;
@@ -220,10 +221,11 @@ char *get_default_prompt (void) {
     assert (U && U->print_name);
     l += tsnprintf (buf + l, 999 - l, COLOR_RED "%.*s " COLOR_NORMAL, 100, U->print_name);
   }
-  if (unread_messages || cur_uploading_bytes || cur_downloading_bytes) {
+  if ((unread_messages && unread_disabled == 0) 
+			|| cur_uploading_bytes || cur_downloading_bytes) {
     l += tsnprintf (buf + l, 999 - l, COLOR_RED "[");
     int ok = 0;
-    if (unread_messages) {
+    if (unread_messages && unread_disabled == 0) {
       l += tsnprintf (buf + l, 999 - l, "%d unread", unread_messages);
       ok = 1;
     }
