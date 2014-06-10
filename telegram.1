@@ -104,6 +104,12 @@ Messaging
 .B rename_contact <\fIuser\fR>  <\fIfirst-name\fR>  <\fIlast-name\fR> tries to rename contact. If you have another device it will be a fight
 .IP \(bu 2
 .B mark_read <\fIpeer\fR> mark read all received messages with peer
+.IP \(bu 2
+.B delete_msg <\fImsg-seqno\fR> remove a message
+.IP \(bu 2
+.B status_online/status_offline \fR appear online to others or not
+.IP \(bu 2
+.B fwd <\fIpeer\fR> <\fImsg-seqno\fR> forward a message to the peer specified
 .RE
 .PP
 Multimedia
@@ -115,9 +121,9 @@ Multimedia
 .IP \(bu 2
 .B send_text <\fIpeer\fR> <\fItext-file-name\fR> sends text file as plain messages
 .IP \(bu 2
-.B load_photo/load_video/load_video_thumb <\fImsg-seqno\fR> loads photo/video to download dir
+.B load_photo/load_video/load_video_thumb/load_document/load_document_thumb/load_audio <\fImsg-seqno\fR> loads photo/video to download dir
 .IP \(bu 2
-.B view_photo/view_video/view_video_thumbnail <\fImsg-seqno\fR> loads photo/video to download dir and starts system default viewer (xdg-open on some system)
+.B view_photo/view_video/view_video_thumbnail/view_document/view_document_thumb/view_audio <\fImsg-seqno\fR> loads photo/video to download dir and starts system default viewer (xdg-open on some system)
 .RE
 Group chat options
 .RS
@@ -164,6 +170,39 @@ Stats and various info
 .B show_license\fR prints contents of GPLv2
 .IP \(bu 2
 .B help\fR prints a help page
+.RE
+Options
+.RS
+.IP \(bu 2
+.B set <\fIparam\fR> <\fIparam-value\fR> Possible <\fIparam\fR> values are:
+.Ps
+.RS
+.IP \(bu 2 
+\fIdebug_verbosity\fR - just as it sounds. Debug verbosity
+.IP \(bu 2 
+\fIlog_level\fR - level of logging of new events. Lower is less verbose:
+.RS
+.RS
+.IP \(bu 2 
+\fILevel 1\fR: prints info about read messages
+.IP \(bu 2 
+\fILevel 2\fR: prints line, when somebody is typing in chat
+.IP \(bu 2 
+\fILevel 3\fR: prints line, when somebody changes online status
+.RE
+.RE
+.IP \(bu 2 
+\fImsg_num\fR - enables/disables numeration of messages
+.IP \(bu 2 
+\fIalert\fR - enables/disables alert sound notifications
+.RE
+.RE
+
+.RS
+.IP \(bu 2
+.B quit/safe_quit \fR exit the program
+.RE
+
 .SH SCRIPTS
 You can extend the program by writting a lua script. An example script come with the source (test.lua).
 
