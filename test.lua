@@ -56,3 +56,7 @@ end
 function on_binlog_replay_end ()
   started = 1
 end
+
+function on_second_scheduler_end ()
+	-- would be executed each second 
+end

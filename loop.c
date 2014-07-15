@@ -53,6 +53,8 @@
 #include "binlog.h"
 #include "lua-tg.h"
 
+#include "time.h"
+
 extern char *default_username;
 extern char *auth_token;
 extern int test_dc;
@@ -66,6 +68,7 @@ int register_mode;
 extern int safe_quit;
 extern int queries_num;
 
+int last_timestamp;
 int unread_messages;
 void got_it (char *line, int len);
 void net_loop (int flags, int (*is_end)(void)) {
@@ -100,7 +103,11 @@ void net_loop (int flags, int (*is_end)(void)) {
     }
     connections_poll_result (fds + cc, x - cc);
     #ifdef USE_LUA
-      lua_do_all ();
+      if (last_timestamp < ((int) time(NULL))) {
+				last_timestamp = (int) time(NULL); 
+				lua_scheduler_end();
+			}
+			lua_do_all ();
     #endif
     if (safe_quit && !queries_num) {
       printf ("All done. Exit\n");

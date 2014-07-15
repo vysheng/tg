@@ -12,6 +12,7 @@ void lua_user_update (struct user *U);
 void lua_user_status_update (struct user *U, int *online);
 void lua_chat_update (struct chat *C);
 void lua_binlog_end (void);
+void lua_scheduler_end (void);
 void lua_diff_end (void);
 void lua_do_all (void);
 #endif
