@@ -118,7 +118,7 @@ void tfree_secure (void *ptr, int size) {
 void *trealloc (void *ptr, size_t old_size __attribute__ ((unused)), size_t size) {
 #ifdef DEBUG
   void *p = talloc (size);
-  memcpy (p, ptr, size >= old_size ? old_size : size); 
+  memcpy (p, ptr, size >= old_size ? old_size : size);
   tfree (ptr, old_size);
   return p;
 #else
@@ -237,7 +237,7 @@ void tcheck (void) {
     int j = 0;
     for (j = 0; j < l; j++) {
       if (*(char *)(ptr + 4 + j)) {
-        hexdump (ptr + 8, ptr + 8 + l + ((-l) & 3)); 
+        hexdump (ptr + 8, ptr + 8 + l + ((-l) & 3));
         logprintf ("Used freed memory size = %d. ptr = %p\n", l + 4 - RES_PRE - RES_AFTER, ptr);
         assert (0);
       }

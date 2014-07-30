@@ -41,7 +41,7 @@
 #define CODE_client_DH_inner_data	0x6643b654
 #define CODE_dh_gen_ok			0x3bcbf734
 #define CODE_dh_gen_retry		0x46dc1fb9
-#define CODE_dh_gen_fail		0xa69dae02 
+#define CODE_dh_gen_fail		0xa69dae02
 
 /* service messages */
 #define CODE_rpc_result			0xf35c6d01
@@ -160,11 +160,11 @@ void fetch_qts (void);
 void fetch_date (void);
 void fetch_seq (void);
 static inline int prefetch_strlen (void) {
-  if (in_ptr >= in_end) { 
-    return -1; 
+  if (in_ptr >= in_end) {
+    return -1;
   }
   unsigned l = *in_ptr;
-  if ((l & 0xff) < 0xfe) { 
+  if ((l & 0xff) < 0xfe) {
     l &= 0xff;
     return (in_end >= in_ptr + (l >> 2) + 1) ? (int)l : -1;
   } else if ((l & 0xff) == 0xfe) {
@@ -190,7 +190,7 @@ static inline char *fetch_str (int len) {
     in_ptr += (len + 7) >> 2;
     return str;
   }
-} 
+}
 
 static inline char *fetch_str_dup (void) {
   int l = prefetch_strlen ();

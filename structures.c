@@ -120,7 +120,7 @@ int fetch_user_status (struct user_status *S) {
 
 /*
  *
- * Skip simple structures 
+ * Skip simple structures
  *
  */
 
@@ -211,7 +211,7 @@ int fetch_user (struct user *U) {
   if (x == CODE_user_empty) {
     return 0;
   }
-  
+
   if (x == CODE_user_self) {
     assert (!our_id || (our_id == get_peer_id (U->id)));
     if (!our_id) {
@@ -219,9 +219,9 @@ int fetch_user (struct user *U) {
       write_auth_file ();
     }
   }
-  
+
   int new = 0;
-  if (!(U->flags & FLAG_CREATED)) { 
+  if (!(U->flags & FLAG_CREATED)) {
     new = 1;
   }
   if (new) {
@@ -231,7 +231,7 @@ int fetch_user (struct user *U) {
     int l2 = prefetch_strlen ();
     code_assert (l2 >= 0);
     char *s2 = fetch_str (l2);
-    
+
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
       bl_do_new_user (get_peer_id (U->id), s1, l1, s2, l2, 0, 0, 0, 0);
       bl_do_user_delete (U);
@@ -250,7 +250,7 @@ int fetch_user (struct user *U) {
       }
       bl_do_new_user (get_peer_id (U->id), s1, l1, s2, l2, access_token, phone, phone_len, x == CODE_user_contact);
       if (fetch_user_photo (U) < 0) { return -1; }
-    
+
       if (fetch_user_status (&U->status) < 0) { return -1; }
       if (x == CODE_user_self) {
         fetch_bool ();
@@ -261,7 +261,7 @@ int fetch_user (struct user *U) {
     char *s1 = fetch_str (l1);
     int l2 = prefetch_strlen ();
     char *s2 = fetch_str (l2);
-    
+
     bl_do_set_user_name (U, s1, l1, s2, l2);
 
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
@@ -277,7 +277,7 @@ int fetch_user (struct user *U) {
         bl_do_set_user_phone (U, s, l);
       }
       if (fetch_user_photo (U) < 0) { return -1; }
-    
+
       fetch_user_status (&U->status);
       if (x == CODE_user_self) {
         fetch_bool ();
@@ -301,7 +301,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     return;
   }
   int new = !(U->flags & FLAG_CREATED);
- 
+
   if (x == CODE_encrypted_chat_discarded) {
     if (new) {
       logprintf ("Unknown chat in deleted state. May be we forgot something...\n");
@@ -328,7 +328,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       memset (g_key, 0, sizeof (g_key));
       memset (nonce, 0, sizeof (nonce));
     }
-    
+
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     if (l != 256) { logprintf ("l = %d\n", l); }
@@ -337,7 +337,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     } else {
       memcpy (g_key, s +  (l - 256), 256);
     }
-    
+
     /*l = prefetch_strlen ();
     s = fetch_str (l);
     if (l != 256) { logprintf ("l = %d\n", l); }
@@ -346,7 +346,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     } else {
       memcpy (nonce, s +  (l - 256), 256);
     }*/
-    
+
     if (x == CODE_encrypted_chat) {
       fetch_long (); // fingerprint
     }
@@ -374,12 +374,12 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       write_secret_chat_file ();
       return; // We needed only access hash from here
     }
-    
+
     if (x == CODE_encrypted_chat_requested || x == CODE_encrypted_chat) {
       memset (g_key, 0, sizeof (g_key));
       memset (nonce, 0, sizeof (nonce));
     }
-    
+
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     if (l != 256) { logprintf ("l = %d\n", l); }
@@ -388,7 +388,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     } else {
       memcpy (g_key, s +  (l - 256), 256);
     }
-    
+
     /*l = prefetch_strlen ();
     s = fetch_str (l);
     if (l != 256) { logprintf ("l = %d\n", l); }
@@ -397,7 +397,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     } else {
       memcpy (nonce, s +  (l - 256), 256);
     }*/
-   
+
     if (x == CODE_encrypted_chat_requested) {
       return; // Duplicate?
     }
@@ -496,12 +496,12 @@ void fetch_chat (struct chat *C) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     bl_do_set_chat_title (C, s, l);
-    
+
     struct file_location small;
     struct file_location big;
     memset (&small, 0, sizeof (small));
     memset (&big, 0, sizeof (big));
-    
+
     if (x == CODE_chat) {
       unsigned y = fetch_int ();
       if (y == CODE_chat_photo_empty) {
@@ -545,7 +545,7 @@ void fetch_notify_settings (void) {
 void fetch_chat_full (struct chat *C) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_chat_full);
-  assert (fetch_int () == CODE_chat_full); 
+  assert (fetch_int () == CODE_chat_full);
   C->id = MK_CHAT (fetch_int ());
   //C->flags &= ~(FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
   //C->flags |= FLAG_CREATED;
@@ -864,9 +864,9 @@ void fetch_message_short (struct message *M) {
     int to_id = our_id;
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
-    
+
     fetch_pts ();
-    
+
     int date = fetch_int ();
     fetch_seq ();
 
@@ -874,9 +874,9 @@ void fetch_message_short (struct message *M) {
   } else {
     fetch_int (); // id
     fetch_int (); // from_id
-    int l = prefetch_strlen (); 
+    int l = prefetch_strlen ();
     fetch_str (l); // text
-    
+
     fetch_pts ();
     fetch_int ();
     fetch_seq ();
@@ -892,9 +892,9 @@ void fetch_message_short_chat (struct message *M) {
     int to_id = fetch_int ();
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
-    
+
     fetch_pts ();
-    
+
     int date = fetch_int ();
     fetch_seq ();
 
@@ -903,9 +903,9 @@ void fetch_message_short_chat (struct message *M) {
     fetch_int (); // id
     fetch_int (); // from_id
     fetch_int (); // to_id
-    int l = prefetch_strlen (); 
+    int l = prefetch_strlen ();
     fetch_str (l); // text
-    
+
     fetch_pts ();
     fetch_int ();
     fetch_seq ();
@@ -1005,10 +1005,10 @@ void fetch_skip_message_media_encrypted (void) {
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     fetch_skip (5);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
     break;
@@ -1017,19 +1017,19 @@ void fetch_skip_message_media_encrypted (void) {
     fetch_str (l); // thumb
 
     fetch_skip (6);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
     break;
   case CODE_decrypted_message_media_audio:
     fetch_skip (2);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
     break;
@@ -1038,16 +1038,16 @@ void fetch_skip_message_media_encrypted (void) {
     fetch_str (l); // thumb
 
     fetch_skip (2);
-    
+
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     fetch_skip (1);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
-    
+
     l = prefetch_strlen  ();
     fetch_str (l);
     break;
@@ -1086,7 +1086,7 @@ void fetch_message_media_encrypted (struct message_media *M) {
     M->encr_photo.w = fetch_int ();
     M->encr_photo.h = fetch_int ();
     M->encr_photo.size = fetch_int ();
-    
+
     l = prefetch_strlen  ();
     assert (l > 0);
     M->encr_photo.key = talloc (32);
@@ -1116,7 +1116,7 @@ void fetch_message_media_encrypted (struct message_media *M) {
     M->encr_video.w = fetch_int ();
     M->encr_video.h = fetch_int ();
     M->encr_video.size = fetch_int ();
-    
+
     l = prefetch_strlen  ();
     assert (l > 0);
     M->encr_video.key = talloc0 (32);
@@ -1139,7 +1139,7 @@ void fetch_message_media_encrypted (struct message_media *M) {
     M->type = x;
     M->encr_audio.duration = fetch_int ();
     M->encr_audio.size = fetch_int ();
-    
+
     l = prefetch_strlen  ();
     assert (l > 0);
     M->encr_video.key = talloc0 (32);
@@ -1166,7 +1166,7 @@ void fetch_message_media_encrypted (struct message_media *M) {
     M->encr_document.file_name = fetch_str_dup ();
     M->encr_document.mime_type = fetch_str_dup ();
     M->encr_video.size = fetch_int ();
-    
+
     l = prefetch_strlen  ();
     assert (l > 0);
     M->encr_video.key = talloc0 (32);
@@ -1193,13 +1193,13 @@ void fetch_message_media_encrypted (struct message_media *M) {
     assert (l > 0);
     M->encr_file.key = talloc (l);
     memcpy (M->encr_file.key, fetch_str (l), l);
-    
+
     l = fetch_int ();
     assert (l > 0);
     M->encr_file.iv = talloc (l);
     memcpy (M->encr_file.iv, fetch_str (l), l);
     break;
-  */  
+  */
   case CODE_decrypted_message_media_geo_point:
     M->geo.longitude = fetch_double ();
     M->geo.latitude = fetch_double ();
@@ -1337,21 +1337,21 @@ int decrypt_encrypted_message (struct secret_chat *E) {
   static unsigned char sha1b_buffer[20];
   static unsigned char sha1c_buffer[20];
   static unsigned char sha1d_buffer[20];
- 
+
   static unsigned char buf[64];
   memcpy (buf, msg_key, 16);
   memcpy (buf + 16, E->key, 32);
   sha1 (buf, 48, sha1a_buffer);
-  
+
   memcpy (buf, E->key + 8, 16);
   memcpy (buf + 16, msg_key, 16);
   memcpy (buf + 32, E->key + 12, 16);
   sha1 (buf, 48, sha1b_buffer);
-  
+
   memcpy (buf, E->key + 16, 32);
   memcpy (buf + 32, msg_key, 16);
   sha1 (buf, 48, sha1c_buffer);
-  
+
   memcpy (buf, msg_key, 16);
   memcpy (buf + 16, E->key + 24, 32);
   sha1 (buf, 48, sha1d_buffer);
@@ -1395,7 +1395,7 @@ void fetch_encrypted_message (struct message *M) {
   int to_id = fetch_int ();
   peer_id_t chat = MK_ENCR_CHAT (to_id);
   int date = fetch_int ();
-  
+
   peer_t *P = user_chat_get (chat);
   if (!P) {
     logprintf ("Encrypted message to unknown chat. Dropping\n");
@@ -1426,7 +1426,7 @@ void fetch_encrypted_message (struct message *M) {
     int *save_in_end = in_end;
     in_ptr = decr_ptr;
     int ll = fetch_int ();
-    in_end = in_ptr + ll; 
+    in_end = in_ptr + ll;
     x = fetch_int ();
     if (x == CODE_decrypted_message_layer) {
       int layer = fetch_int ();
@@ -1452,7 +1452,7 @@ void fetch_encrypted_message (struct message *M) {
     in_ptr = save_in_ptr;
     in_end = save_in_end;
   }
- 
+
   if (sx == CODE_encrypted_message) {
     if (ok) {
       int *start_file = in_ptr;
@@ -1468,7 +1468,7 @@ void fetch_encrypted_message (struct message *M) {
         assert (x == CODE_encrypted_file_empty);
       }
       M->media.type = CODE_message_media_empty;
-    }    
+    }
   } else {
     if (ok && x == CODE_decrypted_message_service) {
       bl_do_create_message_service_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, start, end - start);
@@ -1911,7 +1911,7 @@ void free_chat (struct chat *U) {
 }
 
 int print_stat (char *s, int len) {
-  return tsnprintf (s, len, 
+  return tsnprintf (s, len,
     "users_allocated\t%d\n"
     "chats_allocated\t%d\n"
     "secret_chats_allocated\t%d\n"

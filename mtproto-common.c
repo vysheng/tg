@@ -195,7 +195,7 @@ int serialize_bignum (BIGNUM *b, char *buffer, int maxlen) {
 
 long long compute_rsa_key_fingerprint (RSA *key) {
   static char tempbuff[4096];
-  static unsigned char sha[20]; 
+  static unsigned char sha[20];
   assert (key->n && key->e);
   int l1 = serialize_bignum (key->n, tempbuff, 4096);
   assert (l1 > 0);
@@ -381,7 +381,7 @@ void init_aes_auth (char auth_key[192], char msg_key[16], int encrypt) {
   memcpy (buffer + 16, auth_key + 96, 32);
   SHA1 (buffer, 48, hash);
   memcpy (aes_iv + 24, hash, 8);
-  
+
   if (encrypt == AES_ENCRYPT) {
     AES_set_encrypt_key (aes_key_raw, 32*8, &aes_key);
   } else {
@@ -404,7 +404,7 @@ int pad_aes_decrypt (char *from, int from_len, char *to, int size) {
   if (from_len <= 0 || from_len > size || (from_len & 15)) {
     return -1;
   }
-  AES_ige_encrypt ((unsigned char *) from, (unsigned char *) to, from_len, &aes_key, aes_iv, AES_DECRYPT); 
+  AES_ige_encrypt ((unsigned char *) from, (unsigned char *) to, from_len, &aes_key, aes_iv, AES_DECRYPT);
   return from_len;
 }
 
