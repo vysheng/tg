@@ -123,7 +123,7 @@ void replay_log_event (void) {
     break;
   case LOG_DEFAULT_DC:
     rptr ++;
-    { 
+    {
       int num = *(rptr ++);
       assert (num >= 0 && num <= MAX_DC_ID);
       DC_working = DC_list[num];
@@ -215,7 +215,7 @@ void replay_log_event (void) {
       U->user_id = *(rptr ++);
       memcpy (U->key, rptr, 256);
       rptr += 64;
-      if (!U->print_name) {  
+      if (!U->print_name) {
         peer_t *P = user_chat_get (MK_USER (U->user_id));
         if (P) {
           U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
@@ -272,7 +272,7 @@ void replay_log_event (void) {
       U->admin_id = *(rptr ++);
       U->user_id = *(rptr ++);
       U->access_hash = *(long long *)rptr;
-      if (!U->print_name) {  
+      if (!U->print_name) {
         peer_t *P = user_chat_get (MK_USER (U->user_id));
         if (P) {
           U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
@@ -325,7 +325,7 @@ void replay_log_event (void) {
       if (fetch_int ()) {
         U->flags |= FLAG_USER_CONTACT;
       }
-      
+
       #ifdef USE_LUA
         lua_user_update (U);
       #endif
@@ -359,7 +359,7 @@ void replay_log_event (void) {
       assert (U);
       if (U->user.phone) { tfree_str (U->user.phone); }
       U->user.phone = fetch_str_dup ();
-      
+
       #ifdef USE_LUA
         lua_user_update (&U->user);
       #endif
@@ -409,7 +409,7 @@ void replay_log_event (void) {
       if (U->user.real_last_name) { tfree_str (U->user.real_last_name); }
       U->user.real_first_name = fetch_str_dup ();
       U->user.real_last_name = fetch_str_dup ();
-      
+
       #ifdef USE_LUA
         lua_user_update (&U->user);
       #endif
@@ -613,7 +613,7 @@ void replay_log_event (void) {
       C->version = fetch_int ();
       fetch_data (&C->photo_big, sizeof (struct file_location));
       fetch_data (&C->photo_small, sizeof (struct file_location));
-      
+
       #ifdef USE_LUA
         lua_chat_update (C);
       #endif
@@ -637,9 +637,9 @@ void replay_log_event (void) {
       struct chat *C = &_C->chat;
       if (C->title) { tfree_str (C->title); }
       C->title = fetch_str_dup ();
-      if (C->print_title) { 
+      if (C->print_title) {
         peer_delete_name ((void *)C);
-        tfree_str (C->print_title); 
+        tfree_str (C->print_title);
       }
       C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
       peer_insert_name ((void *)C);
@@ -808,7 +808,7 @@ void replay_log_event (void) {
       }
       M->to_id = set_peer_id (t, fetch_int ());
       M->date = fetch_int ();
-      
+
       int l = prefetch_strlen ();
       M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
@@ -828,7 +828,7 @@ void replay_log_event (void) {
         message_insert_unsent (M);
         M->flags |= FLAG_PENDING;
       }
-      
+
       #ifdef USE_LUA
         lua_new_msg (M);
       #endif
@@ -855,13 +855,13 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       M->fwd_from_id = MK_USER (fetch_int ());
       M->fwd_date = fetch_int ();
-      
+
       int l = prefetch_strlen ();
       M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
       M->message[l] = 0;
       M->message_len = l;
-      
+
       M->media.type = CODE_message_media_empty;
       M->unread = 1;
       M->out = get_peer_id (M->from_id) == our_id;
@@ -891,7 +891,7 @@ void replay_log_event (void) {
       int t = fetch_int ();
       M->to_id = set_peer_id (t, fetch_int ());
       M->date = fetch_int ();
-      
+
       int l = prefetch_strlen ();
       M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
@@ -927,7 +927,7 @@ void replay_log_event (void) {
       int t = fetch_int ();
       M->to_id = set_peer_id (t, fetch_int ());
       M->date = fetch_int ();
-      
+
       int l = prefetch_strlen ();
       M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
@@ -967,7 +967,7 @@ void replay_log_event (void) {
       M->date = fetch_int ();
       M->fwd_from_id = MK_USER (fetch_int ());
       M->fwd_date = fetch_int ();
-      
+
       int l = prefetch_strlen ();
       M->message = talloc (l + 1);
       memcpy (M->message, fetch_str (l), l);
@@ -1035,8 +1035,8 @@ void replay_log_event (void) {
       M->to_id = set_peer_id (t, fetch_int ());
       M->date = fetch_int ();
 
-      fetch_message_action_encrypted (&M->action); 
-      
+      fetch_message_action_encrypted (&M->action);
+
       M->unread = 1;
       M->out = get_peer_id (M->from_id) == our_id;
       M->service = 1;
@@ -1165,7 +1165,7 @@ void create_new_binlog (void) {
   out_int (443);
   out_int (LOG_DEFAULT_DC);
   out_int (1);
-  
+
   int fd = open (get_binlog_file_name (), O_WRONLY | O_EXCL | O_CREAT, 0600);
   if (fd < 0) {
     perror ("Write new binlog");
@@ -1204,7 +1204,7 @@ void replay_log (void) {
         exit (2);
       }
       assert (!(k & 3));
-      if (k < l) { 
+      if (k < l) {
         end = 1;
       }
       wptr += (k / 4);
@@ -1222,12 +1222,12 @@ void write_binlog (void) {
     perror ("binlog open");
     exit (2);
   }
-  
+
   assert (lseek (binlog_fd, binlog_pos, SEEK_SET) == binlog_pos);
   if (flock (binlog_fd, LOCK_EX | LOCK_NB) < 0) {
     perror ("get lock");
     exit (2);
-  } 
+  }
 }
 
 void add_log_event (const int *data, int len) {
@@ -1340,7 +1340,7 @@ void bl_do_set_user_profile_photo (struct user *U, long long photo_id, struct fi
 }
 
 void bl_do_set_user_name (struct user *U, const char *f, int fl, const char *l, int ll) {
-  if ((U->first_name && (int)strlen (U->first_name) == fl && !strncmp (U->first_name, f, fl)) && 
+  if ((U->first_name && (int)strlen (U->first_name) == fl && !strncmp (U->first_name, f, fl)) &&
       (U->last_name  && (int)strlen (U->last_name)  == ll && !strncmp (U->last_name,  l, ll))) {
     return;
   }
@@ -1384,7 +1384,7 @@ void bl_do_set_user_friend (struct user *U, int friend) {
 void bl_do_dc_option (int id, int l1, const char *name, int l2, const char *ip, int port) {
   struct dc *DC = DC_list[id];
   if (DC) { return; }
-  
+
   clear_packet ();
   out_int (CODE_binlog_dc_option);
   out_int (id);
@@ -1428,7 +1428,7 @@ void bl_do_set_user_blocked (struct user *U, int blocked) {
 }
 
 void bl_do_set_user_real_name (struct user *U, const char *f, int fl, const char *l, int ll) {
-  if ((U->real_first_name && (int)strlen (U->real_first_name) == fl && !strncmp (U->real_first_name, f, fl)) && 
+  if ((U->real_first_name && (int)strlen (U->real_first_name) == fl && !strncmp (U->real_first_name, f, fl)) &&
       (U->real_last_name  && (int)strlen (U->real_last_name)  == ll && !strncmp (U->real_last_name,  l, ll))) {
     return;
   }

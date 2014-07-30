@@ -104,7 +104,7 @@ int fail_alarm (void *ev) {
 }
 void start_fail_timer (struct connection *c) {
   if (c->in_fail_timer) { return; }
-  c->in_fail_timer = 1;  
+  c->in_fail_timer = 1;
   c->ev.timeout = get_double_time () + 10;
   c->ev.alarm = (void *)fail_alarm;
   c->ev.self = c;
@@ -251,7 +251,7 @@ struct connection *create_connection (const char *host, int port, struct session
   setsockopt (fd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof (flags));
 
   struct sockaddr_in addr;
-  addr.sin_family = AF_INET; 
+  addr.sin_family = AF_INET;
   addr.sin_port = htons (port);
   addr.sin_addr.s_addr = inet_addr (host);
 
@@ -271,7 +271,7 @@ struct connection *create_connection (const char *host, int port, struct session
   s.fd = fd;
   s.events = POLLOUT | POLLERR | POLLRDHUP | POLLHUP;
   errno = 0;
-  
+
   while (poll (&s, 1, 10000) <= 0 || !(s.revents & POLLOUT)) {
     if (errno == EINTR) { continue; }
     if (errno) {
@@ -285,7 +285,7 @@ struct connection *create_connection (const char *host, int port, struct session
   }
 
   c->session = session;
-  c->fd = fd; 
+  c->fd = fd;
   c->ip = tstrdup (host);
   c->flags = 0;
   c->state = conn_ready;
@@ -309,7 +309,7 @@ void restart_connection (struct connection *c) {
     start_fail_timer (c);
     return;
   }
-  
+
   c->last_connect_time = time (0);
   int fd = socket (AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
@@ -326,7 +326,7 @@ void restart_connection (struct connection *c) {
   setsockopt (fd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof (flags));
 
   struct sockaddr_in addr;
-  addr.sin_family = AF_INET; 
+  addr.sin_family = AF_INET;
   addr.sin_port = htons (c->port);
   addr.sin_addr.s_addr = inet_addr (c->ip);
 
@@ -347,7 +347,7 @@ void restart_connection (struct connection *c) {
   c->last_receive_time = get_double_time ();
   start_ping_timer (c);
   Connections[fd] = c;
-  
+
   char byte = 0xef;
   assert (write_out (c, &byte, 1) == 1);
   flush_out (c);
@@ -429,7 +429,7 @@ void try_write (struct connection *c) {
 void hexdump_buf (struct connection_buffer *b) {
   int pos = 0;
   int rem = 8;
-  while (b) { 
+  while (b) {
     unsigned char *c = b->rptr;
     while (c != b->wptr) {
       if (rem == 8) {
@@ -447,7 +447,7 @@ void hexdump_buf (struct connection_buffer *b) {
     b = b->next;
   }
   printf ("\n");
-    
+
 }
 
 void try_rpc_read (struct connection *c) {
@@ -472,7 +472,7 @@ void try_rpc_read (struct connection *c) {
     }
 
     if (len >= 1 && len <= 0x7e) {
-      assert (read_in (c, &t, 1) == 1);    
+      assert (read_in (c, &t, 1) == 1);
       assert (t == len);
       assert (len >= 1);
     } else {
@@ -601,7 +601,7 @@ int send_all_acks (struct session *S) {
   out_int (CODE_vector);
   out_int (tree_count_long (S->ack_tree));
   while (S->ack_tree) {
-    long long x = tree_get_min_long (S->ack_tree); 
+    long long x = tree_get_min_long (S->ack_tree);
     out_long (x);
     S->ack_tree = tree_delete_long (S->ack_tree, x);
   }

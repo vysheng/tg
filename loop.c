@@ -92,7 +92,7 @@ void net_loop (int flags, int (*is_end)(void)) {
       if (flags & 1) {
         rl_callback_read_char ();
       } else {
-        char *line = 0;        
+        char *line = 0;
         size_t len = 0;
         assert (getline (&line, &len, stdin) >= 0);
         got_it (line, strlen (line));
@@ -110,7 +110,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     if (unknown_user_list_pos) {
       do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
       unknown_user_list_pos = 0;
-    }   
+    }
   }
 }
 
@@ -122,7 +122,7 @@ void got_it (char *line, int len) {
   assert (len > 0);
   line[-- len] = 0; // delete end of line
   *_s = line;
-  *_l = len;  
+  *_l = len;
   got_it_ok = 1;
 }
 
@@ -170,7 +170,7 @@ void write_dc (int auth_file_fd, struct dc *DC) {
   } else {
     assert (write (auth_file_fd, zero, 256 + 8) == 256 + 8);
   }
- 
+
   assert (write (auth_file_fd, &DC->server_salt, 8) == 8);
   assert (write (auth_file_fd, &DC->has_auth, 4) == 4);
 }
@@ -287,14 +287,14 @@ void read_state_file (void) {
   assert (version >= 0);
   int x[4];
   if (read (state_file_fd, x, 16) < 16) {
-    close (state_file_fd); 
+    close (state_file_fd);
     return;
   }
   pts = x[0];
   qts = x[1];
   seq = x[2];
   last_date = x[3];
-  close (state_file_fd); 
+  close (state_file_fd);
 }
 
 void write_state_file (void) {
@@ -316,7 +316,7 @@ void write_state_file (void) {
   x[4] = seq;
   x[5] = last_date;
   assert (write (state_file_fd, x, 24) == 24);
-  close (state_file_fd); 
+  close (state_file_fd);
   wseq = seq; wpts = pts; wqts = qts; wdate = last_date;
 }
 
@@ -412,7 +412,7 @@ void write_secret_chat_file (void) {
       t = strlen (Peers[i]->print_name);
       assert (write (fd, &t, 4) == 4);
       assert (write (fd, Peers[i]->print_name, t) == t);
-      
+
       assert (write (fd, &Peers[i]->encr_chat.state, 4) == 4);
 
       assert (write (fd, &Peers[i]->encr_chat.user_id, 4) == 4);
@@ -426,7 +426,7 @@ void write_secret_chat_file (void) {
         assert (write (fd, Peers[i]->encr_chat.nonce, 256) == 256);
       }
       assert (write (fd, Peers[i]->encr_chat.key, 256) == 256);
-      assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);      
+      assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);
     }
   }
   assert (write (fd, &encr_root, 4) == 4);
@@ -480,7 +480,7 @@ int loop (void) {
     auth_state = 100;
     write_auth_file ();
   }
-  
+
   if (verbosity) {
     logprintf ("Requesting info about DC...\n");
   }
@@ -502,7 +502,7 @@ int loop (void) {
       char *user = 0;
 
       if (!user) {
-        printf ("Telephone number (with '+' sign): ");         
+        printf ("Telephone number (with '+' sign): ");
         if (net_getline (&user, &size) == -1) {
           perror ("getline()");
           exit (EXIT_FAILURE);
@@ -567,7 +567,7 @@ int loop (void) {
       assert (dc_num >= 0 && dc_num <= MAX_DC_NUM && DC_list[dc_num]);
       dc_working_num = dc_num;
       DC_working = DC_list[dc_working_num];
-      
+
       do_send_code (default_username);
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {

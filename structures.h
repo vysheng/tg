@@ -91,7 +91,7 @@ struct encr_video {
   int dc_id;
   int size;
   int key_fingerprint;
-  
+
   unsigned char *key;
   unsigned char *iv;
   int w;
@@ -105,7 +105,7 @@ struct encr_audio {
   int dc_id;
   int size;
   int key_fingerprint;
-  
+
   unsigned char *key;
   unsigned char *iv;
   int duration;
@@ -117,7 +117,7 @@ struct encr_document {
   int dc_id;
   int size;
   int key_fingerprint;
-  
+
   unsigned char *key;
   unsigned char *iv;
   char *file_name;

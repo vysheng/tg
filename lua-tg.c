@@ -88,7 +88,7 @@ void push_encr_chat (peer_t *P) {
 
 void push_peer (peer_id_t id, peer_t *P) {
   lua_newtable (luaState);
- 
+
   lua_add_num_field ("id", get_peer_id (id));
   lua_pushstring (luaState, "type");
   push_peer_type (get_peer_type (id));
@@ -96,7 +96,7 @@ void push_peer (peer_id_t id, peer_t *P) {
 
 
   if (!P || !(P->flags & FLAG_CREATED)) {
-    lua_pushstring (luaState, "print_name"); 
+    lua_pushstring (luaState, "print_name");
     static char s[100];
     switch (get_peer_type (id)) {
     case PEER_USER:
@@ -111,15 +111,15 @@ void push_peer (peer_id_t id, peer_t *P) {
     default:
       assert (0);
     }
-    lua_pushstring (luaState, s); 
+    lua_pushstring (luaState, s);
     lua_settable (luaState, -3); // flags
-  
+
     return;
   }
-  
+
   lua_add_string_field ("print_name", P->print_name);
   lua_add_num_field ("flags", P->flags);
-  
+
   switch (get_peer_type (id)) {
   case PEER_USER:
     push_user (P);
@@ -185,7 +185,7 @@ void push_message (struct message *M) {
   tsnprintf (s, 30, "%lld", M->id);
   lua_add_string_field ("id", s);
   lua_add_num_field ("flags", M->flags);
-  
+
   if (get_peer_type (M->fwd_from_id)) {
     lua_pushstring (luaState, "fwd_from");
     push_peer (M->fwd_from_id, user_chat_get (M->fwd_from_id));
@@ -193,41 +193,41 @@ void push_message (struct message *M) {
 
     lua_add_num_field ("fwd_date", M->fwd_date);
   }
-  
+
   lua_pushstring (luaState, "from");
   push_peer (M->from_id, user_chat_get (M->from_id));
-  lua_settable (luaState, -3); 
-  
+  lua_settable (luaState, -3);
+
   lua_pushstring (luaState, "to");
   push_peer (M->to_id, user_chat_get (M->to_id));
-  lua_settable (luaState, -3); 
-  
+  lua_settable (luaState, -3);
+
   lua_pushstring (luaState, "out");
   lua_pushboolean (luaState, M->out);
-  lua_settable (luaState, -3); 
-  
+  lua_settable (luaState, -3);
+
   lua_pushstring (luaState, "unread");
   lua_pushboolean (luaState, M->unread);
-  lua_settable (luaState, -3); 
-  
+  lua_settable (luaState, -3);
+
   lua_pushstring (luaState, "date");
   lua_pushnumber (luaState, M->date);
-  lua_settable (luaState, -3); 
-  
+  lua_settable (luaState, -3);
+
   lua_pushstring (luaState, "service");
   lua_pushboolean (luaState, M->service);
-  lua_settable (luaState, -3); 
+  lua_settable (luaState, -3);
 
-  if (!M->service) {  
+  if (!M->service) {
     if (M->message_len && M->message) {
       lua_pushstring (luaState, "text");
       lua_pushlstring (luaState, M->message, M->message_len);
-      lua_settable (luaState, -3); 
+      lua_settable (luaState, -3);
     }
     if (M->media.type  && M->media.type != CODE_message_media_empty && M->media.type != CODE_decrypted_message_media_empty) {
       lua_pushstring (luaState, "media");
       push_media (&M->media);
-      lua_settable (luaState, -3); 
+      lua_settable (luaState, -3);
     }
   }
 }
@@ -342,7 +342,7 @@ extern int peer_num;
 void *lua_ptr[MAX_LUA_COMMANDS];
 static int pos;
 
-static peer_t *get_peer (const char *s) { 
+static peer_t *get_peer (const char *s) {
   int index = 0;
   while (index < peer_num && (!Peers[index]->print_name || strcmp (Peers[index]->print_name, s))) {
     index ++;
@@ -397,19 +397,19 @@ static int send_msg_from_lua (lua_State *L) {
     return 1;
   }
   const char *msg = lua_tostring (L, -1);
-  
+
   peer_t *P = get_peer (s);
   if (!P) {
     lua_pushboolean (L, 0);
     return 1;
   }
-  
+
   lua_ptr[pos ++] = (void *)2l;
   lua_ptr[pos ++] = (void *)0l;
   lua_ptr[pos ++] = P;
   lua_ptr[pos ++] = tstrdup (msg);
   logprintf ("msg = %s\n", msg);
-  
+
   lua_pushboolean (L, 1);
   return 1;
 }
@@ -435,7 +435,7 @@ static int fwd_msg_from_lua (lua_State *L) {
     lua_pushboolean (L, 0);
     return 1;
   }
-  
+
   lua_ptr[pos ++] = (void *)2l;
   lua_ptr[pos ++] = (void *)1l;
   lua_ptr[pos ++] = P;
@@ -464,7 +464,7 @@ static int mark_read_from_lua (lua_State *L) {
     lua_pushboolean (L, 0);
     return 1;
   }
-  
+
   lua_ptr[pos ++] = (void *)1l;
   lua_ptr[pos ++] = (void *)2l;
   lua_ptr[pos ++] = P;
@@ -474,7 +474,7 @@ static int mark_read_from_lua (lua_State *L) {
 
 int lua_postpone_alarm (void *self) {
   int *t = self;
-  
+
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
   my_lua_checkstack (luaState, 20);
@@ -482,7 +482,7 @@ int lua_postpone_alarm (void *self) {
   lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[1]);
   lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[0]);
   assert (lua_gettop (luaState) == 2);
-  
+
   int r = lua_pcall (luaState, 1, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, t[0]);
@@ -518,12 +518,12 @@ static int postpone_from_lua (lua_State *L) {
   t[0] = a1;
   t[1] = a2;
   *(void **)(t + 2) = ev;
-  
+
   ev->timeout = get_double_time () + timeout;
   ev->alarm = (void *)lua_postpone_alarm;
   ev->self = t;
   insert_event_timer (ev);
-  
+
   lua_pushboolean (L, 1);
   return 1;
 }

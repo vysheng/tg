@@ -249,7 +249,7 @@ int send_req_pq_packet (struct connection *c) {
   clear_packet ();
   out_int (CODE_req_pq);
   out_ints ((int *)nonce, 4);
-  rpc_send_packet (c);    
+  rpc_send_packet (c);
   c_state = st_reqpq_sent;
   return 1;
 }
@@ -333,7 +333,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   if (p1 > p2) {
     unsigned t = p1; p1 = p2; p2 = t;
   }
-  
+
 
   if (verbosity) {
     logprintf ( "p1 = %d, p2 = %d, %d iterations\n", p1, p2, it);
@@ -370,7 +370,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
     clen = 3;
   } else {
     clen = 4;
-  } 
+  }
   p1 = __builtin_bswap32 (p1);
   out_cstring ((char *)&p1 + 4 - clen, clen);
   p1 = __builtin_bswap32 (p1);
@@ -387,7 +387,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   p2 = __builtin_bswap32 (p2);
   out_cstring ((char *)&p2 + 4 - clen, clen);
   p2 = __builtin_bswap32 (p2);
-    
+
   //out_int (0x0301);  // p=3
   //out_int (0x0501);  // q=5
   out_ints ((int *) nonce, 4);
@@ -397,7 +397,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   sha1 ((unsigned char *) (packet_buffer + 5), (packet_ptr - packet_buffer - 5) * 4, (unsigned char *) packet_buffer);
 
   int l = encrypt_packet_buffer ();
-  
+
   clear_packet ();
   out_int (CODE_req_DH_params);
   out_ints ((int *) nonce, 4);
@@ -412,7 +412,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
     clen = 3;
   } else {
     clen = 4;
-  } 
+  }
   p1 = __builtin_bswap32 (p1);
   out_cstring ((char *)&p1 + 4 - clen, clen);
   p1 = __builtin_bswap32 (p1);
@@ -428,12 +428,12 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   p2 = __builtin_bswap32 (p2);
   out_cstring ((char *)&p2 + 4 - clen, clen);
   p2 = __builtin_bswap32 (p2);
-    
+
   out_long (pk_fingerprint);
   out_cstring ((char *) encrypt_buffer, l);
 
   c_state = st_reqdh_sent;
-  
+
   return rpc_send_packet (c);
 }
 
@@ -497,7 +497,7 @@ int check_g (unsigned char p[256], BIGNUM *g) {
   int ok = 0;
   int i;
   for (i = 0; i < 64; i++) {
-    if (s[i]) { 
+    if (s[i]) {
       ok = 1;
       break;
     }
@@ -505,7 +505,7 @@ int check_g (unsigned char p[256], BIGNUM *g) {
   if (!ok) { return -1; }
   ok = 0;
   for (i = 0; i < 64; i++) {
-    if (s[255 - i]) { 
+    if (s[255 - i]) {
       ok = 1;
       break;
     }
@@ -513,7 +513,7 @@ int check_g (unsigned char p[256], BIGNUM *g) {
   if (!ok) { return -1; }
   ok = 0;
   for (i = 0; i < 64; i++) {
-    if (s[i] < p[i]) { 
+    if (s[i] < p[i]) {
       ok = 1;
       break;
     } else if (s[i] > p[i]) {
@@ -587,7 +587,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   out_ints ((int *) nonce, 4);
   out_ints ((int *) server_nonce, 4);
   out_long (0LL);
-  
+
   BN_init (&dh_g);
   ensure (BN_set_word (&dh_g, g));
 
@@ -614,7 +614,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   BN_free (&dh_prime);
 
   //hexdump (auth_key, auth_key + 256);
- 
+
   sha1 ((unsigned char *) (packet_buffer + 5), (packet_ptr - packet_buffer - 5) * 4, (unsigned char *) packet_buffer);
 
   //hexdump ((char *)packet_buffer, (char *)packet_ptr);
@@ -656,7 +656,7 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   sha1 (tmp, 41, sha1_buffer);
   assert (!memcmp (packet + 56, sha1_buffer + 4, 16));
   GET_DC(c)->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
-  
+
   if (verbosity >= 3) {
     logprintf ( "auth_key_id=%016llx\n", GET_DC(c)->auth_key_id);
   }
@@ -673,7 +673,7 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   auth_success ++;
   GET_DC(c)->flags |= 1;
   write_auth_file ();
-  
+
   return 1;
 }
 
@@ -765,7 +765,7 @@ long long encrypt_send_message (struct connection *c, int *msg, int msg_ints, in
   //hexdump ((char *)&enc_msg, (char *)&enc_msg + l  + 24);
   assert (l > 0);
   rpc_send_message (c, &enc_msg, l + UNENCSZ);
-  
+
   return client_last_msg_id;
 }
 
@@ -850,9 +850,9 @@ void work_update_binlog (void) {
         struct user *U = &UC->user;
         if (U->first_name) { tfree_str (U->first_name); }
         if (U->last_name) { tfree_str (U->last_name); }
-        if (U->print_name) { 
+        if (U->print_name) {
           peer_delete_name (UC);
-          tfree_str (U->print_name); 
+          tfree_str (U->print_name);
         }
         U->first_name = fetch_str_dup ();
         U->last_name = fetch_str_dup ();
@@ -871,7 +871,7 @@ void work_update_binlog (void) {
       fetch_date ();
       if (UC) {
         struct user *U = &UC->user;
-        
+
         unsigned y = fetch_int ();
         if (y == CODE_user_profile_photo_empty) {
           U->photo_id = 0;
@@ -1058,7 +1058,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           fetch_file_location (&big);
         }
         bl_do_set_user_profile_photo (U, photo_id, &big, &small);
-        
+
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
@@ -1129,7 +1129,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
             users[i].inviter_id = fetch_int ();
             users[i].date = fetch_int ();
           }
-          int version = fetch_int (); 
+          int version = fetch_int ();
           bl_do_set_chat_participants (&C->chat, version, n, users);
         }
       } else {
@@ -1339,8 +1339,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       peer_id_t user_id = MK_USER (fetch_int ());
       peer_id_t inviter_id = MK_USER (fetch_int ());
-      int  version = fetch_int (); 
-      
+      int  version = fetch_int ();
+
       peer_t *C = user_chat_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         bl_do_chat_add_user (&C->chat, version, get_peer_id (user_id), get_peer_id (inviter_id), time (0));
@@ -1365,7 +1365,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       peer_id_t user_id = MK_USER (fetch_int ());
       int version = fetch_int ();
-      
+
       peer_t *C = user_chat_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         bl_do_chat_del_user (&C->chat, version, get_peer_id (user_id));
@@ -1430,7 +1430,7 @@ void work_updates (struct connection *c, long long msg_id) {
 
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_update_short_message);
-  struct message *M = fetch_alloc_message_short ();  
+  struct message *M = fetch_alloc_message_short ();
   unread_messages ++;
   print_message (M);
   update_prompt ();
@@ -1441,7 +1441,7 @@ void work_update_short_message (struct connection *c UU, long long msg_id UU) {
 
 void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == CODE_update_short_chat_message);
-  struct message *M = fetch_alloc_message_short_chat ();  
+  struct message *M = fetch_alloc_message_short_chat ();
   unread_messages ++;
   print_message (M);
   update_prompt ();
@@ -1458,8 +1458,8 @@ void work_container (struct connection *c, long long msg_id UU) {
   int n = fetch_int ();
   int i;
   for (i = 0; i < n; i++) {
-    long long id = fetch_long (); 
-    //int seqno = fetch_int (); 
+    long long id = fetch_long ();
+    //int seqno = fetch_int ();
     fetch_int (); // seq_no
     if (id & 1) {
       insert_msg_id (c->session, id);
@@ -1482,7 +1482,7 @@ void work_new_session_created (struct connection *c, long long msg_id UU) {
   //DC->session_id = fetch_long ();
   fetch_long (); // unique_id
   GET_DC(c)->server_salt = fetch_long ();
-  
+
 }
 
 void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
@@ -1523,7 +1523,7 @@ void work_packed (struct connection *c, long long msg_id) {
   static int buf[MAX_PACKED_SIZE >> 2];
   assert (!in_gzip);
   in_gzip = 1;
-    
+
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
 
@@ -1650,7 +1650,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   const int MINSZ = offsetof (struct encrypted_message, message);
   const int UNENCSZ = offsetof (struct encrypted_message, server_salt);
   if (verbosity) {
-    logprintf ( "process_rpc_message(), len=%d\n", len);  
+    logprintf ( "process_rpc_message(), len=%d\n", len);
   }
   assert (len >= MINSZ && (len & 15) == (UNENCSZ & 15));
   struct dc *DC = GET_DC(c);
@@ -1669,7 +1669,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
     DC->server_salt = enc->server_salt;
     write_auth_file ();
   }
-  
+
   int this_server_time = enc->msg_id >> 32LL;
   if (!DC->server_time_delta) {
     DC->server_time_delta = this_server_time - get_utime (CLOCK_REALTIME);
@@ -1697,10 +1697,10 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   assert (l >= (MINSZ - UNENCSZ) + 8);
   //assert (enc->message[0] == CODE_rpc_result && *(long long *)(enc->message + 1) == client_last_msg_id);
   ++good_messages;
-  
+
   in_ptr = enc->message;
   in_end = in_ptr + (enc->msg_len / 4);
- 
+
   if (enc->msg_id & 1) {
     insert_msg_id (c->session, enc->msg_id);
   }
@@ -1774,7 +1774,7 @@ int rpc_execute (struct connection *c, int op, int len) {
     logprintf ( "fatal: cannot receive answer in state %d\n", c_state);
     exit (2);
   }
- 
+
   return 0;
 }
 
@@ -1793,7 +1793,7 @@ int tc_becomes_ready (struct connection *c) {
   char byte = 0xef;
   assert (write_out (c, &byte, 1) == 1);
   flush_out (c);
-  
+
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
   setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
