@@ -5,7 +5,9 @@ VERSION=$(shell dpkg-parsechangelog | sed -n 's/^Version: //p' | cut -f1 -d'-')
 PACKAGE_NAME=$(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
 
 %:
+	cp tg-server.pub server.pub
 	dh $@  --with autotools-dev
+	rm server.pub
 
 build-orig:
 	mkdir -p $(PACKAGE_NAME)-$(VERSION)
