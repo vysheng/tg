@@ -151,6 +151,13 @@ void tree_check_ ## X_NAME (struct tree_ ## X_NAME *T) { \
   tree_check_ ## X_NAME (T->left); \
   tree_check_ ## X_NAME (T->right); \
 }\
+struct tree_ ## X_NAME *tree_clear_ ## X_NAME (struct tree_ ## X_NAME *T) { \
+  if (!T) { return 0; }\
+  tree_clear_ ## X_NAME (T->left); \
+  tree_clear_ ## X_NAME (T->right); \
+  delete_tree_node_ ## X_NAME (T); \
+  return 0; \
+} \
 
 #define int_cmp(a,b) ((a) - (b))
 #pragma pack(pop)

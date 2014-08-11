@@ -92,7 +92,7 @@ int get_random_bytes (unsigned char *buf, int n) {
 
 void my_clock_gettime (int clock_id UU, struct timespec *T) {
 #ifdef __MACH__
-  // We are ignoring MONOTONIC and hope time doesn't go back to often
+  // We are ignoring MONOTONIC and hope time doesn't go back too often
   clock_serv_t cclock;
   mach_timespec_t mts;
   host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
