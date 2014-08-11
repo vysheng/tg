@@ -36,22 +36,7 @@
 #define LOG_ENCR_CHAT_REQUESTED 0x9011011a
 #define LOG_ENCR_CHAT_OK 0x7612ce13
 
-#define CODE_binlog_user_delete 0xf7a27c79
-#define CODE_binlog_set_user_access_token 0x1349f615
-#define CODE_binlog_set_user_phone 0x5d3afde2
-#define CODE_binlog_set_user_friend 0x75a7ec5a
 #define CODE_binlog_dc_option 0x08c0ef19
-#define CODE_binlog_user_full_photo 0xfaa35824
-#define CODE_binlog_user_blocked 0xb2dea7cd
-#define CODE_binlog_set_user_full_name 0x4ceb4cf0
-#define CODE_binlog_encr_chat_delete 0xb9d33f87
-#define CODE_binlog_encr_chat_requested 0xf57d1ea2
-#define CODE_binlog_set_encr_chat_access_hash 0xe5612bb3
-#define CODE_binlog_set_encr_chat_date 0x54f16911
-#define CODE_binlog_set_encr_chat_state 0x76a6e45b
-#define CODE_binlog_encr_chat_accepted 0x4627e926
-#define CODE_binlog_set_encr_chat_key 0x179df2d4
-#define CODE_binlog_set_dh_params 0x20ba46bc
 #define CODE_binlog_encr_chat_init 0x939cd1c7
 #define CODE_binlog_set_pts 0x844e4c1c
 #define CODE_binlog_set_qts 0x3cf22b79

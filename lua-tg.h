@@ -13,4 +13,5 @@ void lua_chat_update (struct chat *C);
 void lua_binlog_end (void);
 void lua_diff_end (void);
 void lua_do_all (void);
+#define lua_secret_chat_update(x)
 #endif

@@ -173,14 +173,274 @@ int fetch_comb_binlog_new_user (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_new_user (void *extra) {
+int fetch_comb_binlog_user_delete (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
   U->flags |= FLAG_DELETED;
   
   #ifdef USE_LUA
-    lua_user_update (U);
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_user_access_token (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  U->user.access_hash = fetch_long ();
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_user_phone (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  if (U->user.phone) {
+    tfree_str (U->user.phone);
+  }
+  U->user.phone = fetch_str_dup ();
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_user_friend (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  if (U->user.phone) {
+    tfree_str (U->user.phone);
+  }
+  int friend = fetch_int ();
+  if (friend) { U->flags |= FLAG_USER_CONTACT; }
+  else { U->flags &= ~FLAG_USER_CONTACT; }
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_user_full_photo (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  if (U->flags & FLAG_HAS_PHOTO) {
+    free_photo (&U->user.photo);
+  }
+  fetch_photo (&U->user.photo);
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_user_blocked (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+
+  U->user.blocked = fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_user_full_name (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+
+  if (U->user.real_first_name) { tfree_str (U->user.real_first_name); }
+  if (U->user.real_last_name) { tfree_str (U->user.real_last_name); }
+  U->user.real_first_name = fetch_str_dup ();
+  U->user.real_last_name = fetch_str_dup ();
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_encr_chat_delete (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *_U = user_chat_get (id);
+  assert (_U);
+  struct secret_chat *U = &_U->encr_chat;
+  memset (U->key, 0, sizeof (U->key));
+  U->flags |= FLAG_DELETED;
+  U->state = sc_deleted;
+  if (U->nonce) {
+    tfree_secure (U->nonce, 256);
+    U->nonce = 0;
+  }
+  if (U->g_key) {
+    tfree_secure (U->g_key, 256);
+    U->g_key = 0;
+  }
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (U);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_encr_chat_requested (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *_U = user_chat_get (id);
+  if (!_U) {
+    _U = talloc0 (sizeof (*_U));
+    _U->id = id;
+    insert_encrypted_chat (_U);
+  } else {
+    assert (!(_U->flags & FLAG_CREATED));
+  }
+  struct secret_chat *U = (void *)_U;
+  U->access_hash = fetch_long ();
+  U->date = fetch_int ();
+  U->admin_id = fetch_int ();
+  U->user_id = fetch_int ();
+
+  peer_t *Us = user_chat_get (MK_USER (U->user_id));
+  assert (!U->print_name);
+  if (Us) {
+    U->print_name = create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
+  } else {
+    static char buf[100];
+    tsnprintf (buf, 99, "user#%d", U->user_id);
+    U->print_name = create_print_name (id, "!", buf, 0, 0);
+  }
+  peer_insert_name ((void *)U);
+  U->g_key = talloc (256);
+  U->nonce = talloc (256);
+  fetch_ints (U->g_key, 64);
+  fetch_ints (U->nonce, 64);
+
+  U->flags |= FLAG_CREATED;
+  U->state = sc_request;
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (U);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_encr_chat_access_hash (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  U->encr_chat.access_hash = fetch_long ();
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (&U->encr_chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_encr_chat_date (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  U->encr_chat.date = fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (&U->encr_chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_encr_chat_state (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  U->encr_chat.state = fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (&U->encr_chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_encr_chat_accepted (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *_U = user_chat_get (id);
+  assert (_U);
+  struct secret_chat *U = &_U->encr_chat;
+  if (!U->g_key) {
+    U->g_key = talloc (256);
+  }
+  if (!U->nonce) {
+    U->nonce = talloc (256);
+  }
+
+  fetch_ints (U->g_key, 256);
+  fetch_ints (U->nonce, 256);
+  U->key_fingerprint = fetch_long ();
+  
+  if (U->state == sc_waiting) {
+    do_create_keys_end (U);
+  }
+  U->state = sc_ok;
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (U);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_encr_chat_key (void *extra) {
+  peer_id_t id = MK_ENCR_CHAT (fetch_int ());
+  peer_t *_U = user_chat_get (id);
+  assert (_U);
+  struct secret_chat *U = &_U->encr_chat;
+  fetch_ints (U->key, 64);
+  U->key_fingerprint = fetch_long ();
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (U);
+  #endif
+  return 0;
+}
+      
+int fetch_comb_binlog_set_dh_params (void *extra) {
+  if (encr_prime) { tfree (encr_prime, 256); }
+  encr_root = fetch_int ();
+  encr_prime = talloc (256);
+  fetch_ints (encr_prime, 64);
+  encr_param_version = fetch_int ();
+
+  return 0;
+}
+
+int fetch_comb_binlog_encr_chat_init (void *extra) {
+  peer_t *P = talloc0 (sizeof (*P));
+  P->id = MK_ENCR_CHAT (fetch_int ());
+  assert (!user_chat_get (P->id));
+  P->encr_chat.user_id = fetch_int ();
+  P->encr_chat.admin_id = our_id;
+  insert_encrypted_chat (P);
+  peer_t *Us = user_chat_get (MK_USER (P->encr_chat.user_id));
+  assert (Us);
+  P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
+  peer_insert_name (P);
+
+  fetch_ints (P->encr_chat.key, 64);
+  fetch_ints (P->encr_chat.g_key, 64);
+  P->flags |= FLAG_CREATED;
+  
+  #ifdef USE_LUA
+    lua_secret_chat_update (U);
   #endif
   return 0;
 }
@@ -194,6 +454,21 @@ FETCH_COMBINATOR_FUNCTION (binlog_dc_signed)
 FETCH_COMBINATOR_FUNCTION (binlog_dc_salt)
 FETCH_COMBINATOR_FUNCTION (binlog_new_user)
 FETCH_COMBINATOR_FUNCTION (binlog_user_delete)
+FETCH_COMBINATOR_FUNCTION (binlog_set_user_access_token)
+FETCH_COMBINATOR_FUNCTION (binlog_set_user_phone)
+FETCH_COMBINATOR_FUNCTION (binlog_set_user_friend)
+FETCH_COMBINATOR_FUNCTION (binlog_user_full_photo)
+FETCH_COMBINATOR_FUNCTION (binlog_user_blocked)
+FETCH_COMBINATOR_FUNCTION (binlog_set_user_full_name)
+FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_delete)
+FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_requested)
+FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_access_hash)
+FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_date)
+FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_state)
+FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
+FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_key)
+FETCH_COMBINATOR_FUNCTION (binlog_set_dh_params)
+FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
 
 void replay_log_event (void) {
   int *start = rptr;
@@ -208,218 +483,6 @@ void replay_log_event (void) {
   in_ptr = rptr;
   in_end = wptr;
   switch (op) {
-  case CODE_binlog_set_user_access_token:
-    rptr ++;
-    {
-      peer_id_t id = MK_USER (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      U->user.access_hash = *(long long *)rptr;
-      rptr += 2;
-    }
-    break;
-  case CODE_binlog_set_user_phone:
-    in_ptr ++;
-    {
-      peer_id_t id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      if (U->user.phone) { tfree_str (U->user.phone); }
-      U->user.phone = fetch_str_dup ();
-      
-      #ifdef USE_LUA
-        lua_user_update (&U->user);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_set_user_friend:
-    rptr ++;
-    {
-      peer_id_t id = MK_USER (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      int friend = *(rptr ++);
-      if (friend) { U->flags |= FLAG_USER_CONTACT; }
-      else { U->flags &= ~FLAG_USER_CONTACT; }
-    }
-    break;
-  case CODE_binlog_user_full_photo:
-    in_ptr ++;
-    {
-      peer_id_t id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      if (U->flags & FLAG_HAS_PHOTO) {
-        free_photo (&U->user.photo);
-      }
-      fetch_photo (&U->user.photo);
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_user_blocked:
-    rptr ++;
-    {
-      peer_id_t id = MK_USER (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      U->user.blocked = *(rptr ++);
-    }
-    break;
-  case CODE_binlog_set_user_full_name:
-    in_ptr ++;
-    {
-      peer_id_t id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      if (U->user.real_first_name) { tfree_str (U->user.real_first_name); }
-      if (U->user.real_last_name) { tfree_str (U->user.real_last_name); }
-      U->user.real_first_name = fetch_str_dup ();
-      U->user.real_last_name = fetch_str_dup ();
-      
-      #ifdef USE_LUA
-        lua_user_update (&U->user);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_encr_chat_delete:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *_U = user_chat_get (id);
-      assert (_U);
-      struct secret_chat *U = &_U->encr_chat;
-      memset (U->key, 0, sizeof (U->key));
-      U->flags |= FLAG_DELETED;
-      U->state = sc_deleted;
-      if (U->nonce) {
-        tfree_secure (U->nonce, 256);
-        U->nonce = 0;
-      }
-      if (U->g_key) {
-        tfree_secure (U->g_key, 256);
-        U->g_key = 0;
-      }
-    }
-    break;
-  case CODE_binlog_encr_chat_requested:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *_U = user_chat_get (id);
-      if (!_U) {
-        _U = talloc0 (sizeof (*_U));
-        _U->id = id;
-        insert_encrypted_chat (_U);
-      } else {
-        assert (!(_U->flags & FLAG_CREATED));
-      }
-      struct secret_chat *U = (void *)_U;
-      U->access_hash = *(long long *)rptr;
-      rptr += 2;
-      U->date = *(rptr ++);
-      U->admin_id = *(rptr ++);
-      U->user_id = *(rptr ++);
-
-      peer_t *Us = user_chat_get (MK_USER (U->user_id));
-      assert (!U->print_name);
-      if (Us) {
-        U->print_name = create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
-      } else {
-        static char buf[100];
-        tsnprintf (buf, 99, "user#%d", U->user_id);
-        U->print_name = create_print_name (id, "!", buf, 0, 0);
-      }
-      peer_insert_name ((void *)U);
-      U->g_key = talloc (256);
-      U->nonce = talloc (256);
-      memcpy (U->g_key, rptr, 256);
-      rptr += 64;
-      memcpy (U->nonce, rptr, 256);
-      rptr += 64;
-
-      U->flags |= FLAG_CREATED;
-      U->state = sc_request;
-    }
-    break;
-  case CODE_binlog_set_encr_chat_access_hash:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      U->encr_chat.access_hash = *(long long *)rptr;
-      rptr += 2;
-    }
-    break;
-  case CODE_binlog_set_encr_chat_date:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      U->encr_chat.date = *(rptr ++);
-    }
-    break;
-  case CODE_binlog_set_encr_chat_state:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      U->encr_chat.state = *(rptr ++);
-    }
-    break;
-  case CODE_binlog_encr_chat_accepted:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *_U = user_chat_get (id);
-      assert (_U);
-      struct secret_chat *U = &_U->encr_chat;
-      if (!U->g_key) {
-        U->g_key = talloc (256);
-      }
-      if (!U->nonce) {
-        U->nonce = talloc (256);
-      }
-      memcpy (U->g_key, rptr, 256);
-      rptr += 64;
-      memcpy (U->nonce, rptr, 256);
-      rptr += 64;
-      U->key_fingerprint = *(long long *)rptr;
-      rptr += 2;
-      if (U->state == sc_waiting) {
-        do_create_keys_end (U);
-      }
-      U->state = sc_ok;
-    }
-    break;
-  case CODE_binlog_set_encr_chat_key:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      peer_t *_U = user_chat_get (id);
-      assert (_U);
-      struct secret_chat *U = &_U->encr_chat;
-      memcpy (U->key, rptr, 256);
-      rptr += 64;
-      U->key_fingerprint = *(long long *)rptr;
-      rptr += 2;
-    }
-    break;
-  case CODE_binlog_set_dh_params:
-    rptr ++;
-    {
-      if (encr_prime) { tfree (encr_prime, 256); }
-      encr_root = *(rptr ++);
-      encr_prime = talloc (256);
-      memcpy (encr_prime, rptr, 256);
-      rptr += 64;
-      encr_param_version = *(rptr ++);
-    }
-    break;
   case CODE_binlog_encr_chat_init:
     rptr ++;
     {
