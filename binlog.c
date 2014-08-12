@@ -139,6 +139,44 @@ int fetch_comb_binlog_dc_salt (void *extra) {
   DC_list[num]->server_salt = fetch_long ();
   return 0;
 }
+      
+int fetch_comb_binlog_set_dh_params (void *extra) {
+  if (encr_prime) { tfree (encr_prime, 256); }
+  encr_root = fetch_int ();
+  encr_prime = talloc (256);
+  fetch_ints (encr_prime, 64);
+  encr_param_version = fetch_int ();
+
+  return 0;
+}
+
+int fetch_comb_binlog_set_pts (void *extra) {
+  int new_pts = fetch_int ();
+  assert (new_pts >= pts);
+  pts = new_pts;
+  return 0;
+}
+
+int fetch_comb_binlog_set_qts (void *extra) {
+  int new_qts = fetch_int ();
+  assert (new_qts >= qts);
+  qts = new_qts;
+  return 0;
+}
+
+int fetch_comb_binlog_set_date (void *extra) {
+  int new_date = fetch_int ();
+  assert (new_date >= last_date);
+  last_date = new_date;
+  return 0;
+}
+
+int fetch_comb_binlog_set_seq (void *extra) {
+  int new_seq = fetch_int ();
+  assert (new_seq >= seq);
+  seq = new_seq;
+  return 0;
+}
 
 int fetch_comb_binlog_new_user (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
@@ -412,16 +450,6 @@ int fetch_comb_binlog_set_encr_chat_key (void *extra) {
   #endif
   return 0;
 }
-      
-int fetch_comb_binlog_set_dh_params (void *extra) {
-  if (encr_prime) { tfree (encr_prime, 256); }
-  encr_root = fetch_int ();
-  encr_prime = talloc (256);
-  fetch_ints (encr_prime, 64);
-  encr_param_version = fetch_int ();
-
-  return 0;
-}
 
 int fetch_comb_binlog_encr_chat_init (void *extra) {
   peer_t *P = talloc0 (sizeof (*P));
@@ -445,6 +473,415 @@ int fetch_comb_binlog_encr_chat_init (void *extra) {
   return 0;
 }
 
+int fetch_comb_binlog_chat_create (void *extra) {
+  peer_id_t id = MK_CHAT (fetch_int ());
+  peer_t *_C = user_chat_get (id);
+  if (!_C) {
+    _C = talloc0 (sizeof (*_C));
+    _C->id = id;
+    insert_chat (_C);
+  } else {
+    assert (!(_C->flags & FLAG_CREATED));
+  }
+  struct chat *C = &_C->chat;
+  C->flags = FLAG_CREATED | fetch_int ();
+  C->title = fetch_str_dup ();
+  assert (!C->print_title);
+  C->print_title = create_print_name (id, C->title, 0, 0, 0);
+  peer_insert_name ((void *)C);
+  C->users_num = fetch_int ();
+  C->date = fetch_int ();
+  C->version = fetch_int ();
+
+  fetch_data (&C->photo_big, sizeof (struct file_location));
+  fetch_data (&C->photo_small, sizeof (struct file_location));
+      
+  #ifdef USE_LUA
+    lua_chat_update (C);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_chat_change_flags (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+  C->chat.flags |= fetch_int ();
+  C->chat.flags &= ~fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_chat_title (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+      
+  if (C->chat.title) { tfree_str (C->chat.title); }
+  C->chat.title = fetch_str_dup ();
+  if (C->print_name) { 
+    peer_delete_name ((void *)C);
+    tfree_str (C->print_name); 
+  }
+  C->print_name = create_print_name (C->id, C->chat.title, 0, 0, 0);
+  peer_insert_name ((void *)C);
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_chat_photo (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+  fetch_data (&C->photo_big, sizeof (struct file_location));
+  fetch_data (&C->photo_small, sizeof (struct file_location));
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_chat_date (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+  C->chat.date = fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_chat_version (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+  C->chat.version = fetch_int ();
+  C->chat.users_num = fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_chat_admin (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+  C->chat.admin_id = fetch_int ();
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_chat_participants (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+  C->chat.user_list_version = fetch_int ();
+  if (C->chat.user_list) { tfree (C->chat.user_list, 12 * C->chat.user_list_size); }
+  C->chat.user_list_size = fetch_int ();
+  C->chat.user_list = talloc (12 * C->chat.user_list_size);
+  fetch_ints (C->chat.user_list, 3 * C->chat.user_list_size);
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_chat_full_photo (void *extra) {
+  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  assert (C && (C->flags & FLAG_CREATED));
+      
+  assert (C && (C->flags & FLAG_CREATED));
+  if (C->flags & FLAG_HAS_PHOTO) {
+    free_photo (&C->chat.photo);
+  }
+  fetch_photo (&C->chat.photo);
+  
+  #ifdef USE_LUA
+    lua_chat_update (&C->chat);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_add_chat_participant (void *extra) {
+  peer_id_t id = MK_CHAT (fetch_int ());
+  peer_t *_C = user_chat_get (id);
+  assert (_C && (_C->flags & FLAG_CREATED));
+  struct chat *C = &_C->chat;
+
+  int version = fetch_int ();
+  int user = fetch_int ();
+  int inviter = fetch_int ();
+  int date = fetch_int ();
+  assert (C->user_list_version < version);
+
+  int i;
+  for (i = 0; i < C->user_list_size; i++) {
+    assert (C->user_list[i].user_id != user);
+  }
+
+  C->user_list_size ++;
+  C->user_list = trealloc (C->user_list, 12 * C->user_list_size - 12, 12 * C->user_list_size);
+  C->user_list[C->user_list_size - 1].user_id = user;
+  C->user_list[C->user_list_size - 1].inviter_id = inviter;
+  C->user_list[C->user_list_size - 1].date = date;
+  C->user_list_version = version;
+  
+  #ifdef USE_LUA
+    lua_chat_update (C);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_del_chat_participant (void *extra) {
+  peer_id_t id = MK_CHAT (fetch_int ());
+  peer_t *_C = user_chat_get (id);
+  assert (_C && (_C->flags & FLAG_CREATED));
+  struct chat *C = &_C->chat;
+  
+  int version = fetch_int ();
+  int user = fetch_int ();
+  assert (C->user_list_version < version);
+      
+  int i;
+  for (i = 0; i < C->user_list_size; i++) {
+    if (C->user_list[i].user_id == user) {
+      struct chat_user t;
+      t = C->user_list[i];
+      C->user_list[i] = C->user_list[C->user_list_size - 1];
+      C->user_list[C->user_list_size - 1] = t;
+    }
+  }
+  assert (C->user_list[C->user_list_size - 1].user_id == user);
+  C->user_list_size --;
+  C->user_list = trealloc (C->user_list, 12 * C->user_list_size + 12, 12 * C->user_list_size);
+  C->user_list_version = version;
+  
+  #ifdef USE_LUA
+    lua_chat_update (C);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_create_message_text (void *extra) {
+  long long id = fetch_int ();
+  
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  if (t == PEER_ENCR_CHAT) {
+    M->flags |= FLAG_ENCRYPTED;
+  }
+
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+      
+  int l = prefetch_strlen ();
+  M->message = talloc (l + 1);
+  memcpy (M->message, fetch_str (l), l);
+  M->message[l] = 0;
+  M->message_len = l;
+
+  if (t == PEER_ENCR_CHAT) {
+    M->media.type = CODE_decrypted_message_media_empty;
+  } else {
+    M->media.type = CODE_message_media_empty;
+  }
+  
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+
+  message_insert (M);
+      
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_send_message_text (void *extra) {
+  long long id = fetch_long ();
+  
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  if (t == PEER_ENCR_CHAT) {
+    M->flags |= FLAG_ENCRYPTED;
+  }
+
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+      
+  int l = prefetch_strlen ();
+  M->message = talloc (l + 1);
+  memcpy (M->message, fetch_str (l), l);
+  M->message[l] = 0;
+  M->message_len = l;
+
+  if (t == PEER_ENCR_CHAT) {
+    M->media.type = CODE_decrypted_message_media_empty;
+  } else {
+    M->media.type = CODE_message_media_empty;
+  }
+  
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+
+  message_insert (M);
+  message_insert_unsent (M);
+  M->flags |= FLAG_PENDING;
+      
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_create_message_text_fwd (void *extra) {
+  long long id = fetch_int ();
+  
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  if (t == PEER_ENCR_CHAT) {
+    M->flags |= FLAG_ENCRYPTED;
+  }
+
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+  
+  M->fwd_from_id = MK_USER (fetch_int ());
+  M->fwd_date = fetch_int ();
+      
+  int l = prefetch_strlen ();
+  M->message = talloc (l + 1);
+  memcpy (M->message, fetch_str (l), l);
+  M->message[l] = 0;
+  M->message_len = l;
+
+  if (t == PEER_ENCR_CHAT) {
+    M->media.type = CODE_decrypted_message_media_empty;
+  } else {
+    M->media.type = CODE_message_media_empty;
+  }
+  
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+
+  message_insert (M);
+      
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_create_message_media (void *extra) {
+  int id = fetch_int ();
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+      
+  int l = prefetch_strlen ();
+  M->message = talloc (l + 1);
+  memcpy (M->message, fetch_str (l), l);
+  M->message[l] = 0;
+  M->message_len = l;
+
+  fetch_message_media (&M->media);
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+
+  message_insert (M);
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_create_message_media_encr (void *extra) {
+  int id = fetch_int ();
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+      
+  int l = prefetch_strlen ();
+  M->message = talloc (l + 1);
+  memcpy (M->message, fetch_str (l), l);
+  M->message[l] = 0;
+  M->message_len = l;
+
+  fetch_message_media_encrypted (&M->media);
+  fetch_encrypted_message_file (&M->media);
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+
+  message_insert (M);
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
 FETCH_COMBINATOR_FUNCTION (binlog_start)
 FETCH_COMBINATOR_FUNCTION (binlog_dc_option)
 FETCH_COMBINATOR_FUNCTION (binlog_auth_key)
@@ -452,6 +889,13 @@ FETCH_COMBINATOR_FUNCTION (binlog_default_dc)
 FETCH_COMBINATOR_FUNCTION (binlog_our_id)
 FETCH_COMBINATOR_FUNCTION (binlog_dc_signed)
 FETCH_COMBINATOR_FUNCTION (binlog_dc_salt)
+
+FETCH_COMBINATOR_FUNCTION (binlog_set_dh_params)
+FETCH_COMBINATOR_FUNCTION (binlog_set_pts)
+FETCH_COMBINATOR_FUNCTION (binlog_set_qts)
+FETCH_COMBINATOR_FUNCTION (binlog_set_date)
+FETCH_COMBINATOR_FUNCTION (binlog_set_seq)
+
 FETCH_COMBINATOR_FUNCTION (binlog_new_user)
 FETCH_COMBINATOR_FUNCTION (binlog_user_delete)
 FETCH_COMBINATOR_FUNCTION (binlog_set_user_access_token)
@@ -459,6 +903,7 @@ FETCH_COMBINATOR_FUNCTION (binlog_set_user_phone)
 FETCH_COMBINATOR_FUNCTION (binlog_set_user_friend)
 FETCH_COMBINATOR_FUNCTION (binlog_user_full_photo)
 FETCH_COMBINATOR_FUNCTION (binlog_user_blocked)
+
 FETCH_COMBINATOR_FUNCTION (binlog_set_user_full_name)
 FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_delete)
 FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_requested)
@@ -467,8 +912,24 @@ FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_date)
 FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_state)
 FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
 FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_key)
-FETCH_COMBINATOR_FUNCTION (binlog_set_dh_params)
 FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
+
+FETCH_COMBINATOR_FUNCTION (binlog_chat_create)
+FETCH_COMBINATOR_FUNCTION (binlog_chat_change_flags)
+FETCH_COMBINATOR_FUNCTION (binlog_set_chat_title)
+FETCH_COMBINATOR_FUNCTION (binlog_set_chat_photo)
+FETCH_COMBINATOR_FUNCTION (binlog_set_chat_date)
+FETCH_COMBINATOR_FUNCTION (binlog_set_chat_version)
+FETCH_COMBINATOR_FUNCTION (binlog_set_chat_admin)
+FETCH_COMBINATOR_FUNCTION (binlog_set_chat_participants)
+FETCH_COMBINATOR_FUNCTION (binlog_chat_full_photo)
+FETCH_COMBINATOR_FUNCTION (binlog_add_chat_participant)
+FETCH_COMBINATOR_FUNCTION (binlog_del_chat_participant)
+
+FETCH_COMBINATOR_FUNCTION (binlog_create_message_text)
+FETCH_COMBINATOR_FUNCTION (binlog_send_message_text)
+FETCH_COMBINATOR_FUNCTION (binlog_create_message_text_fwd)
+FETCH_COMBINATOR_FUNCTION (binlog_create_message_media)
 
 void replay_log_event (void) {
   int *start = rptr;
@@ -483,400 +944,6 @@ void replay_log_event (void) {
   in_ptr = rptr;
   in_end = wptr;
   switch (op) {
-  case CODE_binlog_encr_chat_init:
-    rptr ++;
-    {
-      peer_t *P = talloc0 (sizeof (*P));
-      P->id = MK_ENCR_CHAT (*(rptr ++));
-      assert (!user_chat_get (P->id));
-      P->encr_chat.user_id = *(rptr ++);
-      P->encr_chat.admin_id = our_id;
-      insert_encrypted_chat (P);
-      peer_t *Us = user_chat_get (MK_USER (P->encr_chat.user_id));
-      assert (Us);
-      P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
-      peer_insert_name (P);
-      memcpy (P->encr_chat.key, rptr, 256);
-      rptr += 64;
-      P->encr_chat.g_key = talloc (256);
-      memcpy (P->encr_chat.g_key, rptr, 256);
-      rptr += 64;
-      P->flags |= FLAG_CREATED;
-    }
-    break;
-  case CODE_binlog_set_pts:
-    rptr ++;
-    pts = *(rptr ++);
-    break;
-  case CODE_binlog_set_qts:
-    rptr ++;
-    qts = *(rptr ++);
-    break;
-  case CODE_binlog_set_date:
-    rptr ++;
-    last_date = *(rptr ++);
-    break;
-  case CODE_binlog_set_seq:
-    rptr ++;
-    seq = *(rptr ++);
-    break;
-  case CODE_binlog_chat_create:
-    in_ptr ++;
-    {
-      peer_id_t id = MK_CHAT (fetch_int ());
-      peer_t *_C = user_chat_get (id);
-      if (!_C) {
-        _C = talloc0 (sizeof (*_C));
-        _C->id = id;
-        insert_chat (_C);
-      } else {
-        assert (!(_C->flags & FLAG_CREATED));
-      }
-      struct chat *C = &_C->chat;
-      C->flags = FLAG_CREATED | fetch_int ();
-      C->title = fetch_str_dup ();
-      assert (!C->print_title);
-      C->print_title = create_print_name (id, C->title, 0, 0, 0);
-      peer_insert_name ((void *)C);
-      C->users_num = fetch_int ();
-      C->date = fetch_int ();
-      C->version = fetch_int ();
-      fetch_data (&C->photo_big, sizeof (struct file_location));
-      fetch_data (&C->photo_small, sizeof (struct file_location));
-      
-      #ifdef USE_LUA
-        lua_chat_update (C);
-      #endif
-    };
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_chat_change_flags:
-    rptr ++;
-    {
-      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
-      assert (C && (C->flags & FLAG_CREATED));
-      C->flags |= *(rptr ++);
-      C->flags &= ~*(rptr ++);
-    };
-    break;
-  case CODE_binlog_set_chat_title:
-    in_ptr ++;
-    {
-      peer_t *_C = user_chat_get (MK_CHAT (fetch_int ()));
-      assert (_C && (_C->flags & FLAG_CREATED));
-      struct chat *C = &_C->chat;
-      if (C->title) { tfree_str (C->title); }
-      C->title = fetch_str_dup ();
-      if (C->print_title) { 
-        peer_delete_name ((void *)C);
-        tfree_str (C->print_title); 
-      }
-      C->print_title = create_print_name (C->id, C->title, 0, 0, 0);
-      peer_insert_name ((void *)C);
-      #ifdef USE_LUA
-        lua_chat_update (C);
-      #endif
-    };
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_set_chat_photo:
-    in_ptr ++;
-    {
-      peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
-      assert (C && (C->flags & FLAG_CREATED));
-      fetch_data (&C->photo_big, sizeof (struct file_location));
-      fetch_data (&C->photo_small, sizeof (struct file_location));
-    };
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_set_chat_date:
-    rptr ++;
-    {
-      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
-      assert (C && (C->flags & FLAG_CREATED));
-      C->chat.date = *(rptr ++);
-      #ifdef USE_LUA
-        lua_chat_update (&C->chat);
-      #endif
-    };
-    break;
-  case CODE_binlog_set_chat_version:
-    rptr ++;
-    {
-      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
-      assert (C && (C->flags & FLAG_CREATED));
-      C->chat.version = *(rptr ++);
-      C->chat.users_num = *(rptr ++);
-      #ifdef USE_LUA
-        lua_chat_update (&C->chat);
-      #endif
-    };
-    break;
-  case CODE_binlog_set_chat_admin:
-    rptr ++;
-    {
-      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
-      assert (C && (C->flags & FLAG_CREATED));
-      C->chat.admin_id = *(rptr ++);
-      #ifdef USE_LUA
-        lua_chat_update (&C->chat);
-      #endif
-    };
-    break;
-  case CODE_binlog_set_chat_participants:
-    rptr ++;
-    {
-      peer_t *C = user_chat_get (MK_CHAT (*(rptr ++)));
-      assert (C && (C->flags & FLAG_CREATED));
-      C->chat.user_list_version = *(rptr ++);
-      if (C->chat.user_list) { tfree (C->chat.user_list, 12 * C->chat.user_list_size); }
-      C->chat.user_list_size = *(rptr ++);
-      C->chat.user_list = talloc (12 * C->chat.user_list_size);
-      memcpy (C->chat.user_list, rptr, 12 * C->chat.user_list_size);
-      rptr += 3 * C->chat.user_list_size;
-      #ifdef USE_LUA
-        lua_chat_update (&C->chat);
-      #endif
-    };
-    break;
-  case CODE_binlog_chat_full_photo:
-    in_ptr ++;
-    {
-      peer_id_t id = MK_CHAT (fetch_int ());
-      peer_t *U = user_chat_get (id);
-      assert (U && (U->flags & FLAG_CREATED));
-      if (U->flags & FLAG_HAS_PHOTO) {
-        free_photo (&U->chat.photo);
-      }
-      fetch_photo (&U->chat.photo);
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_add_chat_participant:
-    rptr ++;
-    {
-      peer_id_t id = MK_CHAT (*(rptr ++));
-      peer_t *_C = user_chat_get (id);
-      assert (_C && (_C->flags & FLAG_CREATED));
-      struct chat *C = &_C->chat;
-
-      int version = *(rptr ++);
-      int user = *(rptr ++);
-      int inviter = *(rptr ++);
-      int date = *(rptr ++);
-      assert (C->user_list_version < version);
-
-      int i;
-      for (i = 0; i < C->user_list_size; i++) {
-        assert (C->user_list[i].user_id != user);
-      }
-      C->user_list_size ++;
-      C->user_list = trealloc (C->user_list, 12 * C->user_list_size - 12, 12 * C->user_list_size);
-      C->user_list[C->user_list_size - 1].user_id = user;
-      C->user_list[C->user_list_size - 1].inviter_id = inviter;
-      C->user_list[C->user_list_size - 1].date = date;
-      C->user_list_version = version;
-      #ifdef USE_LUA
-        lua_chat_update (C);
-      #endif
-    }
-    break;
-  case CODE_binlog_del_chat_participant:
-    rptr ++;
-    {
-      peer_id_t id = MK_CHAT (*(rptr ++));
-      peer_t *_C = user_chat_get (id);
-      assert (_C && (_C->flags & FLAG_CREATED));
-      struct chat *C = &_C->chat;
-
-      int version = *(rptr ++);
-      int user = *(rptr ++);
-      assert (C->user_list_version < version);
-
-      int i;
-      for (i = 0; i < C->user_list_size; i++) {
-        if (C->user_list[i].user_id == user) {
-          struct chat_user t;
-          t = C->user_list[i];
-          C->user_list[i] = C->user_list[C->user_list_size - 1];
-          C->user_list[C->user_list_size - 1] = t;
-        }
-      }
-      assert (C->user_list[C->user_list_size - 1].user_id == user);
-      C->user_list_size --;
-      C->user_list = trealloc (C->user_list, 12 * C->user_list_size + 12, 12 * C->user_list_size);
-      C->user_list_version = version;
-      #ifdef USE_LUA
-        lua_chat_update (C);
-      #endif
-    }
-    break;
-  case CODE_binlog_create_message_text:
-  case CODE_binlog_send_message_text:
-    in_ptr ++;
-    {
-      long long id;
-      if (op == CODE_binlog_create_message_text) {
-        id = fetch_int ();
-      } else {
-        id = fetch_long ();
-      }
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      if (t == PEER_ENCR_CHAT) {
-        M->flags |= FLAG_ENCRYPTED;
-      }
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
-      
-      int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
-
-      if (t == PEER_ENCR_CHAT) {
-        M->media.type = CODE_decrypted_message_media_empty;
-      } else {
-        M->media.type = CODE_message_media_empty;
-      }
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-
-      message_insert (M);
-      if (op == CODE_binlog_send_message_text) {
-        message_insert_unsent (M);
-        M->flags |= FLAG_PENDING;
-      }
-      
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_create_message_text_fwd:
-    in_ptr ++;
-    {
-      int id = fetch_int ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
-      M->fwd_from_id = MK_USER (fetch_int ());
-      M->fwd_date = fetch_int ();
-      
-      int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
-      
-      M->media.type = CODE_message_media_empty;
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_create_message_media:
-    in_ptr ++;
-    {
-      int id = fetch_int ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
-      
-      int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
-
-      fetch_message_media (&M->media);
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_create_message_media_encr:
-    in_ptr ++;
-    {
-      long long id = fetch_long ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
-      
-      int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
-
-      fetch_message_media_encrypted (&M->media);
-      fetch_encrypted_message_file (&M->media);
-
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
   case CODE_binlog_create_message_media_fwd:
     in_ptr ++;
     {

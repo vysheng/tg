@@ -36,34 +36,12 @@
 #define LOG_ENCR_CHAT_REQUESTED 0x9011011a
 #define LOG_ENCR_CHAT_OK 0x7612ce13
 
-#define CODE_binlog_dc_option 0x08c0ef19
-#define CODE_binlog_encr_chat_init 0x939cd1c7
-#define CODE_binlog_set_pts 0x844e4c1c
-#define CODE_binlog_set_qts 0x3cf22b79
-#define CODE_binlog_set_date 0x33dfe392
-#define CODE_binlog_set_seq 0xb9294837
-#define CODE_binlog_chat_create 0xbaa75791
-#define CODE_binlog_chat_change_flags 0x1e494031
-#define CODE_binlog_set_chat_title 0x7dd9bea8
-#define CODE_binlog_set_chat_photo 0xb4ea1fd2
-#define CODE_binlog_set_chat_date 0x78d1114e
-#define CODE_binlog_set_chat_version 0xa5d3504f
-#define CODE_binlog_set_chat_admin 0x1e7cea04
-#define CODE_binlog_set_chat_participants 0x3a29d335
-#define CODE_binlog_chat_full_photo 0x6cca6629
-#define CODE_binlog_add_chat_participant 0x63345108
-#define CODE_binlog_del_chat_participant 0x82d1f0ee
-#define CODE_binlog_create_message_text 0x269acd5b
-#define CODE_binlog_create_message_text_fwd 0xa3d864cd
 #define CODE_binlog_create_message_service 0xbbe5e94b
 #define CODE_binlog_create_message_service_fwd 0xea9c57ae
-#define CODE_binlog_create_message_media 0x62a92d19
 #define CODE_binlog_create_message_media_fwd 0xbefdc462
-#define CODE_binlog_send_message_text 0x31cfd652
 #define CODE_binlog_set_unread 0x21d4c909
 #define CODE_binlog_set_message_sent 0xc335282b
 #define CODE_binlog_set_msg_id 0xf3285b6a
-#define CODE_binlog_create_message_media_encr 0x19cd7c9d
 #define CODE_binlog_create_message_service_encr 0x8b4b9395
 #define CODE_binlog_delete_msg 0xa1d6ab6d
 
