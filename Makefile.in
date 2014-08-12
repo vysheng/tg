@@ -14,20 +14,28 @@ HEADERS= ${srcdir}/constants.h  ${srcdir}/include.h  ${srcdir}/interface.h  ${sr
 INCLUDE=-I. -I${srcdir}
 CC=@CC@
 OBJECTS=main.o loop.o interface.o net.o mtproto-common.o mtproto-client.o queries.o structures.o binlog.o tools.o lua-tg.o
+TLC_OBJECTS=tlc.o tl-parser.o tools.o crc32.o
+GENERATE_OBJECTS=generate.o tools.o
 
 .SUFFIXES:
 
 .SUFFIXES: .c .h .o
 
-all: telegram
+all: telegram tlc generate
 
-${OBJECTS}: ${HEADERS}
+${OBJECTS} ${TLC_OBJECTS}: ${HEADERS}
 
 telegram: ${OBJECTS}
 	${CC} ${OBJECTS} ${LINK_FLAGS} -o $@
 
+tlc: ${TLC_OBJECTS}
+	${CC} ${TLC_OBJECTS} ${LINK_FLAGS} -o $@
+
 .c.o :
 	${CC} ${COMPILE_FLAGS} ${INCLUDE} -c $< -o $@
+
+tlc: ${GENERATE_OBJECTS}
+	${CC} ${GENERATE_OBJECTS} ${LINK_FLAGS} -o $@
 
 
 clean:

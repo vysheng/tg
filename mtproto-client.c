@@ -53,6 +53,7 @@
 #include "interface.h"
 #include "structures.h"
 #include "binlog.h"
+#include "auto.h"
 
 #if defined(__FreeBSD__)
 #define __builtin_bswap32(x) bswap32(x)
@@ -1407,6 +1408,10 @@ void work_update_short (struct connection *c, long long msg_id) {
 }
 
 void work_updates (struct connection *c, long long msg_id) {
+  int *save = in_ptr;
+  assert (!skip_type_any (&(struct paramed_type) {.type = &tl_type_Updates, .params=0}));
+  int *save_end = in_ptr;
+  in_ptr = save;
   assert (fetch_int () == CODE_updates);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -1426,6 +1431,7 @@ void work_updates (struct connection *c, long long msg_id) {
   }
   bl_do_set_date (fetch_int ());
   bl_do_set_seq (fetch_int ());
+  assert (save_end == in_ptr);
 }
 
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {

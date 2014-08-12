@@ -20,6 +20,7 @@
 #ifndef __QUERIES_H__
 #define __QUERIES_H__
 #include "structures.h"
+#include "auto.h"
 
 #define QUERY_ACK_RECEIVED 1
 
@@ -28,6 +29,7 @@ struct query_methods {
   int (*on_answer)(struct query *q);
   int (*on_error)(struct query *q, int error_code, int len, char *error);
   int (*on_timeout)(struct query *q);
+  struct paramed_type *type;
 };
 
 struct event_timer {

@@ -53,6 +53,7 @@
 
 #include "no-preview.h"
 #include "binlog.h"
+#include "auto.h"
 
 #define sha1 SHA1
 
@@ -242,6 +243,16 @@ void query_result (long long id UU) {
     }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_answer) {
+      if (q->methods->type) {
+        int *save = in_ptr;
+        if (skip_type_any (q->methods->type) < 0) {
+          logprintf ("Skipped %ld int out of %ld (type %s)\n", in_ptr - save, in_end - save, q->methods->type->type->id);
+          assert (0);
+        }
+        
+        assert (in_ptr == in_end);
+        in_ptr = save;
+      }
       q->methods->on_answer (q);
       assert (in_ptr == in_end);
     }
@@ -376,7 +387,8 @@ int help_get_config_on_answer (struct query *q UU) {
 }
 
 struct query_methods help_get_config_methods  = {
-  .on_answer = help_get_config_on_answer
+  .on_answer = help_get_config_on_answer,
+  .type = TYPE_TO_PARAM(Config)
 };
 
 void do_help_get_config (void) {
@@ -421,7 +433,8 @@ int send_code_on_error (struct query *q UU, int error_code, int l, char *error) 
 
 struct query_methods send_code_methods  = {
   .on_answer = send_code_on_answer,
-  .on_error = send_code_on_error
+  .on_error = send_code_on_error,
+  .type = TYPE_TO_PARAM(auth_SentCode)
 };
 
 int code_is_sent (void) {
@@ -490,7 +503,8 @@ int phone_call_on_error (struct query *q UU, int error_code, int l, char *error)
 
 struct query_methods phone_call_methods  = {
   .on_answer = phone_call_on_answer,
-  .on_error = phone_call_on_error
+  .on_error = phone_call_on_error,
+  .type = TYPE_TO_PARAM(Bool)
 };
 
 void do_phone_call (const char *user) {
@@ -554,7 +568,8 @@ int check_phone_on_error (struct query *q UU, int error_code, int l, char *error
 
 struct query_methods check_phone_methods = {
   .on_answer = check_phone_on_answer,
-  .on_error = check_phone_on_error
+  .on_error = check_phone_on_error,
+  .type = TYPE_TO_PARAM(auth_CheckedPhone)
 };
 
 int do_auth_check_phone (const char *user) {
@@ -598,7 +613,8 @@ int fail_on_error (struct query *q UU, int error_code UU, int l UU, char *error 
 
 struct query_methods nearest_dc_methods = {
   .on_answer = nearest_dc_on_answer,
-  .on_error = fail_on_error
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM(NearestDc)
 };
 
 int do_get_nearest_dc (void) {
@@ -649,7 +665,8 @@ int sign_in_on_error (struct query *q UU, int error_code, int l, char *error) {
 
 struct query_methods sign_in_methods  = {
   .on_answer = sign_in_on_answer,
-  .on_error = sign_in_on_error
+  .on_error = sign_in_on_error,
+  .type = TYPE_TO_PARAM(auth_Authorization)
 };
 
 int do_send_code_result (const char *code) {
@@ -684,6 +701,7 @@ extern char *user_list[];
 
 int get_contacts_on_answer (struct query *q UU) {
   int i;
+
   assert (fetch_int () == (int)CODE_contacts_contacts);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -728,6 +746,7 @@ int get_contacts_on_answer (struct query *q UU) {
 
 struct query_methods get_contacts_methods = {
   .on_answer = get_contacts_on_answer,
+  .type = TYPE_TO_PARAM(contacts_Contacts)
 };
 
 
@@ -893,11 +912,13 @@ int msg_send_on_error (struct query *q, int error_code, int error_len, char *err
 
 struct query_methods msg_send_methods = {
   .on_answer = msg_send_on_answer,
-  .on_error = msg_send_on_error
+  .on_error = msg_send_on_error,
+  .type = TYPE_TO_PARAM(messages_SentMessage)
 };
 
 struct query_methods msg_send_encr_methods = {
-  .on_answer = msg_send_encr_on_answer
+  .on_answer = msg_send_encr_on_answer,
+  .type = TYPE_TO_PARAM(messages_SentEncryptedMessage)
 };
 
 int out_message_num;
@@ -1001,11 +1022,13 @@ int mark_read_encr_on_receive (struct query *q UU) {
 }
 
 struct query_methods mark_read_methods = {
-  .on_answer = mark_read_on_receive
+  .on_answer = mark_read_on_receive,
+  .type = TYPE_TO_PARAM(messages_AffectedHistory)
 };
 
 struct query_methods mark_read_encr_methods = {
-  .on_answer = mark_read_encr_on_receive
+  .on_answer = mark_read_encr_on_receive,
+  .type = TYPE_TO_PARAM(Bool)
 };
 
 void do_messages_mark_read (peer_id_t id, int max_id) {
@@ -1093,6 +1116,7 @@ int get_history_on_answer (struct query *q UU) {
 
 struct query_methods get_history_methods = {
   .on_answer = get_history_on_answer,
+  .type = TYPE_TO_PARAM(messages_Messages)
 };
 
 void do_get_local_history (peer_id_t id, int limit) {
@@ -1196,6 +1220,7 @@ int get_dialogs_on_answer (struct query *q UU) {
 
 struct query_methods get_dialogs_methods = {
   .on_answer = get_dialogs_on_answer,
+  .type = TYPE_TO_PARAM(messages_Dialogs)
 };
 
 
@@ -2085,7 +2110,7 @@ int import_auth_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   fetch_int (); // expires
   fetch_alloc_user ();
-  tfree_str (export_auth_str);
+  tfree (export_auth_str, export_auth_str_len);
   export_auth_str = 0;
   return 0;
 }

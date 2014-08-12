@@ -53,6 +53,8 @@
 #include "binlog.h"
 #include "lua-tg.h"
 
+#include "auto.h"
+
 extern char *default_username;
 extern char *auth_token;
 extern int test_dc;

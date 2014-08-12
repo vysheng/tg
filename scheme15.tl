@@ -405,6 +405,9 @@ notifyAll#74d07c60 = NotifyPeer;
 updateUserBlocked#80ece81a user_id:int blocked:Bool = Update;
 updateNotifySettings#bec268ef peer:NotifyPeer notify_settings:PeerNotifySettings = Update;
 
+za int = Z 0;
+zb {n:#} int %(Vector int) = Z (n + 1);
+
 ---functions---
 
 invokeAfterMsg#cb9f372d {X:Type} msg_id:long query:!X = X;

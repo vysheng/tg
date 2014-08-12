@@ -272,14 +272,22 @@ char *parse_lex (void) {
     if (curch == '#') {
       parse.lex.flags |= 2;
       int i;
+      int ok = 1;
       for (i = 0; i < 8; i++) {
         if (!is_hexdigit (nextch())) {
-          parse_error ("Hex digit expected");
-          parse.lex.type = lex_error;
-          return (parse.lex.ptr = (void *)-1);
+          if (curch ==  ' ' && i >= 5) { 
+            ok = 2;
+            break;
+          } else {                     
+            parse_error ("Hex digit expected");
+            parse.lex.type = lex_error;
+            return (parse.lex.ptr = (void *)-1);
+          }
         }
       }
-      nextch ();
+      if (ok == 1) {
+        nextch ();
+      }
     }
     parse.lex.len = parse.text + parse.pos - p;
     parse.lex.type = lex_lc_ident;
@@ -1117,9 +1125,9 @@ struct tl_constructor *tl_add_constructor (struct tl_type *a, const char *_id, i
 
   unsigned magic = 0;
   if (x < len) {
-    assert (len - x == 9);
+    assert (len - x >= 6 && len - x <= 9);
     int i;
-    for (i = 1; i <= 8; i++) {
+    for (i = 1; i < len - x; i++) {
       magic = (magic << 4) + (_id[x + i] <= '9' ? _id[x + i] - '0' : _id[x + i] - 'a' + 10);
     }
     assert (magic && magic != (unsigned)-1);
@@ -1178,9 +1186,9 @@ struct tl_constructor *tl_add_function (struct tl_type *a, const char *_id, int 
 
   unsigned magic = 0;
   if (x < len) {
-    assert (len - x == 9);
+    assert (len - x >= 6 && len - x <= 9);
     int i;
-    for (i = 1; i <= 8; i++) {
+    for (i = 1; i < len - x; i++) {
       magic = (magic << 4) + (_id[x + i] <= '9' ? _id[x + i] - '0' : _id[x + i] - 'a' + 10);
     }
     assert (magic && magic != (unsigned)-1);
