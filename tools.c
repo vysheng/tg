@@ -138,6 +138,8 @@ void *talloc (size_t size) {
   *(int *)(p + RES_PRE + size) = size ^ 0x7bed7bed;
   *(int *)(p + RES_AFTER + 4 + size) = used_blocks;
   blocks[used_blocks ++] = p;
+
+  tcheck ();
   return p + 8;
 #else
   void *p = malloc (size);
@@ -227,9 +229,12 @@ void tcheck (void) {
   for (i = 0; i < used_blocks; i++) {
     void *ptr = blocks[i];
     int size = (*(int *)ptr) ^ 0xbedabeda;
-    assert (*(int *)(ptr + 4) == size);
-    assert (*(int *)(ptr + RES_PRE + size) == (size ^ 0x7bed7bed));
-    assert (*(int *)(ptr + RES_PRE + 4 + size) == i);
+    if (!(*(int *)(ptr + 4) == size) || 
+        !(*(int *)(ptr + RES_PRE + size) == (size ^ 0x7bed7bed)) ||
+        !(*(int *)(ptr + RES_PRE + 4 + size) == i)) {
+      logprintf ("Bad block at address %p (size %d, num %d)\n", ptr, size, i);
+      assert (0 && "Bad block");
+    }
   }
   for (i = 0; i < free_blocks_cnt; i++) {
     void *ptr = free_blocks[i];
@@ -243,7 +248,7 @@ void tcheck (void) {
       }
     }
   }
-  logprintf ("ok. Used_blocks = %d. Free blocks = %d\n", used_blocks, free_blocks_cnt);
+  //logprintf ("ok. Used_blocks = %d. Free blocks = %d\n", used_blocks, free_blocks_cnt);
 }
 
 void texists (void *ptr, int size) {

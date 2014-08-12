@@ -19,6 +19,6 @@ struct paramed_type {
 #define INT2PTR(x) (void *)(long)(((long)x) * 2 + 1)
 #define PTR2INT(x) ((((long)x) - 1) / 2)
 
-#include "auto-header.h"
+#include "auto/auto-header.h"
 
 #endif

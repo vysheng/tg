@@ -36,7 +36,7 @@
 #include <signal.h>
 #include "config.h"
 #include <execinfo.h>
-
+#include <stdarg.h>
 
 int verbosity;
 int output_expressions;
@@ -62,6 +62,10 @@ int vkext_write (const char *filename) {
 
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void logprintf (const char *format __attribute__ ((unused)), ...) {
+  va_list ap;
+  va_start (ap, format);
+  vfprintf (stderr, format, ap);
+  va_end (ap);
 }
 
 void hexdump (int *in_ptr, int *in_end) {

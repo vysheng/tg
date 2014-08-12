@@ -37,6 +37,7 @@
 #include "crc32.h"
 #include "tl-tl.h"
 #include "tools.h"
+#include "config.h"
 
 extern int verbosity;
 extern int schema_version;
@@ -1013,6 +1014,7 @@ struct tl_var *tl_get_var (char *_id, int len) {
       return w;
     }
   }
+  tfree (id, len + 1);
   return 0;
 }
 
@@ -1133,6 +1135,7 @@ struct tl_constructor *tl_add_constructor (struct tl_type *a, const char *_id, i
     assert (magic && magic != (unsigned)-1);
   }
 
+  len = x;
   if (*id != '_') {
     struct tl_constructor _t = {.id = id};
     if (tree_lookup_tl_constructor (tl_constructor_tree, &_t)) {
