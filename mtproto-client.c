@@ -839,7 +839,7 @@ void fetch_seq (void) {
     bl_do_set_seq (seq);
   }
 }
-
+/*
 void work_update_binlog (void) {
   unsigned op = fetch_int ();
   switch (op) {
@@ -901,7 +901,7 @@ void work_update_binlog (void) {
   default:
     assert (0);
   }
-}
+}*/
 
 void work_update (struct connection *c UU, long long msg_id UU) {
   unsigned op = fetch_int ();
@@ -1018,7 +1018,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         int l2 = prefetch_strlen ();
         char *l = fetch_str (l2);
         struct user *U = &UC->user;
-        bl_do_set_user_real_name (U, f, l1, l, l2);
+        bl_do_user_set_real_name (U, f, l1, l, l2);
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
@@ -1409,7 +1409,7 @@ void work_update_short (struct connection *c, long long msg_id) {
 
 void work_updates (struct connection *c, long long msg_id) {
   int *save = in_ptr;
-  assert (!skip_type_any (TYPE_TO_PARAM (Updates)));
+  assert (!skip_type_any (TYPE_TO_PARAM (updates)));
   int *save_end = in_ptr;
   in_ptr = save;
   assert (fetch_int () == CODE_updates);

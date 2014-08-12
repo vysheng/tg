@@ -198,7 +198,7 @@ int fetch_user (struct user *U) {
     char *s2 = fetch_str (l2);
     
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
-      bl_do_new_user (get_peer_id (U->id), s1, l1, s2, l2, 0, 0, 0, 0);
+      bl_do_user_add (get_peer_id (U->id), s1, l1, s2, l2, 0, 0, 0, 0);
       bl_do_user_delete (U);
     }
     if (x != CODE_user_deleted) {
@@ -213,7 +213,7 @@ int fetch_user (struct user *U) {
         assert (phone_len >= 0);
         phone = fetch_str (phone_len);
       }
-      bl_do_new_user (get_peer_id (U->id), s1, l1, s2, l2, access_token, phone, phone_len, x == CODE_user_contact);
+      bl_do_user_add (get_peer_id (U->id), s1, l1, s2, l2, access_token, phone, phone_len, x == CODE_user_contact);
       if (fetch_user_photo (U) < 0) { return -1; }
     
       if (fetch_user_status (&U->status) < 0) { return -1; }
@@ -227,19 +227,19 @@ int fetch_user (struct user *U) {
     int l2 = prefetch_strlen ();
     char *s2 = fetch_str (l2);
     
-    bl_do_set_user_name (U, s1, l1, s2, l2);
+    bl_do_user_set_name (U, s1, l1, s2, l2);
 
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
       bl_do_user_delete (U);
     }
     if (x != CODE_user_deleted) {
       if (x != CODE_user_self) {
-        bl_do_set_user_access_token (U, fetch_long ());
+        bl_do_user_set_access_hash (U, fetch_long ());
       }
       if (x != CODE_user_foreign) {
         int l = prefetch_strlen ();
         char *s = fetch_str (l);
-        bl_do_set_user_phone (U, s, l);
+        bl_do_user_set_phone (U, s, l);
       }
       assert (fetch_user_photo (U) >= 0);
     
@@ -249,9 +249,9 @@ int fetch_user (struct user *U) {
       }
 
       if (x == CODE_user_contact) {
-        bl_do_set_user_friend (U, 1);
+        bl_do_user_set_friend (U, 1);
       } else  {
-        bl_do_set_user_friend (U, 0);
+        bl_do_user_set_friend (U, 0);
       }
     }
   }
@@ -340,20 +340,20 @@ void fetch_encrypted_chat (struct secret_chat *U) {
 void fetch_user_full (struct user *U) {
   assert (fetch_int () == CODE_user_full);
   fetch_alloc_user ();
-  assert (skip_type_any (TYPE_TO_PARAM (contacts_Link)) >= 0);
+  assert (skip_type_any (TYPE_TO_PARAM (contacts_link)) >= 0);
 
   int *start = in_ptr;
-  assert (skip_type_any (TYPE_TO_PARAM (Photo)) >= 0);
-  bl_do_set_user_full_photo (U, start, 4 * (in_ptr - start));
+  assert (skip_type_any (TYPE_TO_PARAM (photo)) >= 0);
+  bl_do_user_set_full_photo (U, start, 4 * (in_ptr - start));
 
-  assert (skip_type_any (TYPE_TO_PARAM (PeerNotifySettings)) >= 0);
+  assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
   
-  bl_do_set_user_blocked (U, fetch_bool ());
+  bl_do_user_set_blocked (U, fetch_bool ());
   int l1 = prefetch_strlen ();
   char *s1 = fetch_str (l1);
   int l2 = prefetch_strlen ();
   char *s2 = fetch_str (l2);
-  bl_do_set_user_real_name (U, s1, l1, s2, l2);
+  bl_do_user_set_real_name (U, s1, l1, s2, l2);
 }
 
 void fetch_chat (struct chat *C) {
@@ -470,9 +470,9 @@ void fetch_chat_full (struct chat *C) {
     version = fetch_int ();
   }
   int *start = in_ptr;
-  assert (skip_type_any (TYPE_TO_PARAM (Photo)) >= 0);
+  assert (skip_type_any (TYPE_TO_PARAM (photo)) >= 0);
   int *end = in_ptr;
-  assert (skip_type_any (TYPE_TO_PARAM (PeerNotifySettings)) >= 0);
+  assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
 
   int n, i;
   assert (fetch_int () == CODE_vector);
@@ -932,7 +932,7 @@ void fetch_message (struct message *M) {
   if (x == CODE_message_service) {
     int *start = in_ptr;
 
-    assert (skip_type_any (TYPE_TO_PARAM (MessageAction)) >= 0);
+    assert (skip_type_any (TYPE_TO_PARAM (message_action)) >= 0);
     
     if (new) {
       if (fwd_from_id) {
@@ -946,7 +946,7 @@ void fetch_message (struct message *M) {
     char *s = fetch_str (l);
     int *start = in_ptr;
     
-    assert (skip_type_any (TYPE_TO_PARAM (MessageMedia)) >= 0);
+    assert (skip_type_any (TYPE_TO_PARAM (message_media)) >= 0);
 
     if (new) {
       if (fwd_from_id) {
@@ -1097,11 +1097,11 @@ void fetch_encrypted_message (struct message *M) {
       l = prefetch_strlen ();
       s = fetch_str (l);
       start = in_ptr;
-      assert (skip_type_any (TYPE_TO_PARAM (DecryptedMessageMedia)) >= 0);
+      assert (skip_type_any (TYPE_TO_PARAM (decrypted_message_media)) >= 0);
       end = in_ptr;
     } else {
       start = in_ptr;
-      assert (skip_type_any (TYPE_TO_PARAM (DecryptedMessageAction)) >= 0);
+      assert (skip_type_any (TYPE_TO_PARAM (decrypted_message_action)) >= 0);
       end = in_ptr;
     }
     in_ptr = save_in_ptr;
@@ -1111,7 +1111,7 @@ void fetch_encrypted_message (struct message *M) {
   if (sx == CODE_encrypted_message) {
     if (ok) {
       int *start_file = in_ptr;
-      assert (skip_type_any (TYPE_TO_PARAM (EncryptedFile)) >= 0);
+      assert (skip_type_any (TYPE_TO_PARAM (encrypted_file)) >= 0);
       if (x == CODE_decrypted_message) {
         bl_do_create_message_media_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, l, s, start, end - start, start_file, in_ptr - start_file);
       }

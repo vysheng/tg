@@ -6,6 +6,7 @@ struct tl_combinator;
 struct tl_type {  
 //  struct tl_type_methods *methods;
   char *id;
+  char *print_id;
   unsigned name;
   int arity;
   int flags;
@@ -131,6 +132,7 @@ struct arg {
 struct tl_combinator {
   //struct tl_combinator_methods *methods;
   char *id;
+  char *print_id;
   unsigned name;
   int is_fun;
   int var_num;

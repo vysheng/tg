@@ -376,9 +376,9 @@ int gen_field_fetch (struct arg *arg, int *vars, int num) {
         bare = ((struct tl_tree_type *)arg->type)->self.flags & FLAG_BARE;
       }
       if (!bare) {
-        printf ("%sif (skip_type_%s (field%d) < 0) { return -1;}\n", offset, t == NODE_TYPE_VAR_TYPE ? "any" : ((struct tl_tree_type *)arg->type)->type->id, num);
+        printf ("%sif (skip_type_%s (field%d) < 0) { return -1;}\n", offset, t == NODE_TYPE_VAR_TYPE ? "any" : ((struct tl_tree_type *)arg->type)->type->print_id, num);
       } else {
-        printf ("%sif (skip_type_bare_%s (field%d) < 0) { return -1;}\n", offset, t == NODE_TYPE_VAR_TYPE ? "any" : ((struct tl_tree_type *)arg->type)->type->id, num);
+        printf ("%sif (skip_type_bare_%s (field%d) < 0) { return -1;}\n", offset, t == NODE_TYPE_VAR_TYPE ? "any" : ((struct tl_tree_type *)arg->type)->type->print_id, num);
       }
     } else {
       assert (t == NODE_TYPE_ARRAY);
@@ -400,7 +400,7 @@ int gen_field_fetch (struct arg *arg, int *vars, int num) {
 }
 
 void gen_constructor_fetch (struct tl_combinator *c) {
-  printf ("int skip_constructor_%s (struct paramed_type *T) {\n", c->id);
+  printf ("int skip_constructor_%s (struct paramed_type *T) {\n", c->print_id);
   static char s[10000];
   sprintf (s, "T");
   
@@ -439,21 +439,21 @@ void gen_constructor_fetch (struct tl_combinator *c) {
 }
 
 void gen_type_fetch (struct tl_type *t) {
-  printf ("int skip_type_%s (struct paramed_type *T) {\n", t->id);
+  printf ("int skip_type_%s (struct paramed_type *T) {\n", t->print_id);
   printf ("  int magic = *in_ptr;\n");
   printf ("  if (skip_int () < 0) { return -1; }\n");
   printf ("  switch (magic) {\n");
   int i;
   for (i = 0; i < t->constructors_num; i++) {
-     printf ("  case 0x%08x: return skip_constructor_%s (T);\n", t->constructors[i]->name, t->constructors[i]->id);
+     printf ("  case 0x%08x: return skip_constructor_%s (T);\n", t->constructors[i]->name, t->constructors[i]->print_id);
   }
   printf ("  default: return -1;\n");
   printf ("  }\n");
   printf ("}\n");
-  printf ("int skip_type_bare_%s (struct paramed_type *T) {\n", t->id);
+  printf ("int skip_type_bare_%s (struct paramed_type *T) {\n", t->print_id);
   printf ("  int *save = in_ptr;\n");
   for (i = 0; i < t->constructors_num; i++) {
-     printf ("  if (skip_constructor_%s (T) >= 0) { return 0; }\n", t->constructors[i]->id);
+     printf ("  if (skip_constructor_%s (T) >= 0) { return 0; }\n", t->constructors[i]->print_id);
      printf ("  in_ptr = save;\n");
   }
   printf ("  return -1;\n");
@@ -694,12 +694,35 @@ int read_combinator_left (struct tl_combinator *c) {
   }
 }
 
+char *gen_print_id (const char *id) {
+  static char s[1000];
+  char *ptr = s;
+  int first = 1;
+  while (*id) {
+    if (*id == '.') { 
+      *(ptr ++) = '_';
+    } else if (*id >= 'A' && *id <= 'Z') {
+      if (!first && *(ptr - 1) != '_') {
+        *(ptr ++) = '_';
+      }
+      *(ptr ++) = *id - 'A' + 'a';
+    } else {
+      *(ptr ++) = *id;
+    }
+    id ++;
+    first = 0;
+  }
+  *ptr = 0;
+  return s;
+}
+
 struct tl_combinator *read_combinators (int v) {
   struct tl_combinator *c = malloc0 (sizeof (*c));
   c->name = get_int ();
   c->id = get_string ();
-  char *s = c->id;
-  while (*s) { if (*s == '.') { *s = '_'; } ; s ++;}
+  c->print_id = strdup (gen_print_id (c->id));
+  //char *s = c->id;
+  //while (*s) { if (*s == '.') { *s = '_'; } ; s ++;}
   int x = get_int ();
   struct tl_type *t = tl_type_get_by_name (x);
   assert (t || (!x && v == 3));
@@ -722,8 +745,7 @@ struct tl_type *read_types (void) {
   struct tl_type *t = malloc0 (sizeof (*t));
   t->name = get_int ();
   t->id = get_string ();
-  char *s = t->id;
-  while (*s) { if (*s == '.') { *s = '_'; } ; s++; }
+  t->print_id = strdup (gen_print_id (t->id));
   
   t->constructors_num = get_int ();
   assert (t->constructors_num >= 0 && t->constructors_num <= 1000);
@@ -870,20 +892,20 @@ int parse_tlo_file (void) {
     printf ("int skip_type_any (struct paramed_type *T) {\n");
     printf ("  switch (T->type->name) {\n");
     for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type")) {
-      printf ("  case 0x%08x: return skip_type_%s (T);\n", tps[i]->name, tps[i]->id);
-      printf ("  case 0x%08x: return skip_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->id);
+      printf ("  case 0x%08x: return skip_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
+      printf ("  case 0x%08x: return skip_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
     }
     printf ("  default: return -1; }\n");
     printf ("}\n");
   } else {
     for (i = 0; i < tn; i++) {
       for (j = 0; j < tps[i]->constructors_num; j ++) {
-        printf ("int skip_constructor_%s (struct paramed_type *T);\n", tps[i]->constructors[j]->id);
+        printf ("int skip_constructor_%s (struct paramed_type *T);\n", tps[i]->constructors[j]->print_id);
       }
     }
     for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type")) {
-      printf ("int skip_type_%s (struct paramed_type *T);\n", tps[i]->id);
-      printf ("int skip_type_bare_%s (struct paramed_type *T);\n", tps[i]->id);
+      printf ("int skip_type_%s (struct paramed_type *T);\n", tps[i]->print_id);
+      printf ("int skip_type_bare_%s (struct paramed_type *T);\n", tps[i]->print_id);
     }
     printf ("int skip_type_any (struct paramed_type *T);\n");
     
@@ -891,13 +913,13 @@ int parse_tlo_file (void) {
       printf ("extern struct tl_type tl_type_%s;\n", tps[i]->id);
     }*/
     for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type")) {
-      printf ("static struct tl_type tl_type_%s __attribute__ ((unused));\n", tps[i]->id);
-      printf ("static struct tl_type tl_type_%s = {\n", tps[i]->id);
+      printf ("static struct tl_type tl_type_%s __attribute__ ((unused));\n", tps[i]->print_id);
+      printf ("static struct tl_type tl_type_%s = {\n", tps[i]->print_id);
       printf ("  .name = 0x%08x,\n", tps[i]->name);
       printf ("  .id = \"%s\"\n", tps[i]->id);
       printf ("};\n");
-      printf ("static struct tl_type tl_type_bare_%s __attribute__ ((unused));\n", tps[i]->id);
-      printf ("static struct tl_type tl_type_bare_%s = {\n", tps[i]->id);
+      printf ("static struct tl_type tl_type_bare_%s __attribute__ ((unused));\n", tps[i]->print_id);
+      printf ("static struct tl_type tl_type_bare_%s = {\n", tps[i]->print_id);
       printf ("  .name = 0x%08x,\n", ~tps[i]->name);
       printf ("  .id = \"Bare_%s\"\n", tps[i]->id);
       printf ("};\n");

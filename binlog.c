@@ -178,7 +178,7 @@ int fetch_comb_binlog_set_seq (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_new_user (void *extra) {
+int fetch_comb_binlog_user_add (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *_U = user_chat_get (id);
   if (!_U) {
@@ -223,7 +223,7 @@ int fetch_comb_binlog_user_delete (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_user_access_token (void *extra) {
+int fetch_comb_binlog_user_set_access_hash (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -235,7 +235,7 @@ int fetch_comb_binlog_set_user_access_token (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_user_phone (void *extra) {
+int fetch_comb_binlog_user_set_phone (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -250,7 +250,7 @@ int fetch_comb_binlog_set_user_phone (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_user_friend (void *extra) {
+int fetch_comb_binlog_user_set_friend (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -267,7 +267,7 @@ int fetch_comb_binlog_set_user_friend (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_user_full_photo (void *extra) {
+int fetch_comb_binlog_user_set_full_photo (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -282,7 +282,7 @@ int fetch_comb_binlog_user_full_photo (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_user_blocked (void *extra) {
+int fetch_comb_binlog_user_set_blocked (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -295,7 +295,7 @@ int fetch_comb_binlog_user_blocked (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_user_full_name (void *extra) {
+int fetch_comb_binlog_user_set_real_name (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -304,6 +304,52 @@ int fetch_comb_binlog_set_user_full_name (void *extra) {
   if (U->user.real_last_name) { tfree_str (U->user.real_last_name); }
   U->user.real_first_name = fetch_str_dup ();
   U->user.real_last_name = fetch_str_dup ();
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_user_set_name (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+
+  if (U->user.first_name) { tfree_str (U->user.first_name); }
+  if (U->user.last_name) { tfree_str (U->user.last_name); }
+  U->user.first_name = fetch_str_dup ();
+  U->user.last_name = fetch_str_dup ();
+  if (U->print_name) { 
+    peer_delete_name (U);
+    tfree_str (U->print_name); 
+  }
+  U->print_name = create_print_name (U->id, U->user.first_name, U->user.last_name, 0, 0);
+  peer_insert_name ((void *)U);
+  
+  #ifdef USE_LUA
+    lua_user_update (&U->user);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_user_set_photo (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+        
+        
+  unsigned y = fetch_int ();
+  if (y == CODE_user_profile_photo_empty) {
+    U->user.photo_id = 0;
+    U->user.photo_big.dc = -2;
+    U->user.photo_small.dc = -2;
+  } else {
+    assert (y == CODE_user_profile_photo);
+    U->user.photo_id = fetch_long ();
+    fetch_file_location (&U->user.photo_small);
+    fetch_file_location (&U->user.photo_big);
+  }
   
   #ifdef USE_LUA
     lua_user_update (&U->user);
@@ -882,57 +928,199 @@ int fetch_comb_binlog_create_message_media_encr (void *extra) {
   return 0;
 }
 
-FETCH_COMBINATOR_FUNCTION (binlog_start)
-FETCH_COMBINATOR_FUNCTION (binlog_dc_option)
-FETCH_COMBINATOR_FUNCTION (binlog_auth_key)
-FETCH_COMBINATOR_FUNCTION (binlog_default_dc)
-FETCH_COMBINATOR_FUNCTION (binlog_our_id)
-FETCH_COMBINATOR_FUNCTION (binlog_dc_signed)
-FETCH_COMBINATOR_FUNCTION (binlog_dc_salt)
+int fetch_comb_binlog_create_message_media_fwd (void *extra) {
+  int id = fetch_int ();
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+  
+  M->fwd_from_id = MK_USER (fetch_int ());
+  M->fwd_date = fetch_int ();
+      
+  int l = prefetch_strlen ();
+  M->message = talloc (l + 1);
+  memcpy (M->message, fetch_str (l), l);
+  M->message[l] = 0;
+  M->message_len = l;
 
-FETCH_COMBINATOR_FUNCTION (binlog_set_dh_params)
-FETCH_COMBINATOR_FUNCTION (binlog_set_pts)
-FETCH_COMBINATOR_FUNCTION (binlog_set_qts)
-FETCH_COMBINATOR_FUNCTION (binlog_set_date)
-FETCH_COMBINATOR_FUNCTION (binlog_set_seq)
+  fetch_message_media (&M->media);
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
 
-FETCH_COMBINATOR_FUNCTION (binlog_new_user)
-FETCH_COMBINATOR_FUNCTION (binlog_user_delete)
-FETCH_COMBINATOR_FUNCTION (binlog_set_user_access_token)
-FETCH_COMBINATOR_FUNCTION (binlog_set_user_phone)
-FETCH_COMBINATOR_FUNCTION (binlog_set_user_friend)
-FETCH_COMBINATOR_FUNCTION (binlog_user_full_photo)
-FETCH_COMBINATOR_FUNCTION (binlog_user_blocked)
+  message_insert (M);
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
 
-FETCH_COMBINATOR_FUNCTION (binlog_set_user_full_name)
-FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_delete)
-FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_requested)
-FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_access_hash)
-FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_date)
-FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_state)
-FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
-FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_key)
-FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
+int fetch_comb_binlog_create_message_service (void *extra) {
+  int id = fetch_int ();
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+      
+  fetch_message_action (&M->action);
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+  M->service = 1;
 
-FETCH_COMBINATOR_FUNCTION (binlog_chat_create)
-FETCH_COMBINATOR_FUNCTION (binlog_chat_change_flags)
-FETCH_COMBINATOR_FUNCTION (binlog_set_chat_title)
-FETCH_COMBINATOR_FUNCTION (binlog_set_chat_photo)
-FETCH_COMBINATOR_FUNCTION (binlog_set_chat_date)
-FETCH_COMBINATOR_FUNCTION (binlog_set_chat_version)
-FETCH_COMBINATOR_FUNCTION (binlog_set_chat_admin)
-FETCH_COMBINATOR_FUNCTION (binlog_set_chat_participants)
-FETCH_COMBINATOR_FUNCTION (binlog_chat_full_photo)
-FETCH_COMBINATOR_FUNCTION (binlog_add_chat_participant)
-FETCH_COMBINATOR_FUNCTION (binlog_del_chat_participant)
+  message_insert (M);
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
 
-FETCH_COMBINATOR_FUNCTION (binlog_create_message_text)
-FETCH_COMBINATOR_FUNCTION (binlog_send_message_text)
-FETCH_COMBINATOR_FUNCTION (binlog_create_message_text_fwd)
-FETCH_COMBINATOR_FUNCTION (binlog_create_message_media)
+int fetch_comb_binlog_create_message_service_encr (void *extra) {
+  int id = fetch_int ();
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+  
+  fetch_message_action_encrypted (&M->action);
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+  M->service = 1;
+
+  message_insert (M);
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_create_message_service_fwd (void *extra) {
+  int id = fetch_int ();
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  M->flags |= FLAG_CREATED;
+  M->from_id = MK_USER (fetch_int ());
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+  
+  M->fwd_from_id = MK_USER (fetch_int ());
+  M->fwd_date = fetch_int ();
+      
+  fetch_message_action (&M->action);
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+  M->service = 1;
+
+  message_insert (M);
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_message_set_unread (void *extra) {
+  struct message *M = message_get (fetch_int ());
+  assert (M);
+  M->unread = 0;
+  #ifdef USE_LUA
+    lua_update_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_message_sent (void *extra) {
+  struct message *M = message_get (fetch_long ());
+  assert (M);
+  message_remove_unsent (M);
+  M->flags &= ~FLAG_PENDING;
+  #ifdef USE_LUA
+    lua_update_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_set_msg_id (void *extra) {
+  struct message *M = message_get (fetch_long ());
+  assert (M);
+  if (M->flags & FLAG_PENDING) {
+    message_remove_unsent (M);
+    M->flags &= ~FLAG_PENDING;
+  }
+  message_remove_tree (M);
+  message_del_peer (M);
+  M->id = fetch_int ();
+  if (message_get (M->id)) {
+    free_message (M);
+    tfree (M, sizeof (*M));
+  } else {
+    message_insert_tree (M);
+    message_add_peer (M);
+  }
+  #ifdef USE_LUA
+    lua_update_msg (M);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_delete_msg (void *extra) {
+  struct message *M = message_get (fetch_long ());
+  assert (M);
+  if (M->flags & FLAG_PENDING) {
+    message_remove_unsent (M);
+    M->flags &= ~FLAG_PENDING;
+  }
+  message_remove_tree (M);
+  message_del_peer (M);
+  message_del_use (M);
+  free_message (M);
+  tfree (M, sizeof (*M));
+  return 0;
+}
+
+#define FETCH_COMBINATOR_FUNCTION(NAME) \
+  case CODE_ ## NAME:\
+    ok = fetch_comb_ ## NAME (0); \
+    break; \
+    
 
 void replay_log_event (void) {
-  int *start = rptr;
   in_replay_log = 1;
   assert (rptr < wptr);
   int op = *rptr;
@@ -943,224 +1131,95 @@ void replay_log_event (void) {
 
   in_ptr = rptr;
   in_end = wptr;
+  assert (skip_type_any (TYPE_TO_PARAM(binlog_update)) >= 0);
+  in_end = in_ptr;
+  in_ptr = rptr;
+
+  int ok = -1;
+  in_ptr ++;
+
   switch (op) {
-  case CODE_binlog_create_message_media_fwd:
-    in_ptr ++;
-    {
-      int id = fetch_int ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
-      M->fwd_from_id = MK_USER (fetch_int ());
-      M->fwd_date = fetch_int ();
-      
-      int l = prefetch_strlen ();
-      M->message = talloc (l + 1);
-      memcpy (M->message, fetch_str (l), l);
-      M->message[l] = 0;
-      M->message_len = l;
+  FETCH_COMBINATOR_FUNCTION (binlog_start)
+  FETCH_COMBINATOR_FUNCTION (binlog_dc_option)
+  FETCH_COMBINATOR_FUNCTION (binlog_auth_key)
+  FETCH_COMBINATOR_FUNCTION (binlog_default_dc)
+  FETCH_COMBINATOR_FUNCTION (binlog_our_id)
+  FETCH_COMBINATOR_FUNCTION (binlog_dc_signed)
+  FETCH_COMBINATOR_FUNCTION (binlog_dc_salt)
 
-      fetch_message_media (&M->media);
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
+  FETCH_COMBINATOR_FUNCTION (binlog_set_dh_params)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_pts)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_qts)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_date)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_seq)
 
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_create_message_service:
-    in_ptr ++;
-    {
-      int id = fetch_int ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
+  FETCH_COMBINATOR_FUNCTION (binlog_user_add)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_delete)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_access_hash)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_phone)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_friend)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_full_photo)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_blocked)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_name)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_photo)
 
-      fetch_message_action (&M->action);
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-      M->service = 1;
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_real_name)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_delete)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_requested)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_access_hash)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_date)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_state)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_key)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
 
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_create_message_service_encr:
-    in_ptr ++;
-    {
-      long long id = fetch_long ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_create)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_change_flags)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_title)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_photo)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_date)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_version)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_admin)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_participants)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_full_photo)
+  FETCH_COMBINATOR_FUNCTION (binlog_add_chat_participant)
+  FETCH_COMBINATOR_FUNCTION (binlog_del_chat_participant)
 
-      fetch_message_action_encrypted (&M->action); 
-      
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-      M->service = 1;
-
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_create_message_service_fwd:
-    in_ptr ++;
-    {
-      int id = fetch_int ();
-      struct message *M = message_get (id);
-      if (!M) {
-        M = talloc0 (sizeof (*M));
-        M->id = id;
-        message_insert_tree (M);
-        messages_allocated ++;
-      } else {
-        assert (!(M->flags & FLAG_CREATED));
-      }
-      M->flags |= FLAG_CREATED;
-      M->from_id = MK_USER (fetch_int ());
-      int t = fetch_int ();
-      M->to_id = set_peer_id (t, fetch_int ());
-      M->date = fetch_int ();
-      M->fwd_from_id = MK_USER (fetch_int ());
-      M->fwd_date = fetch_int ();
-      fetch_message_action (&M->action);
-      M->unread = 1;
-      M->out = get_peer_id (M->from_id) == our_id;
-      M->service = 1;
-
-      message_insert (M);
-      #ifdef USE_LUA
-        lua_new_msg (M);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_set_unread:
-    rptr ++;
-    {
-      struct message *M = message_get (*(rptr ++));
-      assert (M);
-      M->unread = 0;
-    }
-    break;
-  case CODE_binlog_set_message_sent:
-    rptr ++;
-    {
-      struct message *M = message_get (*(long long *)rptr);
-      rptr += 2;
-      assert (M);
-      message_remove_unsent (M);
-      M->flags &= ~FLAG_PENDING;
-    }
-    break;
-  case CODE_binlog_set_msg_id:
-    rptr ++;
-    {
-      struct message *M = message_get (*(long long *)rptr);
-      rptr += 2;
-      assert (M);
-      if (M->flags & FLAG_PENDING) {
-        message_remove_unsent (M);
-        M->flags &= ~FLAG_PENDING;
-      }
-      message_remove_tree (M);
-      message_del_peer (M);
-      M->id = *(rptr ++);
-      if (message_get (M->id)) {
-        free_message (M);
-        tfree (M, sizeof (*M));
-      } else {
-        message_insert_tree (M);
-        message_add_peer (M);
-      }
-    }
-    break;
-  case CODE_binlog_delete_msg:
-    rptr ++;
-    {
-      struct message *M = message_get (*(long long *)rptr);
-      rptr += 2;
-      assert (M);
-      if (M->flags & FLAG_PENDING) {
-        message_remove_unsent (M);
-        M->flags &= ~FLAG_PENDING;
-      }
-      message_remove_tree (M);
-      message_del_peer (M);
-      message_del_use (M);
-      free_message (M);
-      tfree (M, sizeof (*M));
-    }
-    break;
-  case CODE_update_user_photo:
-  case CODE_update_user_name:
-    work_update_binlog ();
-    rptr = in_ptr;
-    break;
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_text)
+  FETCH_COMBINATOR_FUNCTION (binlog_send_message_text)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_text_fwd)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_media)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_media_encr)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_media_fwd)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_service)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_service_encr)
+  FETCH_COMBINATOR_FUNCTION (binlog_create_message_service_fwd)
+  FETCH_COMBINATOR_FUNCTION (binlog_message_set_unread)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_message_sent)
+  FETCH_COMBINATOR_FUNCTION (binlog_set_msg_id)
+  FETCH_COMBINATOR_FUNCTION (binlog_delete_msg)
   default:
-    logprintf ("Unknown logevent [0x%08x] 0x%08x [0x%08x] at %lld\n", *(rptr - 1), op, *(rptr + 1), binlog_pos);
-
+    logprintf ("Unknown op 0x%08x\n", op);
     assert (0);
   }
-  if (verbosity >= 2) {
-    logprintf ("Event end\n");
-  }
+  assert (ok >= 0);
+
+  assert (in_ptr == in_end);
   in_replay_log = 0;
-  binlog_pos += (rptr - start) * 4;
+  binlog_pos += (in_ptr - rptr) * 4;
+  rptr = in_ptr;
 }
 
 void create_new_binlog (void) {
   static int s[1000];
   packet_ptr = s;
-  out_int (LOG_START);
+  out_int (CODE_binlog_start);
   out_int (CODE_binlog_dc_option);
   out_int (1);
   out_string ("");
   out_string (test_dc ? TG_SERVER_TEST : TG_SERVER);
   out_int (443);
-  out_int (LOG_DEFAULT_DC);
+  out_int (CODE_binlog_default_dc);
   out_int (1);
   
   int fd = open (get_binlog_file_name (), O_WRONLY | O_EXCL | O_CREAT, 0600);
@@ -1255,7 +1314,7 @@ void bl_do_set_auth_key_id (int num, unsigned char *buf) {
   SHA1 (buf, 256, sha1_buffer);
   long long fingerprint = *(long long *)(sha1_buffer + 12);
   int *ev = alloc_log_event (8 + 8 + 256);
-  ev[0] = LOG_AUTH_KEY;
+  ev[0] = CODE_binlog_auth_key;
   ev[1] = num;
   *(long long *)(ev + 2) = fingerprint;
   memcpy (ev + 4, buf, 256);
@@ -1264,14 +1323,14 @@ void bl_do_set_auth_key_id (int num, unsigned char *buf) {
 
 void bl_do_set_our_id (int id) {
   int *ev = alloc_log_event (8);
-  ev[0] = LOG_OUR_ID;
+  ev[0] = CODE_binlog_our_id;
   ev[1] = id;
   add_log_event (ev, 8);
 }
 
-void bl_do_new_user (int id, const char *f, int fl, const char *l, int ll, long long access_token, const char *p, int pl, int contact) {
+void bl_do_user_add (int id, const char *f, int fl, const char *l, int ll, long long access_token, const char *p, int pl, int contact) {
   clear_packet ();
-  out_int (CODE_binlog_new_user);
+  out_int (CODE_binlog_user_add);
   out_int (id);
   out_cstring (f ? f : "", fl);
   out_cstring (l ? l : "", ll);
@@ -1289,22 +1348,18 @@ void bl_do_user_delete (struct user *U) {
   add_log_event (ev, 8);
 }
 
-extern int last_date;
 void bl_do_set_user_profile_photo (struct user *U, long long photo_id, struct file_location *big, struct file_location *small) {
   if (photo_id == U->photo_id) { return; }
   if (!photo_id) {
-    int *ev = alloc_log_event (20);
-    ev[0] = CODE_update_user_photo;
+    int *ev = alloc_log_event (12);
+    ev[0] = CODE_binlog_user_set_photo;
     ev[1] = get_peer_id (U->id);
-    ev[2] = last_date;
-    ev[3] = CODE_user_profile_photo_empty;
-    ev[4] = CODE_bool_false;
-    add_log_event (ev, 20);
+    ev[2] = CODE_user_profile_photo_empty;
+    add_log_event (ev, 12);
   } else {
     clear_packet ();
-    out_int (CODE_update_user_photo);
+    out_int (CODE_binlog_user_set_photo);
     out_int (get_peer_id (U->id));
-    out_int (last_date);
     out_int (CODE_user_profile_photo);
     out_long (photo_id);
     if (small->dc >= 0) {
@@ -1331,48 +1386,47 @@ void bl_do_set_user_profile_photo (struct user *U, long long photo_id, struct fi
       out_int (big->local_id);
       out_long (big->secret);
     }
-    out_int (CODE_bool_false);
     add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
   }
 }
 
-void bl_do_set_user_name (struct user *U, const char *f, int fl, const char *l, int ll) {
+void bl_do_user_set_name (struct user *U, const char *f, int fl, const char *l, int ll) {
   if ((U->first_name && (int)strlen (U->first_name) == fl && !strncmp (U->first_name, f, fl)) && 
       (U->last_name  && (int)strlen (U->last_name)  == ll && !strncmp (U->last_name,  l, ll))) {
     return;
   }
   clear_packet ();
-  out_int (CODE_update_user_name);
+  out_int (CODE_binlog_user_set_name);
   out_int (get_peer_id (U->id));
   out_cstring (f, fl);
   out_cstring (l, ll);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_set_user_access_token (struct user *U, long long access_token) {
+void bl_do_user_set_access_hash (struct user *U, long long access_token) {
   if (U->access_hash == access_token) { return; }
   int *ev = alloc_log_event (16);
-  ev[0] = CODE_binlog_set_user_access_token;
+  ev[0] = CODE_binlog_user_set_access_hash;
   ev[1] = get_peer_id (U->id);
   *(long long *)(ev + 2) = access_token;
   add_log_event (ev, 16);
 }
 
-void bl_do_set_user_phone (struct user *U, const char *p, int pl) {
+void bl_do_user_set_phone (struct user *U, const char *p, int pl) {
   if (U->phone && (int)strlen (U->phone) == pl && !strncmp (U->phone, p, pl)) {
     return;
   }
   clear_packet ();
-  out_int (CODE_binlog_set_user_phone);
+  out_int (CODE_binlog_user_set_phone);
   out_int (get_peer_id (U->id));
   out_cstring (p, pl);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_set_user_friend (struct user *U, int friend) {
+void bl_do_user_set_friend (struct user *U, int friend) {
   if (friend == ((U->flags & FLAG_USER_CONTACT) != 0)) { return ; }
   int *ev = alloc_log_event (12);
-  ev[0] = CODE_binlog_set_user_friend;
+  ev[0] = CODE_binlog_user_set_friend;
   ev[1] = get_peer_id (U->id);
   ev[2] = friend;
   add_log_event (ev, 12);
@@ -1394,43 +1448,43 @@ void bl_do_dc_option (int id, int l1, const char *name, int l2, const char *ip, 
 
 void bl_do_dc_signed (int id) {
   int *ev = alloc_log_event (8);
-  ev[0] = LOG_DC_SIGNED;
+  ev[0] = CODE_binlog_dc_signed;
   ev[1] = id;
   add_log_event (ev, 8);
 }
 
 void bl_do_set_working_dc (int num) {
   int *ev = alloc_log_event (8);
-  ev[0] = LOG_DEFAULT_DC;
+  ev[0] = CODE_binlog_default_dc;
   ev[1] = num;
   add_log_event (ev, 8);
 }
 
-void bl_do_set_user_full_photo (struct user *U, const int *start, int len) {
+void bl_do_user_set_full_photo (struct user *U, const int *start, int len) {
   if (U->photo.id == *(long long *)(start + 1)) { return; }
   int *ev = alloc_log_event (len + 8);
-  ev[0] = CODE_binlog_user_full_photo;
+  ev[0] = CODE_binlog_user_set_full_photo;
   ev[1] = get_peer_id (U->id);
   memcpy (ev + 2, start, len);
   add_log_event (ev, len + 8);
 }
 
-void bl_do_set_user_blocked (struct user *U, int blocked) {
+void bl_do_user_set_blocked (struct user *U, int blocked) {
   if (U->blocked == blocked) { return; }
   int *ev = alloc_log_event (12);
-  ev[0] = CODE_binlog_user_blocked;
+  ev[0] = CODE_binlog_user_set_blocked;
   ev[1] = get_peer_id (U->id);
   ev[2] = blocked;
   add_log_event (ev, 12);
 }
 
-void bl_do_set_user_real_name (struct user *U, const char *f, int fl, const char *l, int ll) {
+void bl_do_user_set_real_name (struct user *U, const char *f, int fl, const char *l, int ll) {
   if ((U->real_first_name && (int)strlen (U->real_first_name) == fl && !strncmp (U->real_first_name, f, fl)) && 
       (U->real_last_name  && (int)strlen (U->real_last_name)  == ll && !strncmp (U->real_last_name,  l, ll))) {
     return;
   }
   clear_packet ();
-  out_int (CODE_binlog_set_user_full_name);
+  out_int (CODE_binlog_user_set_real_name);
   out_int (get_peer_id (U->id));
   out_cstring (f, fl);
   out_cstring (l, ll);
@@ -1817,7 +1871,7 @@ void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int
 void bl_do_set_unread (struct message *M, int unread) {
   if (unread || !M->unread) { return; }
   clear_packet ();
-  out_int (CODE_binlog_set_unread);
+  out_int (CODE_binlog_message_set_unread);
   out_int (M->id);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }

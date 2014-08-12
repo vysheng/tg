@@ -27,20 +27,18 @@ int skip_string (void) {
   unsigned len = *(unsigned char *)in_ptr;
   if (len == 0xff) { return -1; }
   if (len < 0xfe) {
-    int size = len + 1;
-    size += (-size) & 3;
-    if (in_ptr + (size / 4) <= in_end) {
-      in_ptr += (size / 4);
+    unsigned size = (len + 4) >> 2;
+    if (in_ptr + size <= in_end) {
+      in_ptr += size;
       return 0;
     } else {
       return -1;
     }
   } else {
-    len = (*in_ptr) >> 8;
-    int size = len + 4;
-    size += (-size) & 3;
-    if (in_ptr + (size / 4) <= in_end) {
-      in_ptr += (size / 4);
+    len = (*(unsigned *)in_ptr) >> 8;
+    unsigned size = (len + 7) >> 2;
+    if (in_ptr + size <= in_end) {
+      in_ptr += size;
       return 0;
     } else {
       return -1;

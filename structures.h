@@ -39,13 +39,14 @@ typedef struct { int type; int id; } peer_id_t;
 
 #define FLAG_ENCRYPTED 4096
 #define FLAG_PENDING 8192
-
+#pragma pack(push,4)
 struct file_location {
   int dc;
   long long volume;
   int local_id;
   long long secret;
 };
+#pragma pack(pop)
 
 struct photo_size {
   char *type;

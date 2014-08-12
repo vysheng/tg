@@ -21,30 +21,6 @@
 
 #include "structures.h"
 
-#define LOG_START 0x8948329a
-#define LOG_AUTH_KEY 0x984932aa
-#define LOG_DEFAULT_DC 0x95382908
-#define LOG_OUR_ID 0x8943211a
-#define LOG_DC_SIGNED 0x234f9893
-#define LOG_DC_SALT 0x92192ffa
-#define LOG_DH_CONFIG 0x8983402b
-#define LOG_ENCR_CHAT_KEY 0x894320aa
-#define LOG_ENCR_CHAT_SEND_ACCEPT 0x12ab01c4
-#define LOG_ENCR_CHAT_SEND_CREATE 0xab091e24
-#define LOG_ENCR_CHAT_DELETED 0x99481230
-#define LOG_ENCR_CHAT_WAITING 0x7102100a
-#define LOG_ENCR_CHAT_REQUESTED 0x9011011a
-#define LOG_ENCR_CHAT_OK 0x7612ce13
-
-#define CODE_binlog_create_message_service 0xbbe5e94b
-#define CODE_binlog_create_message_service_fwd 0xea9c57ae
-#define CODE_binlog_create_message_media_fwd 0xbefdc462
-#define CODE_binlog_set_unread 0x21d4c909
-#define CODE_binlog_set_message_sent 0xc335282b
-#define CODE_binlog_set_msg_id 0xf3285b6a
-#define CODE_binlog_create_message_service_encr 0x8b4b9395
-#define CODE_binlog_delete_msg 0xa1d6ab6d
-
 void *alloc_log_event (int l);
 void replay_log (void);
 void add_log_event (const int *data, int l);
@@ -54,16 +30,16 @@ void bl_do_set_auth_key_id (int num, unsigned char *buf);
 void bl_do_dc_option (int id, int l1, const char *name, int l2, const char *ip, int port);
 
 void bl_do_set_our_id (int id);
-void bl_do_new_user (int id, const char *f, int fl, const char *l, int ll, long long access_token, const char *p, int pl, int contact);
+void bl_do_user_add (int id, const char *f, int fl, const char *l, int ll, long long access_token, const char *p, int pl, int contact);
 void bl_do_user_delete (struct user *U);
 void bl_do_set_user_profile_photo (struct user *U, long long photo_id, struct file_location *big, struct file_location *small);
-void bl_do_set_user_name (struct user *U, const char *f, int fl, const char *l, int ll);
-void bl_do_set_user_access_token (struct user *U, long long access_token);
-void bl_do_set_user_phone (struct user *U, const char *p, int pl);
-void bl_do_set_user_friend (struct user *U, int friend);
-void bl_do_set_user_full_photo (struct user *U, const int *start, int len);
-void bl_do_set_user_blocked (struct user *U, int blocked);
-void bl_do_set_user_real_name (struct user *U, const char *f, int fl, const char *l, int ll);
+void bl_do_user_set_name (struct user *U, const char *f, int fl, const char *l, int ll);
+void bl_do_user_set_access_hash (struct user *U, long long access_token);
+void bl_do_user_set_phone (struct user *U, const char *p, int pl);
+void bl_do_user_set_friend (struct user *U, int friend);
+void bl_do_user_set_full_photo (struct user *U, const int *start, int len);
+void bl_do_user_set_blocked (struct user *U, int blocked);
+void bl_do_user_set_real_name (struct user *U, const char *f, int fl, const char *l, int ll);
 
 void bl_do_encr_chat_delete (struct secret_chat *U);
 void bl_do_encr_chat_requested (struct secret_chat *U, long long access_hash, int date, int admin_id, int user_id, unsigned char g_key[], unsigned char nonce[]);
