@@ -17,7 +17,7 @@ lua_State *luaState;
 
 #include "structures.h"
 #include "interface.h"
-#include "constants.h"
+#include "auto/constants.h"
 #include "tools.h"
 #include "queries.h"
 #include "net.h"

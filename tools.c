@@ -139,6 +139,9 @@ void *talloc (size_t size) {
   *(int *)(p + RES_AFTER + 4 + size) = used_blocks;
   blocks[used_blocks ++] = p;
 
+  if (used_blocks - 1 == 24867) {
+    assert (0);
+  }
   tcheck ();
   return p + 8;
 #else

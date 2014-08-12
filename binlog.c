@@ -76,6 +76,125 @@ void *alloc_log_event (int l UU) {
 
 long long binlog_pos;
 
+int fetch_comb_binlog_start (void *extra) {
+  return 0;
+}
+
+int fetch_comb_binlog_dc_option (void *extra) {
+  int id = fetch_int ();
+  int l1 = prefetch_strlen ();
+  assert (l1 >= 0);
+  char *name = fetch_str (l1);
+  int l2 = prefetch_strlen ();
+  assert (l2 >= 0);
+  char *ip = fetch_str (l2);
+  int port = fetch_int ();
+
+  if (verbosity) {
+    logprintf ("DC%d '%s' update: %s:%d\n", id, name, ip, port);
+  }
+
+  alloc_dc (id, tstrndup (ip, l2), port);
+  return 0;
+}
+
+int fetch_comb_binlog_auth_key (void *extra) {
+  int num = fetch_int ();
+  assert (num >= 0 && num <= MAX_DC_ID);
+  assert (DC_list[num]);
+  DC_list[num]->auth_key_id = fetch_long ();
+  fetch_ints (DC_list[num]->auth_key, 64);
+  DC_list[num]->flags |= 1;
+  return 0;
+}
+
+int fetch_comb_binlog_default_dc (void *extra) {
+  int num = fetch_int ();
+  assert (num >= 0 && num <= MAX_DC_ID);
+  DC_working = DC_list[num];
+  dc_working_num = num;
+  return 0;
+}
+
+int fetch_comb_binlog_our_id (void *extra) {
+  our_id = fetch_int ();
+  #ifdef USE_LUA
+    lua_our_id (our_id);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_dc_signed (void *extra) {
+  int num = fetch_int ();
+  assert (num >= 0 && num <= MAX_DC_ID);
+  assert (DC_list[num]);
+  DC_list[num]->has_auth = 1;
+  return 0;
+}
+
+int fetch_comb_binlog_dc_salt (void *extra) {
+  int num = fetch_int ();
+  assert (num >= 0 && num <= MAX_DC_ID);
+  assert (DC_list[num]);
+  DC_list[num]->server_salt = fetch_long ();
+  return 0;
+}
+
+int fetch_comb_binlog_new_user (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *_U = user_chat_get (id);
+  if (!_U) {
+    _U = talloc0 (sizeof (*_U));
+    _U->id = id;
+    insert_user (_U);
+  } else {
+    assert (!(_U->flags & FLAG_CREATED));
+  }
+  struct user *U = (void *)_U;
+  U->flags |= FLAG_CREATED;
+  if (get_peer_id (id) == our_id) {
+    U->flags |= FLAG_USER_SELF;
+  }
+  U->first_name = fetch_str_dup ();
+  U->last_name = fetch_str_dup ();
+  assert (!U->print_name);
+  U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+
+  peer_insert_name ((void *)U);
+  U->access_hash = fetch_long ();
+  U->phone = fetch_str_dup ();
+  if (fetch_int ()) {
+    U->flags |= FLAG_USER_CONTACT;
+  }
+      
+  #ifdef USE_LUA
+    lua_user_update (U);
+  #endif
+  return 0;
+}
+
+int fetch_comb_binlog_new_user (void *extra) {
+  peer_id_t id = MK_USER (fetch_int ());
+  peer_t *U = user_chat_get (id);
+  assert (U);
+  U->flags |= FLAG_DELETED;
+  
+  #ifdef USE_LUA
+    lua_user_update (U);
+  #endif
+  return 0;
+}
+
+FETCH_COMBINATOR_FUNCTION (binlog_start)
+FETCH_COMBINATOR_FUNCTION (binlog_dc_option)
+FETCH_COMBINATOR_FUNCTION (binlog_auth_key)
+FETCH_COMBINATOR_FUNCTION (binlog_default_dc)
+FETCH_COMBINATOR_FUNCTION (binlog_our_id)
+FETCH_COMBINATOR_FUNCTION (binlog_dc_signed)
+FETCH_COMBINATOR_FUNCTION (binlog_dc_salt)
+FETCH_COMBINATOR_FUNCTION (binlog_new_user)
+FETCH_COMBINATOR_FUNCTION (binlog_user_delete)
+
 void replay_log_event (void) {
   int *start = rptr;
   in_replay_log = 1;
@@ -89,258 +208,6 @@ void replay_log_event (void) {
   in_ptr = rptr;
   in_end = wptr;
   switch (op) {
-  case LOG_START:
-    rptr ++;
-    break;
-  case CODE_binlog_dc_option:
-    in_ptr ++;
-    {
-      int id = fetch_int ();
-      int l1 = prefetch_strlen ();
-      char *name = fetch_str (l1);
-      int l2 = prefetch_strlen ();
-      char *ip = fetch_str (l2);
-      int port = fetch_int ();
-      if (verbosity) {
-        logprintf ( "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
-      }
-      alloc_dc (id, tstrndup (ip, l2), port);
-    }
-    rptr = in_ptr;
-    break;
-  case LOG_AUTH_KEY:
-    rptr ++;
-    {
-      int num = *(rptr ++);
-      assert (num >= 0 && num <= MAX_DC_ID);
-      assert (DC_list[num]);
-      DC_list[num]->auth_key_id = *(long long *)rptr;
-      rptr += 2;
-      memcpy (DC_list[num]->auth_key, rptr, 256);
-      rptr += 64;
-      DC_list[num]->flags |= 1;
-    };
-    break;
-  case LOG_DEFAULT_DC:
-    rptr ++;
-    { 
-      int num = *(rptr ++);
-      assert (num >= 0 && num <= MAX_DC_ID);
-      DC_working = DC_list[num];
-      dc_working_num = num;
-    }
-    break;
-  case LOG_OUR_ID:
-    rptr ++;
-    {
-      our_id = *(rptr ++);
-      #ifdef USE_LUA
-        lua_our_id (our_id);
-      #endif
-    }
-    break;
-  case LOG_DC_SIGNED:
-    rptr ++;
-    {
-      int num = *(rptr ++);
-      assert (num >= 0 && num <= MAX_DC_ID);
-      assert (DC_list[num]);
-      DC_list[num]->has_auth = 1;
-    }
-    break;
-  case LOG_DC_SALT:
-    rptr ++;
-    {
-      int num = *(rptr ++);
-      assert (num >= 0 && num <= MAX_DC_ID);
-      assert (DC_list[num]);
-      DC_list[num]->server_salt = *(long long *)rptr;
-      rptr += 2;
-    };
-    break;
-/*  case CODE_user_empty:
-  case CODE_user_self:
-  case CODE_user_contact:
-  case CODE_user_request:
-  case CODE_user_foreign:
-  case CODE_user_deleted:
-    fetch_alloc_user ();
-    rptr = in_ptr;
-    break;*/
-  case LOG_DH_CONFIG:
-    get_dh_config_on_answer (0);
-    rptr = in_ptr;
-    break;
-  case LOG_ENCR_CHAT_KEY:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      assert (U);
-      U->key_fingerprint = *(long long *)rptr;
-      rptr += 2;
-      memcpy (U->key, rptr, 256);
-      rptr += 64;
-    };
-    break;
-  case LOG_ENCR_CHAT_SEND_ACCEPT:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      assert (U);
-      U->key_fingerprint = *(long long *)rptr;
-      rptr += 2;
-      memcpy (U->key, rptr, 256);
-      rptr += 64;
-      if (!U->g_key) {
-        U->g_key = talloc (256);
-      }
-      memcpy (U->g_key, rptr, 256);
-      rptr += 64;
-    };
-    break;
-  case LOG_ENCR_CHAT_SEND_CREATE:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      assert (!U || !(U->flags & FLAG_CREATED));
-      if (!U) {
-        U = talloc0 (sizeof (peer_t));
-        U->id = id;
-        insert_encrypted_chat ((void *)U);
-      }
-      U->flags |= FLAG_CREATED;
-      U->user_id = *(rptr ++);
-      memcpy (U->key, rptr, 256);
-      rptr += 64;
-      if (!U->print_name) {  
-        peer_t *P = user_chat_get (MK_USER (U->user_id));
-        if (P) {
-          U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
-        } else {
-          static char buf[100];
-          tsnprintf (buf, 99, "user#%d", U->user_id);
-          U->print_name = create_print_name (U->id, "!", buf, 0, 0);
-        }
-        peer_insert_name ((void *)U);
-      }
-    };
-    break;
-  case LOG_ENCR_CHAT_DELETED:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      if (!U) {
-        U = talloc0 (sizeof (peer_t));
-        U->id = id;
-        insert_encrypted_chat ((void *)U);
-      }
-      U->flags |= FLAG_CREATED;
-      U->state = sc_deleted;
-    };
-    break;
-  case LOG_ENCR_CHAT_WAITING:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      assert (U);
-      U->state = sc_waiting;
-      U->date = *(rptr ++);
-      U->admin_id = *(rptr ++);
-      U->user_id = *(rptr ++);
-      U->access_hash = *(long long *)rptr;
-      rptr += 2;
-    };
-    break;
-  case LOG_ENCR_CHAT_REQUESTED:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      if (!U) {
-        U = talloc0 (sizeof (peer_t));
-        U->id = id;
-        insert_encrypted_chat ((void *)U);
-      }
-      U->flags |= FLAG_CREATED;
-      U->state = sc_request;
-      U->date = *(rptr ++);
-      U->admin_id = *(rptr ++);
-      U->user_id = *(rptr ++);
-      U->access_hash = *(long long *)rptr;
-      if (!U->print_name) {  
-        peer_t *P = user_chat_get (MK_USER (U->user_id));
-        if (P) {
-          U->print_name = create_print_name (U->id, "!", P->user.first_name, P->user.last_name, 0);
-        } else {
-          static char buf[100];
-          tsnprintf (buf, 99, "user#%d", U->user_id);
-          U->print_name = create_print_name (U->id, "!", buf, 0, 0);
-        }
-        peer_insert_name ((void *)U);
-      }
-      rptr += 2;
-    };
-    break;
-  case LOG_ENCR_CHAT_OK:
-    rptr ++;
-    {
-      peer_id_t id = MK_ENCR_CHAT (*(rptr ++));
-      struct secret_chat *U = (void *)user_chat_get (id);
-      assert (U);
-      U->state = sc_ok;
-      #ifdef USE_LUA
-        lua_secret_chat_created (U);
-      #endif
-    }
-    break;
-  case CODE_binlog_new_user:
-    in_ptr ++;
-    {
-      peer_id_t id = MK_USER (fetch_int ());
-      peer_t *_U = user_chat_get (id);
-      if (!_U) {
-        _U = talloc0 (sizeof (*_U));
-        _U->id = id;
-        insert_user (_U);
-      } else {
-        assert (!(_U->flags & FLAG_CREATED));
-      }
-      struct user *U = (void *)_U;
-      U->flags |= FLAG_CREATED;
-      if (get_peer_id (id) == our_id) {
-        U->flags |= FLAG_USER_SELF;
-      }
-      U->first_name = fetch_str_dup ();
-      U->last_name = fetch_str_dup ();
-      assert (!U->print_name);
-      U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
-      peer_insert_name ((void *)U);
-      U->access_hash = fetch_long ();
-      U->phone = fetch_str_dup ();
-      if (fetch_int ()) {
-        U->flags |= FLAG_USER_CONTACT;
-      }
-      
-      #ifdef USE_LUA
-        lua_user_update (U);
-      #endif
-    }
-    rptr = in_ptr;
-    break;
-  case CODE_binlog_user_delete:
-    rptr ++;
-    {
-      peer_id_t id = MK_USER (*(rptr ++));
-      peer_t *U = user_chat_get (id);
-      assert (U);
-      U->flags |= FLAG_DELETED;
-    }
-    break;
   case CODE_binlog_set_user_access_token:
     rptr ++;
     {

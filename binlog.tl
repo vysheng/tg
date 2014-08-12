@@ -1,10 +1,11 @@
-log.peer peer_type:int peer_id:int = log.Peer;
+---types---
+binlog.start = binlog.Update;
+binlog.dcUpdate id:int name:string ip:string port:int = binlog.Update;
+binlog.authKey dc:int key_id:long key:64*[int] = binlog.Update; 
+binlog.defaultDc dc:int = binlog.Update;
+binlog.ourId id:int = binlog.Update;
+binlog.dcSigned id:int = binlog.Update;
+binlog.dcSalt id:int salt:long = binlog.Update;
 
-log.dc num:int hostname:string ip:string port:int = log.Event;
-log.dcRenum old_num:int new_num:int = log.Event;
-log.authKey dc:int key:bytes key_id:long = log.Event;
-log.signIn dc:int id:int = log.Event;
-
-
-log.user id:int flags:int access_hash:long first_name:string last_name:string real_first_name:string real_last_name:string phone:string photo:log.Photo photo_id:long photo_big:log.FileLocation photo_small:long.FileLocation = log.Event;
-
+binlog.newUser id:int first_name:string last_name:string hash:long phone:string is_contact:int = binlog.Update;
+binlog.userDelete id:int = binlog.Update;

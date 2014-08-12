@@ -36,7 +36,7 @@ CC=@CC@
 .SUFFIXES: .c .h .o
 
 all: ${EXE_LIST} ${DIR_LIST}
-create_dirs_and_headers: ${DIR_LIST} ${AUTO}/auto.c ${AUTO}/auto-header.h
+create_dirs_and_headers: ${DIR_LIST} ${AUTO}/auto.c ${AUTO}/auto-header.h ${AUTO}/constants.h
 create_dirs: ${DIR_LIST}
 
 ${DIR_LIST}:
@@ -59,14 +59,23 @@ ${EXE}/telegram-cli: ${TG_OBJECTS} ${COMMON_OBJECTS}
 ${EXE}/generate: ${GENERATE_OBJECTS} ${COMMON_OBJECTS}
 	${CC} ${GENERATE_OBJECTS} ${COMMON_OBJECTS} ${LINK_FLAGS} -o $@
 
-${AUTO}/scheme.tlo: ${srcdir}/scheme.tl ${EXE}/tlc
-	${EXE}/tlc -e $@ ${srcdir}/scheme.tl
+${AUTO}/scheme.tlo: ${AUTO}/scheme.tl ${EXE}/tlc
+	${EXE}/tlc -e $@ ${AUTO}/scheme.tl
+
+${AUTO}/scheme.tl: ${srcdir}/scheme.tl ${srcdir}/binlog.tl
+	cat $^ > $@
+
+${AUTO}/scheme2.tl: ${AUTO}/scheme.tl ${EXE}/tlc
+	${EXE}/tlc -E ${AUTO}/scheme.tl 2> $@  || ( cat $@ && rm $@ && false )
 
 ${AUTO}/auto.c: ${AUTO}/scheme.tlo ${EXE}/generate
 	${EXE}/generate ${AUTO}/scheme.tlo > $@
 
 ${AUTO}/auto-header.h: ${AUTO}/scheme.tlo ${EXE}/generate
 	${EXE}/generate -H ${AUTO}/scheme.tlo > $@
+
+${AUTO}/constants.h: ${AUTO}/scheme2.tl
+	awk -f ${srcdir}/gen_constants_h.awk < $^ > $@
 
 clean:
 	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"

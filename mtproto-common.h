@@ -28,7 +28,7 @@
 
 #include "interface.h"
 #include "tools.h"
-#include "constants.h"
+#include "auto/constants.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
 #define CODE_resPQ			0x05162463
@@ -322,6 +322,17 @@ static inline void fetch_ints (void *data, int count) {
   assert (in_ptr + count <= in_end);
   memcpy (data, in_ptr, 4 * count);
   in_ptr += count;
+}
+    
+static inline void fetch256 (void *buf) {
+  int l = prefetch_strlen ();
+  assert (l >= 0);
+  char *s = fetch_str (l);
+  if (l < 256) {
+    memcpy (buf + 256 - l, s, l);
+  } else {
+    memcpy (buf, s + (l - 256), 256);
+  }
 }
 
 int get_random_bytes (unsigned char *buf, int n);

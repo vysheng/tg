@@ -1197,6 +1197,8 @@ struct tl_constructor *tl_add_function (struct tl_type *a, const char *_id, int 
     assert (magic && magic != (unsigned)-1);
   }
 
+  len = x;
+
   struct tl_constructor _t = {.id = id};
   if (tree_lookup_tl_constructor (tl_function_tree, &_t)) {
     TL_ERROR ("Duplicate function id `%s`\n", id);

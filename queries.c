@@ -1324,15 +1324,18 @@ int send_encr_file_on_answer (struct query *q UU) {
 }
 
 struct query_methods send_file_part_methods = {
-  .on_answer = send_file_part_on_answer
+  .on_answer = send_file_part_on_answer,
+  .type = TYPE_TO_PARAM(Bool)
 };
 
 struct query_methods send_file_methods = {
-  .on_answer = send_file_on_answer
+  .on_answer = send_file_on_answer,
+  .type = TYPE_TO_PARAM(messages_StatedMessage)
 };
 
 struct query_methods send_encr_file_methods = {
-  .on_answer = send_encr_file_on_answer
+  .on_answer = send_encr_file_on_answer,
+  .type = TYPE_TO_PARAM(messages_SentEncryptedMessage)
 };
 
 void send_part (struct send_file *f) {
@@ -1614,7 +1617,8 @@ int fwd_msg_on_answer (struct query *q UU) {
 }
 
 struct query_methods fwd_msg_methods = {
-  .on_answer = fwd_msg_on_answer
+  .on_answer = fwd_msg_on_answer,
+  .type = TYPE_TO_PARAM(messages_StatedMessage)
 };
 
 void do_forward_message (peer_id_t id, int n) {
@@ -1653,7 +1657,8 @@ int rename_chat_on_answer (struct query *q UU) {
 }
 
 struct query_methods rename_chat_methods = {
-  .on_answer = rename_chat_on_answer
+  .on_answer = rename_chat_on_answer,
+  .type = TYPE_TO_PARAM(messages_StatedMessage)
 };
 
 void do_rename_chat (peer_id_t id, char *name UU) {
@@ -1698,7 +1703,8 @@ int chat_info_on_answer (struct query *q UU) {
 }
 
 struct query_methods chat_info_methods = {
-  .on_answer = chat_info_on_answer
+  .on_answer = chat_info_on_answer,
+  .type = TYPE_TO_PARAM(messages_ChatFull)
 };
 
 void do_get_chat_info (peer_id_t id) {
@@ -1748,7 +1754,8 @@ int user_info_on_answer (struct query *q UU) {
 }
 
 struct query_methods user_info_methods = {
-  .on_answer = user_info_on_answer
+  .on_answer = user_info_on_answer,
+  .type = TYPE_TO_PARAM(UserFull)
 };
 
 void do_get_user_info (peer_id_t id) {
@@ -1789,7 +1796,8 @@ int user_list_info_silent_on_answer (struct query *q UU) {
 }
 
 struct query_methods user_list_info_silent_methods = {
-  .on_answer = user_list_info_silent_on_answer
+  .on_answer = user_list_info_silent_on_answer,
+  .type = TYPE_TO_PARAM_1(Vector, TYPE_TO_PARAM(User))
 };
 
 void do_get_user_list_info_silent (int num, int *list) {
@@ -1891,7 +1899,8 @@ int download_on_answer (struct query *q) {
 }
 
 struct query_methods download_methods = {
-  .on_answer = download_on_answer
+  .on_answer = download_on_answer,
+  .type = TYPE_TO_PARAM(upload_File)
 };
 
 void load_next_part (struct download *D) {
@@ -2092,7 +2101,8 @@ int export_auth_on_answer (struct query *q UU) {
 
 struct query_methods export_auth_methods = {
   .on_answer = export_auth_on_answer,
-  .on_error = fail_on_error
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM(auth_ExportedAuthorization)
 };
 
 void do_export_auth (int num) {
@@ -2117,7 +2127,8 @@ int import_auth_on_answer (struct query *q UU) {
 
 struct query_methods import_auth_methods = {
   .on_answer = import_auth_on_answer,
-  .on_error = fail_on_error
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM(auth_Authorization)
 };
 
 void do_import_auth (int num) {
@@ -2183,6 +2194,7 @@ int add_contact_on_answer (struct query *q UU) {
 
 struct query_methods add_contact_methods = {
   .on_answer = add_contact_on_answer,
+  .type = TYPE_TO_PARAM(contacts_ImportedContacts)
 };
 
 void do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force) {
@@ -2206,7 +2218,8 @@ int msg_search_on_answer (struct query *q UU) {
 }
 
 struct query_methods msg_search_methods = {
-  .on_answer = msg_search_on_answer
+  .on_answer = msg_search_on_answer,
+  .type = TYPE_TO_PARAM(messages_Messages)
 };
 
 void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
@@ -2260,7 +2273,8 @@ int contacts_search_on_answer (struct query *q UU) {
 }
 
 struct query_methods contacts_search_methods = {
-  .on_answer = contacts_search_on_answer
+  .on_answer = contacts_search_on_answer,
+  .type = TYPE_TO_PARAM(contacts_Found)
 };
 
 void do_contacts_search (int limit, const char *s) {
@@ -2321,11 +2335,13 @@ int send_encr_request_on_answer (struct query *q UU) {
 }
 
 struct query_methods send_encr_accept_methods  = {
-  .on_answer = send_encr_accept_on_answer
+  .on_answer = send_encr_accept_on_answer,
+  .type = TYPE_TO_PARAM(EncryptedChat)
 };
 
 struct query_methods send_encr_request_methods  = {
-  .on_answer = send_encr_request_on_answer
+  .on_answer = send_encr_request_on_answer,
+  .type = TYPE_TO_PARAM(EncryptedChat)
 };
 
 int encr_root;
@@ -2544,7 +2560,8 @@ int get_dh_config_on_answer (struct query *q UU) {
 }
 
 struct query_methods get_dh_config_methods  = {
-  .on_answer = get_dh_config_on_answer
+  .on_answer = get_dh_config_on_answer,
+  .type = TYPE_TO_PARAM(messages_DhConfig)
 };
 
 void do_accept_encr_chat_request (struct secret_chat *E) {
@@ -2655,11 +2672,13 @@ int get_difference_on_answer (struct query *q UU) {
 }
 
 struct query_methods get_state_methods = {
-  .on_answer = get_state_on_answer
+  .on_answer = get_state_on_answer,
+  .type = TYPE_TO_PARAM(updates_State)
 };
 
 struct query_methods get_difference_methods = {
-  .on_answer = get_difference_on_answer
+  .on_answer = get_difference_on_answer,
+  .type = TYPE_TO_PARAM(updates_Difference)
 };
 
 void do_get_difference (void) {
@@ -2746,7 +2765,8 @@ int get_suggested_on_answer (struct query *q UU) {
 }
 
 struct query_methods get_suggested_methods = {
-  .on_answer = get_suggested_on_answer
+  .on_answer = get_suggested_on_answer,
+  .type = TYPE_TO_PARAM(contacts_Suggested)
 };
 
 void do_get_suggested (void) {
@@ -2760,7 +2780,8 @@ void do_get_suggested (void) {
 /* {{{ Add user to chat */
 
 struct query_methods add_user_to_chat_methods = {
-  .on_answer = fwd_msg_on_answer
+  .on_answer = fwd_msg_on_answer,
+  .type = TYPE_TO_PARAM(MessageAction)
 };
 
 void do_add_user_to_chat (peer_id_t chat_id, peer_id_t id, int limit) {
@@ -2818,7 +2839,8 @@ void do_create_secret_chat (peer_id_t id) {
 
 /* {{{ Create group chat */
 struct query_methods create_group_chat_methods = {
-  .on_answer = fwd_msg_on_answer
+  .on_answer = fwd_msg_on_answer,
+  .type = TYPE_TO_PARAM(MessageAction)
 };
 
 void do_create_group_chat (peer_id_t id, char *chat_topic) {
@@ -2857,7 +2879,8 @@ int delete_msg_on_answer (struct query *q UU) {
 }
 
 struct query_methods delete_msg_methods = {
-  .on_answer = delete_msg_on_answer
+  .on_answer = delete_msg_on_answer,
+  .type = TYPE_TO_PARAM_1(Vector, TYPE_TO_PARAM (bare_Int))
 };
 
 void do_delete_msg (long long id) {
@@ -2881,7 +2904,8 @@ int restore_msg_on_answer (struct query *q UU) {
 }
 
 struct query_methods restore_msg_methods = {
-  .on_answer = restore_msg_on_answer
+  .on_answer = restore_msg_on_answer,
+  .type = TYPE_TO_PARAM_1(Vector, TYPE_TO_PARAM (bare_Int))
 };
 
 void do_restore_msg (long long id) {
@@ -2899,7 +2923,8 @@ int update_status_on_answer (struct query *q UU) {
 }
 
 struct query_methods update_status_methods = {
-  .on_answer = update_status_on_answer
+  .on_answer = update_status_on_answer,
+  .type = TYPE_TO_PARAM(Bool)
 };
 
 void do_update_status (int online UU) {

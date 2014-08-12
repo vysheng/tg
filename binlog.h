@@ -36,7 +36,6 @@
 #define LOG_ENCR_CHAT_REQUESTED 0x9011011a
 #define LOG_ENCR_CHAT_OK 0x7612ce13
 
-#define CODE_binlog_new_user 0xe04f30de
 #define CODE_binlog_user_delete 0xf7a27c79
 #define CODE_binlog_set_user_access_token 0x1349f615
 #define CODE_binlog_set_user_phone 0x5d3afde2

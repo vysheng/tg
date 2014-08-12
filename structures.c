@@ -67,84 +67,6 @@ peer_t *Peers[MAX_PEER_NUM];
 extern int binlog_enabled;
 
 
-void fetch_skip_photo (void);
-
-#define code_assert(x) if (!(x)) { logprintf ("Can not parse at line %d\n", __LINE__); assert (0); return -1; }
-#define code_try(x) if ((x) == -1) { return -1; }
-
-/*
- *
- * Fetch simple structures (immediate fetch into buffer)
- *
- */
-
-int fetch_file_location (struct file_location *loc) {
-  int x = fetch_int ();
-  code_assert (x == CODE_file_location_unavailable || x == CODE_file_location);
-
-  if (x == CODE_file_location_unavailable) {
-    loc->dc = -1;
-    loc->volume = fetch_long ();
-    loc->local_id = fetch_int ();
-    loc->secret = fetch_long ();
-  } else {
-    loc->dc = fetch_int ();
-    loc->volume = fetch_long ();
-    loc->local_id = fetch_int ();
-    loc->secret = fetch_long ();
-  }
-  return 0;
-}
-
-int fetch_user_status (struct user_status *S) {
-  unsigned x = fetch_int ();
-  code_assert (x == CODE_user_status_empty || x == CODE_user_status_online || x == CODE_user_status_offline);
-  switch (x) {
-  case CODE_user_status_empty:
-    S->online = 0;
-    S->when = 0;
-    break;
-  case CODE_user_status_online:
-    S->online = 1;
-    S->when = fetch_int ();
-    break;
-  case CODE_user_status_offline:
-    S->online = -1;
-    S->when = fetch_int ();
-    break;
-  default:
-    assert (0);
-  }
-  return 0;
-}
-
-/*
- *
- * Skip simple structures 
- *
- */
-
-int fetch_skip_file_location (void) {
-  int x = fetch_int ();
-  code_assert (x == CODE_file_location_unavailable || x == CODE_file_location);
-
-  if (x == CODE_file_location_unavailable) {
-    in_ptr += 5;
-  } else {
-    in_ptr += 6;
-  }
-  return 0;
-}
-
-int fetch_skip_user_status (void) {
-  unsigned x = fetch_int ();
-  code_assert (x == CODE_user_status_empty || x == CODE_user_status_online || x == CODE_user_status_offline);
-  if (x != CODE_user_status_empty) {
-    fetch_int ();
-  }
-  return 0;
-}
-
 char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4) {
   const char *d[4];
   d[0] = a1; d[1] = a2; d[2] = a3; d[3] = a4;
@@ -180,13 +102,59 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
 
 /*
  *
+ * Fetch simple structures (immediate fetch into buffer)
+ *
+ */
+
+int fetch_file_location (struct file_location *loc) {
+  int x = fetch_int ();
+  assert (x == CODE_file_location_unavailable || x == CODE_file_location);
+
+  if (x == CODE_file_location_unavailable) {
+    loc->dc = -1;
+    loc->volume = fetch_long ();
+    loc->local_id = fetch_int ();
+    loc->secret = fetch_long ();
+  } else {
+    loc->dc = fetch_int ();
+    loc->volume = fetch_long ();
+    loc->local_id = fetch_int ();
+    loc->secret = fetch_long ();
+  }
+  return 0;
+}
+
+int fetch_user_status (struct user_status *S) {
+  unsigned x = fetch_int ();
+  assert (x == CODE_user_status_empty || x == CODE_user_status_online || x == CODE_user_status_offline);
+  switch (x) {
+  case CODE_user_status_empty:
+    S->online = 0;
+    S->when = 0;
+    break;
+  case CODE_user_status_online:
+    S->online = 1;
+    S->when = fetch_int ();
+    break;
+  case CODE_user_status_offline:
+    S->online = -1;
+    S->when = fetch_int ();
+    break;
+  default:
+    assert (0);
+  }
+  return 0;
+}
+
+/*
+ *
  * Fetch with log event
  *
  */
 
 long long fetch_user_photo (struct user *U) {
   unsigned x = fetch_int ();
-  code_assert (x == CODE_user_profile_photo || x == CODE_user_profile_photo_old || x == CODE_user_profile_photo_empty);
+  assert (x == CODE_user_profile_photo || x == CODE_user_profile_photo_old || x == CODE_user_profile_photo_empty);
   if (x == CODE_user_profile_photo_empty) {
     bl_do_set_user_profile_photo (U, 0, 0, 0);
     return 0;
@@ -195,10 +163,10 @@ long long fetch_user_photo (struct user *U) {
   if (x == CODE_user_profile_photo) {
     photo_id = fetch_long ();
   }
-  struct file_location big;
-  struct file_location small;
-  code_try (fetch_file_location (&small));
-  code_try (fetch_file_location (&big));
+  static struct file_location big;
+  static struct file_location small;
+  assert (fetch_file_location (&small) >= 0);
+  assert (fetch_file_location (&big) >= 0);
 
   bl_do_set_user_profile_photo (U, photo_id, &big, &small);
   return 0;
@@ -206,7 +174,7 @@ long long fetch_user_photo (struct user *U) {
 
 int fetch_user (struct user *U) {
   unsigned x = fetch_int ();
-  code_assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
+  assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
   U->id = MK_USER (fetch_int ());
   if (x == CODE_user_empty) {
     return 0;
@@ -220,16 +188,13 @@ int fetch_user (struct user *U) {
     }
   }
   
-  int new = 0;
-  if (!(U->flags & FLAG_CREATED)) { 
-    new = 1;
-  }
+  int new = !(U->flags & FLAG_CREATED);
   if (new) {
     int l1 = prefetch_strlen ();
-    code_assert (l1 >= 0);
+    assert (l1 >= 0);
     char *s1 = fetch_str (l1);
     int l2 = prefetch_strlen ();
-    code_assert (l2 >= 0);
+    assert (l2 >= 0);
     char *s2 = fetch_str (l2);
     
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
@@ -245,7 +210,7 @@ int fetch_user (struct user *U) {
       char *phone = 0;
       if (x != CODE_user_foreign) {
         phone_len = prefetch_strlen ();
-        code_assert (phone_len >= 0);
+        assert (phone_len >= 0);
         phone = fetch_str (phone_len);
       }
       bl_do_new_user (get_peer_id (U->id), s1, l1, s2, l2, access_token, phone, phone_len, x == CODE_user_contact);
@@ -276,7 +241,7 @@ int fetch_user (struct user *U) {
         char *s = fetch_str (l);
         bl_do_set_user_phone (U, s, l);
       }
-      if (fetch_user_photo (U) < 0) { return -1; }
+      assert (fetch_user_photo (U) >= 0);
     
       fetch_user_status (&U->status);
       if (x == CODE_user_self) {
@@ -326,26 +291,9 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     }
     if (x == CODE_encrypted_chat_requested || x == CODE_encrypted_chat) {
       memset (g_key, 0, sizeof (g_key));
-      memset (nonce, 0, sizeof (nonce));
     }
-    
-    int l = prefetch_strlen ();
-    char *s = fetch_str (l);
-    if (l != 256) { logprintf ("l = %d\n", l); }
-    if (l < 256) {
-      memcpy (g_key + 256 - l, s, l);
-    } else {
-      memcpy (g_key, s +  (l - 256), 256);
-    }
-    
-    /*l = prefetch_strlen ();
-    s = fetch_str (l);
-    if (l != 256) { logprintf ("l = %d\n", l); }
-    if (l < 256) {
-      memcpy (nonce + 256 - l, s, l);
-    } else {
-      memcpy (nonce, s +  (l - 256), 256);
-    }*/
+
+    fetch256 (g_key);
     
     if (x == CODE_encrypted_chat) {
       fetch_long (); // fingerprint
@@ -377,27 +325,10 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     
     if (x == CODE_encrypted_chat_requested || x == CODE_encrypted_chat) {
       memset (g_key, 0, sizeof (g_key));
-      memset (nonce, 0, sizeof (nonce));
     }
-    
-    int l = prefetch_strlen ();
-    char *s = fetch_str (l);
-    if (l != 256) { logprintf ("l = %d\n", l); }
-    if (l < 256) {
-      memcpy (g_key + 256 - l, s, l);
-    } else {
-      memcpy (g_key, s +  (l - 256), 256);
-    }
-    
-    /*l = prefetch_strlen ();
-    s = fetch_str (l);
-    if (l != 256) { logprintf ("l = %d\n", l); }
-    if (l < 256) {
-      memcpy (nonce + 256 - l, s, l);
-    } else {
-      memcpy (nonce, s +  (l - 256), 256);
-    }*/
    
+    fetch256 (g_key);
+    
     if (x == CODE_encrypted_chat_requested) {
       return; // Duplicate?
     }
@@ -406,30 +337,17 @@ void fetch_encrypted_chat (struct secret_chat *U) {
   write_secret_chat_file ();
 }
 
-void fetch_notify_settings (void);
 void fetch_user_full (struct user *U) {
   assert (fetch_int () == CODE_user_full);
   fetch_alloc_user ();
-  unsigned x;
-  assert (fetch_int () == (int)CODE_contacts_link);
-  x = fetch_int ();
-  assert (x == CODE_contacts_my_link_empty || x == CODE_contacts_my_link_requested || x == CODE_contacts_my_link_contact);
-  if (x == CODE_contacts_my_link_requested) {
-    fetch_bool ();
-  }
-  x = fetch_int ();
-  assert (x == CODE_contacts_foreign_link_unknown || x == CODE_contacts_foreign_link_requested || x == CODE_contacts_foreign_link_mutual);
-  if (x == CODE_contacts_foreign_link_requested) {
-    fetch_bool ();
-  }
-  fetch_alloc_user ();
+  assert (skip_type_any (TYPE_TO_PARAM (contacts_Link)) >= 0);
 
   int *start = in_ptr;
-  fetch_skip_photo ();
+  assert (skip_type_any (TYPE_TO_PARAM (Photo)) >= 0);
   bl_do_set_user_full_photo (U, start, 4 * (in_ptr - start));
 
-  fetch_notify_settings ();
-
+  assert (skip_type_any (TYPE_TO_PARAM (PeerNotifySettings)) >= 0);
+  
   bl_do_set_user_blocked (U, fetch_bool ());
   int l1 = prefetch_strlen ();
   char *s1 = fetch_str (l1);
@@ -523,25 +441,6 @@ void fetch_chat (struct chat *C) {
   }
 }
 
-void fetch_notify_settings (void) {
-  unsigned x = fetch_int ();
-  assert (x == CODE_peer_notify_settings || x == CODE_peer_notify_settings_empty || x == CODE_peer_notify_settings_old);
-  if (x == CODE_peer_notify_settings_old) {
-    fetch_int (); // mute_until
-    int l = prefetch_strlen ();
-    fetch_str (l);
-    fetch_bool (); // show_previews
-    fetch_int (); // peer notify events
-  }
-  if (x == CODE_peer_notify_settings) {
-    fetch_int (); // mute_until
-    int l = prefetch_strlen ();
-    fetch_str (l);
-    fetch_bool (); // show_previews
-    fetch_int (); // events_mask
-  }
-}
-
 void fetch_chat_full (struct chat *C) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_chat_full);
@@ -571,9 +470,9 @@ void fetch_chat_full (struct chat *C) {
     version = fetch_int ();
   }
   int *start = in_ptr;
-  fetch_skip_photo ();
+  assert (skip_type_any (TYPE_TO_PARAM (Photo)) >= 0);
   int *end = in_ptr;
-  fetch_notify_settings ();
+  assert (skip_type_any (TYPE_TO_PARAM (PeerNotifySettings)) >= 0);
 
   int n, i;
   assert (fetch_int () == CODE_vector);
@@ -616,23 +515,6 @@ void fetch_photo_size (struct photo_size *S) {
   }
 }
 
-void fetch_skip_photo_size (void) {
-  unsigned x = fetch_int ();
-  assert (x == CODE_photo_size || x == CODE_photo_cached_size || x == CODE_photo_size_empty);
-  int l = prefetch_strlen ();
-  fetch_str (l); // type
-  if (x != CODE_photo_size_empty) {
-    fetch_skip_file_location ();
-    in_ptr += 2; // w, h
-    if (x == CODE_photo_size) {
-      in_ptr ++;
-    } else {
-      l = prefetch_strlen ();
-      fetch_str (l);
-    }
-  }
-}
-
 void fetch_geo (struct geo *G) {
   unsigned x = fetch_int ();
   if (x == CODE_geo_point) {
@@ -642,14 +524,6 @@ void fetch_geo (struct geo *G) {
     assert (x == CODE_geo_point_empty);
     G->longitude = 0;
     G->latitude = 0;
-  }
-}
-
-void fetch_skip_geo (void) {
-  unsigned x = fetch_int ();
-  assert (x == CODE_geo_point || x == CODE_geo_point_empty);
-  if (x == CODE_geo_point) {
-    in_ptr += 4;
   }
 }
 
@@ -673,23 +547,6 @@ void fetch_photo (struct photo *P) {
   }
 }
 
-void fetch_skip_photo (void) {
-  unsigned x = fetch_int ();
-  assert (x == CODE_photo_empty || x == CODE_photo);
-  in_ptr += 2; // id
-  if (x == CODE_photo_empty) { return; }
-  in_ptr += 2  +1 + 1; // access_hash, user_id, date
-  int l = prefetch_strlen ();
-  fetch_str (l); // caption
-  fetch_skip_geo ();
-  assert (fetch_int () == CODE_vector);
-  int n = fetch_int ();
-  int i;
-  for (i = 0; i < n; i++) {
-    fetch_skip_photo_size ();
-  }
-}
-
 void fetch_video (struct video *V) {
   memset (V, 0, sizeof (*V));
   unsigned x = fetch_int ();
@@ -707,18 +564,6 @@ void fetch_video (struct video *V) {
   V->h = fetch_int ();
 }
 
-void fetch_skip_video (void) {
-  unsigned x = fetch_int ();
-  fetch_long ();
-  if (x == CODE_video_empty) { return; }
-  fetch_skip (4);
-  int l = prefetch_strlen ();
-  fetch_str (l);
-  fetch_skip (2);
-  fetch_skip_photo_size ();
-  fetch_skip (3);
-}
-
 void fetch_audio (struct audio *V) {
   memset (V, 0, sizeof (*V));
   unsigned x = fetch_int ();
@@ -730,13 +575,6 @@ void fetch_audio (struct audio *V) {
   V->duration = fetch_int ();
   V->size = fetch_int ();
   V->dc_id = fetch_int ();
-}
-
-void fetch_skip_audio (void) {
-  unsigned x = fetch_int ();
-  fetch_skip (2);
-  if (x == CODE_audio_empty) { return; }
-  fetch_skip (7);
 }
 
 void fetch_document (struct document *V) {
@@ -752,20 +590,6 @@ void fetch_document (struct document *V) {
   V->size = fetch_int ();
   fetch_photo_size (&V->thumb);
   V->dc_id = fetch_int ();
-}
-
-void fetch_skip_document (void) {
-  unsigned x = fetch_int ();
-  fetch_skip (2);
-  if (x == CODE_document_empty) { return; }
-  fetch_skip (4);
-  int l = prefetch_strlen ();
-  fetch_str (l);
-  l = prefetch_strlen ();
-  fetch_str (l);
-  fetch_skip (1);
-  fetch_skip_photo_size ();
-  fetch_skip (1);
 }
 
 void fetch_message_action (struct message_action *M) {
@@ -806,49 +630,6 @@ void fetch_message_action (struct message_action *M) {
     break;
   case CODE_message_action_chat_delete_user:
     M->user = fetch_int ();
-    break;
-  default:
-    assert (0);
-  }
-}
-
-void fetch_skip_message_action (void) {
-  unsigned x = fetch_int ();
-  int l;
-  switch (x) {
-  case CODE_message_action_empty:
-    break;
-  case CODE_message_action_geo_chat_create:
-    {
-      l = prefetch_strlen ();
-      fetch_str (l);
-      l = prefetch_strlen ();
-      fetch_str (l);
-    }
-    break;
-  case CODE_message_action_geo_chat_checkin:
-    break;
-  case CODE_message_action_chat_create:
-    l = prefetch_strlen ();
-    fetch_str (l);
-    assert (fetch_int () == (int)CODE_vector);
-    l = fetch_int ();
-    fetch_skip (l);
-    break;
-  case CODE_message_action_chat_edit_title:
-    l = prefetch_strlen ();
-    fetch_str (l);
-    break;
-  case CODE_message_action_chat_edit_photo:
-    fetch_skip_photo ();
-    break;
-  case CODE_message_action_chat_delete_photo:
-    break;
-  case CODE_message_action_chat_add_user:
-    fetch_int ();
-    break;
-  case CODE_message_action_chat_delete_user:
-    fetch_int ();
     break;
   default:
     assert (0);
@@ -947,124 +728,6 @@ void fetch_message_media (struct message_media *M) {
     break;
   default:
     logprintf ("type = 0x%08x\n", M->type);
-    assert (0);
-  }
-}
-
-void fetch_skip_message_media (void) {
-  unsigned x = fetch_int ();
-  switch (x) {
-  case CODE_message_media_empty:
-    break;
-  case CODE_message_media_photo:
-    fetch_skip_photo ();
-    break;
-  case CODE_message_media_video:
-    fetch_skip_video ();
-    break;
-  case CODE_message_media_audio:
-    fetch_skip_audio ();
-    break;
-  case CODE_message_media_document:
-    fetch_skip_document ();
-    break;
-  case CODE_message_media_geo:
-    fetch_skip_geo ();
-    break;
-  case CODE_message_media_contact:
-    {
-      int l;
-      l = prefetch_strlen ();
-      fetch_str (l);
-      l = prefetch_strlen ();
-      fetch_str (l);
-      l = prefetch_strlen ();
-      fetch_str (l);
-      fetch_int ();
-    }
-    break;
-  case CODE_message_media_unsupported:
-    {
-      int l = prefetch_strlen ();
-      fetch_str (l);
-    }
-    break;
-  default:
-    logprintf ("type = 0x%08x\n", x);
-    assert (0);
-  }
-}
-
-void fetch_skip_message_media_encrypted (void) {
-  unsigned x = fetch_int ();
-  int l;
-  switch (x) {
-  case CODE_decrypted_message_media_empty:
-    break;
-  case CODE_decrypted_message_media_photo:
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-    fetch_skip (5);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    break;
-  case CODE_decrypted_message_media_video:
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-
-    fetch_skip (6);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    break;
-  case CODE_decrypted_message_media_audio:
-    fetch_skip (2);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    break;
-  case CODE_decrypted_message_media_document:
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-
-    fetch_skip (2);
-    
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-    fetch_skip (1);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    
-    l = prefetch_strlen  ();
-    fetch_str (l);
-    break;
-  case CODE_decrypted_message_media_geo_point:
-    fetch_skip (4);
-    break;
-  case CODE_decrypted_message_media_contact:
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-    l = prefetch_strlen ();
-    fetch_str (l); // thumb
-    fetch_skip (1);
-    break;
-  default:
-    logprintf ("type = 0x%08x\n", x);
     assert (0);
   }
 }
@@ -1218,18 +881,6 @@ void fetch_message_media_encrypted (struct message_media *M) {
   }
 }
 
-void fetch_skip_message_action_encrypted (void) {
-  unsigned x = fetch_int ();
-  switch (x) {
-  case CODE_decrypted_message_action_set_message_t_t_l:
-    fetch_skip (1);
-    break;
-  default:
-    logprintf ("x = 0x%08x\n", x);
-    assert (0);
-  }
-}
-
 void fetch_message_action_encrypted (struct message_action *M) {
   unsigned x = fetch_int ();
   switch (x) {
@@ -1280,7 +931,9 @@ void fetch_message (struct message *M) {
 
   if (x == CODE_message_service) {
     int *start = in_ptr;
-    fetch_skip_message_action ();
+
+    assert (skip_type_any (TYPE_TO_PARAM (MessageAction)) >= 0);
+    
     if (new) {
       if (fwd_from_id) {
         bl_do_create_message_service_fwd (id, from_id, get_peer_type (to_id), get_peer_id (to_id), date, fwd_from_id, fwd_date, start, (in_ptr - start));
@@ -1292,7 +945,9 @@ void fetch_message (struct message *M) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     int *start = in_ptr;
-    fetch_skip_message_media ();
+    
+    assert (skip_type_any (TYPE_TO_PARAM (MessageMedia)) >= 0);
+
     if (new) {
       if (fwd_from_id) {
         bl_do_create_message_media_fwd (id, from_id, get_peer_type (to_id), get_peer_id (to_id), date, fwd_from_id, fwd_date, l, s, start, in_ptr - start);
@@ -1442,11 +1097,11 @@ void fetch_encrypted_message (struct message *M) {
       l = prefetch_strlen ();
       s = fetch_str (l);
       start = in_ptr;
-      fetch_skip_message_media_encrypted ();
+      assert (skip_type_any (TYPE_TO_PARAM (DecryptedMessageMedia)) >= 0);
       end = in_ptr;
     } else {
       start = in_ptr;
-      fetch_skip_message_action_encrypted ();
+      assert (skip_type_any (TYPE_TO_PARAM (DecryptedMessageAction)) >= 0);
       end = in_ptr;
     }
     in_ptr = save_in_ptr;
@@ -1456,7 +1111,7 @@ void fetch_encrypted_message (struct message *M) {
   if (sx == CODE_encrypted_message) {
     if (ok) {
       int *start_file = in_ptr;
-      fetch_skip_encrypted_message_file ();
+      assert (skip_type_any (TYPE_TO_PARAM (EncryptedFile)) >= 0);
       if (x == CODE_decrypted_message) {
         bl_do_create_message_media_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, l, s, start, end - start, start_file, in_ptr - start_file);
       }
@@ -1493,15 +1148,6 @@ void fetch_encrypted_message_file (struct message_media *M) {
     }
     M->encr_photo.dc_id = fetch_int();
     M->encr_photo.key_fingerprint = fetch_int();
-  }
-}
-
-void fetch_skip_encrypted_message_file (void) {
-  unsigned x = fetch_int ();
-  assert (x == CODE_encrypted_file || x == CODE_encrypted_file_empty);
-  if (x == CODE_encrypted_file_empty) {
-  } else {
-    fetch_skip (7);
   }
 }
 

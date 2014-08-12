@@ -1409,7 +1409,7 @@ void work_update_short (struct connection *c, long long msg_id) {
 
 void work_updates (struct connection *c, long long msg_id) {
   int *save = in_ptr;
-  assert (!skip_type_any (&(struct paramed_type) {.type = &tl_type_Updates, .params=0}));
+  assert (!skip_type_any (TYPE_TO_PARAM (Updates)));
   int *save_end = in_ptr;
   in_ptr = save;
   assert (fetch_int () == CODE_updates);
