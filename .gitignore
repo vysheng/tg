@@ -7,6 +7,7 @@ config.log
 config.status
 .idea/
 nbproject/
-auto.c
-auto-header.h
-scheme.tlo
+bin/
+objs/
+dep/
+auto/
