@@ -307,8 +307,8 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     bl_do_encr_chat_requested (U, access_hash, date, admin_id, user_id, (void *)g_key, (void *)nonce);
     write_secret_chat_file ();
   } else {
-    bl_do_set_encr_chat_access_hash (U, fetch_long ());
-    bl_do_set_encr_chat_date (U, fetch_int ());
+    bl_do_encr_chat_set_access_hash (U, fetch_long ());
+    bl_do_encr_chat_set_date (U, fetch_int ());
     if (fetch_int () != U->admin_id) {
       logprintf ("Changed admin in secret chat. WTF?\n");
       return;
@@ -318,7 +318,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       return;
     }
     if (x == CODE_encrypted_chat_waiting) {
-      bl_do_set_encr_chat_state (U, sc_waiting);
+      bl_do_encr_chat_set_state (U, sc_waiting);
       write_secret_chat_file ();
       return; // We needed only access hash from here
     }
@@ -413,7 +413,7 @@ void fetch_chat (struct chat *C) {
     }
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
-    bl_do_set_chat_title (C, s, l);
+    bl_do_chat_set_title (C, s, l);
     
     struct file_location small;
     struct file_location big;
@@ -430,13 +430,13 @@ void fetch_chat (struct chat *C) {
         fetch_file_location (&small);
         fetch_file_location (&big);
       }
-      bl_do_set_chat_photo (C, &big, &small);
+      bl_do_chat_set_photo (C, &big, &small);
       int users_num = fetch_int ();
-      bl_do_set_chat_date (C, fetch_int ());
-      bl_do_set_chat_set_in_chat (C, fetch_bool ());
-      bl_do_set_chat_version (C, users_num, fetch_int ());
+      bl_do_chat_set_date (C, fetch_int ());
+      bl_do_chat_set_set_in_chat (C, fetch_bool ());
+      bl_do_chat_set_version (C, users_num, fetch_int ());
     } else {
-      bl_do_set_chat_date (C, fetch_int ());
+      bl_do_chat_set_date (C, fetch_int ());
     }
   }
 }
@@ -486,13 +486,13 @@ void fetch_chat_full (struct chat *C) {
     fetch_alloc_user ();
   }
   if (admin_id) {
-    bl_do_set_chat_admin (C, admin_id);
+    bl_do_chat_set_admin (C, admin_id);
   }
   if (version > 0) {
-    bl_do_set_chat_participants (C, version, users_num, users);
+    bl_do_chat_set_participants (C, version, users_num, users);
     tfree (users, sizeof (struct chat_user) * users_num);
   }
-  bl_do_set_chat_full_photo (C, start, 4 * (end - start));
+  bl_do_chat_set_full_photo (C, start, 4 * (end - start));
 }
 
 void fetch_photo_size (struct photo_size *S) {

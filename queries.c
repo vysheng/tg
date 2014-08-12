@@ -2389,7 +2389,7 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   static unsigned char sha_buffer[20];
   sha1 (kk, 256, sha_buffer);
 
-  bl_do_set_encr_chat_key (E, kk, *(long long *)(sha_buffer + 12));
+  bl_do_encr_chat_set_key (E, kk, *(long long *)(sha_buffer + 12));
 
   clear_packet ();
   out_int (CODE_messages_accept_encryption);

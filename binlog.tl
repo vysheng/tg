@@ -30,24 +30,25 @@ binlog.userSetPhoto id:int photo:UserProfilePhoto = binlog.Update;
 
 binlog.encrChatDelete id:int = binlog.Update;
 binlog.encrChatRequested id:int hash:long date:int admin:int user:int key:64*[int] nonce:64*[int] = binlog.Update;
-binlog.setEncrChatAccessHash id:int hash:long = binlog.Update;
-binlog.setEncrChatDate id:int date:int = binlog.Update;
-binlog.setEncrChatState id:int state:int = binlog.Update;
 binlog.encrChatAccepted id:int key:64*[int] nonce:64*[int] fingerprint:long = binlog.Update;
-binlog.setEncrChatKey id:int key:64*[int] fingerprint:long = binlog.Update;
 binlog.encrChatInit id:int user:int key:64*[int] g_key:64*[int] = binlog.Update;
+
+binlog.encrChatSetAccessHash id:int hash:long = binlog.Update;
+binlog.encrChatSetDate id:int date:int = binlog.Update;
+binlog.encrChatSetState id:int state:int = binlog.Update;
+binlog.encrChatSetKey id:int key:64*[int] fingerprint:long = binlog.Update;
 
 binlog.chatCreate id:int flags:int title:string user_num:int date:int version:int photo_big:%binlog.FileLocation photo_small:%binlog.FileLocation = binlog.Update;
 binlog.chatChangeFlags id:int set_flags:int clear_flags:int = binlog.Update;
-binlog.setChatTitle id:int title:string = binlog.Update;
-binlog.setChatPhoto id:int photo_big:%binlog.FileLocation photo_small:%binlog.FileLocation = binlog.Update;
-binlog.setChatDate id:int date:int = binlog.Update;
-binlog.setChatVersion id:int version:int users_num:int = binlog.Update;
-binlog.setChatAdmin id:int admin:int = binlog.Update;
-binlog.setChatParticipants id:int version:int participants:%(Vector %binlog.ChatParticipant) = binlog.Update;
-binlog.chatFullPhoto id:int photo:Photo = binlog.Update;
-binlog.addChatParticipant id:int version:int user:%binlog.ChatParticipant = binlog.Update;
-binlog.delChatParticipant id:int version:int user:int = binlog.Update;
+binlog.chatSetTitle id:int title:string = binlog.Update;
+binlog.chatSetPhoto id:int photo_big:%binlog.FileLocation photo_small:%binlog.FileLocation = binlog.Update;
+binlog.chatSetDate id:int date:int = binlog.Update;
+binlog.chatSetVersion id:int version:int users_num:int = binlog.Update;
+binlog.chatSetAdmin id:int admin:int = binlog.Update;
+binlog.chatSetParticipants id:int version:int participants:%(Vector %binlog.ChatParticipant) = binlog.Update;
+binlog.chatSetFullPhoto id:int photo:Photo = binlog.Update;
+binlog.chatAddParticipant id:int version:int user:%binlog.ChatParticipant = binlog.Update;
+binlog.chatDelParticipant id:int version:int user:int = binlog.Update;
 
 binlog.createMessageText id:int from_id:int to_type:int to_id:int date:int text:string = binlog.Update;
 binlog.sendMessageText id:long from_id:int to_type:int to_id:int date:int text:string = binlog.Update;

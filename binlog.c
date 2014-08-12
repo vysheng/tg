@@ -420,7 +420,7 @@ int fetch_comb_binlog_encr_chat_requested (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_encr_chat_access_hash (void *extra) {
+int fetch_comb_binlog_encr_chat_set_access_hash (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -432,7 +432,7 @@ int fetch_comb_binlog_set_encr_chat_access_hash (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_encr_chat_date (void *extra) {
+int fetch_comb_binlog_encr_chat_set_date (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -444,7 +444,7 @@ int fetch_comb_binlog_set_encr_chat_date (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_encr_chat_state (void *extra) {
+int fetch_comb_binlog_encr_chat_set_state (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
   peer_t *U = user_chat_get (id);
   assert (U);
@@ -483,7 +483,7 @@ int fetch_comb_binlog_encr_chat_accepted (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_encr_chat_key (void *extra) {
+int fetch_comb_binlog_encr_chat_set_key (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
   peer_t *_U = user_chat_get (id);
   assert (_U);
@@ -560,7 +560,7 @@ int fetch_comb_binlog_chat_change_flags (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_chat_title (void *extra) {
+int fetch_comb_binlog_chat_set_title (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
       
@@ -579,7 +579,7 @@ int fetch_comb_binlog_set_chat_title (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_chat_photo (void *extra) {
+int fetch_comb_binlog_chat_set_photo (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   fetch_data (&C->photo_big, sizeof (struct file_location));
@@ -591,7 +591,7 @@ int fetch_comb_binlog_set_chat_photo (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_chat_date (void *extra) {
+int fetch_comb_binlog_chat_set_date (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.date = fetch_int ();
@@ -602,7 +602,7 @@ int fetch_comb_binlog_set_chat_date (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_chat_version (void *extra) {
+int fetch_comb_binlog_chat_set_version (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.version = fetch_int ();
@@ -614,7 +614,7 @@ int fetch_comb_binlog_set_chat_version (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_chat_admin (void *extra) {
+int fetch_comb_binlog_chat_set_admin (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.admin_id = fetch_int ();
@@ -625,7 +625,7 @@ int fetch_comb_binlog_set_chat_admin (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_set_chat_participants (void *extra) {
+int fetch_comb_binlog_chat_set_participants (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.user_list_version = fetch_int ();
@@ -640,7 +640,7 @@ int fetch_comb_binlog_set_chat_participants (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_chat_full_photo (void *extra) {
+int fetch_comb_binlog_chat_set_full_photo (void *extra) {
   peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
       
@@ -656,7 +656,7 @@ int fetch_comb_binlog_chat_full_photo (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_add_chat_participant (void *extra) {
+int fetch_comb_binlog_chat_add_participant (void *extra) {
   peer_id_t id = MK_CHAT (fetch_int ());
   peer_t *_C = user_chat_get (id);
   assert (_C && (_C->flags & FLAG_CREATED));
@@ -686,7 +686,7 @@ int fetch_comb_binlog_add_chat_participant (void *extra) {
   return 0;
 }
 
-int fetch_comb_binlog_del_chat_participant (void *extra) {
+int fetch_comb_binlog_chat_del_participant (void *extra) {
   peer_id_t id = MK_CHAT (fetch_int ());
   peer_t *_C = user_chat_get (id);
   assert (_C && (_C->flags & FLAG_CREATED));
@@ -1166,24 +1166,24 @@ void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_user_set_real_name)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_delete)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_requested)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_access_hash)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_date)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_state)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_access_hash)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_date)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_state)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_encr_chat_key)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_key)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
 
   FETCH_COMBINATOR_FUNCTION (binlog_chat_create)
   FETCH_COMBINATOR_FUNCTION (binlog_chat_change_flags)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_title)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_photo)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_date)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_version)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_admin)
-  FETCH_COMBINATOR_FUNCTION (binlog_set_chat_participants)
-  FETCH_COMBINATOR_FUNCTION (binlog_chat_full_photo)
-  FETCH_COMBINATOR_FUNCTION (binlog_add_chat_participant)
-  FETCH_COMBINATOR_FUNCTION (binlog_del_chat_participant)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_title)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_photo)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_date)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_version)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_admin)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_participants)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_set_full_photo)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_add_participant)
+  FETCH_COMBINATOR_FUNCTION (binlog_chat_del_participant)
 
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_text)
   FETCH_COMBINATOR_FUNCTION (binlog_send_message_text)
@@ -1513,28 +1513,28 @@ void bl_do_encr_chat_requested (struct secret_chat *U, long long access_hash, in
   add_log_event (ev, 540);
 }
 
-void bl_do_set_encr_chat_access_hash (struct secret_chat *U, long long access_hash) {
+void bl_do_encr_chat_set_access_hash (struct secret_chat *U, long long access_hash) {
   if (U->access_hash == access_hash) { return; }
   int *ev = alloc_log_event (16);
-  ev[0] = CODE_binlog_set_encr_chat_access_hash;
+  ev[0] = CODE_binlog_encr_chat_set_access_hash;
   ev[1] = get_peer_id (U->id);
   *(long long *)(ev + 2) = access_hash;
   add_log_event (ev, 16);
 }
 
-void bl_do_set_encr_chat_date (struct secret_chat *U, int date) {
+void bl_do_encr_chat_set_date (struct secret_chat *U, int date) {
   if (U->date == date) { return; }
   int *ev = alloc_log_event (12);
-  ev[0] = CODE_binlog_set_encr_chat_date;
+  ev[0] = CODE_binlog_encr_chat_set_date;
   ev[1] = get_peer_id (U->id);
   ev[2] = date;
   add_log_event (ev, 12);
 }
 
-void bl_do_set_encr_chat_state (struct secret_chat *U, enum secret_chat_state state) {
+void bl_do_encr_chat_set_state (struct secret_chat *U, enum secret_chat_state state) {
   if (U->state == state) { return; }
   int *ev = alloc_log_event (12);
-  ev[0] = CODE_binlog_set_encr_chat_state;
+  ev[0] = CODE_binlog_encr_chat_set_state;
   ev[1] = get_peer_id (U->id);
   ev[2] = state;
   add_log_event (ev, 12);
@@ -1551,9 +1551,9 @@ void bl_do_encr_chat_accepted (struct secret_chat *U, const unsigned char g_key[
   add_log_event (ev, 528);
 }
 
-void bl_do_set_encr_chat_key (struct secret_chat *E, unsigned char key[], long long key_fingerprint) {
+void bl_do_encr_chat_set_key (struct secret_chat *E, unsigned char key[], long long key_fingerprint) {
   int *ev = alloc_log_event (272);
-  ev[0] = CODE_binlog_set_encr_chat_key;
+  ev[0] = CODE_binlog_encr_chat_set_key;
   ev[1] = get_peer_id (E->id);
   memcpy (ev + 2, key, 256);
   *(long long *)(ev + 66) = key_fingerprint;
@@ -1641,36 +1641,36 @@ void bl_do_chat_forbid (struct chat *C, int on) {
   }
 }
 
-void bl_do_set_chat_title (struct chat *C, const char *s, int l) {
+void bl_do_chat_set_title (struct chat *C, const char *s, int l) {
   if (C->title && (int)strlen (C->title) == l && !strncmp (C->title, s, l)) { return; }
   clear_packet ();
-  out_int (CODE_binlog_set_chat_title);
+  out_int (CODE_binlog_chat_set_title);
   out_int (get_peer_id (C->id));
   out_cstring (s, l);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_set_chat_photo (struct chat *C, struct file_location *big, struct file_location *small) {
+void bl_do_chat_set_photo (struct chat *C, struct file_location *big, struct file_location *small) {
   if (!memcmp (&C->photo_small, small, sizeof (struct file_location)) &&
       !memcmp (&C->photo_big, big, sizeof (struct file_location))) { return; }
   clear_packet ();
-  out_int (CODE_binlog_set_chat_photo);
+  out_int (CODE_binlog_chat_set_photo);
   out_int (get_peer_id (C->id));
   out_data (big, sizeof (struct file_location));
   out_data (small, sizeof (struct file_location));
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_set_chat_date (struct chat *C, int date) {
+void bl_do_chat_set_date (struct chat *C, int date) {
   if (C->date == date) { return; }
   int *ev = alloc_log_event (12);
-  ev[0] = CODE_binlog_set_chat_date;
+  ev[0] = CODE_binlog_chat_set_date;
   ev[1] = get_peer_id (C->id);
   ev[2] = date;
   add_log_event (ev, 12);
 }
 
-void bl_do_set_chat_set_in_chat (struct chat *C, int on) {
+void bl_do_chat_set_set_in_chat (struct chat *C, int on) {
   if (on) {
     if (C->flags & FLAG_CHAT_IN_CHAT) { return; }
     int *ev = alloc_log_event (16);
@@ -1690,29 +1690,29 @@ void bl_do_set_chat_set_in_chat (struct chat *C, int on) {
   }
 }
 
-void bl_do_set_chat_version (struct chat *C, int version, int user_num) {
+void bl_do_chat_set_version (struct chat *C, int version, int user_num) {
   if (C->version >= version) { return; }
   int *ev = alloc_log_event (16);
-  ev[0] = CODE_binlog_set_chat_version;
+  ev[0] = CODE_binlog_chat_set_version;
   ev[1] = get_peer_id (C->id);
   ev[2] = version;
   ev[3] = user_num;
   add_log_event (ev, 16);
 }
 
-void bl_do_set_chat_admin (struct chat *C, int admin) {
+void bl_do_chat_set_admin (struct chat *C, int admin) {
   if (C->admin_id == admin) { return; }
   int *ev = alloc_log_event (12);
-  ev[0] = CODE_binlog_set_chat_admin;
+  ev[0] = CODE_binlog_chat_set_admin;
   ev[1] = get_peer_id (C->id);
   ev[2] = admin;
   add_log_event (ev, 12);
 }
 
-void bl_do_set_chat_participants (struct chat *C, int version, int user_num, struct chat_user *users) {
+void bl_do_chat_set_participants (struct chat *C, int version, int user_num, struct chat_user *users) {
   if (C->user_list_version >= version) { return; }
   int *ev = alloc_log_event (12 * user_num + 16);
-  ev[0] = CODE_binlog_set_chat_participants;
+  ev[0] = CODE_binlog_chat_set_participants;
   ev[1] = get_peer_id (C->id);
   ev[2] = version;
   ev[3] = user_num;
@@ -1720,10 +1720,10 @@ void bl_do_set_chat_participants (struct chat *C, int version, int user_num, str
   add_log_event (ev, 12 * user_num + 16);
 }
 
-void bl_do_set_chat_full_photo (struct chat *U, const int *start, int len) {
+void bl_do_chat_set_full_photo (struct chat *U, const int *start, int len) {
   if (U->photo.id == *(long long *)(start + 1)) { return; }
   int *ev = alloc_log_event (len + 8);
-  ev[0] = CODE_binlog_chat_full_photo;
+  ev[0] = CODE_binlog_chat_set_full_photo;
   ev[1] = get_peer_id (U->id);
   memcpy (ev + 2, start, len);
   add_log_event (ev, len + 8);
@@ -1732,7 +1732,7 @@ void bl_do_set_chat_full_photo (struct chat *U, const int *start, int len) {
 void bl_do_chat_add_user (struct chat *C, int version, int user, int inviter, int date) {
   if (C->user_list_version >= version || !C->user_list_version) { return; }
   int *ev = alloc_log_event (24);
-  ev[0] = CODE_binlog_add_chat_participant;
+  ev[0] = CODE_binlog_chat_add_participant;
   ev[1] = get_peer_id (C->id);
   ev[2] = version;
   ev[3] = user;
@@ -1744,7 +1744,7 @@ void bl_do_chat_add_user (struct chat *C, int version, int user, int inviter, in
 void bl_do_chat_del_user (struct chat *C, int version, int user) {
   if (C->user_list_version >= version || !C->user_list_version) { return; }
   int *ev = alloc_log_event (16);
-  ev[0] = CODE_binlog_add_chat_participant;
+  ev[0] = CODE_binlog_chat_del_participant;
   ev[1] = get_peer_id (C->id);
   ev[2] = version;
   ev[3] = user;

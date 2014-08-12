@@ -43,11 +43,11 @@ void bl_do_user_set_real_name (struct user *U, const char *f, int fl, const char
 
 void bl_do_encr_chat_delete (struct secret_chat *U);
 void bl_do_encr_chat_requested (struct secret_chat *U, long long access_hash, int date, int admin_id, int user_id, unsigned char g_key[], unsigned char nonce[]);
-void bl_do_set_encr_chat_access_hash (struct secret_chat *U, long long access_hash);
-void bl_do_set_encr_chat_date (struct secret_chat *U, int date);
-void bl_do_set_encr_chat_state (struct secret_chat *U, enum secret_chat_state state);
+void bl_do_encr_chat_set_access_hash (struct secret_chat *U, long long access_hash);
+void bl_do_encr_chat_set_date (struct secret_chat *U, int date);
+void bl_do_encr_chat_set_state (struct secret_chat *U, enum secret_chat_state state);
 void bl_do_encr_chat_accepted (struct secret_chat *U, const unsigned char g_key[], const unsigned char nonce[], long long key_fingerprint);
-void bl_do_set_encr_chat_key (struct secret_chat *E, unsigned char key[], long long key_fingerprint);
+void bl_do_encr_chat_set_key (struct secret_chat *E, unsigned char key[], long long key_fingerprint);
 void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned char g_a[]);
 
 void bl_do_dc_signed (int id);
@@ -61,14 +61,14 @@ void bl_do_set_date (int date);
 
 void bl_do_create_chat (struct chat *C, int y, const char *s, int l, int users_num, int date, int version, struct file_location *big, struct file_location *small);
 void bl_do_chat_forbid (struct chat *C, int on);
-void bl_do_set_chat_title (struct chat *C, const char *s, int l);
-void bl_do_set_chat_photo (struct chat *C, struct file_location *big, struct file_location *small);
-void bl_do_set_chat_date (struct chat *C, int date);
-void bl_do_set_chat_set_in_chat (struct chat *C, int on);
-void bl_do_set_chat_version (struct chat *C, int version, int user_num);
-void bl_do_set_chat_admin (struct chat *C, int admin);
-void bl_do_set_chat_participants (struct chat *C, int version, int user_num, struct chat_user *users);
-void bl_do_set_chat_full_photo (struct chat *U, const int *start, int len);
+void bl_do_chat_set_title (struct chat *C, const char *s, int l);
+void bl_do_chat_set_photo (struct chat *C, struct file_location *big, struct file_location *small);
+void bl_do_chat_set_date (struct chat *C, int date);
+void bl_do_chat_set_set_in_chat (struct chat *C, int on);
+void bl_do_chat_set_version (struct chat *C, int version, int user_num);
+void bl_do_chat_set_admin (struct chat *C, int admin);
+void bl_do_chat_set_participants (struct chat *C, int version, int user_num, struct chat_user *users);
+void bl_do_chat_set_full_photo (struct chat *U, const int *start, int len);
 void bl_do_chat_add_user (struct chat *C, int version, int user, int inviter, int date);
 void bl_do_chat_del_user (struct chat *C, int version, int user);
 

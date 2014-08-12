@@ -1119,7 +1119,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_t *C = user_chat_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         if (x == CODE_chat_participants) {
-          bl_do_set_chat_admin (&C->chat, fetch_int ());
+          bl_do_chat_set_admin (&C->chat, fetch_int ());
           assert (fetch_int () == CODE_vector);
           n = fetch_int ();
           struct chat_user *users = talloc (12 * n);
@@ -1131,7 +1131,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
             users[i].date = fetch_int ();
           }
           int version = fetch_int (); 
-          bl_do_set_chat_participants (&C->chat, version, n, users);
+          bl_do_chat_set_participants (&C->chat, version, n, users);
         }
       } else {
         if (x == CODE_chat_participants) {
