@@ -846,7 +846,7 @@ void work_update_binlog (void) {
   case CODE_update_user_name:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = user_chat_get (user_id);
+      peer_t *UC = peer_get (user_id);
       if (UC) {
         struct user *U = &UC->user;
         if (U->first_name) { tfree_str (U->first_name); }
@@ -868,7 +868,7 @@ void work_update_binlog (void) {
   case CODE_update_user_photo:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = user_chat_get (user_id);
+      peer_t *UC = peer_get (user_id);
       fetch_date ();
       if (UC) {
         struct user *U = &UC->user;
@@ -952,7 +952,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_user_typing:
     {
       peer_id_t id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (id);
+      peer_t *U = peer_get (id);
       if (log_level >= 2) {
         print_start ();
         push_color (COLOR_YELLOW);
@@ -969,8 +969,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       peer_id_t id = MK_USER (fetch_int ());
-      peer_t *C = user_chat_get (chat_id);
-      peer_t *U = user_chat_get (id);
+      peer_t *C = peer_get (chat_id);
+      peer_t *U = peer_get (id);
       if (log_level >= 2) {
         print_start ();
         push_color (COLOR_YELLOW);
@@ -988,7 +988,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_user_status:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (user_id);
+      peer_t *U = peer_get (user_id);
       if (U) {
         fetch_user_status (&U->user.status);
         if (log_level >= 3) {
@@ -1011,7 +1011,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_user_name:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = user_chat_get (user_id);
+      peer_t *UC = peer_get (user_id);
       if (UC && (UC->flags & FLAG_CREATED)) {
         int l1 = prefetch_strlen ();
         char *f = fetch_str (l1);
@@ -1038,7 +1038,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_user_photo:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = user_chat_get (user_id);
+      peer_t *UC = peer_get (user_id);
       fetch_date ();
       if (UC && (UC->flags & FLAG_CREATED)) {
         struct user *U = &UC->user;
@@ -1116,7 +1116,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       assert (x == CODE_chat_participants || x == CODE_chat_participants_forbidden);
       peer_id_t chat_id = MK_CHAT (fetch_int ());
       int n = 0;
-      peer_t *C = user_chat_get (chat_id);
+      peer_t *C = peer_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         if (x == CODE_chat_participants) {
           bl_do_chat_set_admin (&C->chat, fetch_int ());
@@ -1159,7 +1159,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_contact_registered:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (user_id);
+      peer_t *U = peer_get (user_id);
       fetch_int (); // date
       print_start ();
       push_color (COLOR_YELLOW);
@@ -1174,7 +1174,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_contact_link:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (user_id);
+      peer_t *U = peer_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
@@ -1198,7 +1198,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_activation:
     {
       peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = user_chat_get (user_id);
+      peer_t *U = peer_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
@@ -1290,14 +1290,14 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_encrypted_chat_typing:
     {
       peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-      peer_t *P = user_chat_get (id);
+      peer_t *P = peer_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       if (P) {
         printf (" User ");
         peer_id_t user_id = MK_USER (P->encr_chat.user_id);
-        print_user_name (user_id, user_chat_get (user_id));
+        print_user_name (user_id, peer_get (user_id));
         printf (" typing in secret chat ");
         print_encr_chat_name (id, P);
         printf ("\n");
@@ -1313,7 +1313,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t id = MK_ENCR_CHAT (fetch_int ()); // chat_id
       fetch_int (); // max_date
       fetch_int (); // date
-      peer_t *P = user_chat_get (id);
+      peer_t *P = peer_get (id);
       int x = -1;
       if (P && P->last) {
         x = 0;
@@ -1331,7 +1331,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         push_color (COLOR_YELLOW);
         print_date (time (0));
         printf (" Encrypted chat ");
-        print_encr_chat_name_full (id, user_chat_get (id));
+        print_encr_chat_name_full (id, peer_get (id));
         printf (": %d messages marked read \n", x);
         pop_color ();
         print_end ();
@@ -1345,7 +1345,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t inviter_id = MK_USER (fetch_int ());
       int  version = fetch_int (); 
       
-      peer_t *C = user_chat_get (chat_id);
+      peer_t *C = peer_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         bl_do_chat_add_user (&C->chat, version, get_peer_id (user_id), get_peer_id (inviter_id), time (0));
       }
@@ -1354,11 +1354,11 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Chat ");
-      print_chat_name (chat_id, user_chat_get (chat_id));
+      print_chat_name (chat_id, peer_get (chat_id));
       printf (": user ");
-      print_user_name (user_id, user_chat_get (user_id));
+      print_user_name (user_id, peer_get (user_id));
       printf (" added by user ");
-      print_user_name (inviter_id, user_chat_get (inviter_id));
+      print_user_name (inviter_id, peer_get (inviter_id));
       printf ("\n");
       pop_color ();
       print_end ();
@@ -1370,7 +1370,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t user_id = MK_USER (fetch_int ());
       int version = fetch_int ();
       
-      peer_t *C = user_chat_get (chat_id);
+      peer_t *C = peer_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         bl_do_chat_del_user (&C->chat, version, get_peer_id (user_id));
       }
@@ -1379,9 +1379,9 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Chat ");
-      print_chat_name (chat_id, user_chat_get (chat_id));
+      print_chat_name (chat_id, peer_get (chat_id));
       printf (": user ");
-      print_user_name (user_id, user_chat_get (user_id));
+      print_user_name (user_id, peer_get (user_id));
       printf (" deleted\n");
       pop_color ();
       print_end ();
@@ -1402,7 +1402,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
        int id = fetch_int ();
        int blocked = fetch_bool ();
-       peer_t *P = user_chat_get (MK_USER (id));
+       peer_t *P = peer_get (MK_USER (id));
        if (P && (P->flags & FLAG_CREATED)) {
          bl_do_user_set_blocked (&P->user, blocked);
        }

@@ -82,7 +82,7 @@ void push_chat (peer_t *P) {
 void push_encr_chat (peer_t *P) {
   my_lua_checkstack (luaState, 4);
   lua_pushstring (luaState, "user");
-  push_peer (MK_USER (P->encr_chat.user_id), user_chat_get (MK_USER (P->encr_chat.user_id)));
+  push_peer (MK_USER (P->encr_chat.user_id), peer_get (MK_USER (P->encr_chat.user_id)));
   lua_settable (luaState, -3);
 }
 
@@ -188,18 +188,18 @@ void push_message (struct message *M) {
   
   if (get_peer_type (M->fwd_from_id)) {
     lua_pushstring (luaState, "fwd_from");
-    push_peer (M->fwd_from_id, user_chat_get (M->fwd_from_id));
+    push_peer (M->fwd_from_id, peer_get (M->fwd_from_id));
     lua_settable (luaState, -3); // fwd_from
 
     lua_add_num_field ("fwd_date", M->fwd_date);
   }
   
   lua_pushstring (luaState, "from");
-  push_peer (M->from_id, user_chat_get (M->from_id));
+  push_peer (M->from_id, peer_get (M->from_id));
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "to");
-  push_peer (M->to_id, user_chat_get (M->to_id));
+  push_peer (M->to_id, peer_get (M->to_id));
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "out");

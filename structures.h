@@ -367,7 +367,7 @@ void free_chat (struct chat *U);
 char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 
 int print_stat (char *s, int len);
-peer_t *user_chat_get (peer_id_t id);
+peer_t *peer_get (peer_id_t id);
 struct message *message_get (long long id);
 void update_message_id (struct message *M, long long id);
 void message_insert (struct message *M);

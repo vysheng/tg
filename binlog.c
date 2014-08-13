@@ -180,7 +180,7 @@ int fetch_comb_binlog_set_seq (void *extra) {
 
 int fetch_comb_binlog_user_add (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *_U = user_chat_get (id);
+  peer_t *_U = peer_get (id);
   if (!_U) {
     _U = talloc0 (sizeof (*_U));
     _U->id = id;
@@ -213,7 +213,7 @@ int fetch_comb_binlog_user_add (void *extra) {
 
 int fetch_comb_binlog_user_delete (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   U->flags |= FLAG_DELETED;
   
@@ -225,7 +225,7 @@ int fetch_comb_binlog_user_delete (void *extra) {
 
 int fetch_comb_binlog_user_set_access_hash (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   U->user.access_hash = fetch_long ();
   
@@ -237,7 +237,7 @@ int fetch_comb_binlog_user_set_access_hash (void *extra) {
 
 int fetch_comb_binlog_user_set_phone (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   if (U->user.phone) {
     tfree_str (U->user.phone);
@@ -252,7 +252,7 @@ int fetch_comb_binlog_user_set_phone (void *extra) {
 
 int fetch_comb_binlog_user_set_friend (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   if (U->user.phone) {
     tfree_str (U->user.phone);
@@ -269,7 +269,7 @@ int fetch_comb_binlog_user_set_friend (void *extra) {
 
 int fetch_comb_binlog_user_set_full_photo (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   if (U->flags & FLAG_HAS_PHOTO) {
     free_photo (&U->user.photo);
@@ -284,7 +284,7 @@ int fetch_comb_binlog_user_set_full_photo (void *extra) {
 
 int fetch_comb_binlog_user_set_blocked (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
 
   U->user.blocked = fetch_int ();
@@ -297,7 +297,7 @@ int fetch_comb_binlog_user_set_blocked (void *extra) {
 
 int fetch_comb_binlog_user_set_real_name (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
 
   if (U->user.real_first_name) { tfree_str (U->user.real_first_name); }
@@ -313,7 +313,7 @@ int fetch_comb_binlog_user_set_real_name (void *extra) {
 
 int fetch_comb_binlog_user_set_name (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
 
   if (U->user.first_name) { tfree_str (U->user.first_name); }
@@ -335,7 +335,7 @@ int fetch_comb_binlog_user_set_name (void *extra) {
 
 int fetch_comb_binlog_user_set_photo (void *extra) {
   peer_id_t id = MK_USER (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
         
         
@@ -359,7 +359,7 @@ int fetch_comb_binlog_user_set_photo (void *extra) {
 
 int fetch_comb_binlog_encr_chat_delete (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *_U = user_chat_get (id);
+  peer_t *_U = peer_get (id);
   assert (_U);
   struct secret_chat *U = &_U->encr_chat;
   memset (U->key, 0, sizeof (U->key));
@@ -382,7 +382,7 @@ int fetch_comb_binlog_encr_chat_delete (void *extra) {
 
 int fetch_comb_binlog_encr_chat_requested (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *_U = user_chat_get (id);
+  peer_t *_U = peer_get (id);
   if (!_U) {
     _U = talloc0 (sizeof (*_U));
     _U->id = id;
@@ -396,7 +396,7 @@ int fetch_comb_binlog_encr_chat_requested (void *extra) {
   U->admin_id = fetch_int ();
   U->user_id = fetch_int ();
 
-  peer_t *Us = user_chat_get (MK_USER (U->user_id));
+  peer_t *Us = peer_get (MK_USER (U->user_id));
   assert (!U->print_name);
   if (Us) {
     U->print_name = create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
@@ -422,7 +422,7 @@ int fetch_comb_binlog_encr_chat_requested (void *extra) {
 
 int fetch_comb_binlog_encr_chat_set_access_hash (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   U->encr_chat.access_hash = fetch_long ();
   
@@ -434,7 +434,7 @@ int fetch_comb_binlog_encr_chat_set_access_hash (void *extra) {
 
 int fetch_comb_binlog_encr_chat_set_date (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   U->encr_chat.date = fetch_int ();
   
@@ -446,7 +446,7 @@ int fetch_comb_binlog_encr_chat_set_date (void *extra) {
 
 int fetch_comb_binlog_encr_chat_set_state (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   assert (U);
   U->encr_chat.state = fetch_int ();
   
@@ -458,7 +458,7 @@ int fetch_comb_binlog_encr_chat_set_state (void *extra) {
 
 int fetch_comb_binlog_encr_chat_accepted (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *_U = user_chat_get (id);
+  peer_t *_U = peer_get (id);
   assert (_U);
   struct secret_chat *U = &_U->encr_chat;
   if (!U->g_key) {
@@ -485,7 +485,7 @@ int fetch_comb_binlog_encr_chat_accepted (void *extra) {
 
 int fetch_comb_binlog_encr_chat_set_key (void *extra) {
   peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-  peer_t *_U = user_chat_get (id);
+  peer_t *_U = peer_get (id);
   assert (_U);
   struct secret_chat *U = &_U->encr_chat;
   fetch_ints (U->key, 64);
@@ -500,11 +500,11 @@ int fetch_comb_binlog_encr_chat_set_key (void *extra) {
 int fetch_comb_binlog_encr_chat_init (void *extra) {
   peer_t *P = talloc0 (sizeof (*P));
   P->id = MK_ENCR_CHAT (fetch_int ());
-  assert (!user_chat_get (P->id));
+  assert (!peer_get (P->id));
   P->encr_chat.user_id = fetch_int ();
   P->encr_chat.admin_id = our_id;
   insert_encrypted_chat (P);
-  peer_t *Us = user_chat_get (MK_USER (P->encr_chat.user_id));
+  peer_t *Us = peer_get (MK_USER (P->encr_chat.user_id));
   assert (Us);
   P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
   peer_insert_name (P);
@@ -522,7 +522,7 @@ int fetch_comb_binlog_encr_chat_init (void *extra) {
 
 int fetch_comb_binlog_chat_create (void *extra) {
   peer_id_t id = MK_CHAT (fetch_int ());
-  peer_t *_C = user_chat_get (id);
+  peer_t *_C = peer_get (id);
   if (!_C) {
     _C = talloc0 (sizeof (*_C));
     _C->id = id;
@@ -550,7 +550,7 @@ int fetch_comb_binlog_chat_create (void *extra) {
 }
 
 int fetch_comb_binlog_chat_change_flags (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.flags |= fetch_int ();
   C->chat.flags &= ~fetch_int ();
@@ -562,7 +562,7 @@ int fetch_comb_binlog_chat_change_flags (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_title (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
       
   if (C->chat.title) { tfree_str (C->chat.title); }
@@ -581,7 +581,7 @@ int fetch_comb_binlog_chat_set_title (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_photo (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   fetch_data (&C->photo_big, sizeof (struct file_location));
   fetch_data (&C->photo_small, sizeof (struct file_location));
@@ -593,7 +593,7 @@ int fetch_comb_binlog_chat_set_photo (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_date (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.date = fetch_int ();
   
@@ -604,7 +604,7 @@ int fetch_comb_binlog_chat_set_date (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_version (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.version = fetch_int ();
   C->chat.users_num = fetch_int ();
@@ -616,7 +616,7 @@ int fetch_comb_binlog_chat_set_version (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_admin (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.admin_id = fetch_int ();
   
@@ -627,7 +627,7 @@ int fetch_comb_binlog_chat_set_admin (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_participants (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.user_list_version = fetch_int ();
   if (C->chat.user_list) { tfree (C->chat.user_list, 12 * C->chat.user_list_size); }
@@ -642,7 +642,7 @@ int fetch_comb_binlog_chat_set_participants (void *extra) {
 }
 
 int fetch_comb_binlog_chat_set_full_photo (void *extra) {
-  peer_t *C = user_chat_get (MK_CHAT (fetch_int ()));
+  peer_t *C = peer_get (MK_CHAT (fetch_int ()));
   assert (C && (C->flags & FLAG_CREATED));
       
   assert (C && (C->flags & FLAG_CREATED));
@@ -659,7 +659,7 @@ int fetch_comb_binlog_chat_set_full_photo (void *extra) {
 
 int fetch_comb_binlog_chat_add_participant (void *extra) {
   peer_id_t id = MK_CHAT (fetch_int ());
-  peer_t *_C = user_chat_get (id);
+  peer_t *_C = peer_get (id);
   assert (_C && (_C->flags & FLAG_CREATED));
   struct chat *C = &_C->chat;
 
@@ -689,7 +689,7 @@ int fetch_comb_binlog_chat_add_participant (void *extra) {
 
 int fetch_comb_binlog_chat_del_participant (void *extra) {
   peer_id_t id = MK_CHAT (fetch_int ());
-  peer_t *_C = user_chat_get (id);
+  peer_t *_C = peer_get (id);
   assert (_C && (_C->flags & FLAG_CREATED));
   struct chat *C = &_C->chat;
   
@@ -832,7 +832,7 @@ int fetch_comb_binlog_send_message_action_encr (void *extra) {
   M->date = fetch_int ();
       
   M->media.type = CODE_decrypted_message_media_empty;
-  fetch_message_action_encrypted ((void *)user_chat_get (M->to_id), &M->action);
+  fetch_message_action_encrypted ((void *)peer_get (M->to_id), &M->action);
   
   M->unread = 1;
   M->out = get_peer_id (M->from_id) == our_id;
@@ -1050,7 +1050,7 @@ int fetch_comb_binlog_create_message_service_encr (void *extra) {
   M->to_id = set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
 
-  struct secret_chat *E = (void *)user_chat_get (M->to_id);
+  struct secret_chat *E = (void *)peer_get (M->to_id);
   assert (E);
   
   fetch_message_action_encrypted (0, &M->action);

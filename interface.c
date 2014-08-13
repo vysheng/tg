@@ -230,7 +230,7 @@ char *get_default_prompt (void) {
   static char buf[1000];
   int l = 0;
   if (in_chat_mode) {
-    peer_t *U = user_chat_get (chat_mode_id);
+    peer_t *U = peer_get (chat_mode_id);
     assert (U && U->print_name);
     l += tsnprintf (buf + l, 999 - l, COLOR_RED "%.*s " COLOR_NORMAL, 100, U->print_name);
   }
@@ -856,7 +856,7 @@ void interpreter (char *line UU) {
     do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0);
   } else if (IS_WORD ("rename_contact")) {
     GET_PEER_USER;
-    peer_t *U = user_chat_get (id);
+    peer_t *U = peer_get (id);
     if (!U) {
       printf ("No such user\n");
       RET;
@@ -1407,13 +1407,13 @@ void print_service_message (struct message *M) {
   pop_color ();
   printf (" ");
   if (get_peer_type (M->to_id) == PEER_CHAT) {
-    print_chat_name (M->to_id, user_chat_get (M->to_id));
+    print_chat_name (M->to_id, peer_get (M->to_id));
   } else {
     assert (get_peer_type (M->to_id) == PEER_ENCR_CHAT);
-    print_encr_chat_name (M->to_id, user_chat_get (M->to_id));
+    print_encr_chat_name (M->to_id, peer_get (M->to_id));
   }
   printf (" ");
-  print_user_name (M->from_id, user_chat_get (M->from_id));
+  print_user_name (M->from_id, peer_get (M->from_id));
  
   switch (M->action.type) {
   case CODE_message_action_empty:
@@ -1440,12 +1440,12 @@ void print_service_message (struct message *M) {
     break;
   case CODE_message_action_chat_add_user:
     printf (" added user ");
-    print_user_name (set_peer_id (PEER_USER, M->action.user), user_chat_get (set_peer_id (PEER_USER, M->action.user)));
+    print_user_name (set_peer_id (PEER_USER, M->action.user), peer_get (set_peer_id (PEER_USER, M->action.user)));
     printf ("\n");
     break;
   case CODE_message_action_chat_delete_user:
     printf (" deleted user ");
-    print_user_name (set_peer_id (PEER_USER, M->action.user), user_chat_get (set_peer_id (PEER_USER, M->action.user)));
+    print_user_name (set_peer_id (PEER_USER, M->action.user), peer_get (set_peer_id (PEER_USER, M->action.user)));
     printf ("\n");
     break;
   case CODE_decrypted_message_action_set_message_t_t_l:
@@ -1504,7 +1504,7 @@ void print_message (struct message *M) {
       print_date (M->date);
       pop_color ();
       printf (" ");
-      print_user_name (M->to_id, user_chat_get (M->to_id));
+      print_user_name (M->to_id, peer_get (M->to_id));
       push_color (COLOR_GREEN);
       if (M->unread) {
         printf (" <<< ");
@@ -1519,7 +1519,7 @@ void print_message (struct message *M) {
       print_date (M->date);
       pop_color ();
       printf (" ");
-      print_user_name (M->from_id, user_chat_get (M->from_id));
+      print_user_name (M->from_id, peer_get (M->from_id));
       push_color (COLOR_BLUE);
       if (M->unread) {
         printf (" >>> ");
@@ -1531,7 +1531,7 @@ void print_message (struct message *M) {
       }
     }
   } else if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
-    peer_t *P = user_chat_get (M->to_id);
+    peer_t *P = peer_get (M->to_id);
     assert (P);
     if (M->out) {
       push_color (COLOR_GREEN);
@@ -1575,9 +1575,9 @@ void print_message (struct message *M) {
     print_date (M->date);
     pop_color ();
     printf (" ");
-    print_chat_name (M->to_id, user_chat_get (M->to_id));
+    print_chat_name (M->to_id, peer_get (M->to_id));
     printf (" ");
-    print_user_name (M->from_id, user_chat_get (M->from_id));
+    print_user_name (M->from_id, peer_get (M->from_id));
     if ((get_peer_type (M->from_id) == PEER_USER) && (get_peer_id (M->from_id) == our_id)) {
       push_color (COLOR_GREEN);
     } else {
@@ -1591,7 +1591,7 @@ void print_message (struct message *M) {
   }
   if (get_peer_type (M->fwd_from_id) == PEER_USER) {
     printf ("[fwd from ");
-    print_user_name (M->fwd_from_id, user_chat_get (M->fwd_from_id));
+    print_user_name (M->fwd_from_id, peer_get (M->fwd_from_id));
     printf ("] ");
   }
   if (M->message && strlen (M->message)) {

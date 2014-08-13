@@ -940,7 +940,7 @@ int out_message_num;
 int our_id;
 
 void do_send_encr_msg_action (struct message *M) {
-  peer_t *P = user_chat_get (M->to_id);
+  peer_t *P = peer_get (M->to_id);
   if (!P || P->encr_chat.state != sc_ok) { return; }
   
   clear_packet ();
@@ -974,7 +974,7 @@ void do_send_encr_msg (struct message *M) {
     do_send_encr_msg_action (M);
     return;
   }
-  peer_t *P = user_chat_get (M->to_id);
+  peer_t *P = peer_get (M->to_id);
   if (!P || P->encr_chat.state != sc_ok) { return; }
   
   clear_packet ();
@@ -1011,7 +1011,7 @@ void do_send_msg (struct message *M) {
 
 void do_send_message (peer_id_t id, const char *msg, int len) {
   if (get_peer_type (id) == PEER_ENCR_CHAT) {
-    peer_t *P = user_chat_get (id);
+    peer_t *P = peer_get (id);
     if (!P) {
       logprintf ("Can not send to unknown encrypted chat\n");
       return;
@@ -1100,7 +1100,7 @@ void do_messages_mark_read_encr (peer_id_t id, long long access_hash, int last_t
 }
 
 void do_mark_read (peer_id_t id) {
-  peer_t *P = user_chat_get (id);
+  peer_t *P = peer_get (id);
   if (!P) {
     rprintf ("Unknown peer\n");
     return;
@@ -1169,7 +1169,7 @@ struct query_methods get_history_methods = {
 };
 
 void do_get_local_history (peer_id_t id, int limit) {
-  peer_t *P = user_chat_get (id);
+  peer_t *P = peer_get (id);
   if (!P || !P->last) { return; }
   struct message *M = P->last;
   int count = 1;
@@ -1248,13 +1248,13 @@ int get_dialogs_on_answer (struct query *q UU) {
     peer_t *UC;
     switch (get_peer_type (plist[i])) {
     case PEER_USER:
-      UC = user_chat_get (plist[i]);
+      UC = peer_get (plist[i]);
       printf ("User ");
       print_user_name (plist[i], UC);
       printf (": %d unread\n", dlist[2 * i + 1]);
       break;
     case PEER_CHAT:
-      UC = user_chat_get (plist[i]);
+      UC = peer_get (plist[i]);
       printf ("Chat ");
       print_chat_name (plist[i], UC);
       printf (": %d unread\n", dlist[2 * i + 1]);
@@ -1312,7 +1312,7 @@ void out_peer_id (peer_id_t id) {
     out_int (get_peer_id (id));
     break;
   case PEER_USER:
-    U = user_chat_get (id);
+    U = peer_get (id);
     if (U && U->user.access_hash) {
       out_int (CODE_input_peer_foreign);
       out_int (get_peer_id (id));
@@ -1487,7 +1487,7 @@ void send_part (struct send_file *f) {
       out_int (CODE_messages_send_encrypted_file);
       out_int (CODE_input_encrypted_chat);
       out_int (get_peer_id (f->to_id));
-      peer_t *P = user_chat_get (f->to_id);
+      peer_t *P = peer_get (f->to_id);
       assert (P);
       out_long (P->encr_chat.access_hash);
       long long r = -lrand48 () * (1ll << 32) - lrand48 (); 
@@ -1737,9 +1737,9 @@ void print_chat_info (struct chat *C) {
   int i;
   for (i = 0; i < C->user_list_size; i++) {
     printf ("\t\t");
-    print_user_name (MK_USER (C->user_list[i].user_id), user_chat_get (MK_USER (C->user_list[i].user_id)));
+    print_user_name (MK_USER (C->user_list[i].user_id), peer_get (MK_USER (C->user_list[i].user_id)));
     printf (" invited by ");
-    print_user_name (MK_USER (C->user_list[i].inviter_id), user_chat_get (MK_USER (C->user_list[i].inviter_id)));
+    print_user_name (MK_USER (C->user_list[i].inviter_id), peer_get (MK_USER (C->user_list[i].inviter_id)));
     printf (" at ");
     print_date_full (C->user_list[i].date);
     if (C->user_list[i].user_id == C->admin_id) {
@@ -1764,7 +1764,7 @@ struct query_methods chat_info_methods = {
 
 void do_get_chat_info (peer_id_t id) {
   if (offline_mode) {
-    peer_t *C = user_chat_get (id);
+    peer_t *C = peer_get (id);
     if (!C) {
       rprintf ("No such chat\n");
     } else {
@@ -1815,7 +1815,7 @@ struct query_methods user_info_methods = {
 
 void do_get_user_info (peer_id_t id) {
   if (offline_mode) {
-    peer_t *C = user_chat_get (id);
+    peer_t *C = peer_get (id);
     if (!C) {
       rprintf ("No such user\n");
     } else {
@@ -1826,7 +1826,7 @@ void do_get_user_info (peer_id_t id) {
   clear_packet ();
   out_int (CODE_users_get_full_user);
   assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
     out_int (get_peer_id (id));
@@ -2557,18 +2557,18 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
   BN_bn2bin (r, (void *)g_a);
   
   int t = lrand48 ();
-  while (user_chat_get (MK_ENCR_CHAT (t))) {
+  while (peer_get (MK_ENCR_CHAT (t))) {
     t = lrand48 ();
   }
 
   bl_do_encr_chat_init (t, user_id, (void *)random, (void *)g_a);
-  peer_t *_E = user_chat_get (MK_ENCR_CHAT (t));
+  peer_t *_E = peer_get (MK_ENCR_CHAT (t));
   assert (_E);
   struct secret_chat *E = &_E->encr_chat;
   
   clear_packet ();
   out_int (CODE_messages_request_encryption);
-  peer_t *U = user_chat_get (MK_USER (E->user_id));
+  peer_t *U = peer_get (MK_USER (E->user_id));
   assert (U);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
@@ -2768,7 +2768,7 @@ char *colors[4] = {COLOR_GREY, COLOR_CYAN, COLOR_BLUE, COLOR_GREEN};
 
 void do_visualize_key (peer_id_t id) {
   assert (get_peer_type (id) == PEER_ENCR_CHAT);
-  peer_t *P = user_chat_get (id);
+  peer_t *P = peer_get (id);
   assert (P);
   if (P->encr_chat.state != sc_ok) {
     rprintf ("Chat is not initialized yet\n");
@@ -2851,7 +2851,7 @@ void do_add_user_to_chat (peer_id_t chat_id, peer_id_t id, int limit) {
   out_int (get_peer_id (chat_id));
   
   assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
     out_int (get_peer_id (id));
@@ -2870,7 +2870,7 @@ void do_del_user_from_chat (peer_id_t chat_id, peer_id_t id) {
   out_int (get_peer_id (chat_id));
   
   assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
     out_int (get_peer_id (id));
@@ -2888,7 +2888,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
 
 void do_create_secret_chat (peer_id_t id) {
   assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   if (!U) { 
     rprintf ("Can not create chat with unknown user\n");
     return;
@@ -2906,7 +2906,7 @@ struct query_methods create_group_chat_methods = {
 
 void do_create_group_chat (peer_id_t id, char *chat_topic) {
   assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  peer_t *U = peer_get (id);
   if (!U) { 
     rprintf ("Can not create chat with unknown user\n");
     return;
