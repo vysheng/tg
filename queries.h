@@ -117,6 +117,7 @@ void do_contacts_search (int limit, const char *s);
 void do_send_msg (struct message *M);
 void do_delete_msg (long long id);
 void do_restore_msg (long long id);
+void do_send_encr_chat_layer (struct secret_chat *E);
 
 // For binlog
 

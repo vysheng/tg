@@ -98,6 +98,7 @@ struct encr_video {
   int w;
   int h;
   int duration;
+  char *mime_type;
 };
 
 struct encr_audio {
@@ -110,6 +111,7 @@ struct encr_audio {
   unsigned char *key;
   unsigned char *iv;
   int duration;
+  char *mime_type;
 };
 
 struct encr_document {
@@ -203,6 +205,7 @@ struct secret_chat {
   int admin_id;
   int date;
   int ttl;
+  int layer;
   long long access_hash;
   unsigned char *g_key;
   unsigned char *nonce;
@@ -240,6 +243,7 @@ struct video {
   int duration;
   int w;
   int h;
+  char *mime_type;
 };
 
 struct audio {
@@ -250,6 +254,7 @@ struct audio {
   int size;
   int dc_id;
   int duration;
+  char *mime_type;
 };
 
 struct document {
@@ -276,6 +281,10 @@ struct message_action {
     struct photo photo;
     int user;
     int ttl;
+    int layer;
+    int read_cnt;
+    int delete_cnt;
+    int screenshot_cnt;
   };
 };
 
@@ -344,7 +353,7 @@ struct message *fetch_alloc_encrypted_message (void);
 void fetch_encrypted_message_file (struct message_media *M);
 void fetch_skip_encrypted_message_file (void);
 void fetch_encrypted_message_file (struct message_media *M);
-void fetch_message_action_encrypted (struct message_action *M);
+void fetch_message_action_encrypted (struct secret_chat *E, struct message_action *M);
 peer_id_t fetch_peer_id (void);
 
 void fetch_message_media (struct message_media *M);

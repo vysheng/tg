@@ -557,6 +557,7 @@ void fetch_video (struct video *V) {
   V->date = fetch_int ();
   V->caption = fetch_str_dup ();
   V->duration = fetch_int ();
+  V->mime_type = fetch_str_dup ();
   V->size = fetch_int ();
   fetch_photo_size (&V->thumb);
   V->dc_id = fetch_int ();
@@ -573,6 +574,7 @@ void fetch_audio (struct audio *V) {
   V->user_id = fetch_int ();
   V->date = fetch_int ();
   V->duration = fetch_int ();
+  V->mime_type = fetch_str_dup ();
   V->size = fetch_int ();
   V->dc_id = fetch_int ();
 }
@@ -770,12 +772,16 @@ void fetch_message_media_encrypted (struct message_media *M) {
     }
     break;
   case CODE_decrypted_message_media_video:
-    M->type = x;
+  case CODE_decrypted_message_media_video_l12:
+    M->type = CODE_decrypted_message_media_video;
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     fetch_int (); // thumb_w
     fetch_int (); // thumb_h
     M->encr_video.duration = fetch_int ();
+    if (x == CODE_decrypted_message_media_video) {
+      M->encr_video.mime_type = fetch_str_dup ();
+    }
     M->encr_video.w = fetch_int ();
     M->encr_video.h = fetch_int ();
     M->encr_video.size = fetch_int ();
@@ -799,8 +805,12 @@ void fetch_message_media_encrypted (struct message_media *M) {
     }
     break;
   case CODE_decrypted_message_media_audio:
-    M->type = x;
+  case CODE_decrypted_message_media_audio_l12:
+    M->type = CODE_decrypted_message_media_audio;
     M->encr_audio.duration = fetch_int ();
+    if (x == CODE_decrypted_message_media_audio) {
+      M->encr_audio.mime_type = fetch_str_dup ();
+    }
     M->encr_audio.size = fetch_int ();
     
     l = prefetch_strlen  ();
@@ -881,12 +891,59 @@ void fetch_message_media_encrypted (struct message_media *M) {
   }
 }
 
-void fetch_message_action_encrypted (struct message_action *M) {
+void fetch_message_action_encrypted (struct secret_chat *E, struct message_action *M) {
   unsigned x = fetch_int ();
   switch (x) {
   case CODE_decrypted_message_action_set_message_t_t_l:
     M->type = x;
     M->ttl = fetch_int ();
+    break;
+  case CODE_decrypted_message_action_read_messages: 
+    M->type = x;
+    { 
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      M->read_cnt = n;
+      while (n -- > 0) {
+        long long id = fetch_long ();
+        struct message *N = message_get (id);
+        if (N) {
+          N->unread = 0;
+        }
+      }
+    }
+    break;
+  case CODE_decrypted_message_action_delete_messages: 
+    M->type = x;
+    { 
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      M->delete_cnt = n;
+      while (n -- > 0) {
+        fetch_long ();
+      }
+    }
+    break;
+  case CODE_decrypted_message_action_screenshot_messages: 
+    M->type = x;
+    { 
+      assert (fetch_int () == CODE_vector);
+      int n = fetch_int ();
+      M->screenshot_cnt = n;
+      while (n -- > 0) {
+        fetch_long ();
+      }
+    }
+    break;
+  case CODE_decrypted_message_action_notify_layer: 
+    M->type = x;
+    M->layer = fetch_int ();
+    //if (M->from_id != our_id) {
+    //  E->layer = M->layer;
+    //}
+    break;
+  case CODE_decrypted_message_action_flush_history:
+    M->type = x;
     break;
   default:
     logprintf ("x = 0x%08x\n", x);
@@ -1106,6 +1163,10 @@ void fetch_encrypted_message (struct message *M) {
     }
     in_ptr = save_in_ptr;
     in_end = save_in_end;
+  } else {
+    if (P && new) {
+      assert (0);
+    }
   }
  
   if (sx == CODE_encrypted_message) {
@@ -1114,14 +1175,11 @@ void fetch_encrypted_message (struct message *M) {
       assert (skip_type_any (TYPE_TO_PARAM (encrypted_file)) >= 0);
       if (x == CODE_decrypted_message) {
         bl_do_create_message_media_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, l, s, start, end - start, start_file, in_ptr - start_file);
+      } else if (x == CODE_decrypted_message_service) {
+        bl_do_create_message_service_encr (id, P->encr_chat.user_id, PEER_ENCR_CHAT, to_id, date, start, end - start);
       }
     } else {
-      x = fetch_int ();
-      if (x == CODE_encrypted_file) {
-        fetch_skip (7);
-      } else {
-        assert (x == CODE_encrypted_file_empty);
-      }
+      assert (skip_type_any (TYPE_TO_PARAM (encrypted_file)) >= 0);
       M->media.type = CODE_message_media_empty;
     }    
   } else {
@@ -1480,7 +1538,6 @@ struct message *fetch_alloc_encrypted_message (void) {
     message_insert_tree (M);
     messages_allocated ++;
     assert (message_get (M->id) == M);
-    logprintf ("id = %lld\n", M->id);
   }
   fetch_encrypted_message (M);
   return M;

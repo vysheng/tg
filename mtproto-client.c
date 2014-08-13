@@ -1281,6 +1281,9 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       if (E->state == sc_request && !disable_auto_accept) {
         do_accept_encr_chat_request (E);
       }
+      if (E->state == sc_ok) {
+        do_send_encr_chat_layer (E);
+      }
       fetch_int (); // date
     }
     break;
@@ -1393,6 +1396,22 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       for (i = 0; i < n; i++) {
         fetch_dc_option ();
       }
+    }
+    break;
+  case CODE_update_user_blocked:
+    {
+       int id = fetch_int ();
+       int blocked = fetch_bool ();
+       peer_t *P = user_chat_get (MK_USER (id));
+       if (P && (P->flags & FLAG_CREATED)) {
+         bl_do_user_set_blocked (&P->user, blocked);
+       }
+    }
+    break;
+  case CODE_update_notify_settings:
+    {
+       assert (skip_type_any (TYPE_TO_PARAM (notify_peer)) >= 0);
+       assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
     }
     break;
   default:

@@ -81,6 +81,7 @@ void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int t
 void bl_do_create_message_media_encr (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len, const int *data2, int len2);
 void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len);
 void bl_do_send_message_text (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s);
+void bl_do_send_message_action_encr (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const int *s);
 void bl_do_set_unread (struct message *M, int unread);
 void bl_do_set_message_sent (struct message *M);
 void bl_do_set_msg_id (struct message *M, int id);

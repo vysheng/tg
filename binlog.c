@@ -159,7 +159,7 @@ int fetch_comb_binlog_set_pts (void *extra) {
 
 int fetch_comb_binlog_set_qts (void *extra) {
   int new_qts = fetch_int ();
-  assert (new_qts >= qts);
+  //assert (new_qts >= qts);
   qts = new_qts;
   return 0;
 }
@@ -468,8 +468,8 @@ int fetch_comb_binlog_encr_chat_accepted (void *extra) {
     U->nonce = talloc (256);
   }
 
-  fetch_ints (U->g_key, 256);
-  fetch_ints (U->nonce, 256);
+  fetch_ints (U->g_key, 64);
+  fetch_ints (U->nonce, 64);
   U->key_fingerprint = fetch_long ();
   
   if (U->state == sc_waiting) {
@@ -509,6 +509,7 @@ int fetch_comb_binlog_encr_chat_init (void *extra) {
   P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
   peer_insert_name (P);
 
+  P->encr_chat.g_key = talloc (256);
   fetch_ints (P->encr_chat.key, 64);
   fetch_ints (P->encr_chat.g_key, 64);
   P->flags |= FLAG_CREATED;
@@ -810,6 +811,43 @@ int fetch_comb_binlog_send_message_text (void *extra) {
   return 0;
 }
 
+int fetch_comb_binlog_send_message_action_encr (void *extra) {
+  long long id = fetch_long ();
+  
+  struct message *M = message_get (id);
+  if (!M) {
+    M = talloc0 (sizeof (*M));
+    M->id = id;
+    message_insert_tree (M);
+    messages_allocated ++;
+  } else {
+    assert (!(M->flags & FLAG_CREATED));
+  }
+  
+  M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
+  M->from_id = MK_USER (fetch_int ());
+  
+  int t = fetch_int ();
+  M->to_id = set_peer_id (t, fetch_int ());
+  M->date = fetch_int ();
+      
+  M->media.type = CODE_decrypted_message_media_empty;
+  fetch_message_action_encrypted ((void *)user_chat_get (M->to_id), &M->action);
+  
+  M->unread = 1;
+  M->out = get_peer_id (M->from_id) == our_id;
+  M->service = 1;
+
+  message_insert (M);
+  message_insert_unsent (M);
+  M->flags |= FLAG_PENDING;
+      
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  return 0;
+}
+
 int fetch_comb_binlog_create_message_text_fwd (void *extra) {
   long long id = fetch_int ();
   
@@ -894,7 +932,7 @@ int fetch_comb_binlog_create_message_media (void *extra) {
 }
 
 int fetch_comb_binlog_create_message_media_encr (void *extra) {
-  int id = fetch_int ();
+  long long id = fetch_long ();
   struct message *M = message_get (id);
   if (!M) {
     M = talloc0 (sizeof (*M));
@@ -995,7 +1033,7 @@ int fetch_comb_binlog_create_message_service (void *extra) {
 }
 
 int fetch_comb_binlog_create_message_service_encr (void *extra) {
-  int id = fetch_int ();
+  long long id = fetch_long ();
   struct message *M = message_get (id);
   if (!M) {
     M = talloc0 (sizeof (*M));
@@ -1008,10 +1046,14 @@ int fetch_comb_binlog_create_message_service_encr (void *extra) {
   M->flags |= FLAG_CREATED | FLAG_ENCRYPTED;
   M->from_id = MK_USER (fetch_int ());
   int t = fetch_int ();
+  assert (t == PEER_ENCR_CHAT);
   M->to_id = set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
+
+  struct secret_chat *E = (void *)user_chat_get (M->to_id);
+  assert (E);
   
-  fetch_message_action_encrypted (&M->action);
+  fetch_message_action_encrypted (0, &M->action);
   M->unread = 1;
   M->out = get_peer_id (M->from_id) == our_id;
   M->service = 1;
@@ -1187,6 +1229,7 @@ void replay_log_event (void) {
 
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_text)
   FETCH_COMBINATOR_FUNCTION (binlog_send_message_text)
+  FETCH_COMBINATOR_FUNCTION (binlog_send_message_action_encr)
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_text_fwd)
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_media)
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_media_encr)
@@ -1775,6 +1818,18 @@ void bl_do_send_message_text (long long msg_id, int from_id, int to_type, int to
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
+void bl_do_send_message_action_encr (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const int *action) {
+  clear_packet ();
+  out_int (CODE_binlog_send_message_action_encr);
+  out_long (msg_id);
+  out_int (from_id);
+  out_int (to_type);
+  out_int (to_id);
+  out_int (date);
+  out_ints (action, l);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
 void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s) {
   clear_packet ();
   out_int (CODE_binlog_create_message_text_fwd);
@@ -1842,6 +1897,7 @@ void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_
   out_ints (data, len);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
+
 void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len) {
   clear_packet ();
   out_int (CODE_binlog_create_message_service_encr);

@@ -320,7 +320,7 @@ void out_random (int n) {
 
 int allow_send_linux_version;
 void do_insert_header (void) {
-  out_int (CODE_invoke_with_layer12);  
+  out_int (CODE_invoke_with_layer15);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -840,6 +840,20 @@ void encr_finish (struct secret_chat *E) {
 }
 /* }}} */
 
+void do_send_encr_chat_layer (struct secret_chat *E) {
+  long long t;
+  secure_random (&t, 8);
+  int action[2];
+  action[0] = CODE_decrypted_message_action_notify_layer;
+  action[1] = 15;
+  bl_do_send_message_action_encr (t, our_id, get_peer_type (E->id), get_peer_id (E->id), time (0), 2, action);
+
+  struct message *M = message_get (t);
+  assert (M);
+  do_send_msg (M);
+  print_message (M);
+}
+
 /* {{{ Seng msg (plain text) */
 int msg_send_encr_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_messages_sent_encrypted_message);
@@ -925,7 +939,41 @@ struct query_methods msg_send_encr_methods = {
 int out_message_num;
 int our_id;
 
+void do_send_encr_msg_action (struct message *M) {
+  peer_t *P = user_chat_get (M->to_id);
+  if (!P || P->encr_chat.state != sc_ok) { return; }
+  
+  clear_packet ();
+  out_int (CODE_messages_send_encrypted_service);
+  out_int (CODE_input_encrypted_chat);
+  out_int (get_peer_id (M->to_id));
+  out_long (P->encr_chat.access_hash);
+  out_long (M->id);
+  encr_start ();
+  out_int (CODE_decrypted_message_service);
+  out_long (M->id);
+  static int buf[4];
+  secure_random (buf, 16);
+  out_cstring ((void *)buf, 16);
+
+  switch (M->action.type) {
+  case CODE_decrypted_message_action_notify_layer:
+    out_int (M->action.type);
+    out_int (M->action.layer);
+    break;
+  default:
+    assert (0);
+  }
+  encr_finish (&P->encr_chat);
+  
+  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M);
+}
+
 void do_send_encr_msg (struct message *M) {
+  if (M->service) {
+    do_send_encr_msg_action (M);
+    return;
+  }
   peer_t *P = user_chat_get (M->to_id);
   if (!P || P->encr_chat.state != sc_ok) { return; }
   
@@ -1167,7 +1215,7 @@ int get_dialogs_on_answer (struct query *q UU) {
   static peer_id_t plist[100];
   int dl_size = n;
   for (i = 0; i < n; i++) {
-    assert (fetch_int () == CODE_dialog);
+    assert (fetch_int () == (int)CODE_dialog);
     if (i < 100) {
       plist[i] = fetch_peer_id ();
       dlist[2 * i + 0] = fetch_int ();
@@ -1177,6 +1225,7 @@ int get_dialogs_on_answer (struct query *q UU) {
       fetch_int ();
       fetch_int ();
     }
+    assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
@@ -1419,6 +1468,7 @@ void send_part (struct send_file *f) {
         out_int (100);
         out_int (100);
         out_int (100);
+        out_string ("video");
       }
       if (f->media_type == CODE_input_media_uploaded_document || f->media_type == CODE_input_media_uploaded_thumb_document) {
         out_string (s + 1);
@@ -1426,6 +1476,7 @@ void send_part (struct send_file *f) {
       }
       if (f->media_type == CODE_input_media_uploaded_audio) {
         out_int (60);
+        out_string ("audio");
       }
 
       out_long (-lrand48 () * (1ll << 32) - lrand48 ());
@@ -1468,6 +1519,7 @@ void send_part (struct send_file *f) {
       }
       if (f->media_type == CODE_input_media_uploaded_video) {
         out_int (0);
+        out_string ("video");
       }
       if (f->media_type == CODE_input_media_uploaded_document) {
         out_string (f->file_name);
@@ -1475,6 +1527,7 @@ void send_part (struct send_file *f) {
       }
       if (f->media_type == CODE_input_media_uploaded_audio) {
         out_int (60);
+        out_string ("audio");
       }
       if (f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_photo) {
         out_int (100);
@@ -1584,7 +1637,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     f->key = talloc (32);
     secure_random (f->key, 32);
   }
-  if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
+  /*if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
     f->media_type = CODE_input_media_uploaded_thumb_video;
     send_file_thumb (f);
   } else if (f->media_type == CODE_input_media_uploaded_document && !f->encr) {
@@ -1592,7 +1645,8 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     send_file_thumb (f);
   } else {
     send_part (f);
-  }
+  }*/
+  send_part (f);
 }
 /* }}} */
 
@@ -2158,6 +2212,12 @@ int add_contact_on_answer (struct query *q UU) {
     assert (fetch_int () == (int)CODE_imported_contact);
     fetch_int (); // uid
     fetch_long (); // client_id
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    long long id = fetch_long ();
+    logprintf ("contact #%lld not added. Please retry\n", id);
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();

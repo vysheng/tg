@@ -77,6 +77,20 @@ int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
 }
 
+char *end_string_token (int *l) {
+  while (*line_ptr == ' ') { line_ptr ++; }
+  if (!*line_ptr) { 
+    *l = 0;
+    return 0;
+  }
+  char *s = line_ptr;
+  while (*line_ptr) { line_ptr ++; }
+  while (*line_ptr == ' ' || !*line_ptr) { line_ptr --; }
+  line_ptr ++;
+  
+  *l = line_ptr - s;
+  return s;
+}
 char *next_token (int *l) {
   while (*line_ptr == ' ') { line_ptr ++; }
   if (!*line_ptr) { 
@@ -683,7 +697,7 @@ void interpreter (char *line UU) {
   } else if (IS_WORD ("send_photo")) {
     GET_PEER;
     int t;
-    char *s = next_token (&t);
+    char *s = end_string_token (&t);
     if (!s) {
       printf ("Empty file name\n");
       RET;
@@ -692,7 +706,7 @@ void interpreter (char *line UU) {
   } else if (IS_WORD("send_video")) {
     GET_PEER;
     int t;
-    char *s = next_token (&t);
+    char *s = end_string_token (&t);
     if (!s) {
       printf ("Empty file name\n");
       RET;
@@ -969,7 +983,7 @@ void interpreter (char *line UU) {
   } else if (IS_WORD("send_audio")) {
     GET_PEER;
     int t;
-    char *s = next_token (&t);
+    char *s = end_string_token (&t);
     if (!s) {
       printf ("Empty file name\n");
       RET;
@@ -978,7 +992,7 @@ void interpreter (char *line UU) {
   } else if (IS_WORD("send_document")) {
     GET_PEER;
     int t;
-    char *s = next_token (&t);
+    char *s = end_string_token (&t);
     if (!s) {
       printf ("Empty file name\n");
       RET;
@@ -1236,10 +1250,18 @@ void print_media (struct message_media *M) {
       }
       return;
     case CODE_message_media_video:
-      printf ("[video]");
+      if (M->video.mime_type) {
+        printf ("[video: type %s]", M->video.mime_type);
+      } else {
+        printf ("[video]");
+      }
       return;
     case CODE_message_media_audio:
-      printf ("[audio]");
+      if (M->audio.mime_type) {
+        printf ("[audio: type %s]", M->audio.mime_type);
+      } else {
+        printf ("[audio]");
+      }
       return;
     case CODE_message_media_document:
       if (M->document.mime_type && M->document.caption) {
@@ -1252,9 +1274,11 @@ void print_media (struct message_media *M) {
        printf ("[photo]");
       return;
     case CODE_decrypted_message_media_video:
+    case CODE_decrypted_message_media_video_l12:
       printf ("[video]");
       return;
     case CODE_decrypted_message_media_audio:
+    case CODE_decrypted_message_media_audio_l12:
       printf ("[audio]");
       return;
     case CODE_decrypted_message_media_document:
@@ -1426,6 +1450,21 @@ void print_service_message (struct message *M) {
     break;
   case CODE_decrypted_message_action_set_message_t_t_l:
     printf (" set ttl to %d seconds. Unsupported yet\n", M->action.ttl);
+    break;
+  case CODE_decrypted_message_action_read_messages:
+    printf (" %d messages marked read\n", M->action.read_cnt);
+    break;
+  case CODE_decrypted_message_action_delete_messages:
+    printf (" %d messages deleted\n", M->action.delete_cnt);
+    break;
+  case CODE_decrypted_message_action_screenshot_messages:
+    printf (" %d messages screenshoted\n", M->action.screenshot_cnt);
+    break;
+  case CODE_decrypted_message_action_flush_history:
+    printf (" cleared history\n");
+    break;
+  case CODE_decrypted_message_action_notify_layer:
+    printf (" updated layer to %d\n", M->action.layer);
     break;
   default:
     assert (0);
