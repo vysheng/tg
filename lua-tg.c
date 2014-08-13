@@ -21,14 +21,15 @@ lua_State *luaState;
 #include "tools.h"
 #include "queries.h"
 #include "net.h"
+#include "tgl.h"
 
 extern int verbosity;
 
 static int have_file;
 
 #define my_lua_checkstack(L,x) assert (lua_checkstack (L, x))
-void push_user (peer_t *P UU);
-void push_peer (peer_id_t id, peer_t *P);
+void push_user (tgl_peer_t *P UU);
+void push_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
 void lua_add_string_field (const char *name, const char *value) {
   assert (name && strlen (name));
@@ -47,15 +48,15 @@ void lua_add_num_field (const char *name, double value) {
   lua_settable (luaState, -3);
 }
 
-void push_peer_type (int x) {
+void push_tgl_peer_type (int x) {
   switch (x) {
-  case PEER_USER:
+  case TGL_PEER_USER:
     lua_pushstring (luaState, "user");
     break;
-  case PEER_CHAT:
+  case TGL_PEER_CHAT:
     lua_pushstring (luaState, "chat");
     break;
-  case PEER_ENCR_CHAT:
+  case TGL_PEER_ENCR_CHAT:
     lua_pushstring (luaState, "encr_chat");
     break;
   default:
@@ -63,7 +64,7 @@ void push_peer_type (int x) {
   }
 }
 
-void push_user (peer_t *P UU) {
+void push_user (tgl_peer_t *P UU) {
   my_lua_checkstack (luaState, 4);
   lua_add_string_field ("first_name", P->user.first_name);
   lua_add_string_field ("last_name", P->user.last_name);
@@ -72,41 +73,41 @@ void push_user (peer_t *P UU) {
   lua_add_string_field ("phone", P->user.phone);
 }
 
-void push_chat (peer_t *P) {
+void push_chat (tgl_peer_t *P) {
   my_lua_checkstack (luaState, 4);
   assert (P->chat.title);
   lua_add_string_field ("title", P->chat.title);
   lua_add_num_field ("members_num", P->chat.users_num);
 }
 
-void push_encr_chat (peer_t *P) {
+void push_encr_chat (tgl_peer_t *P) {
   my_lua_checkstack (luaState, 4);
   lua_pushstring (luaState, "user");
-  push_peer (MK_USER (P->encr_chat.user_id), peer_get (MK_USER (P->encr_chat.user_id)));
+  push_peer (TGL_MK_USER (P->encr_chat.user_id), tgl_peer_get (TGL_MK_USER (P->encr_chat.user_id)));
   lua_settable (luaState, -3);
 }
 
-void push_peer (peer_id_t id, peer_t *P) {
+void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   lua_newtable (luaState);
  
-  lua_add_num_field ("id", get_peer_id (id));
+  lua_add_num_field ("id", tgl_get_peer_id (id));
   lua_pushstring (luaState, "type");
-  push_peer_type (get_peer_type (id));
+  push_tgl_peer_type (tgl_get_peer_type (id));
   lua_settable (luaState, -3);
 
 
   if (!P || !(P->flags & FLAG_CREATED)) {
     lua_pushstring (luaState, "print_name"); 
     static char s[100];
-    switch (get_peer_type (id)) {
-    case PEER_USER:
-      sprintf (s, "user#%d", get_peer_id (id));
+    switch (tgl_get_peer_type (id)) {
+    case TGL_PEER_USER:
+      sprintf (s, "user#%d", tgl_get_peer_id (id));
       break;
-    case PEER_CHAT:
-      sprintf (s, "chat#%d", get_peer_id (id));
+    case TGL_PEER_CHAT:
+      sprintf (s, "chat#%d", tgl_get_peer_id (id));
       break;
-    case PEER_ENCR_CHAT:
-      sprintf (s, "encr_chat#%d", get_peer_id (id));
+    case TGL_PEER_ENCR_CHAT:
+      sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
       break;
     default:
       assert (0);
@@ -120,14 +121,14 @@ void push_peer (peer_id_t id, peer_t *P) {
   lua_add_string_field ("print_name", P->print_name);
   lua_add_num_field ("flags", P->flags);
   
-  switch (get_peer_type (id)) {
-  case PEER_USER:
+  switch (tgl_get_peer_type (id)) {
+  case TGL_PEER_USER:
     push_user (P);
     break;
-  case PEER_CHAT:
+  case TGL_PEER_CHAT:
     push_chat (P);
     break;
-  case PEER_ENCR_CHAT:
+  case TGL_PEER_ENCR_CHAT:
     push_encr_chat (P);
     break;
   default:
@@ -135,7 +136,7 @@ void push_peer (peer_id_t id, peer_t *P) {
   }
 }
 
-void push_media (struct message_media *M) {
+void push_media (struct tgl_message_media *M) {
   my_lua_checkstack (luaState, 4);
 
   switch (M->type) {
@@ -176,7 +177,7 @@ void push_media (struct message_media *M) {
   }
 }
 
-void push_message (struct message *M) {
+void push_message (struct tgl_message *M) {
   assert (M);
   my_lua_checkstack (luaState, 10);
   lua_newtable (luaState);
@@ -186,20 +187,20 @@ void push_message (struct message *M) {
   lua_add_string_field ("id", s);
   lua_add_num_field ("flags", M->flags);
   
-  if (get_peer_type (M->fwd_from_id)) {
+  if (tgl_get_peer_type (M->fwd_from_id)) {
     lua_pushstring (luaState, "fwd_from");
-    push_peer (M->fwd_from_id, peer_get (M->fwd_from_id));
+    push_peer (M->fwd_from_id, tgl_peer_get (M->fwd_from_id));
     lua_settable (luaState, -3); // fwd_from
 
     lua_add_num_field ("fwd_date", M->fwd_date);
   }
   
   lua_pushstring (luaState, "from");
-  push_peer (M->from_id, peer_get (M->from_id));
+  push_peer (M->from_id, tgl_peer_get (M->from_id));
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "to");
-  push_peer (M->to_id, peer_get (M->to_id));
+  push_peer (M->to_id, tgl_peer_get (M->to_id));
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "out");
@@ -275,7 +276,7 @@ void lua_our_id (int id) {
   }
 }
 
-void lua_new_msg (struct message *M UU) {
+void lua_new_msg (struct tgl_message *M UU) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
@@ -290,7 +291,7 @@ void lua_new_msg (struct message *M UU) {
   }
 }
 
-void lua_secret_chat_created (struct secret_chat *C) {
+void lua_secret_chat_created (struct tgl_secret_chat *C) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
@@ -305,7 +306,7 @@ void lua_secret_chat_created (struct secret_chat *C) {
   }
 }
 
-void lua_user_update (struct user *U) {
+void lua_user_update (struct tgl_user *U) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
@@ -320,7 +321,7 @@ void lua_user_update (struct user *U) {
   }
 }
 
-void lua_chat_update (struct chat *C) {
+void lua_chat_update (struct tgl_chat *C) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
@@ -335,15 +336,15 @@ void lua_chat_update (struct chat *C) {
   }
 }
 
-extern peer_t *Peers[];
+extern tgl_peer_t *Peers[];
 extern int peer_num;
 
 #define MAX_LUA_COMMANDS 1000
 void *lua_ptr[MAX_LUA_COMMANDS];
 static int pos;
 
-static peer_t *get_peer (const char *s) { 
-  return peer_lookup_name (s);
+static tgl_peer_t *get_peer (const char *s) { 
+  return tgl_peer_get_by_name (s);
 }
 
 void lua_do_all (void) {
@@ -354,19 +355,19 @@ void lua_do_all (void) {
     int f = (long)lua_ptr[p ++];
     switch (f) {
     case 0:
-      do_send_message (((peer_t *)lua_ptr[p])->id, lua_ptr[p + 1], strlen (lua_ptr[p + 1]));
+      tgl_do_send_message (((tgl_peer_t *)lua_ptr[p])->id, lua_ptr[p + 1], strlen (lua_ptr[p + 1]));
       tfree_str (lua_ptr[p + 1]);
       p += 2;
       break;
     case 1:
-      do_forward_message (((peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1]);
+      tgl_do_forward_message (((tgl_peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1]);
       p += 2;
       break;
     case 2:
       #ifdef DEBUG
-        texists (lua_ptr[p], sizeof (peer_t));
+        texists (lua_ptr[p], sizeof (tgl_peer_t));
       #endif
-      do_mark_read (((peer_t *)lua_ptr[p])->id);
+      tgl_do_mark_read (((tgl_peer_t *)lua_ptr[p])->id);
       p += 1;
       break;
     default:
@@ -394,7 +395,7 @@ static int send_msg_from_lua (lua_State *L) {
   }
   const char *msg = lua_tostring (L, -1);
   
-  peer_t *P = get_peer (s);
+  tgl_peer_t *P = get_peer (s);
   if (!P) {
     lua_pushboolean (L, 0);
     return 1;
@@ -426,7 +427,7 @@ static int fwd_msg_from_lua (lua_State *L) {
     lua_pushboolean (L, 0);
     return 1;
   }
-  peer_t *P = get_peer (s);
+  tgl_peer_t *P = get_peer (s);
   if (!P) {
     lua_pushboolean (L, 0);
     return 1;
@@ -455,7 +456,7 @@ static int mark_read_from_lua (lua_State *L) {
     lua_pushboolean (L, 0);
     return 1;
   }
-  peer_t *P = get_peer (s);
+  tgl_peer_t *P = get_peer (s);
   if (!P) {
     lua_pushboolean (L, 0);
     return 1;

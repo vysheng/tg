@@ -20,41 +20,41 @@
 
 #pragma pack(push,4)
 
-typedef struct { int type; int id; } peer_id_t;
+typedef struct { int type; int id; } tgl_peer_id_t;
 
-struct file_location {
+struct tgl_file_location {
   int dc;
   long long volume;
   int local_id;
   long long secret;
 };
 
-struct photo_size {
+struct tgl_photo_size {
   char *type;
-  struct file_location loc;
+  struct tgl_file_location loc;
   int w;
   int h;
   int size;
   char *data;
 };
 
-struct geo {
+struct tgl_geo {
   double longitude;
   double latitude;
 };
 
-struct photo {
+struct tgl_photo {
   long long id;
   long long access_hash;
   int user_id;
   int date;
   char *caption;
-  struct geo geo;
+  struct tgl_geo geo;
   int sizes_num;
-  struct photo_size *sizes;
+  struct tgl_photo_size *sizes;
 };
 
-struct encr_photo {
+struct tgl_encr_photo {
   long long id;
   long long access_hash;
   int dc_id;
@@ -67,7 +67,7 @@ struct encr_photo {
   int h;
 };
 
-struct encr_video {
+struct tgl_encr_video {
   long long id;
   long long access_hash;
   int dc_id;
@@ -82,7 +82,7 @@ struct encr_video {
   char *mime_type;
 };
 
-struct encr_audio {
+struct tgl_encr_audio {
   long long id;
   long long access_hash;
   int dc_id;
@@ -95,7 +95,7 @@ struct encr_audio {
   char *mime_type;
 };
 
-struct encr_document {
+struct tgl_encr_document {
   long long id;
   long long access_hash;
   int dc_id;
@@ -108,64 +108,64 @@ struct encr_document {
   char *mime_type;
 };
 
-struct encr_file {
+struct tgl_encr_file {
   char *filename;
   unsigned char *key;
   unsigned char *iv;
 };
 
 
-struct user_status {
+struct tgl_user_status {
   int online;
   int when;
 };
 
-struct user {
-  peer_id_t id;
+struct tgl_user {
+  tgl_peer_id_t id;
   int flags;
-  struct message *last;
+  struct tgl_message *last;
   char *print_name;
   int structure_version;
-  struct file_location photo_big;
-  struct file_location photo_small;
+  struct tgl_file_location photo_big;
+  struct tgl_file_location photo_small;
   long long photo_id;
-  struct photo photo;
+  struct tgl_photo photo;
   char *first_name;
   char *last_name;
   char *phone;
   long long access_hash;
-  struct user_status status;
+  struct tgl_user_status status;
   int blocked;
   char *real_first_name;
   char *real_last_name;
 };
 
-struct chat_user {
+struct tgl_chat_user {
   int user_id;
   int inviter_id;
   int date;
 };
 
-struct chat {
-  peer_id_t id;
+struct tgl_chat {
+  tgl_peer_id_t id;
   int flags;
-  struct message *last;
+  struct tgl_message *last;
   char *print_title;
   int structure_version;
-  struct file_location photo_big;
-  struct file_location photo_small;
-  struct photo photo;
+  struct tgl_file_location photo_big;
+  struct tgl_file_location photo_small;
+  struct tgl_photo photo;
   char *title;
   int users_num;
   int user_list_size;
   int user_list_version;
-  struct chat_user *user_list;
+  struct tgl_chat_user *user_list;
   int date;
   int version;
   int admin_id;
 };
 
-enum secret_chat_state {
+enum tgl_secret_chat_state {
   sc_none,
   sc_waiting,
   sc_request,
@@ -173,15 +173,15 @@ enum secret_chat_state {
   sc_deleted
 };
 
-struct secret_chat {
-  peer_id_t id;
+struct tgl_secret_chat {
+  tgl_peer_id_t id;
   int flags;
-  struct message *last;
+  struct tgl_message *last;
   char *print_name;
   int structure_version;
-  struct file_location photo_big;
-  struct file_location photo_small;
-  struct photo photo;
+  struct tgl_file_location photo_big;
+  struct tgl_file_location photo_small;
+  struct tgl_photo photo;
   int user_id;
   int admin_id;
   int date;
@@ -191,35 +191,35 @@ struct secret_chat {
   unsigned char *g_key;
   unsigned char *nonce;
 
-  enum secret_chat_state state;
+  enum tgl_secret_chat_state state;
   int key[64];
   long long key_fingerprint;
 };
 
-typedef union peer {
+typedef union tgl_peer {
   struct {
-    peer_id_t id;
+    tgl_peer_id_t id;
     int flags;
-    struct message *last;
+    struct tgl_message *last;
     char *print_name;
     int structure_version;
-    struct file_location photo_big;
-    struct file_location photo_small;
-    struct photo photo;
+    struct tgl_file_location photo_big;
+    struct tgl_file_location photo_small;
+    struct tgl_photo photo;
   };
-  struct user user;
-  struct chat chat;
-  struct secret_chat encr_chat;
-} peer_t;
+  struct tgl_user user;
+  struct tgl_chat chat;
+  struct tgl_secret_chat encr_chat;
+} tgl_peer_t;
 
-struct video {
+struct tgl_video {
   long long id;
   long long access_hash;
   int user_id;
   int date;
   int size;
   int dc_id;
-  struct photo_size thumb;
+  struct tgl_photo_size thumb;
   char *caption;
   int duration;
   int w;
@@ -227,7 +227,7 @@ struct video {
   char *mime_type;
 };
 
-struct audio {
+struct tgl_audio {
   long long id;
   long long access_hash;
   int user_id;
@@ -238,19 +238,19 @@ struct audio {
   char *mime_type;
 };
 
-struct document {
+struct tgl_document {
   long long id;
   long long access_hash;
   int user_id;
   int date;
   int size;
   int dc_id;
-  struct photo_size thumb;
+  struct tgl_photo_size thumb;
   char *caption;
   char *mime_type;
 };
 
-struct message_action {
+struct tgl_message_action {
   unsigned type;
   union {
     struct {
@@ -259,7 +259,7 @@ struct message_action {
       int *users;
     };
     char *new_title;
-    struct photo photo;
+    struct tgl_photo photo;
     int user;
     int ttl;
     int layer;
@@ -269,25 +269,25 @@ struct message_action {
   };
 };
 
-struct message_media {
+struct tgl_message_media {
   unsigned type;
   union {
-    struct photo photo;
-    struct video video;
-    struct audio audio;
-    struct document document;
-    struct geo geo;
+    struct tgl_photo photo;
+    struct tgl_video video;
+    struct tgl_audio audio;
+    struct tgl_document document;
+    struct tgl_geo geo;
     struct {
       char *phone;
       char *first_name;
       char *last_name;
       int user_id;
     };
-    struct encr_photo encr_photo;
-    struct encr_video encr_video;
-    struct encr_audio encr_audio;
-    struct encr_document encr_document;
-    struct encr_file encr_file;
+    struct tgl_encr_photo encr_photo;
+    struct tgl_encr_video encr_video;
+    struct tgl_encr_audio encr_audio;
+    struct tgl_encr_document encr_document;
+    struct tgl_encr_file encr_file;
     struct {
       void *data;
       int data_size;
@@ -295,25 +295,25 @@ struct message_media {
   };
 };
 
-struct message {
-  struct message *next_use, *prev_use;
-  struct message *next, *prev;
+struct tgl_message {
+  struct tgl_message *next_use, *prev_use;
+  struct tgl_message *next, *prev;
   long long id;
   int flags;
-  peer_id_t fwd_from_id;
+  tgl_peer_id_t fwd_from_id;
   int fwd_date;
-  peer_id_t from_id;
-  peer_id_t to_id;
+  tgl_peer_id_t from_id;
+  tgl_peer_id_t to_id;
   int out;
   int unread;
   int date;
   int service;
   union {
-    struct message_action action;
+    struct tgl_message_action action;
     struct {
       char *message;
       int message_len;
-      struct message_media media;
+      struct tgl_message_media media;
     };
   };
 };

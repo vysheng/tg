@@ -298,9 +298,12 @@ void parse_config (void) {
     buf[l ++] = '.';
   }
   
-  tgl_params.test_mode = 0;
+  int test_mode = 0;
   strcpy (buf + l, "test");
-  config_lookup_bool (&conf, buf, &tgl_params.test_mode);
+  config_lookup_bool (&conf, buf, &test_mode);
+  if (test_mode) {
+    tgl_set_test_mode ();
+  }
   
   strcpy (buf + l, "log_level");
   long long t = log_level;
@@ -393,7 +396,7 @@ void args_parse (int argc, char **argv) {
       rsa_public_key_name = tstrdup (optarg);
       break;
     case 'v':
-      tgl_params.verbosity ++;
+      tgl_incr_verbosity ();
       break;
     case 'N':
       msg_num_mode ++;

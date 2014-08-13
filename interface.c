@@ -38,20 +38,21 @@
 #endif
 
 #include "include.h"
-#include "queries.h"
+//#include "queries.h"
 
 #include "interface.h"
 #include "telegram.h"
-#include "structures.h"
+#include "auto/constants.h"
+#include "tools.h"
+//#include "structures.h"
 
-#include "mtproto-common.h"
+//#include "mtproto-common.h"
 
 #include "tgl.h"
 
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
-int unread_messages;
 int msg_num_mode;
 int alert_sound;
 
@@ -62,17 +63,11 @@ int readline_active;
 
 int log_level;
 
-long long cur_uploading_bytes;
-long long cur_uploaded_bytes;
-long long cur_downloading_bytes;
-long long cur_downloaded_bytes;
 
 char *line_ptr;
-extern peer_t *Peers[];
-extern int peer_num;
 
 int in_chat_mode;
-peer_id_t chat_mode_id;
+tgl_peer_id_t chat_mode_id;
 
 
 int is_same_word (const char *s, size_t l, const char *word) {
@@ -93,6 +88,7 @@ char *end_string_token (int *l) {
   *l = line_ptr - s;
   return s;
 }
+
 char *next_token (int *l) {
   while (*line_ptr == ' ') { line_ptr ++; }
   if (!*line_ptr) { 
@@ -103,14 +99,6 @@ char *next_token (int *l) {
   char *s = line_ptr;
   int in_str = 0;
   while (*line_ptr && (*line_ptr != ' ' || neg || in_str)) {
-/*    if (*line_ptr == '\\') {
-      neg = 1 - neg;
-    } else {
-      if (*line_ptr == '"' && !neg) {
-        in_str = !in_str;
-      }
-      neg = 0;
-    }*/
     line_ptr++;
   }
   *l = line_ptr - s;
@@ -118,7 +106,7 @@ char *next_token (int *l) {
 }
 
 #define NOT_FOUND (int)0x80000000
-peer_id_t PEER_NOT_FOUND = {.id = NOT_FOUND};
+tgl_peer_id_t TGL_PEER_NOT_FOUND = {.id = NOT_FOUND};
 
 long long next_token_int (void) {
   int l;
@@ -133,98 +121,98 @@ long long next_token_int (void) {
   }
 }
 
-peer_id_t next_token_user (void) {
+tgl_peer_id_t next_token_user (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return PEER_NOT_FOUND; }
+  if (!s) { return TGL_PEER_NOT_FOUND; }
 
   if (l >= 6 && !memcmp (s, "user#", 5)) {
     s += 5;    
     l -= 5;
     int r = atoi (s);
-    if (r >= 0) { return set_peer_id (PEER_USER, r); }
-    else { return PEER_NOT_FOUND; }
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
+    else { return TGL_PEER_NOT_FOUND; }
   }
 
   char c = s[l];
-  peer_t *P = peer_lookup_name (s); 
+  tgl_peer_t *P = tgl_peer_get_by_name (s); 
   s[l] = c;
   
-  if (P && get_peer_type (P->id) == PEER_USER) {
+  if (P && tgl_get_peer_type (P->id) == TGL_PEER_USER) {
     return P->id;
   } else {
-    return PEER_NOT_FOUND;
+    return TGL_PEER_NOT_FOUND;
   }
 }
 
-peer_id_t next_token_chat (void) {
+tgl_peer_id_t next_token_chat (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return PEER_NOT_FOUND; }
+  if (!s) { return TGL_PEER_NOT_FOUND; }
   
   if (l >= 6 && !memcmp (s, "chat#", 5)) {
     s += 5;    
     l -= 5;
     int r = atoi (s);
-    if (r >= 0) { return set_peer_id (PEER_CHAT, r); }
-    else { return PEER_NOT_FOUND; }
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
+    else { return TGL_PEER_NOT_FOUND; }
   }
 
   char c = s[l];
-  peer_t *P = peer_lookup_name (s); 
+  tgl_peer_t *P = tgl_peer_get_by_name (s); 
   s[l] = c;
   
-  if (P && get_peer_type (P->id) == PEER_CHAT) {
+  if (P && tgl_get_peer_type (P->id) == TGL_PEER_CHAT) {
     return P->id;
   } else {
-    return PEER_NOT_FOUND;
+    return TGL_PEER_NOT_FOUND;
   }
 }
 
-peer_id_t next_token_encr_chat (void) {
+tgl_peer_id_t next_token_encr_chat (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return PEER_NOT_FOUND; }
+  if (!s) { return TGL_PEER_NOT_FOUND; }
 
   char c = s[l];
-  peer_t *P = peer_lookup_name (s); 
+  tgl_peer_t *P = tgl_peer_get_by_name (s); 
   s[l] = c;
   
-  if (P && get_peer_type (P->id) == PEER_ENCR_CHAT) {
+  if (P && tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT) {
     return P->id;
   } else {
-    return PEER_NOT_FOUND;
+    return TGL_PEER_NOT_FOUND;
   }
 }
 
-peer_id_t next_token_peer (void) {
+tgl_peer_id_t next_token_peer (void) {
   int l;
   char *s = next_token (&l);
-  if (!s) { return PEER_NOT_FOUND; }
+  if (!s) { return TGL_PEER_NOT_FOUND; }
   
   if (l >= 6 && !memcmp (s, "user#", 5)) {
     s += 5;    
     l -= 5;
     int r = atoi (s);
-    if (r >= 0) { return set_peer_id (PEER_USER, r); }
-    else { return PEER_NOT_FOUND; }
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
+    else { return TGL_PEER_NOT_FOUND; }
   }
   if (l >= 6 && !memcmp (s, "chat#", 5)) {
     s += 5;    
     l -= 5;
     int r = atoi (s);
-    if (r >= 0) { return set_peer_id (PEER_CHAT, r); }
-    else { return PEER_NOT_FOUND; }
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
+    else { return TGL_PEER_NOT_FOUND; }
   }
   
   char c = s[l];
-  peer_t *P = peer_lookup_name (s); 
+  tgl_peer_t *P = tgl_peer_get_by_name (s); 
   s[l] = c;
   
   if (P) {
     return P->id;
   } else {
-    return PEER_NOT_FOUND;
+    return TGL_PEER_NOT_FOUND;
   }
 }
 
@@ -232,26 +220,26 @@ char *get_default_prompt (void) {
   static char buf[1000];
   int l = 0;
   if (in_chat_mode) {
-    peer_t *U = peer_get (chat_mode_id);
+    tgl_peer_t *U = tgl_peer_get (chat_mode_id);
     assert (U && U->print_name);
     l += tsnprintf (buf + l, 999 - l, COLOR_RED "%.*s " COLOR_NORMAL, 100, U->print_name);
   }
-  if (unread_messages || cur_uploading_bytes || cur_downloading_bytes) {
+  if (tgl_state.unread_messages || tgl_state.cur_uploading_bytes || tgl_state.cur_downloading_bytes) {
     l += tsnprintf (buf + l, 999 - l, COLOR_RED "[");
     int ok = 0;
-    if (unread_messages) {
-      l += tsnprintf (buf + l, 999 - l, "%d unread", unread_messages);
+    if (tgl_state.unread_messages) {
+      l += tsnprintf (buf + l, 999 - l, "%d unread", tgl_state.unread_messages);
       ok = 1;
     }
-    if (cur_uploading_bytes) {
+    if (tgl_state.cur_uploading_bytes) {
       if (ok) { *(buf + l) = ' '; l ++; }
       ok = 1;
-      l += tsnprintf (buf + l, 999 - l, "%lld%%Up", 100 * cur_uploaded_bytes / cur_uploading_bytes);
+      l += tsnprintf (buf + l, 999 - l, "%lld%%Up", 100 * tgl_state.cur_uploaded_bytes / tgl_state.cur_uploading_bytes);
     }
-    if (cur_downloading_bytes) {
+    if (tgl_state.cur_downloading_bytes) {
       if (ok) { *(buf + l) = ' '; l ++; }
       ok = 1;
-      l += tsnprintf (buf + l, 999 - l, "%lld%%Down", 100 * cur_downloaded_bytes / cur_downloading_bytes);
+      l += tsnprintf (buf + l, 999 - l, "%lld%%Down", 100 * tgl_state.cur_downloaded_bytes / tgl_state.cur_downloading_bytes);
     }
     l += tsnprintf (buf + l, 999 - l, "]" COLOR_NORMAL);
     return buf;
@@ -479,11 +467,11 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 1:
-    index = complete_user_list (index, text, len, &R);    
+    index = tgl_complete_user_list (index, text, len, &R);    
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 2:
-    index = complete_peer_list (index, text, len, &R);
+    index = tgl_complete_peer_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 3:
@@ -491,11 +479,11 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 4:
-    index = complete_chat_list (index, text, len, &R);
+    index = tgl_complete_chat_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 5:
-    index = complete_encr_chat_list (index, text, len, &R);
+    index = tgl_complete_encr_chat_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 6:
@@ -537,15 +525,15 @@ void interpreter_chat_mode (char *line) {
     int limit = 40;
     sscanf (line, "/history %99d", &limit);
     if (limit < 0 || limit > 1000) { limit = 40; }
-    do_get_history (chat_mode_id, limit);
+    tgl_do_get_history (chat_mode_id, limit);
     return;
   }
   if (!strncmp (line, "/read", 5)) {
-    do_mark_read (chat_mode_id);
+    tgl_do_mark_read (chat_mode_id);
     return;
   }
   if (strlen (line)>0) {
-    do_send_message (chat_mode_id, line, strlen (line));
+    tgl_do_send_message (chat_mode_id, line, strlen (line));
   }
 }
 
@@ -592,36 +580,36 @@ void interpreter (char *line UU) {
 #define IS_WORD(s) is_same_word (command, l, (s))
 #define RET in_readline = 0; return; 
 
-  peer_id_t id;
+  tgl_peer_id_t id;
 #define GET_PEER \
   id = next_token_peer (); \
-  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+  if (!tgl_cmp_peer_id (id, TGL_PEER_NOT_FOUND)) { \
     printf ("Bad user/chat id\n"); \
     RET; \
   } 
 #define GET_PEER_USER \
   id = next_token_user (); \
-  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+  if (!tgl_cmp_peer_id (id, TGL_PEER_NOT_FOUND)) { \
     printf ("Bad user id\n"); \
     RET; \
   } 
 #define GET_PEER_CHAT \
   id = next_token_chat (); \
-  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+  if (!tgl_cmp_peer_id (id, TGL_PEER_NOT_FOUND)) { \
     printf ("Bad chat id\n"); \
     RET; \
   } 
 #define GET_PEER_ENCR_CHAT \
   id = next_token_encr_chat (); \
-  if (!cmp_peer_id (id, PEER_NOT_FOUND)) { \
+  if (!tgl_cmp_peer_id (id, TGL_PEER_NOT_FOUND)) { \
     printf ("Bad encr_chat id\n"); \
     RET; \
   } 
 
   if (IS_WORD ("contact_list")) {
-    do_update_contact_list ();
+    tgl_do_update_contact_list ();
   } else if (IS_WORD ("dialog_list")) {
-    do_get_dialog_list ();
+    tgl_do_get_dialog_list ();
   } else if (IS_WORD ("stats")) {
     static char stat_buf[1 << 15];
     tgl_print_stat (stat_buf, (1 << 15) - 1);
@@ -634,7 +622,7 @@ void interpreter (char *line UU) {
       printf ("Empty message\n");
       RET;
     }
-    do_send_message (id, s, strlen (s));
+    tgl_do_send_message (id, s, strlen (s));
   } else if (IS_WORD ("rename_chat")) {
     GET_PEER_CHAT;
     int t;
@@ -643,7 +631,7 @@ void interpreter (char *line UU) {
       printf ("Empty new name\n");
       RET;
     }
-    do_rename_chat (id, s);
+    tgl_do_rename_chat (id, s);
   } else if (IS_WORD ("send_photo")) {
     GET_PEER;
     int t;
@@ -652,7 +640,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    do_send_photo (CODE_input_media_uploaded_photo, id, tstrndup (s, t));
+    tgl_do_send_photo (CODE_input_media_uploaded_photo, id, tstrndup (s, t));
   } else if (IS_WORD("send_video")) {
     GET_PEER;
     int t;
@@ -661,7 +649,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    do_send_photo (CODE_input_media_uploaded_video, id, tstrndup (s, t));
+    tgl_do_send_photo (CODE_input_media_uploaded_video, id, tstrndup (s, t));
   } else if (IS_WORD ("send_text")) {
     GET_PEER;
     int t;
@@ -670,7 +658,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    do_send_text (id, tstrndup (s, t));
+    tgl_do_send_text (id, tstrndup (s, t));
   } else if (IS_WORD ("fwd")) {
     GET_PEER;
     int num = next_token_int ();
@@ -678,18 +666,18 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    do_forward_message (id, num);
+    tgl_do_forward_message (id, num);
   } else if (IS_WORD ("load_photo")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_photo) {
-      do_load_photo (&M->media.photo, 1);
+      tgl_do_load_photo (&M->media.photo, 1);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_photo) {
-      do_load_encr_video (&M->media.encr_video, 1); // this is not a bug. 
+      tgl_do_load_encr_video (&M->media.encr_video, 1); // this is not a bug. 
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -700,11 +688,11 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_photo) {
-      do_load_photo (&M->media.photo, 2);
+      tgl_do_load_photo (&M->media.photo, 2);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_photo) {
-      do_load_encr_video (&M->media.encr_video, 2); // this is not a bug. 
+      tgl_do_load_encr_video (&M->media.encr_video, 2); // this is not a bug. 
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -715,9 +703,9 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_video) {
-      do_load_video_thumb (&M->media.video, 1);
+      tgl_do_load_video_thumb (&M->media.video, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -728,9 +716,9 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_video) {
-      do_load_video_thumb (&M->media.video, 2);
+      tgl_do_load_video_thumb (&M->media.video, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -741,11 +729,11 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_video) {
-      do_load_video (&M->media.video, 1);
+      tgl_do_load_video (&M->media.video, 1);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_video) {
-      do_load_encr_video (&M->media.encr_video, 1);
+      tgl_do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -756,35 +744,35 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_video) {
-      do_load_video (&M->media.video, 2);
+      tgl_do_load_video (&M->media.video, 2);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_video) {
-      do_load_encr_video (&M->media.encr_video, 2);
+      tgl_do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
     }
   } else if (IS_WORD ("chat_info")) {
     GET_PEER_CHAT;
-    do_get_chat_info (id);
+    tgl_do_get_chat_info (id);
   } else if (IS_WORD ("user_info")) {
     GET_PEER_USER;
-    do_get_user_info (id);
+    tgl_do_get_user_info (id);
   } else if (IS_WORD ("history")) {
     GET_PEER;
     int limit = next_token_int ();
-    do_get_history (id, limit > 0 ? limit : 40);
+    tgl_do_get_history (id, limit > 0 ? limit : 40);
   } else if (IS_WORD ("chat_add_user")) {
     GET_PEER_CHAT;    
-    peer_id_t chat_id = id;
+    tgl_peer_id_t chat_id = id;
     GET_PEER_USER;
-    do_add_user_to_chat (chat_id, id, 100);
+    tgl_do_add_user_to_chat (chat_id, id, 100);
   } else if (IS_WORD ("chat_del_user")) {
     GET_PEER_CHAT;    
-    peer_id_t chat_id = id;
+    tgl_peer_id_t chat_id = id;
     GET_PEER_USER;
-    do_del_user_from_chat (chat_id, id);
+    tgl_do_del_user_from_chat (chat_id, id);
   } else if (IS_WORD ("add_contact")) {
     int phone_len, first_name_len, last_name_len;
     char *phone, *first_name, *last_name;
@@ -803,10 +791,10 @@ void interpreter (char *line UU) {
       printf ("No last name found\n");
       RET;
     }
-    do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0);
+    tgl_do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0);
   } else if (IS_WORD ("rename_contact")) {
     GET_PEER_USER;
-    peer_t *U = peer_get (id);
+    tgl_peer_t *U = tgl_peer_get (id);
     if (!U) {
       printf ("No such user\n");
       RET;
@@ -829,7 +817,7 @@ void interpreter (char *line UU) {
       printf ("No last name found\n");
       RET;
     }
-    do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 1);
+    tgl_do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 1);
   } else if (IS_WORD ("help")) {
     //print_start ();
     push_color (COLOR_YELLOW);
@@ -886,7 +874,7 @@ void interpreter (char *line UU) {
       printf ("Empty message\n");
       RET;
     }
-    do_msg_search (id, from, to, limit, s);
+    tgl_do_msg_search (id, from, to, limit, s);
   } else if (IS_WORD ("global_search")) {
     int from = 0;
     int to = 0;
@@ -897,16 +885,16 @@ void interpreter (char *line UU) {
       printf ("Empty message\n");
       RET;
     }
-    do_msg_search (PEER_NOT_FOUND, from, to, limit, s);
+    tgl_do_msg_search (TGL_PEER_NOT_FOUND, from, to, limit, s);
   } else if (IS_WORD ("mark_read")) {
     GET_PEER;
-    do_mark_read (id);
+    tgl_do_mark_read (id);
   } else if (IS_WORD ("visualize_key")) {
     GET_PEER_ENCR_CHAT;
-    do_visualize_key (id);
+    tgl_do_visualize_key (id);
   } else if (IS_WORD ("create_secret_chat")) {
     GET_PEER;    
-    do_create_secret_chat (id);
+    tgl_do_create_secret_chat (id);
   } else if (IS_WORD ("create_group_chat")) {
     GET_PEER;
     int t;
@@ -915,13 +903,13 @@ void interpreter (char *line UU) {
       printf ("Empty chat topic\n");
       RET;
     }    
-    do_create_group_chat (id, s);  
+    tgl_do_create_group_chat (id, s);  
   } else if (IS_WORD ("suggested_contacts")) {
-    do_get_suggested ();
+    tgl_do_get_suggested ();
   } else if (IS_WORD ("status_online")) {
-    do_update_status (1);
+    tgl_do_update_status (1);
   } else if (IS_WORD ("status_offline")) {
-    do_update_status (0);
+    tgl_do_update_status (0);
   } else if (IS_WORD ("contacts_search")) {
     int t;
     char *s = next_token (&t);
@@ -929,7 +917,7 @@ void interpreter (char *line UU) {
       printf ("Empty search query\n");
       RET;
     }
-    do_contacts_search (100, s);
+    tgl_do_contacts_search (100, s);
   } else if (IS_WORD("send_audio")) {
     GET_PEER;
     int t;
@@ -938,7 +926,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    do_send_photo (CODE_input_media_uploaded_audio, id, tstrndup (s, t));
+    tgl_do_send_photo (CODE_input_media_uploaded_audio, id, tstrndup (s, t));
   } else if (IS_WORD("send_document")) {
     GET_PEER;
     int t;
@@ -947,18 +935,18 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    do_send_photo (CODE_input_media_uploaded_document, id, tstrndup (s, t));
+    tgl_do_send_photo (CODE_input_media_uploaded_document, id, tstrndup (s, t));
   } else if (IS_WORD ("load_audio")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_audio) {
-      do_load_audio (&M->media.video, 1);
+      tgl_do_load_audio (&M->media.video, 1);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_audio) {
-      do_load_encr_video (&M->media.encr_video, 1);
+      tgl_do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -969,11 +957,11 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_audio) {
-      do_load_audio (&M->media.video, 2);
+      tgl_do_load_audio (&M->media.video, 2);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_audio) {
-      do_load_encr_video (&M->media.encr_video, 2);
+      tgl_do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -984,9 +972,9 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
-      do_load_document_thumb (&M->media.document, 1);
+      tgl_do_load_document_thumb (&M->media.document, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -997,9 +985,9 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == (int)CODE_message_media_document) {
-      do_load_document_thumb (&M->media.document, 2);
+      tgl_do_load_document_thumb (&M->media.document, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -1010,11 +998,11 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_document) {
-      do_load_document (&M->media.document, 1);
+      tgl_do_load_document (&M->media.document, 1);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_document) {
-      do_load_encr_video (&M->media.encr_video, 1);
+      tgl_do_load_encr_video (&M->media.encr_video, 1);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -1025,11 +1013,11 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    struct message *M = message_get (num);
+    struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == CODE_message_media_document) {
-      do_load_document (&M->media.document, 2);
+      tgl_do_load_document (&M->media.document, 2);
     } else if (M && !M->service && M->media.type == CODE_decrypted_message_media_document) {
-      do_load_encr_video (&M->media.encr_video, 2);
+      tgl_do_load_encr_video (&M->media.encr_video, 2);
     } else {
       printf ("Bad msg id\n");
       RET;
@@ -1042,7 +1030,7 @@ void interpreter (char *line UU) {
       RET;
     }
     if (IS_WORD ("debug_verbosity")) {
-      verbosity = num;
+      tgl_set_verbosity (num); 
     } else if (IS_WORD ("log_level")) {
       log_level = num;
     } else if (IS_WORD ("msg_num")) {
@@ -1060,22 +1048,22 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    do_delete_msg (num);
+    tgl_do_delete_msg (num);
   } else if (IS_WORD ("restore_msg")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
-    do_restore_msg (num);
+    tgl_do_restore_msg (num);
   } else if (IS_WORD ("delete_restore_msg")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {
       printf ("Bad msg id\n");
       RET;
     }
-    do_delete_msg (num);
-    do_restore_msg (num);
+    tgl_do_delete_msg (num);
+    tgl_do_restore_msg (num);
   } else if (IS_WORD ("quit")) {
     exit (0);
   } else if (IS_WORD ("safe_quit")) {
@@ -1186,7 +1174,7 @@ void pop_color (void) {
   }
 }
 
-void print_media (struct message_media *M) {
+void print_media (struct tgl_message_media *M) {
   assert (M);
   switch (M->type) {
     case CODE_message_media_empty:
@@ -1255,31 +1243,31 @@ void print_media (struct message_media *M) {
 int unknown_user_list_pos;
 int unknown_user_list[1000];
 
-void print_user_name (peer_id_t id, peer_t *U) {
-  assert (get_peer_type (id) == PEER_USER);
+void print_user_name (tgl_peer_id_t id, tgl_peer_t *U) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
   push_color (COLOR_RED);
   if (!U) {
-    printf ("user#%d", get_peer_id (id));
+    printf ("user#%d", tgl_get_peer_id (id));
     int i;
     int ok = 1;
     for (i = 0; i < unknown_user_list_pos; i++) {
-      if (unknown_user_list[i] == get_peer_id (id)) {
+      if (unknown_user_list[i] == tgl_get_peer_id (id)) {
         ok = 0;
         break;
       }
     }
     if (ok) {
       assert (unknown_user_list_pos < 1000);
-      unknown_user_list[unknown_user_list_pos ++] = get_peer_id (id);
+      unknown_user_list[unknown_user_list_pos ++] = tgl_get_peer_id (id);
     }
   } else {
     if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
       push_color (COLOR_REDB);
     }
     if ((U->flags & FLAG_DELETED)) {
-      printf ("deleted user#%d", get_peer_id (id));
+      printf ("deleted user#%d", tgl_get_peer_id (id));
     } else if (!(U->flags & FLAG_CREATED)) {
-      printf ("empty user#%d", get_peer_id (id));
+      printf ("empty user#%d", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
       printf ("%s", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
@@ -1294,33 +1282,33 @@ void print_user_name (peer_id_t id, peer_t *U) {
   pop_color ();
 }
 
-void print_chat_name (peer_id_t id, peer_t *C) {
-  assert (get_peer_type (id) == PEER_CHAT);
+void print_chat_name (tgl_peer_id_t id, tgl_peer_t *C) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
   push_color (COLOR_MAGENTA);
   if (!C) {
-    printf ("chat#%d", get_peer_id (id));
+    printf ("chat#%d", tgl_get_peer_id (id));
   } else {
     printf ("%s", C->chat.title);
   }
   pop_color ();
 }
 
-void print_encr_chat_name (peer_id_t id, peer_t *C) {
-  assert (get_peer_type (id) == PEER_ENCR_CHAT);
+void print_encr_chat_name (tgl_peer_id_t id, tgl_peer_t *C) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   push_color (COLOR_MAGENTA);
   if (!C) {
-    printf ("encr_chat#%d", get_peer_id (id));
+    printf ("encr_chat#%d", tgl_get_peer_id (id));
   } else {
     printf ("%s", C->print_name);
   }
   pop_color ();
 }
 
-void print_encr_chat_name_full (peer_id_t id, peer_t *C) {
-  assert (get_peer_type (id) == PEER_ENCR_CHAT);
+void print_encr_chat_name_full (tgl_peer_id_t id, tgl_peer_t *C) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   push_color (COLOR_MAGENTA);
   if (!C) {
-    printf ("encr_chat#%d", get_peer_id (id));
+    printf ("encr_chat#%d", tgl_get_peer_id (id));
   } else {
     printf ("%s", C->print_name);
   }
@@ -1342,7 +1330,7 @@ void print_date_full (long t) {
   printf ("[%04d/%02d/%02d %02d:%02d:%02d]", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
-void print_service_message (struct message *M) {
+void print_service_message (struct tgl_message *M) {
   assert (M);
   print_start ();
   push_color (COLOR_GREY);
@@ -1354,14 +1342,14 @@ void print_service_message (struct message *M) {
   print_date (M->date);
   pop_color ();
   printf (" ");
-  if (get_peer_type (M->to_id) == PEER_CHAT) {
-    print_chat_name (M->to_id, peer_get (M->to_id));
+  if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
+    print_chat_name (M->to_id, tgl_peer_get (M->to_id));
   } else {
-    assert (get_peer_type (M->to_id) == PEER_ENCR_CHAT);
-    print_encr_chat_name (M->to_id, peer_get (M->to_id));
+    assert (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT);
+    print_encr_chat_name (M->to_id, tgl_peer_get (M->to_id));
   }
   printf (" ");
-  print_user_name (M->from_id, peer_get (M->from_id));
+  print_user_name (M->from_id, tgl_peer_get (M->from_id));
  
   switch (M->action.type) {
   case CODE_message_action_empty:
@@ -1388,12 +1376,12 @@ void print_service_message (struct message *M) {
     break;
   case CODE_message_action_chat_add_user:
     printf (" added user ");
-    print_user_name (set_peer_id (PEER_USER, M->action.user), peer_get (set_peer_id (PEER_USER, M->action.user)));
+    print_user_name (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
     printf ("\n");
     break;
   case CODE_message_action_chat_delete_user:
     printf (" deleted user ");
-    print_user_name (set_peer_id (PEER_USER, M->action.user), peer_get (set_peer_id (PEER_USER, M->action.user)));
+    print_user_name (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
     printf ("\n");
     break;
   case CODE_decrypted_message_action_set_message_t_t_l:
@@ -1421,10 +1409,10 @@ void print_service_message (struct message *M) {
   print_end ();
 }
 
-peer_id_t last_from_id;
-peer_id_t last_to_id;
+tgl_peer_id_t last_from_id;
+tgl_peer_id_t last_to_id;
 
-void print_message (struct message *M) {
+void print_message (struct tgl_message *M) {
   assert (M);
   if (M->flags & (FLAG_MESSAGE_EMPTY | FLAG_DELETED)) {
     return;
@@ -1434,7 +1422,7 @@ void print_message (struct message *M) {
     print_service_message (M);
     return;
   }
-  if (!get_peer_type (M->to_id)) {
+  if (!tgl_get_peer_type (M->to_id)) {
     logprintf ("Bad msg\n");
     return;
   }
@@ -1443,7 +1431,7 @@ void print_message (struct message *M) {
   last_to_id = M->to_id;
 
   print_start ();
-  if (get_peer_type (M->to_id) == PEER_USER) {
+  if (tgl_get_peer_type (M->to_id) == TGL_PEER_USER) {
     if (M->out) {
       push_color (COLOR_GREEN);
       if (msg_num_mode) {
@@ -1452,7 +1440,7 @@ void print_message (struct message *M) {
       print_date (M->date);
       pop_color ();
       printf (" ");
-      print_user_name (M->to_id, peer_get (M->to_id));
+      print_user_name (M->to_id, tgl_peer_get (M->to_id));
       push_color (COLOR_GREEN);
       if (M->unread) {
         printf (" <<< ");
@@ -1467,7 +1455,7 @@ void print_message (struct message *M) {
       print_date (M->date);
       pop_color ();
       printf (" ");
-      print_user_name (M->from_id, peer_get (M->from_id));
+      print_user_name (M->from_id, tgl_peer_get (M->from_id));
       push_color (COLOR_BLUE);
       if (M->unread) {
         printf (" >>> ");
@@ -1478,8 +1466,8 @@ void print_message (struct message *M) {
         play_sound();
       }
     }
-  } else if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
-    peer_t *P = peer_get (M->to_id);
+  } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) {
+    tgl_peer_t *P = tgl_peer_get (M->to_id);
     assert (P);
     if (M->out) {
       push_color (COLOR_GREEN);
@@ -1515,7 +1503,7 @@ void print_message (struct message *M) {
       }
     }
   } else {
-    assert (get_peer_type (M->to_id) == PEER_CHAT);
+    assert (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT);
     push_color (COLOR_MAGENTA);
     if (msg_num_mode) {
       printf ("%lld ", M->id);
@@ -1523,10 +1511,10 @@ void print_message (struct message *M) {
     print_date (M->date);
     pop_color ();
     printf (" ");
-    print_chat_name (M->to_id, peer_get (M->to_id));
+    print_chat_name (M->to_id, tgl_peer_get (M->to_id));
     printf (" ");
-    print_user_name (M->from_id, peer_get (M->from_id));
-    if ((get_peer_type (M->from_id) == PEER_USER) && (get_peer_id (M->from_id) == tgl_state.our_id)) {
+    print_user_name (M->from_id, tgl_peer_get (M->from_id));
+    if ((tgl_get_peer_type (M->from_id) == TGL_PEER_USER) && (tgl_get_peer_id (M->from_id) == tgl_state.our_id)) {
       push_color (COLOR_GREEN);
     } else {
       push_color (COLOR_BLUE);
@@ -1537,9 +1525,9 @@ void print_message (struct message *M) {
       printf (" »»» ");
     }
   }
-  if (get_peer_type (M->fwd_from_id) == PEER_USER) {
+  if (tgl_get_peer_type (M->fwd_from_id) == TGL_PEER_USER) {
     printf ("[fwd from ");
-    print_user_name (M->fwd_from_id, peer_get (M->fwd_from_id));
+    print_user_name (M->fwd_from_id, tgl_peer_get (M->fwd_from_id));
     printf ("] ");
   }
   if (M->message && strlen (M->message)) {

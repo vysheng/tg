@@ -16,8 +16,7 @@
 
     Copyright Vitaly Valtman 2013
 */
-#define MAX_DC_NUM 9
-#define MAX_PEER_NUM 100000
+#define TGL_MAX_PEER_NUM 100000
 
 #ifndef PROG_NAME
 #define PROG_NAME "telegram-cli"

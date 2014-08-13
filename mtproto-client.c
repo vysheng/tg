@@ -54,6 +54,7 @@
 #include "structures.h"
 #include "binlog.h"
 #include "auto.h"
+#include "tgl.h"
 
 #if defined(__FreeBSD__)
 #define __builtin_bswap32(x) bswap32(x)
@@ -831,7 +832,7 @@ void fetch_seq (void) {
   int x = fetch_int ();
   if (x > seq + 1) {
     logprintf ("Hole in seq: seq = %d, x = %d\n", seq, x);
-    //do_get_difference ();
+    //tgl_do_get_difference ();
     //seq = x;
   } else if (x == seq + 1) {
     seq = x;
@@ -844,20 +845,20 @@ void work_update_binlog (void) {
   switch (op) {
   case CODE_update_user_name:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *UC = tgl_peer_get (user_id);
       if (UC) {
-        struct user *U = &UC->user;
+        struct tgl_user *U = &UC->user;
         if (U->first_name) { tfree_str (U->first_name); }
         if (U->last_name) { tfree_str (U->last_name); }
         if (U->print_name) { 
-          peer_delete_name (UC);
+          tglp_peer_delete_name (UC);
           tfree_str (U->print_name); 
         }
         U->first_name = fetch_str_dup ();
         U->last_name = fetch_str_dup ();
         U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
-        peer_insert_name ((void *)U);
+        tglp_peer_insert_name ((void *)U);
       } else {
         fetch_skip_str ();
         fetch_skip_str ();
@@ -866,11 +867,11 @@ void work_update_binlog (void) {
     break;
   case CODE_update_user_photo:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *UC = tgl_peer_get (user_id);
       fetch_date ();
       if (UC) {
-        struct user *U = &UC->user;
+        struct tgl_user *U = &UC->user;
         
         unsigned y = fetch_int ();
         if (y == CODE_user_profile_photo_empty) {
@@ -884,7 +885,7 @@ void work_update_binlog (void) {
           tglf_fetch_file_location (&U->photo_big);
         }
       } else {
-        struct file_location t;
+        struct tgl_file_location t;
         unsigned y = fetch_int ();
         if (y == CODE_user_profile_photo_empty) {
         } else {
@@ -907,7 +908,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   switch (op) {
   case CODE_update_new_message:
     {
-      struct message *M = tglf_fetch_alloc_message ();
+      struct tgl_message *M = tglf_fetch_alloc_message ();
       assert (M);
       fetch_pts ();
       unread_messages ++;
@@ -919,7 +920,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       int id = fetch_int (); // id
       int new = fetch_long (); // random_id
-      struct message *M = message_get (new);
+      struct tgl_message *M = tgl_message_get (new);
       if (M) {
         bl_do_set_msg_id (M, id);
       }
@@ -932,7 +933,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       int i;
       for (i = 0; i < n; i++) {
         int id = fetch_int ();
-        struct message *M = message_get (id);
+        struct tgl_message *M = tgl_message_get (id);
         if (M) {
           bl_do_set_unread (M, 0);
         }
@@ -950,8 +951,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_typing:
     {
-      peer_id_t id = MK_USER (fetch_int ());
-      peer_t *U = peer_get (id);
+      tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *U = tgl_peer_get (id);
       if (log_level >= 2) {
         print_start ();
         push_color (COLOR_YELLOW);
@@ -966,10 +967,10 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_chat_user_typing:
     {
-      peer_id_t chat_id = MK_CHAT (fetch_int ());
-      peer_id_t id = MK_USER (fetch_int ());
-      peer_t *C = peer_get (chat_id);
-      peer_t *U = peer_get (id);
+      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
+      tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *C = tgl_peer_get (chat_id);
+      tgl_peer_t *U = tgl_peer_get (id);
       if (log_level >= 2) {
         print_start ();
         push_color (COLOR_YELLOW);
@@ -986,8 +987,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_status:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *U = tgl_peer_get (user_id);
       if (U) {
         tglf_fetch_user_status (&U->user.status);
         if (log_level >= 3) {
@@ -1002,21 +1003,21 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           print_end ();
         }
       } else {
-        struct user_status t;
+        struct tgl_user_status t;
         tglf_fetch_user_status (&t);
       }
     }
     break;
   case CODE_update_user_name:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *UC = tgl_peer_get (user_id);
       if (UC && (UC->flags & FLAG_CREATED)) {
         int l1 = prefetch_strlen ();
         char *f = fetch_str (l1);
         int l2 = prefetch_strlen ();
         char *l = fetch_str (l2);
-        struct user *U = &UC->user;
+        struct tgl_user *U = &UC->user;
         bl_do_user_set_real_name (U, f, l1, l, l2);
         print_start ();
         push_color (COLOR_YELLOW);
@@ -1036,15 +1037,15 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_user_photo:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *UC = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *UC = tgl_peer_get (user_id);
       fetch_date ();
       if (UC && (UC->flags & FLAG_CREATED)) {
-        struct user *U = &UC->user;
+        struct tgl_user *U = &UC->user;
         unsigned y = fetch_int ();
         long long photo_id;
-        struct file_location big;
-        struct file_location small;
+        struct tgl_file_location big;
+        struct tgl_file_location small;
         memset (&big, 0, sizeof (big));
         memset (&small, 0, sizeof (small));
         if (y == CODE_user_profile_photo_empty) {
@@ -1068,7 +1069,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         pop_color ();
         print_end ();
       } else {
-        struct file_location t;
+        struct tgl_file_location t;
         unsigned y = fetch_int ();
         if (y == CODE_user_profile_photo_empty) {
         } else {
@@ -1113,15 +1114,15 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       unsigned x = fetch_int ();
       assert (x == CODE_chat_participants || x == CODE_chat_participants_forbidden);
-      peer_id_t chat_id = MK_CHAT (fetch_int ());
+      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
       int n = 0;
-      peer_t *C = peer_get (chat_id);
+      tgl_peer_t *C = tgl_peer_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
         if (x == CODE_chat_participants) {
           bl_do_chat_set_admin (&C->chat, fetch_int ());
           assert (fetch_int () == CODE_vector);
           n = fetch_int ();
-          struct chat_user *users = talloc (12 * n);
+          struct tgl_chat_user *users = talloc (12 * n);
           int i;
           for (i = 0; i < n; i++) {
             assert (fetch_int () == (int)CODE_chat_participant);
@@ -1157,8 +1158,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_contact_registered:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *U = tgl_peer_get (user_id);
       fetch_int (); // date
       print_start ();
       push_color (COLOR_YELLOW);
@@ -1172,8 +1173,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_contact_link:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *U = tgl_peer_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
@@ -1196,8 +1197,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_activation:
     {
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_t *U = peer_get (user_id);
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_t *U = tgl_peer_get (user_id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
@@ -1227,7 +1228,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_new_geo_chat_message:
     {
-      struct message *M = tglf_fetch_alloc_geo_message ();
+      struct tgl_message *M = tglf_fetch_alloc_geo_message ();
       unread_messages ++;
       print_message (M);
       update_prompt ();
@@ -1235,7 +1236,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_new_encrypted_message:
     {
-      struct message *M = tglf_fetch_alloc_encrypted_message ();
+      struct tgl_message *M = tglf_fetch_alloc_encrypted_message ();
       unread_messages ++;
       print_message (M);
       update_prompt ();
@@ -1244,7 +1245,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_encryption:
     {
-      struct secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
+      struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
       if (verbosity >= 2) {
         logprintf ("Secret chat state = %d\n", E->state);
       }
@@ -1278,25 +1279,25 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       pop_color ();
       print_end ();
       if (E->state == sc_request && !disable_auto_accept) {
-        do_accept_encr_chat_request (E);
+        tgl_do_accept_encr_chat_request (E);
       }
       if (E->state == sc_ok) {
-        do_send_encr_chat_layer (E);
+        tgl_do_send_encr_chat_layer (E);
       }
       fetch_int (); // date
     }
     break;
   case CODE_update_encrypted_chat_typing:
     {
-      peer_id_t id = MK_ENCR_CHAT (fetch_int ());
-      peer_t *P = peer_get (id);
+      tgl_peer_id_t id = TGL_MK_ENCR_CHAT (fetch_int ());
+      tgl_peer_t *P = tgl_peer_get (id);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       if (P) {
         printf (" User ");
-        peer_id_t user_id = MK_USER (P->encr_chat.user_id);
-        print_user_name (user_id, peer_get (user_id));
+        tgl_peer_id_t user_id = TGL_MK_USER (P->encr_chat.user_id);
+        print_user_name (user_id, tgl_peer_get (user_id));
         printf (" typing in secret chat ");
         print_encr_chat_name (id, P);
         printf ("\n");
@@ -1309,14 +1310,14 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_encrypted_messages_read:
     {
-      peer_id_t id = MK_ENCR_CHAT (fetch_int ()); // chat_id
+      tgl_peer_id_t id = TGL_MK_ENCR_CHAT (fetch_int ()); // chat_id
       fetch_int (); // max_date
       fetch_int (); // date
-      peer_t *P = peer_get (id);
+      tgl_peer_t *P = tgl_peer_get (id);
       int x = -1;
       if (P && P->last) {
         x = 0;
-        struct message *M = P->last;
+        struct tgl_message *M = P->last;
         while (M && (!M->out || M->unread)) {
           if (M->out) {
             M->unread = 0;
@@ -1330,7 +1331,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         push_color (COLOR_YELLOW);
         print_date (time (0));
         printf (" Encrypted chat ");
-        print_encr_chat_name_full (id, peer_get (id));
+        print_encr_chat_name_full (id, tgl_peer_get (id));
         printf (": %d messages marked read \n", x);
         pop_color ();
         print_end ();
@@ -1339,25 +1340,25 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_chat_participant_add:
     {
-      peer_id_t chat_id = MK_CHAT (fetch_int ());
-      peer_id_t user_id = MK_USER (fetch_int ());
-      peer_id_t inviter_id = MK_USER (fetch_int ());
+      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
+      tgl_peer_id_t inviter_id = TGL_MK_USER (fetch_int ());
       int  version = fetch_int (); 
       
-      peer_t *C = peer_get (chat_id);
+      tgl_peer_t *C = tgl_peer_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
-        bl_do_chat_add_user (&C->chat, version, get_peer_id (user_id), get_peer_id (inviter_id), time (0));
+        bl_do_chat_add_user (&C->chat, version, tgl_get_peer_id (user_id), tgl_get_peer_id (inviter_id), time (0));
       }
 
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Chat ");
-      print_chat_name (chat_id, peer_get (chat_id));
+      print_chat_name (chat_id, tgl_peer_get (chat_id));
       printf (": user ");
-      print_user_name (user_id, peer_get (user_id));
+      print_user_name (user_id, tgl_peer_get (user_id));
       printf (" added by user ");
-      print_user_name (inviter_id, peer_get (inviter_id));
+      print_user_name (inviter_id, tgl_peer_get (inviter_id));
       printf ("\n");
       pop_color ();
       print_end ();
@@ -1365,22 +1366,22 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_chat_participant_delete:
     {
-      peer_id_t chat_id = MK_CHAT (fetch_int ());
-      peer_id_t user_id = MK_USER (fetch_int ());
+      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
+      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
       int version = fetch_int ();
       
-      peer_t *C = peer_get (chat_id);
+      tgl_peer_t *C = tgl_peer_get (chat_id);
       if (C && (C->flags & FLAG_CREATED)) {
-        bl_do_chat_del_user (&C->chat, version, get_peer_id (user_id));
+        bl_do_chat_del_user (&C->chat, version, tgl_get_peer_id (user_id));
       }
 
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Chat ");
-      print_chat_name (chat_id, peer_get (chat_id));
+      print_chat_name (chat_id, tgl_peer_get (chat_id));
       printf (": user ");
-      print_user_name (user_id, peer_get (user_id));
+      print_user_name (user_id, tgl_peer_get (user_id));
       printf (" deleted\n");
       pop_color ();
       print_end ();
@@ -1401,7 +1402,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
        int id = fetch_int ();
        int blocked = fetch_bool ();
-       peer_t *P = peer_get (MK_USER (id));
+       tgl_peer_t *P = tgl_peer_get (TGL_MK_USER (id));
        if (P && (P->flags & FLAG_CREATED)) {
          bl_do_user_set_blocked (&P->user, blocked);
        }
@@ -1454,7 +1455,7 @@ void work_updates (struct connection *c, long long msg_id) {
 
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_update_short_message);
-  struct message *M = tglf_fetch_alloc_message_short ();  
+  struct tgl_message *M = tglf_fetch_alloc_message_short ();  
   unread_messages ++;
   print_message (M);
   update_prompt ();
@@ -1465,7 +1466,7 @@ void work_update_short_message (struct connection *c UU, long long msg_id UU) {
 
 void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == CODE_update_short_chat_message);
-  struct message *M = tglf_fetch_alloc_message_short_chat ();  
+  struct tgl_message *M = tglf_fetch_alloc_message_short_chat ();  
   unread_messages ++;
   print_message (M);
   update_prompt ();
@@ -1601,7 +1602,7 @@ void work_new_detailed_info (struct connection *c UU, long long msg_id UU) {
 void work_updates_to_long (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_updates_too_long);
   logprintf ("updates to long... Getting difference\n");
-  do_get_difference ();
+  tgl_do_get_difference ();
 }
 
 void work_bad_msg_notification (struct connection *c UU, long long msg_id UU) {

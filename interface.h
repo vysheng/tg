@@ -19,6 +19,7 @@
 #ifndef __INTERFACE_H__
 #define __INTERFACE_H__
 #include "structures.h"
+#include "tgl-layout.h"
 
 #define COLOR_RED "\033[0;31m"
 #define COLOR_REDB "\033[1;31m"
@@ -48,7 +49,7 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
 
 #define vlogprintf(v,...) \
   do { \
-    if (tgl_params.verbosity >= (v)) {\
+    if (tgl_state.verbosity >= (v)) {\
       logprintf (__VA_ARGS__);\
     }\
   } while (0);\
@@ -56,14 +57,13 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
 
 void hexdump (int *in_ptr, int *in_end);
 
-struct message;
-union peer;
-void print_message (struct message *M);
-void print_chat_name (peer_id_t id, union peer *C);
-void print_user_name (peer_id_t id, union peer *U);
-void print_encr_chat_name_full (peer_id_t id, peer_t *C);
-void print_encr_chat_name (peer_id_t id, peer_t *C);
-//void print_media (struct message_media *M);
+struct tgl_message;
+void print_message (struct tgl_message *M);
+void print_chat_name (tgl_peer_id_t id, tgl_peer_t *C);
+void print_user_name (tgl_peer_id_t id, tgl_peer_t *U);
+void print_encr_chat_name_full (tgl_peer_id_t id, tgl_peer_t *C);
+void print_encr_chat_name (tgl_peer_id_t id, tgl_peer_t *C);
+//void print_media (struct tgl_message_media *M);
 void pop_color (void);
 void push_color (const char *color);
 void print_start (void);

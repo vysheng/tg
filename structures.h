@@ -23,72 +23,31 @@
 #include "tgl-layout.h"
 #include "tgl-fetch.h"
 
-char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
-
-struct message *message_alloc (long long id);
-
-void free_user (struct user *U);
-void free_chat (struct chat *U);
+char *create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 
 
-int tgl_print_stat (char *s, int len);
-peer_t *peer_get (peer_id_t id);
-peer_t *peer_lookup_name (const char *s);
-struct message *message_get (long long id);
+void tgls_free_user (struct tgl_user *U);
+void tgls_free_chat (struct tgl_chat *U);
+void tgls_free_photo (struct tgl_photo *P);
+void tgls_free_message (struct tgl_message *M);
 
+struct tgl_message *tglm_message_alloc (long long id);
+void tglm_message_insert_tree (struct tgl_message *M);
+void tglm_update_message_id (struct tgl_message *M, long long id);
+void tglm_message_insert (struct tgl_message *M);
+void tglm_message_insert_unsent (struct tgl_message *M);
+void tglm_message_remove_unsent (struct tgl_message *M);
+void tglm_send_all_unsent (void);
+void tglm_message_remove_tree (struct tgl_message *M);
+void tglm_message_add_peer (struct tgl_message *M);
+void tglm_message_del_peer (struct tgl_message *M);
+void tglm_message_del_use (struct tgl_message *M);
+void tglm_message_add_use (struct tgl_message *M);
 
-
-void message_insert_tree (struct message *M);
-void update_message_id (struct message *M, long long id);
-void message_insert (struct message *M);
-void free_photo (struct photo *P);
-void insert_encrypted_chat (peer_t *P);
-void insert_user (peer_t *P);
-void insert_chat (peer_t *P);
-void message_insert_unsent (struct message *M);
-void message_remove_unsent (struct message *M);
-void send_all_unsent (void);
-void message_remove_tree (struct message *M);
-void message_add_peer (struct message *M);
-void message_del_peer (struct message *M);
-void free_message (struct message *M);
-void message_del_use (struct message *M);
-void peer_insert_name (peer_t *P);
-void peer_delete_name (peer_t *P);
-void peer_iterator_ex (void (*it)(peer_t *P, void *extra), void *extra);
-
-int complete_user_list (int index, const char *text, int len, char **R);
-int complete_chat_list (int index, const char *text, int len, char **R);
-int complete_encr_chat_list (int index, const char *text, int len, char **R);
-int complete_peer_list (int index, const char *text, int len, char **R);
-#define PEER_USER 1
-#define PEER_CHAT 2
-#define PEER_GEO_CHAT 3
-#define PEER_ENCR_CHAT 4
-#define PEER_UNKNOWN 0
-
-#define MK_USER(id) set_peer_id (PEER_USER,id)
-#define MK_CHAT(id) set_peer_id (PEER_CHAT,id)
-#define MK_GEO_CHAT(id) set_peer_id (PEER_GEO_CHAT,id)
-#define MK_ENCR_CHAT(id) set_peer_id (PEER_ENCR_CHAT,id)
-
-static inline int get_peer_type (peer_id_t id) {
-  return id.type;
-}
-
-static inline int get_peer_id (peer_id_t id) {
-  return id.id;
-}
-
-static inline peer_id_t set_peer_id (int type, int id) {
-  peer_id_t ID;
-  ID.id = id;
-  ID.type = type;
-  return ID;
-}
-
-static inline int cmp_peer_id (peer_id_t a, peer_id_t b) {
-  return memcmp (&a, &b, sizeof (a));
-}
+void tglp_peer_insert_name (tgl_peer_t *P);
+void tglp_peer_delete_name (tgl_peer_t *P);
+void tglp_insert_encrypted_chat (tgl_peer_t *P);
+void tglp_insert_user (tgl_peer_t *P);
+void tglp_insert_chat (tgl_peer_t *P);
 
 #endif

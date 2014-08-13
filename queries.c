@@ -78,7 +78,7 @@ extern int sync_from_start;
 
 int queries_num;
 
-void out_peer_id (peer_id_t id);
+void out_peer_id (tgl_peer_id_t id);
 #define QUERY_TIMEOUT 6.0
 
 #define memcmp8(a,b) memcmp ((a), (b), 8)
@@ -320,7 +320,7 @@ void out_random (int n) {
 }
 
 int allow_send_linux_version;
-void do_insert_header (void) {
+void tgl_do_insert_header (void) {
   out_int (CODE_invoke_with_layer15);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
@@ -392,9 +392,9 @@ struct query_methods help_get_config_methods  = {
   .type = TYPE_TO_PARAM(config)
 };
 
-void do_help_get_config (void) {
+void tgl_do_help_get_config (void) {
   clear_packet ();  
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_help_get_config);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0);
 }
@@ -449,12 +449,12 @@ int config_got (void) {
 
 char *suser;
 extern int dc_working_num;
-void do_send_code (const char *user) {
+void tgl_do_send_code (const char *user) {
   logprintf ("sending code\n");
   suser = tstrdup (user);
   want_dc_num = 0;
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -478,7 +478,7 @@ void do_send_code (const char *user) {
   logprintf ("send_code: dc_num = %d\n", dc_working_num);
   want_dc_num = 0;
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -509,17 +509,17 @@ struct query_methods phone_call_methods  = {
   .type = TYPE_TO_PARAM(bool)
 };
 
-void do_phone_call (const char *user) {
+void tgl_do_phone_call (const char *user) {
   logprintf ("calling user\n");
   suser = tstrdup (user);
   want_dc_num = 0;
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_auth_send_call);
   out_string (user);
   out_string (phone_code_hash);
 
-  logprintf ("do_phone_call: dc_num = %d\n", dc_working_num);
+  logprintf ("tgl_do_phone_call: dc_num = %d\n", dc_working_num);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0);
 }
 /* }}} */
@@ -574,7 +574,7 @@ struct query_methods check_phone_methods = {
   .type = TYPE_TO_PARAM(auth_checked_phone)
 };
 
-int do_auth_check_phone (const char *user) {
+int tgl_do_auth_check_phone (const char *user) {
   suser = tstrdup (user);
   clear_packet ();
   out_int (CODE_auth_check_phone);
@@ -619,7 +619,7 @@ struct query_methods nearest_dc_methods = {
   .type = TYPE_TO_PARAM(nearest_dc)
 };
 
-int do_get_nearest_dc (void) {
+int tgl_do_get_nearest_dc (void) {
   clear_packet ();
   out_int (CODE_help_get_nearest_dc);
   nearest_dc_num = -1;
@@ -635,14 +635,14 @@ int sign_in_is_ok (void) {
   return sign_in_ok;
 }
 
-struct user User;
+struct tgl_user User;
 
 int sign_in_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   int expires = fetch_int ();
   tglf_fetch_user (&User);
   if (!tgl_state.our_id) {
-    bl_do_set_our_id (get_peer_id (User.id));
+    bl_do_set_our_id (tgl_get_peer_id (User.id));
   }
   sign_in_ok = 1;
   if (verbosity) {
@@ -668,7 +668,7 @@ struct query_methods sign_in_methods  = {
   .type = TYPE_TO_PARAM(auth_authorization)
 };
 
-int do_send_code_result (const char *code) {
+int tgl_do_send_code_result (const char *code) {
   clear_packet ();
   out_int (CODE_auth_sign_in);
   out_string (suser);
@@ -680,7 +680,7 @@ int do_send_code_result (const char *code) {
   return sign_in_ok;
 }
 
-int do_send_code_result_auth (const char *code, const char *first_name, const char *last_name) {
+int tgl_do_send_code_result_auth (const char *code, const char *first_name, const char *last_name) {
   clear_packet ();
   out_int (CODE_auth_sign_up);
   out_string (suser);
@@ -712,11 +712,11 @@ int get_contacts_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    struct user *U = tglf_fetch_alloc_user ();
+    struct tgl_user *U = tglf_fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
-    printf ("User #%d: ", get_peer_id (U->id));
-    print_user_name (U->id, (peer_t *)U);
+    printf ("User #%d: ", tgl_get_peer_id (U->id));
+    print_user_name (U->id, (tgl_peer_t *)U);
     push_color (COLOR_GREEN);
     printf (" (");
     printf ("%s", U->print_name);
@@ -749,7 +749,7 @@ struct query_methods get_contacts_methods = {
 };
 
 
-void do_update_contact_list (void) {
+void tgl_do_update_contact_list (void) {
   clear_packet ();
   out_int (CODE_contacts_get_contacts);
   out_string ("");
@@ -762,7 +762,7 @@ int *encr_extra;
 int *encr_ptr;
 int *encr_end;
 
-char *encrypt_decrypted_message (struct secret_chat *E) {
+char *encrypt_decrypted_message (struct tgl_secret_chat *E) {
   static int msg_key[4];
   static unsigned char sha1a_buffer[20];
   static unsigned char sha1b_buffer[20];
@@ -819,7 +819,7 @@ void encr_start (void) {
 }
 
 
-void encr_finish (struct secret_chat *E) {
+void encr_finish (struct tgl_secret_chat *E) {
   int l = packet_ptr - (encr_extra +  8);
   while (((packet_ptr - encr_extra) - 3) & 3) {  
     int t;
@@ -838,17 +838,17 @@ void encr_finish (struct secret_chat *E) {
 }
 /* }}} */
 
-void do_send_encr_chat_layer (struct secret_chat *E) {
+void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
   long long t;
   secure_random (&t, 8);
   int action[2];
   action[0] = CODE_decrypted_message_action_notify_layer;
   action[1] = 15;
-  bl_do_send_message_action_encr (t, tgl_state.our_id, get_peer_type (E->id), get_peer_id (E->id), time (0), 2, action);
+  bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
 
-  struct message *M = message_get (t);
+  struct tgl_message *M = tgl_message_get (t);
   assert (M);
-  do_send_msg (M);
+  tgl_do_send_msg (M);
   print_message (M);
 }
 
@@ -856,7 +856,7 @@ void do_send_encr_chat_layer (struct secret_chat *E) {
 int msg_send_encr_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_messages_sent_encrypted_message);
   rprintf ("Sent\n");
-  struct message *M = q->extra;
+  struct tgl_message *M = q->extra;
   //M->date = fetch_int ();
   fetch_int ();
   bl_do_set_message_sent (M);
@@ -867,7 +867,7 @@ int msg_send_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_sent_message || x == CODE_messages_sent_message_link);
   int id = fetch_int (); // id
-  struct message *M = q->extra;
+  struct tgl_message *M = q->extra;
   bl_do_set_msg_id (M, id);
   fetch_date ();
   fetch_pts ();
@@ -889,7 +889,7 @@ int msg_send_on_answer (struct query *q UU) {
       if (b == CODE_contacts_foreign_link_requested) {
         fetch_bool ();
       }
-      struct user *U = tglf_fetch_alloc_user ();
+      struct tgl_user *U = tglf_fetch_alloc_user ();
   
       U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
       if (a == CODE_contacts_my_link_contact) {
@@ -918,7 +918,7 @@ int msg_send_on_answer (struct query *q UU) {
 
 int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
   logprintf ( "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
-  struct message *M = q->extra;
+  struct tgl_message *M = q->extra;
   bl_do_delete_msg (M);
   return 0;
 }
@@ -936,14 +936,14 @@ struct query_methods msg_send_encr_methods = {
 
 int out_message_num;
 
-void do_send_encr_msg_action (struct message *M) {
-  peer_t *P = peer_get (M->to_id);
+void tgl_do_send_encr_msg_action (struct tgl_message *M) {
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
   if (!P || P->encr_chat.state != sc_ok) { return; }
   
   clear_packet ();
   out_int (CODE_messages_send_encrypted_service);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (M->to_id));
+  out_int (tgl_get_peer_id (M->to_id));
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
@@ -966,18 +966,18 @@ void do_send_encr_msg_action (struct message *M) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M);
 }
 
-void do_send_encr_msg (struct message *M) {
+void tgl_do_send_encr_msg (struct tgl_message *M) {
   if (M->service) {
-    do_send_encr_msg_action (M);
+    tgl_do_send_encr_msg_action (M);
     return;
   }
-  peer_t *P = peer_get (M->to_id);
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
   if (!P || P->encr_chat.state != sc_ok) { return; }
   
   clear_packet ();
   out_int (CODE_messages_send_encrypted);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (M->to_id));
+  out_int (tgl_get_peer_id (M->to_id));
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
@@ -993,9 +993,9 @@ void do_send_encr_msg (struct message *M) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M);
 }
 
-void do_send_msg (struct message *M) {
-  if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
-    do_send_encr_msg (M);
+void tgl_do_send_msg (struct tgl_message *M) {
+  if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) {
+    tgl_do_send_encr_msg (M);
     return;
   }
   clear_packet ();
@@ -1006,9 +1006,9 @@ void do_send_msg (struct message *M) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
 }
 
-void do_send_message (peer_id_t id, const char *msg, int len) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
-    peer_t *P = peer_get (id);
+void tgl_do_send_message (tgl_peer_id_t id, const char *msg, int len) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    tgl_peer_t *P = tgl_peer_get (id);
     if (!P) {
       logprintf ("Can not send to unknown encrypted chat\n");
       return;
@@ -1021,16 +1021,16 @@ void do_send_message (peer_id_t id, const char *msg, int len) {
   long long t;
   secure_random (&t, 8);
   logprintf ("t = %lld, len = %d\n", t, len);
-  bl_do_send_message_text (t, tgl_state.our_id, get_peer_type (id), get_peer_id (id), time (0), len, msg);
-  struct message *M = message_get (t);
+  bl_do_send_message_text (t, tgl_state.our_id, tgl_get_peer_type (id), tgl_get_peer_id (id), time (0), len, msg);
+  struct tgl_message *M = tgl_message_get (t);
   assert (M);
-  do_send_msg (M);
+  tgl_do_send_msg (M);
   print_message (M);
 }
 /* }}} */
 
 /* {{{ Send text file */
-void do_send_text (peer_id_t id, char *file_name) {
+void tgl_do_send_text (tgl_peer_id_t id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
@@ -1046,7 +1046,7 @@ void do_send_text (peer_id_t id, char *file_name) {
     close (fd);
   } else {
     buf[x] = 0;
-    do_send_message (id, buf, x);
+    tgl_do_send_message (id, buf, x);
     tfree_str (file_name);
     close (fd);
   }
@@ -1077,7 +1077,7 @@ struct query_methods mark_read_encr_methods = {
   .type = TYPE_TO_PARAM(bool)
 };
 
-void do_messages_mark_read (peer_id_t id, int max_id) {
+void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id) {
   clear_packet ();
   out_int (CODE_messages_read_history);
   out_peer_id (id);
@@ -1086,35 +1086,35 @@ void do_messages_mark_read (peer_id_t id, int max_id) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0);
 }
 
-void do_messages_mark_read_encr (peer_id_t id, long long access_hash, int last_time) {
+void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, int last_time) {
   clear_packet ();
   out_int (CODE_messages_read_encrypted_history);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (id));
+  out_int (tgl_get_peer_id (id));
   out_long (access_hash);
   out_int (last_time);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_encr_methods, 0);
 }
 
-void do_mark_read (peer_id_t id) {
-  peer_t *P = peer_get (id);
+void tgl_do_mark_read (tgl_peer_id_t id) {
+  tgl_peer_t *P = tgl_peer_get (id);
   if (!P) {
     rprintf ("Unknown peer\n");
     return;
   }
-  if (get_peer_type (id) == PEER_USER || get_peer_type (id) == PEER_CHAT) {
+  if (tgl_get_peer_type (id) == TGL_PEER_USER || tgl_get_peer_type (id) == TGL_PEER_CHAT) {
     if (!P->last) {
       rprintf ("Unknown last peer message\n");
       return;
     }
-    do_messages_mark_read (id, P->last->id);
+    tgl_do_messages_mark_read (id, P->last->id);
     return;
   }
-  assert (get_peer_type (id) == PEER_ENCR_CHAT);
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   if (P->last) {
-    do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date);
+    tgl_do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date);
   } else {
-    do_messages_mark_read_encr (id, P->encr_chat.access_hash, time (0) - 10);
+    tgl_do_messages_mark_read_encr (id, P->encr_chat.access_hash, time (0) - 10);
     
   }
 }
@@ -1122,7 +1122,7 @@ void do_mark_read (peer_id_t id) {
 
 /* {{{ Get history */
 int get_history_on_answer (struct query *q UU) {
-  static struct message *ML[10000];
+  static struct tgl_message *ML[10000];
   int i;
   int x = fetch_int ();
   if (x == (int)CODE_messages_messages_slice) {
@@ -1134,7 +1134,7 @@ int get_history_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   for (i = 0; i < n; i++) {
-    struct message *M = tglf_fetch_alloc_message ();
+    struct tgl_message *M = tglf_fetch_alloc_message ();
     if (i <= 9999) {
       ML[i] = M;
     }
@@ -1155,7 +1155,7 @@ int get_history_on_answer (struct query *q UU) {
     tglf_fetch_alloc_user ();
   }
   if (sn > 0 && q->extra) {
-    do_messages_mark_read (*(peer_id_t *)&(q->extra), ML[0]->id);
+    tgl_do_messages_mark_read (*(tgl_peer_id_t *)&(q->extra), ML[0]->id);
   }
   return 0;
 }
@@ -1165,10 +1165,10 @@ struct query_methods get_history_methods = {
   .type = TYPE_TO_PARAM(messages_messages)
 };
 
-void do_get_local_history (peer_id_t id, int limit) {
-  peer_t *P = peer_get (id);
+void tgl_do_get_local_history (tgl_peer_id_t id, int limit) {
+  tgl_peer_t *P = tgl_peer_get (id);
   if (!P || !P->last) { return; }
-  struct message *M = P->last;
+  struct tgl_message *M = P->last;
   int count = 1;
   assert (!M->prev);
   while (count < limit && M->next) {
@@ -1181,10 +1181,10 @@ void do_get_local_history (peer_id_t id, int limit) {
   }
 }
 
-void do_get_history (peer_id_t id, int limit) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT || offline_mode) {
-    do_get_local_history (id, limit);
-    do_mark_read (id);
+void tgl_do_get_history (tgl_peer_id_t id, int limit) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT || offline_mode) {
+    tgl_do_get_local_history (id, limit);
+    tgl_do_mark_read (id);
     return;
   }
   clear_packet ();
@@ -1209,7 +1209,7 @@ int get_dialogs_on_answer (struct query *q UU) {
   int n, i;
   n = fetch_int ();
   static int dlist[2 * 100];
-  static peer_id_t plist[100];
+  static tgl_peer_id_t plist[100];
   int dl_size = n;
   for (i = 0; i < n; i++) {
     assert (fetch_int () == (int)CODE_dialog);
@@ -1242,16 +1242,16 @@ int get_dialogs_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = dl_size - 1; i >= 0; i--) {
-    peer_t *UC;
-    switch (get_peer_type (plist[i])) {
-    case PEER_USER:
-      UC = peer_get (plist[i]);
+    tgl_peer_t *UC;
+    switch (tgl_get_peer_type (plist[i])) {
+    case TGL_PEER_USER:
+      UC = tgl_peer_get (plist[i]);
       printf ("User ");
       print_user_name (plist[i], UC);
       printf (": %d unread\n", dlist[2 * i + 1]);
       break;
-    case PEER_CHAT:
-      UC = peer_get (plist[i]);
+    case TGL_PEER_CHAT:
+      UC = tgl_peer_get (plist[i]);
       printf ("Chat ");
       print_chat_name (plist[i], UC);
       printf (": %d unread\n", dlist[2 * i + 1]);
@@ -1271,7 +1271,7 @@ struct query_methods get_dialogs_methods = {
 };
 
 
-void do_get_dialog_list (void) {
+void tgl_do_get_dialog_list (void) {
   clear_packet ();
   out_int (CODE_messages_get_dialogs);
   out_int (0);
@@ -1292,7 +1292,7 @@ struct send_file {
   int part_size;
   long long id;
   long long thumb_id;
-  peer_id_t to_id;
+  tgl_peer_id_t to_id;
   unsigned media_type;
   char *file_name;
   int encr;
@@ -1301,22 +1301,22 @@ struct send_file {
   unsigned char *key;
 };
 
-void out_peer_id (peer_id_t id) {
-  peer_t *U;
-  switch (get_peer_type (id)) {
-  case PEER_CHAT:
+void out_peer_id (tgl_peer_id_t id) {
+  tgl_peer_t *U;
+  switch (tgl_get_peer_type (id)) {
+  case TGL_PEER_CHAT:
     out_int (CODE_input_peer_chat);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     break;
-  case PEER_USER:
-    U = peer_get (id);
+  case TGL_PEER_USER:
+    U = tgl_peer_get (id);
     if (U && U->user.access_hash) {
       out_int (CODE_input_peer_foreign);
-      out_int (get_peer_id (id));
+      out_int (tgl_get_peer_id (id));
       out_long (U->user.access_hash);
     } else {
       out_int (CODE_input_peer_contact);
-      out_int (get_peer_id (id));
+      out_int (tgl_get_peer_id (id));
     }
     break;
   default:
@@ -1333,7 +1333,7 @@ int send_file_part_on_answer (struct query *q) {
 
 int send_file_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = tglf_fetch_alloc_message ();
+  struct tgl_message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
@@ -1356,7 +1356,7 @@ int send_encr_file_on_answer (struct query *q UU) {
     hexdump_in ();
   }
   assert (fetch_int () == (int)CODE_messages_sent_encrypted_file);
-  struct message *M = q->extra;
+  struct tgl_message *M = q->extra;
   M->date = fetch_int ();
   assert (fetch_int () == CODE_encrypted_file);
   M->media.encr_photo.id = fetch_long ();
@@ -1366,7 +1366,7 @@ int send_encr_file_on_answer (struct query *q UU) {
   M->media.encr_photo.dc_id = fetch_int ();
   assert (fetch_int () == M->media.encr_photo.key_fingerprint);
   print_message (M);
-  message_insert (M);
+  tglm_message_insert (M);
   return 0;
 }
 
@@ -1479,12 +1479,12 @@ void send_part (struct send_file *f) {
       out_long (-lrand48 () * (1ll << 32) - lrand48 ());
       send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
     } else {
-      struct message *M = talloc0 (sizeof (*M));
+      struct tgl_message *M = talloc0 (sizeof (*M));
 
       out_int (CODE_messages_send_encrypted_file);
       out_int (CODE_input_encrypted_chat);
-      out_int (get_peer_id (f->to_id));
-      peer_t *P = peer_get (f->to_id);
+      out_int (tgl_get_peer_id (f->to_id));
+      tgl_peer_t *P = tgl_peer_get (f->to_id);
       assert (P);
       out_long (P->encr_chat.access_hash);
       long long r = -lrand48 () * (1ll << 32) - lrand48 (); 
@@ -1560,7 +1560,7 @@ void send_part (struct send_file *f) {
       M->media.encr_photo.size = f->size;
   
       M->flags = FLAG_ENCRYPTED;
-      M->from_id = MK_USER (tgl_state.our_id);
+      M->from_id = TGL_MK_USER (tgl_state.our_id);
       M->to_id = f->to_id;
       M->unread = 1;
       M->message = tstrdup ("");
@@ -1586,7 +1586,7 @@ void send_file_thumb (struct send_file *f) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
 }
 
-void do_send_photo (int type, peer_id_t to_id, char *file_name) {
+void tgl_do_send_photo (int type, tgl_peer_id_t to_id, char *file_name) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     rprintf ("No such file '%s'\n", file_name);
@@ -1625,7 +1625,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   f->to_id = to_id;
   f->media_type = type;
   f->file_name = file_name;
-  if (get_peer_type (f->to_id) == PEER_ENCR_CHAT) {
+  if (tgl_get_peer_type (f->to_id) == TGL_PEER_ENCR_CHAT) {
     f->encr = 1;
     f->iv = talloc (32);
     secure_random (f->iv, 32);
@@ -1650,7 +1650,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
 /* {{{ Forward */
 int fwd_msg_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = tglf_fetch_alloc_message ();
+  struct tgl_message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
@@ -1673,8 +1673,8 @@ struct query_methods fwd_msg_methods = {
   .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-void do_forward_message (peer_id_t id, int n) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+void tgl_do_forward_message (tgl_peer_id_t id, int n) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
     rprintf ("Can not forward messages from secret chat\n");
     return;
   }
@@ -1690,7 +1690,7 @@ void do_forward_message (peer_id_t id, int n) {
 /* {{{ Rename chat */
 int rename_chat_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = tglf_fetch_alloc_message ();
+  struct tgl_message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
@@ -1713,19 +1713,19 @@ struct query_methods rename_chat_methods = {
   .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-void do_rename_chat (peer_id_t id, char *name UU) {
+void tgl_do_rename_chat (tgl_peer_id_t id, char *name UU) {
   clear_packet ();
   out_int (CODE_messages_edit_chat_title);
-  assert (get_peer_type (id) == PEER_CHAT);
-  out_int (get_peer_id (id));
+  assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
+  out_int (tgl_get_peer_id (id));
   out_string (name);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0);
 }
 /* }}} */
 
 /* {{{ Chat info */
-void print_chat_info (struct chat *C) {
-  peer_t *U = (void *)C;
+void print_chat_info (struct tgl_chat *C) {
+  tgl_peer_t *U = (void *)C;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("Chat ");
@@ -1734,9 +1734,9 @@ void print_chat_info (struct chat *C) {
   int i;
   for (i = 0; i < C->user_list_size; i++) {
     printf ("\t\t");
-    print_user_name (MK_USER (C->user_list[i].user_id), peer_get (MK_USER (C->user_list[i].user_id)));
+    print_user_name (TGL_MK_USER (C->user_list[i].user_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].user_id)));
     printf (" invited by ");
-    print_user_name (MK_USER (C->user_list[i].inviter_id), peer_get (MK_USER (C->user_list[i].inviter_id)));
+    print_user_name (TGL_MK_USER (C->user_list[i].inviter_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].inviter_id)));
     printf (" at ");
     print_date_full (C->user_list[i].date);
     if (C->user_list[i].user_id == C->admin_id) {
@@ -1749,7 +1749,7 @@ void print_chat_info (struct chat *C) {
 }
 
 int chat_info_on_answer (struct query *q UU) {
-  struct chat *C = tglf_fetch_alloc_chat_full ();
+  struct tgl_chat *C = tglf_fetch_alloc_chat_full ();
   print_chat_info (C);
   return 0;
 }
@@ -1759,9 +1759,9 @@ struct query_methods chat_info_methods = {
   .type = TYPE_TO_PARAM(messages_chat_full)
 };
 
-void do_get_chat_info (peer_id_t id) {
+void tgl_do_get_chat_info (tgl_peer_id_t id) {
   if (offline_mode) {
-    peer_t *C = peer_get (id);
+    tgl_peer_t *C = tgl_peer_get (id);
     if (!C) {
       rprintf ("No such chat\n");
     } else {
@@ -1771,16 +1771,16 @@ void do_get_chat_info (peer_id_t id) {
   }
   clear_packet ();
   out_int (CODE_messages_get_full_chat);
-  assert (get_peer_type (id) == PEER_CHAT);
-  out_int (get_peer_id (id));
+  assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
+  out_int (tgl_get_peer_id (id));
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
 }
 /* }}} */
 
 /* {{{ User info */
 
-void print_user_info (struct user *U) {
-  peer_t *C = (void *)U;
+void print_user_info (struct tgl_user *U) {
+  tgl_peer_t *C = (void *)U;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("User ");
@@ -1800,7 +1800,7 @@ void print_user_info (struct user *U) {
 }
 
 int user_info_on_answer (struct query *q UU) {
-  struct user *U = tglf_fetch_alloc_user_full ();
+  struct tgl_user *U = tglf_fetch_alloc_user_full ();
   print_user_info (U);
   return 0;
 }
@@ -1810,9 +1810,9 @@ struct query_methods user_info_methods = {
   .type = TYPE_TO_PARAM(user_full)
 };
 
-void do_get_user_info (peer_id_t id) {
+void tgl_do_get_user_info (tgl_peer_id_t id) {
   if (offline_mode) {
-    peer_t *C = peer_get (id);
+    tgl_peer_t *C = tgl_peer_get (id);
     if (!C) {
       rprintf ("No such user\n");
     } else {
@@ -1822,15 +1822,15 @@ void do_get_user_info (peer_id_t id) {
   }
   clear_packet ();
   out_int (CODE_users_get_full_user);
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = peer_get (id);
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0);
 }
@@ -1852,7 +1852,7 @@ struct query_methods user_list_info_silent_methods = {
   .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM(user))
 };
 
-void do_get_user_list_info_silent (int num, int *list) {
+void tgl_do_get_user_list_info_silent (int num, int *list) {
   clear_packet ();
   out_int (CODE_users_get_users);
   out_int (CODE_vector);
@@ -2007,7 +2007,7 @@ void load_next_part (struct download *D) {
   //send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
 }
 
-void do_load_photo_size (struct photo_size *P, int next) {
+void tgl_do_load_photo_size (struct tgl_photo_size *P, int next) {
   if (!P->loc.dc) {
     rprintf ("Bad video thumb\n");
     return;
@@ -2029,7 +2029,7 @@ void do_load_photo_size (struct photo_size *P, int next) {
   load_next_part (D);
 }
 
-void do_load_photo (struct photo *photo, int next) {
+void tgl_do_load_photo (struct tgl_photo *photo, int next) {
   if (!photo->sizes_num) { return; }
   int max = -1;
   int maxi = 0;
@@ -2040,18 +2040,18 @@ void do_load_photo (struct photo *photo, int next) {
       maxi = i;
     }
   }
-  do_load_photo_size (&photo->sizes[maxi], next);
+  tgl_do_load_photo_size (&photo->sizes[maxi], next);
 }
 
-void do_load_video_thumb (struct video *video, int next) {
-  do_load_photo_size (&video->thumb, next);
+void tgl_do_load_video_thumb (struct tgl_video *video, int next) {
+  tgl_do_load_photo_size (&video->thumb, next);
 }
 
-void do_load_document_thumb (struct document *video, int next) {
-  do_load_photo_size (&video->thumb, next);
+void tgl_do_load_document_thumb (struct tgl_document *video, int next) {
+  tgl_do_load_photo_size (&video->thumb, next);
 }
 
-void do_load_video (struct video *V, int next) {
+void tgl_do_load_video (struct tgl_video *V, int next) {
   assert (V);
   assert (next);
   struct download *D = talloc0 (sizeof (*D));
@@ -2067,7 +2067,7 @@ void do_load_video (struct video *V, int next) {
   load_next_part (D);
 }
 
-void do_load_audio (struct video *V, int next) {
+void tgl_do_load_audio (struct tgl_video *V, int next) {
   assert (V);
   assert (next);
   struct download *D = talloc0 (sizeof (*D));
@@ -2083,7 +2083,7 @@ void do_load_audio (struct video *V, int next) {
   load_next_part (D);
 }
 
-void do_load_document (struct document *V, int next) {
+void tgl_do_load_document (struct tgl_document *V, int next) {
   assert (V);
   assert (next);
   struct download *D = talloc0 (sizeof (*D));
@@ -2099,7 +2099,7 @@ void do_load_document (struct document *V, int next) {
   load_next_part (D);
 }
 
-void do_load_encr_video (struct encr_video *V, int next) {
+void tgl_do_load_encr_video (struct tgl_encr_video *V, int next) {
   assert (V);
   assert (next);
   struct download *D = talloc0 (sizeof (*D));
@@ -2152,7 +2152,7 @@ struct query_methods export_auth_methods = {
   .type = TYPE_TO_PARAM(auth_exported_authorization)
 };
 
-void do_export_auth (int num) {
+void tgl_do_export_auth (int num) {
   export_auth_str = 0;
   clear_packet ();
   out_int (CODE_auth_export_authorization);
@@ -2178,9 +2178,9 @@ struct query_methods import_auth_methods = {
   .type = TYPE_TO_PARAM(auth_authorization)
 };
 
-void do_import_auth (int num) {
+void tgl_do_import_auth (int num) {
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_auth_import_authorization);
   out_int (tgl_state.our_id);
   out_cstring (export_auth_str, export_auth_str_len);
@@ -2214,11 +2214,11 @@ int add_contact_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n ; i++) {
-    struct user *U = tglf_fetch_alloc_user ();
+    struct tgl_user *U = tglf_fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
-    printf ("User #%d: ", get_peer_id (U->id));
-    print_user_name (U->id, (peer_t *)U);
+    printf ("User #%d: ", tgl_get_peer_id (U->id));
+    print_user_name (U->id, (tgl_peer_t *)U);
     push_color (COLOR_GREEN);
     printf (" (");
     printf ("%s", U->print_name);
@@ -2251,7 +2251,7 @@ struct query_methods add_contact_methods = {
   .type = TYPE_TO_PARAM(contacts_imported_contacts)
 };
 
-void do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force) {
+void tgl_do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force) {
   clear_packet ();
   out_int (CODE_contacts_import_contacts);
   out_int (CODE_vector);
@@ -2276,14 +2276,14 @@ struct query_methods msg_search_methods = {
   .type = TYPE_TO_PARAM(messages_messages)
 };
 
-void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
+void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, const char *s) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
     rprintf ("Can not search in secure chat\n");
     return;
   }
   clear_packet ();
   out_int (CODE_messages_search);
-  if (get_peer_type (id) == PEER_UNKNOWN) {
+  if (tgl_get_peer_type (id) == TGL_PEER_UNKNOWN) {
     out_int (CODE_input_peer_empty);
   } else {
     out_peer_id (id);
@@ -2314,7 +2314,7 @@ int contacts_search_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = 0; i < n; i++) {
-    struct user *U = tglf_fetch_alloc_user ();
+    struct tgl_user *U = tglf_fetch_alloc_user ();
     printf ("User ");
     push_color  (COLOR_RED);
     printf ("%s %s", U->first_name, U->last_name); 
@@ -2331,7 +2331,7 @@ struct query_methods contacts_search_methods = {
   .type = TYPE_TO_PARAM(contacts_found)
 };
 
-void do_contacts_search (int limit, const char *s) {
+void tgl_do_contacts_search (int limit, const char *s) {
   clear_packet ();
   out_int (CODE_contacts_search);
   out_string (s);
@@ -2342,7 +2342,7 @@ void do_contacts_search (int limit, const char *s) {
 
 /* {{{ Encr accept */
 int send_encr_accept_on_answer (struct query *q UU) {
-  struct secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
+  struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
 
   if (E->state == sc_ok) {
     print_start ();
@@ -2365,7 +2365,7 @@ int send_encr_accept_on_answer (struct query *q UU) {
 }
 
 int send_encr_request_on_answer (struct query *q UU) {
-  struct secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
+  struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
   if (E->state == sc_deleted) {
     print_start ();
     push_color (COLOR_YELLOW);
@@ -2403,7 +2403,7 @@ unsigned char *encr_prime;
 int encr_param_version;
 BN_CTX *ctx;
 
-void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
+void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *random) {
   int i;
   int ok = 0;
   for (i = 0; i < 64; i++) {
@@ -2446,7 +2446,7 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   clear_packet ();
   out_int (CODE_messages_accept_encryption);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (E->id));
+  out_int (tgl_get_peer_id (E->id));
   out_long (E->access_hash);
   
   ensure (BN_set_word (g_a, encr_root));
@@ -2465,7 +2465,7 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E);
 }
 
-void do_create_keys_end (struct secret_chat *U) {
+void tgl_do_create_keys_end (struct tgl_secret_chat *U) {
   assert (encr_prime);
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
   ensure_ptr (g_b);
@@ -2514,7 +2514,7 @@ void do_create_keys_end (struct secret_chat *U) {
   BN_clear_free (a);
 }
 
-void do_send_create_encr_chat (void *x, unsigned char *random) {
+void tgl_do_send_create_encr_chat (void *x, unsigned char *random) {
   int user_id = (long)x;
   int i;
   unsigned char random_here[256];
@@ -2549,18 +2549,18 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
   BN_bn2bin (r, (void *)g_a);
   
   int t = lrand48 ();
-  while (peer_get (MK_ENCR_CHAT (t))) {
+  while (tgl_peer_get (TGL_MK_ENCR_CHAT (t))) {
     t = lrand48 ();
   }
 
   bl_do_encr_chat_init (t, user_id, (void *)random, (void *)g_a);
-  peer_t *_E = peer_get (MK_ENCR_CHAT (t));
+  tgl_peer_t *_E = tgl_peer_get (TGL_MK_ENCR_CHAT (t));
   assert (_E);
-  struct secret_chat *E = &_E->encr_chat;
+  struct tgl_secret_chat *E = &_E->encr_chat;
   
   clear_packet ();
   out_int (CODE_messages_request_encryption);
-  peer_t *U = peer_get (MK_USER (E->user_id));
+  tgl_peer_t *U = tgl_peer_get (TGL_MK_USER (E->user_id));
   assert (U);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
@@ -2570,7 +2570,7 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
     out_int (CODE_input_user_contact);
     out_int (E->user_id);
   }
-  out_int (get_peer_id (E->id));
+  out_int (tgl_get_peer_id (E->id));
   out_cstring (g_a, 256);
   write_secret_chat_file ();
   
@@ -2617,7 +2617,7 @@ struct query_methods get_dh_config_methods  = {
   .type = TYPE_TO_PARAM(messages_dh_config)
 };
 
-void do_accept_encr_chat_request (struct secret_chat *E) {
+void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E) {
   assert (E->state == sc_request);
   
   clear_packet ();
@@ -2625,18 +2625,18 @@ void do_accept_encr_chat_request (struct secret_chat *E) {
   out_int (encr_param_version);
   out_int (256);
   void **x = talloc (2 * sizeof (void *));
-  x[0] = do_send_accept_encr_chat;
+  x[0] = tgl_do_send_accept_encr_chat;
   x[1] = E;
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x);
 }
 
-void do_create_encr_chat_request (int user_id) {
+void tgl_do_create_encr_chat_request (int user_id) {
   clear_packet ();
   out_int (CODE_messages_get_dh_config);
   out_int (encr_param_version);
   out_int (256);
   void **x = talloc (2 * sizeof (void *));
-  x[0] = do_send_create_encr_chat;
+  x[0] = tgl_do_send_create_encr_chat;
   x[1] = (void *)(long)(user_id);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x);
 }
@@ -2670,7 +2670,7 @@ int get_difference_on_answer (struct query *q UU) {
     int n, i;
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
-    static struct message *ML[10000];
+    static struct tgl_message *ML[10000];
     int ml_pos = 0;
     for (i = 0; i < n; i++) {
       if (ml_pos < 10000) {
@@ -2714,7 +2714,7 @@ int get_difference_on_answer (struct query *q UU) {
       print_message (ML[i]);
     }
     if (x == CODE_updates_difference_slice) {
-      do_get_difference ();
+      tgl_do_get_difference ();
     } else {
       difference_got = 1;
     }
@@ -2734,11 +2734,11 @@ struct query_methods get_difference_methods = {
   .type = TYPE_TO_PARAM(updates_difference)
 };
 
-void do_get_difference (void) {
+void tgl_do_get_difference (void) {
   get_difference_active = 1;
   difference_got = 0;
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   if (seq > 0 || sync_from_start) {
     if (pts == 0) { pts = 1; }
     if (qts == 0) { qts = 1; }
@@ -2758,9 +2758,9 @@ void do_get_difference (void) {
 /* {{{ Visualize key */
 char *colors[4] = {COLOR_GREY, COLOR_CYAN, COLOR_BLUE, COLOR_GREEN};
 
-void do_visualize_key (peer_id_t id) {
-  assert (get_peer_type (id) == PEER_ENCR_CHAT);
-  peer_t *P = peer_get (id);
+void tgl_do_visualize_key (tgl_peer_id_t id) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
+  tgl_peer_t *P = tgl_peer_get (id);
   assert (P);
   if (P->encr_chat.state != sc_ok) {
     rprintf ("Chat is not initialized yet\n");
@@ -2807,8 +2807,8 @@ int get_suggested_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = 0; i < m; i++) {
-    peer_t *U = (void *)tglf_fetch_alloc_user ();
-    assert (get_peer_id (U->id) == l[2 * i]);
+    tgl_peer_t *U = (void *)tglf_fetch_alloc_user ();
+    assert (tgl_get_peer_id (U->id) == l[2 * i]);
     print_user_name (U->id, U);
     printf (" phone %s: %d mutual friends\n", U->user.phone, l[2 * i + 1]);
   }
@@ -2822,7 +2822,7 @@ struct query_methods get_suggested_methods = {
   .type = TYPE_TO_PARAM(contacts_suggested)
 };
 
-void do_get_suggested (void) {
+void tgl_do_get_suggested (void) {
   clear_packet ();
   out_int (CODE_contacts_get_suggested);
   out_int (100);
@@ -2837,56 +2837,56 @@ struct query_methods add_user_to_chat_methods = {
   .type = TYPE_TO_PARAM(message_action)
 };
 
-void do_add_user_to_chat (peer_id_t chat_id, peer_id_t id, int limit) {
+void tgl_do_add_user_to_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, int limit) {
   clear_packet ();
   out_int (CODE_messages_add_chat_user);
-  out_int (get_peer_id (chat_id));
+  out_int (tgl_get_peer_id (chat_id));
   
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = peer_get (id);
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
   out_int (limit);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0);
 }
 
-void do_del_user_from_chat (peer_id_t chat_id, peer_id_t id) {
+void tgl_do_del_user_from_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id) {
   clear_packet ();
   out_int (CODE_messages_delete_chat_user);
-  out_int (get_peer_id (chat_id));
+  out_int (tgl_get_peer_id (chat_id));
   
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = peer_get (id);
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0);
 }
 /* }}} */
 
 /* {{{ Create secret chat */
-char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
+char *create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 
-void do_create_secret_chat (peer_id_t id) {
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = peer_get (id);
+void tgl_do_create_secret_chat (tgl_peer_id_t id) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (!U) { 
     rprintf ("Can not create chat with unknown user\n");
     return;
   }
 
-  do_create_encr_chat_request (get_peer_id (id)); 
+  tgl_do_create_encr_chat_request (tgl_get_peer_id (id)); 
 }
 /* }}} */
 
@@ -2896,9 +2896,9 @@ struct query_methods create_group_chat_methods = {
   .type = TYPE_TO_PARAM(message_action)
 };
 
-void do_create_group_chat (peer_id_t id, char *chat_topic) {
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = peer_get (id);
+void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (!U) { 
     rprintf ("Can not create chat with unknown user\n");
     return;
@@ -2909,11 +2909,11 @@ void do_create_group_chat (peer_id_t id, char *chat_topic) {
   out_int (1); // Number of users, currently we support only 1 user.
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
   out_string (chat_topic);
   send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0);
@@ -2936,7 +2936,7 @@ struct query_methods delete_msg_methods = {
   .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM (bare_int))
 };
 
-void do_delete_msg (long long id) {
+void tgl_do_delete_msg (long long id) {
   clear_packet ();
   out_int (CODE_messages_delete_messages);
   out_int (CODE_vector);
@@ -2961,7 +2961,7 @@ struct query_methods restore_msg_methods = {
   .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM (bare_int))
 };
 
-void do_restore_msg (long long id) {
+void tgl_do_restore_msg (long long id) {
   clear_packet ();
   out_int (CODE_messages_restore_messages);
   out_int (CODE_vector);
@@ -2980,7 +2980,7 @@ struct query_methods update_status_methods = {
   .type = TYPE_TO_PARAM(bool)
 };
 
-void do_update_status (int online UU) {
+void tgl_do_update_status (int online UU) {
   clear_packet ();
   out_int (CODE_account_update_status);
   out_int (online ? CODE_bool_false : CODE_bool_true);

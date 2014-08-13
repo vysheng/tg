@@ -3,6 +3,5 @@
 #endif
 
 #include "tgl.h"
-struct tgl_params tgl_params;
 struct tgl_state tgl_state;
 

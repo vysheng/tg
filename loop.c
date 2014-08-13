@@ -60,9 +60,7 @@
 
 extern char *default_username;
 extern char *auth_token;
-extern int test_dc;
 void set_default_username (const char *s);
-int default_dc_num;
 extern int binlog_enabled;
 
 extern int unknown_user_list_pos;
@@ -71,7 +69,6 @@ int register_mode;
 extern int safe_quit;
 extern int queries_num;
 
-int unread_messages;
 void got_it (char *line, int len);
 void net_loop (int flags, int (*is_end)(void)) {
   while (!is_end ()) {
@@ -93,7 +90,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     }
     work_timers ();
     if ((flags & 3) && (fds[0].revents & POLLIN)) {
-      unread_messages = 0;
+      tgl_state.unread_messages = 0;
       if (flags & 1) {
         rl_callback_read_char ();
       } else {
@@ -113,7 +110,7 @@ void net_loop (int flags, int (*is_end)(void)) {
       exit (0);
     }
     if (unknown_user_list_pos) {
-      do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
+      tgl_do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
       unknown_user_list_pos = 0;
     }   
   }
@@ -153,11 +150,6 @@ int main_loop (void) {
   return 0;
 }
 
-
-struct dc *DC_list[MAX_DC_ID + 1];
-struct dc *DC_working;
-int dc_working_num;
-int auth_state;
 char *get_auth_key_filename (void);
 char *get_state_filename (void);
 char *get_secret_chat_filename (void);
@@ -229,7 +221,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 }
 
 void empty_auth_file (void) {
-  alloc_dc (1, tstrdup (tgl_params.test_mode ? TG_SERVER_TEST : TG_SERVER), 443);
+  alloc_dc (1, tstrdup (tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER), 443);
   dc_working_num = 1;
   auth_state = 0;
   write_auth_file ();
@@ -324,7 +316,7 @@ void write_state_file (void) {
   wseq = seq; wpts = pts; wqts = qts; wdate = last_date;
 }
 
-extern peer_t *Peers[];
+extern tgl_peer_t *Peers[];
 extern int peer_num;
 
 extern int encr_root;
@@ -349,18 +341,18 @@ void read_secret_chat_file (void) {
   assert (read (fd, &cc, 4) == 4);
   int i;
   for (i = 0; i < cc; i++) {
-    peer_t *P = talloc0 (sizeof (*P));
-    struct secret_chat *E = &P->encr_chat;
+    tgl_peer_t *P = talloc0 (sizeof (*P));
+    struct tgl_secret_chat *E = &P->encr_chat;
     int t;
     assert (read (fd, &t, 4) == 4);
-    P->id = MK_ENCR_CHAT (t);
+    P->id = TGL_MK_ENCR_CHAT (t);
     assert (read (fd, &P->flags, 4) == 4);
     assert (read (fd, &t, 4) == 4);
     assert (t > 0);
     P->print_name = talloc (t + 1);
     assert (read (fd, P->print_name, t) == t);
     P->print_name[t] = 0;
-    peer_insert_name (P);
+    tglp_peer_insert_name (P);
 
     assert (read (fd, &E->state, 4) == 4);
     assert (read (fd, &E->user_id, 4) == 4);
@@ -376,7 +368,7 @@ void read_secret_chat_file (void) {
     }
     assert (read (fd, E->key, 256) == 256);
     assert (read (fd, &E->key_fingerprint, 8) == 8);
-    insert_encrypted_chat (P);
+    tglp_insert_encrypted_chat (P);
   }
   if (version >= 1) {
     assert (read (fd, &encr_root, 4) == 4);
@@ -389,16 +381,16 @@ void read_secret_chat_file (void) {
   close (fd);
 }
 
-void count_encr_peer (peer_t *P, void *cc) {
-  if (get_peer_type (P->id) == PEER_ENCR_CHAT && P->encr_chat.state != sc_none && P->encr_chat.state != sc_deleted) {  
+void count_encr_peer (tgl_peer_t *P, void *cc) {
+  if (tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT && P->encr_chat.state != sc_none && P->encr_chat.state != sc_deleted) {  
     (*(int *)cc) ++;
   }
 }
 
-void write_encr_peer (peer_t *P, void *pfd) {
+void write_encr_peer (tgl_peer_t *P, void *pfd) {
   int fd = *(int *)pfd;
-  if (get_peer_type (P->id) == PEER_ENCR_CHAT && P->encr_chat.state != sc_none && P->encr_chat.state != sc_deleted) {  
-    int t = get_peer_id (P->id);
+  if (tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT && P->encr_chat.state != sc_none && P->encr_chat.state != sc_deleted) {  
+    int t = tgl_get_peer_id (P->id);
     assert (write (fd, &t, 4) == 4);
     t = P->flags;
     assert (write (fd, &t, 4) == 4);
@@ -435,8 +427,8 @@ void write_secret_chat_file (void) {
   assert (write (fd, x, 8) == 8);
 
   int cc = 0;
-  peer_iterator_ex (count_encr_peer, &cc);
-  peer_iterator_ex (write_encr_peer, &fd);
+  tgl_peer_iterator_ex (count_encr_peer, &cc);
+  tgl_peer_iterator_ex (write_encr_peer, &fd);
   
   assert (write (fd, &encr_root, 4) == 4);
   if (encr_root) {
@@ -468,9 +460,9 @@ int loop (void) {
   if (binlog_enabled) {
     double t = get_double_time ();
     logprintf ("replay log start\n");
-    replay_log ();
+    tgl_replay_log ();
     logprintf ("replay log end in %lf seconds\n", get_double_time () - t);
-    write_binlog ();
+    tgl_reopen_binlog_for_writing ();
     #ifdef USE_LUA
       lua_binlog_end ();
     #endif
@@ -493,7 +485,7 @@ int loop (void) {
   if (verbosity) {
     logprintf ("Requesting info about DC...\n");
   }
-  do_help_get_config ();
+  tgl_do_help_get_config ();
   net_loop (0, mcs);
   if (verbosity) {
     logprintf ("DC_info: %d new DC got\n", new_dc_num);
@@ -519,11 +511,11 @@ int loop (void) {
         set_default_username (user);
       }
     }
-    int res = do_auth_check_phone (default_username);
+    int res = tgl_do_auth_check_phone (default_username);
     assert (res >= 0);
     logprintf ("%s\n", res > 0 ? "phone registered" : "phone not registered");
     if (res > 0 && !register_mode) {
-      do_send_code (default_username);
+      tgl_do_send_code (default_username);
       char *code = 0;
       size_t size = 0;
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
@@ -534,11 +526,11 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          do_phone_call (default_username);
+          tgl_do_phone_call (default_username);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (do_send_code_result (code) >= 0) {
+        if (tgl_do_send_code_result (code) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
@@ -572,12 +564,12 @@ int loop (void) {
         exit (EXIT_FAILURE);
       }
 
-      int dc_num = do_get_nearest_dc ();
+      int dc_num = tgl_do_get_nearest_dc ();
       assert (dc_num >= 0 && dc_num <= MAX_DC_NUM && DC_list[dc_num]);
       dc_working_num = dc_num;
       DC_working = DC_list[dc_working_num];
       
-      do_send_code (default_username);
+      tgl_do_send_code (default_username);
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
         if (net_getline (&code, &size) == -1) {
@@ -586,11 +578,11 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          do_phone_call (default_username);
+          tgl_do_phone_call (default_username);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (do_send_code_result_auth (code, first_name, last_name) >= 0) {
+        if (tgl_do_send_code_result_auth (code, first_name, last_name) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
@@ -601,8 +593,8 @@ int loop (void) {
   }
 
   for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->has_auth) {
-    do_export_auth (i);
-    do_import_auth (i);
+    tgl_do_export_auth (i);
+    tgl_do_import_auth (i);
     bl_do_dc_signed (i);
     write_auth_file ();
   }
@@ -616,15 +608,15 @@ int loop (void) {
 
   set_interface_callbacks ();
 
-  do_get_difference ();
+  tgl_do_get_difference ();
   net_loop (0, dgot);
   #ifdef USE_LUA
     lua_diff_end ();
   #endif
-  send_all_unsent ();
+  tglm_send_all_unsent ();
 
 
-  do_get_dialog_list ();
+  tgl_do_get_dialog_list ();
   if (wait_dialog_list) {
     dialog_list_got = 0;
     net_loop (0, dlgot);
