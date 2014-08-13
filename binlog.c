@@ -18,11 +18,11 @@
 */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif
 
 #ifdef USE_LUA
-# include "lua-tg.h"
+#  include "lua-tg.h"
 #endif
 #include <unistd.h>
 #include <sys/types.h>
@@ -41,13 +41,17 @@
 #include "net.h"
 #include "include.h"
 #include "mtproto-client.h"
+#include "loop.h"
+
+#include "tgl.h"
 
 #include <openssl/sha.h>
 
 #define BINLOG_BUFFER_SIZE (1 << 20)
-int binlog_buffer[BINLOG_BUFFER_SIZE];
-int *rptr;
-int *wptr;
+static int binlog_buffer[BINLOG_BUFFER_SIZE];
+static int *rptr;
+static int *wptr;
+
 extern int test_dc;
 
 extern int pts;
@@ -61,7 +65,6 @@ char *get_binlog_file_name (void);
 extern struct dc *DC_list[];
 extern struct dc *DC_working;
 extern int dc_working_num;
-extern int our_id;
 extern int binlog_enabled;
 extern int encr_root;
 extern unsigned char *encr_prime;
@@ -74,7 +77,7 @@ void *alloc_log_event (int l UU) {
   return binlog_buffer;
 }
 
-long long binlog_pos;
+static long long binlog_pos;
 
 int fetch_comb_binlog_start (void *extra) {
   return 0;
@@ -90,9 +93,7 @@ int fetch_comb_binlog_dc_option (void *extra) {
   char *ip = fetch_str (l2);
   int port = fetch_int ();
 
-  if (verbosity) {
-    logprintf ("DC%d '%s' update: %s:%d\n", id, name, ip, port);
-  }
+  vlogprintf (E_NOTICE, "DC%d '%s' update: %s:%d\n", id, name, ip, port);
 
   alloc_dc (id, tstrndup (ip, l2), port);
   return 0;
@@ -117,9 +118,9 @@ int fetch_comb_binlog_default_dc (void *extra) {
 }
 
 int fetch_comb_binlog_our_id (void *extra) {
-  our_id = fetch_int ();
+  tgl_state.our_id = fetch_int ();
   #ifdef USE_LUA
-    lua_our_id (our_id);
+    lua_our_id (tgl_state.our_id);
   #endif
   return 0;
 }
@@ -190,7 +191,7 @@ int fetch_comb_binlog_user_add (void *extra) {
   }
   struct user *U = (void *)_U;
   U->flags |= FLAG_CREATED;
-  if (get_peer_id (id) == our_id) {
+  if (get_peer_id (id) == tgl_state.our_id) {
     U->flags |= FLAG_USER_SELF;
   }
   U->first_name = fetch_str_dup ();
@@ -274,7 +275,7 @@ int fetch_comb_binlog_user_set_full_photo (void *extra) {
   if (U->flags & FLAG_HAS_PHOTO) {
     free_photo (&U->user.photo);
   }
-  fetch_photo (&U->user.photo);
+  tglf_fetch_photo (&U->user.photo);
   
   #ifdef USE_LUA
     lua_user_update (&U->user);
@@ -347,8 +348,8 @@ int fetch_comb_binlog_user_set_photo (void *extra) {
   } else {
     assert (y == CODE_user_profile_photo);
     U->user.photo_id = fetch_long ();
-    fetch_file_location (&U->user.photo_small);
-    fetch_file_location (&U->user.photo_big);
+    tglf_fetch_file_location (&U->user.photo_small);
+    tglf_fetch_file_location (&U->user.photo_big);
   }
   
   #ifdef USE_LUA
@@ -502,7 +503,7 @@ int fetch_comb_binlog_encr_chat_init (void *extra) {
   P->id = MK_ENCR_CHAT (fetch_int ());
   assert (!peer_get (P->id));
   P->encr_chat.user_id = fetch_int ();
-  P->encr_chat.admin_id = our_id;
+  P->encr_chat.admin_id = tgl_state.our_id;
   insert_encrypted_chat (P);
   peer_t *Us = peer_get (MK_USER (P->encr_chat.user_id));
   assert (Us);
@@ -649,7 +650,7 @@ int fetch_comb_binlog_chat_set_full_photo (void *extra) {
   if (C->flags & FLAG_HAS_PHOTO) {
     free_photo (&C->chat.photo);
   }
-  fetch_photo (&C->chat.photo);
+  tglf_fetch_photo (&C->chat.photo);
   
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
@@ -722,10 +723,7 @@ int fetch_comb_binlog_create_message_text (void *extra) {
   
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -753,7 +751,7 @@ int fetch_comb_binlog_create_message_text (void *extra) {
   }
   
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
 
   message_insert (M);
       
@@ -768,10 +766,7 @@ int fetch_comb_binlog_send_message_text (void *extra) {
   
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -799,7 +794,7 @@ int fetch_comb_binlog_send_message_text (void *extra) {
   }
   
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
 
   message_insert (M);
   message_insert_unsent (M);
@@ -816,10 +811,7 @@ int fetch_comb_binlog_send_message_action_encr (void *extra) {
   
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -832,10 +824,10 @@ int fetch_comb_binlog_send_message_action_encr (void *extra) {
   M->date = fetch_int ();
       
   M->media.type = CODE_decrypted_message_media_empty;
-  fetch_message_action_encrypted ((void *)peer_get (M->to_id), &M->action);
+  tglf_fetch_message_action_encrypted (&M->action);
   
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
 
   message_insert (M);
@@ -853,10 +845,7 @@ int fetch_comb_binlog_create_message_text_fwd (void *extra) {
   
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -887,7 +876,7 @@ int fetch_comb_binlog_create_message_text_fwd (void *extra) {
   }
   
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
 
   message_insert (M);
       
@@ -901,10 +890,7 @@ int fetch_comb_binlog_create_message_media (void *extra) {
   int id = fetch_int ();
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -920,9 +906,9 @@ int fetch_comb_binlog_create_message_media (void *extra) {
   M->message[l] = 0;
   M->message_len = l;
 
-  fetch_message_media (&M->media);
+  tglf_fetch_message_media (&M->media);
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
 
   message_insert (M);
   #ifdef USE_LUA
@@ -935,10 +921,7 @@ int fetch_comb_binlog_create_message_media_encr (void *extra) {
   long long id = fetch_long ();
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -954,10 +937,10 @@ int fetch_comb_binlog_create_message_media_encr (void *extra) {
   M->message[l] = 0;
   M->message_len = l;
 
-  fetch_message_media_encrypted (&M->media);
-  fetch_encrypted_message_file (&M->media);
+  tglf_fetch_message_media_encrypted (&M->media);
+  tglf_fetch_encrypted_message_file (&M->media);
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
 
   message_insert (M);
   #ifdef USE_LUA
@@ -970,10 +953,7 @@ int fetch_comb_binlog_create_message_media_fwd (void *extra) {
   int id = fetch_int ();
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -992,9 +972,9 @@ int fetch_comb_binlog_create_message_media_fwd (void *extra) {
   M->message[l] = 0;
   M->message_len = l;
 
-  fetch_message_media (&M->media);
+  tglf_fetch_message_media (&M->media);
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
 
   message_insert (M);
   #ifdef USE_LUA
@@ -1007,10 +987,7 @@ int fetch_comb_binlog_create_message_service (void *extra) {
   int id = fetch_int ();
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -1020,9 +997,9 @@ int fetch_comb_binlog_create_message_service (void *extra) {
   M->to_id = set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
       
-  fetch_message_action (&M->action);
+  tglf_fetch_message_action (&M->action);
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
 
   message_insert (M);
@@ -1036,10 +1013,7 @@ int fetch_comb_binlog_create_message_service_encr (void *extra) {
   long long id = fetch_long ();
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -1053,10 +1027,14 @@ int fetch_comb_binlog_create_message_service_encr (void *extra) {
   struct secret_chat *E = (void *)peer_get (M->to_id);
   assert (E);
   
-  fetch_message_action_encrypted (0, &M->action);
+  tglf_fetch_message_action_encrypted (&M->action);
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
+
+  if (!M->out && M->action.type == CODE_decrypted_message_action_notify_layer) {
+    E->layer = M->action.layer;
+  }
 
   message_insert (M);
   #ifdef USE_LUA
@@ -1069,10 +1047,7 @@ int fetch_comb_binlog_create_message_service_fwd (void *extra) {
   int id = fetch_int ();
   struct message *M = message_get (id);
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = id;
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (id);
   } else {
     assert (!(M->flags & FLAG_CREATED));
   }
@@ -1085,9 +1060,9 @@ int fetch_comb_binlog_create_message_service_fwd (void *extra) {
   M->fwd_from_id = MK_USER (fetch_int ());
   M->fwd_date = fetch_int ();
       
-  fetch_message_action (&M->action);
+  tglf_fetch_message_action (&M->action);
   M->unread = 1;
-  M->out = get_peer_id (M->from_id) == our_id;
+  M->out = get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
 
   message_insert (M);
@@ -1260,7 +1235,7 @@ void create_new_binlog (void) {
   out_int (CODE_binlog_dc_option);
   out_int (1);
   out_string ("");
-  out_string (test_dc ? TG_SERVER_TEST : TG_SERVER);
+  out_string (tgl_params.test_mode ? TG_SERVER_TEST : TG_SERVER);
   out_int (443);
   out_int (CODE_binlog_default_dc);
   out_int (1);
@@ -1365,10 +1340,15 @@ void bl_do_set_auth_key_id (int num, unsigned char *buf) {
 }
 
 void bl_do_set_our_id (int id) {
+  if (tgl_state.our_id) {
+    assert (tgl_state.our_id == id);
+    return;
+  }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_our_id;
   ev[1] = id;
   add_log_event (ev, 8);
+  write_auth_file ();
 }
 
 void bl_do_user_add (int id, const char *f, int fl, const char *l, int ll, long long access_token, const char *p, int pl, int contact) {

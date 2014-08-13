@@ -54,6 +54,7 @@
 #include "no-preview.h"
 #include "binlog.h"
 #include "auto.h"
+#include "tgl.h"
 
 #define sha1 SHA1
 
@@ -630,7 +631,6 @@ int do_get_nearest_dc (void) {
 
 /* {{{ Sign in / Sign up */
 int sign_in_ok;
-int our_id;
 int sign_in_is_ok (void) {
   return sign_in_ok;
 }
@@ -640,11 +640,9 @@ struct user User;
 int sign_in_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   int expires = fetch_int ();
-  fetch_user (&User);
-  if (!our_id) {
-    our_id = get_peer_id (User.id);
-      
-    bl_do_set_our_id (our_id);
+  tglf_fetch_user (&User);
+  if (!tgl_state.our_id) {
+    bl_do_set_our_id (get_peer_id (User.id));
   }
   sign_in_ok = 1;
   if (verbosity) {
@@ -714,7 +712,7 @@ int get_contacts_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    struct user *U = fetch_alloc_user ();
+    struct user *U = tglf_fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
     printf ("User #%d: ", get_peer_id (U->id));
@@ -846,7 +844,7 @@ void do_send_encr_chat_layer (struct secret_chat *E) {
   int action[2];
   action[0] = CODE_decrypted_message_action_notify_layer;
   action[1] = 15;
-  bl_do_send_message_action_encr (t, our_id, get_peer_type (E->id), get_peer_id (E->id), time (0), 2, action);
+  bl_do_send_message_action_encr (t, tgl_state.our_id, get_peer_type (E->id), get_peer_id (E->id), time (0), 2, action);
 
   struct message *M = message_get (t);
   assert (M);
@@ -891,7 +889,7 @@ int msg_send_on_answer (struct query *q UU) {
       if (b == CODE_contacts_foreign_link_requested) {
         fetch_bool ();
       }
-      struct user *U = fetch_alloc_user ();
+      struct user *U = tglf_fetch_alloc_user ();
   
       U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
       if (a == CODE_contacts_my_link_contact) {
@@ -937,7 +935,6 @@ struct query_methods msg_send_encr_methods = {
 };
 
 int out_message_num;
-int our_id;
 
 void do_send_encr_msg_action (struct message *M) {
   peer_t *P = peer_get (M->to_id);
@@ -1024,7 +1021,7 @@ void do_send_message (peer_id_t id, const char *msg, int len) {
   long long t;
   secure_random (&t, 8);
   logprintf ("t = %lld, len = %d\n", t, len);
-  bl_do_send_message_text (t, our_id, get_peer_type (id), get_peer_id (id), time (0), len, msg);
+  bl_do_send_message_text (t, tgl_state.our_id, get_peer_type (id), get_peer_id (id), time (0), len, msg);
   struct message *M = message_get (t);
   assert (M);
   do_send_msg (M);
@@ -1137,7 +1134,7 @@ int get_history_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   for (i = 0; i < n; i++) {
-    struct message *M = fetch_alloc_message ();
+    struct message *M = tglf_fetch_alloc_message ();
     if (i <= 9999) {
       ML[i] = M;
     }
@@ -1150,12 +1147,12 @@ int get_history_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   if (sn > 0 && q->extra) {
     do_messages_mark_read (*(peer_id_t *)&(q->extra), ML[0]->id);
@@ -1217,11 +1214,11 @@ int get_dialogs_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     assert (fetch_int () == (int)CODE_dialog);
     if (i < 100) {
-      plist[i] = fetch_peer_id ();
+      plist[i] = tglf_fetch_peer_id ();
       dlist[2 * i + 0] = fetch_int ();
       dlist[2 * i + 1] = fetch_int ();
     } else {
-      fetch_peer_id ();
+      tglf_fetch_peer_id ();
       fetch_int ();
       fetch_int ();
     }
@@ -1230,17 +1227,17 @@ int get_dialogs_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_message ();
+    tglf_fetch_alloc_message ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   print_start ();
   push_color (COLOR_YELLOW);
@@ -1336,17 +1333,17 @@ int send_file_part_on_answer (struct query *q) {
 
 int send_file_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = fetch_alloc_message ();
+  struct message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   fetch_pts ();
   fetch_seq ();
@@ -1563,7 +1560,7 @@ void send_part (struct send_file *f) {
       M->media.encr_photo.size = f->size;
   
       M->flags = FLAG_ENCRYPTED;
-      M->from_id = MK_USER (our_id);
+      M->from_id = MK_USER (tgl_state.our_id);
       M->to_id = f->to_id;
       M->unread = 1;
       M->message = tstrdup ("");
@@ -1653,17 +1650,17 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
 /* {{{ Forward */
 int fwd_msg_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = fetch_alloc_message ();
+  struct message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   fetch_pts ();
   fetch_seq ();
@@ -1693,17 +1690,17 @@ void do_forward_message (peer_id_t id, int n) {
 /* {{{ Rename chat */
 int rename_chat_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = fetch_alloc_message ();
+  struct message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   fetch_pts ();
   fetch_seq ();
@@ -1752,7 +1749,7 @@ void print_chat_info (struct chat *C) {
 }
 
 int chat_info_on_answer (struct query *q UU) {
-  struct chat *C = fetch_alloc_chat_full ();
+  struct chat *C = tglf_fetch_alloc_chat_full ();
   print_chat_info (C);
   return 0;
 }
@@ -1803,7 +1800,7 @@ void print_user_info (struct user *U) {
 }
 
 int user_info_on_answer (struct query *q UU) {
-  struct user *U = fetch_alloc_user_full ();
+  struct user *U = tglf_fetch_alloc_user_full ();
   print_user_info (U);
   return 0;
 }
@@ -1845,7 +1842,7 @@ int user_list_info_silent_on_answer (struct query *q UU) {
   int n = fetch_int ();
   int i;
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   return 0;
 }
@@ -2140,13 +2137,8 @@ int isn_export_auth_str (void) {
 
 int export_auth_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_exported_authorization);
-  int l = fetch_int ();
-  if (!our_id) {
-    our_id = l;
-  } else {
-    assert (our_id == l);
-  }
-  l = prefetch_strlen ();
+  bl_do_set_our_id (fetch_int ());
+  int l = prefetch_strlen ();
   char *s = talloc (l);
   memcpy (s, fetch_str (l), l);
   export_auth_str_len = l;
@@ -2174,7 +2166,7 @@ void do_export_auth (int num) {
 int import_auth_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   fetch_int (); // expires
-  fetch_alloc_user ();
+  tglf_fetch_alloc_user ();
   tfree (export_auth_str, export_auth_str_len);
   export_auth_str = 0;
   return 0;
@@ -2190,7 +2182,7 @@ void do_import_auth (int num) {
   clear_packet ();
   do_insert_header ();
   out_int (CODE_auth_import_authorization);
-  out_int (our_id);
+  out_int (tgl_state.our_id);
   out_cstring (export_auth_str, export_auth_str_len);
   send_query (DC_list[num], packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0);
   net_loop (0, isn_export_auth_str);
@@ -2222,7 +2214,7 @@ int add_contact_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n ; i++) {
-    struct user *U = fetch_alloc_user ();
+    struct user *U = tglf_fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
     printf ("User #%d: ", get_peer_id (U->id));
@@ -2322,7 +2314,7 @@ int contacts_search_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = 0; i < n; i++) {
-    struct user *U = fetch_alloc_user ();
+    struct user *U = tglf_fetch_alloc_user ();
     printf ("User ");
     push_color  (COLOR_RED);
     printf ("%s %s", U->first_name, U->last_name); 
@@ -2350,7 +2342,7 @@ void do_contacts_search (int limit, const char *s) {
 
 /* {{{ Encr accept */
 int send_encr_accept_on_answer (struct query *q UU) {
-  struct secret_chat *E = fetch_alloc_encrypted_chat ();
+  struct secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
 
   if (E->state == sc_ok) {
     print_start ();
@@ -2373,7 +2365,7 @@ int send_encr_accept_on_answer (struct query *q UU) {
 }
 
 int send_encr_request_on_answer (struct query *q UU) {
-  struct secret_chat *E = fetch_alloc_encrypted_chat ();
+  struct secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
   if (E->state == sc_deleted) {
     print_start ();
     push_color (COLOR_YELLOW);
@@ -2682,18 +2674,18 @@ int get_difference_on_answer (struct query *q UU) {
     int ml_pos = 0;
     for (i = 0; i < n; i++) {
       if (ml_pos < 10000) {
-        ML[ml_pos ++] = fetch_alloc_message ();
+        ML[ml_pos ++] = tglf_fetch_alloc_message ();
       } else {
-        fetch_alloc_message ();
+        tglf_fetch_alloc_message ();
       }
     }
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
       if (ml_pos < 10000) {
-        ML[ml_pos ++] = fetch_alloc_encrypted_message ();
+        ML[ml_pos ++] = tglf_fetch_alloc_encrypted_message ();
       } else {
-        fetch_alloc_encrypted_message ();
+        tglf_fetch_alloc_encrypted_message ();
       }
     }
     assert (fetch_int () == CODE_vector);
@@ -2704,12 +2696,12 @@ int get_difference_on_answer (struct query *q UU) {
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
-      fetch_alloc_chat ();
+      tglf_fetch_alloc_chat ();
     }
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
-      fetch_alloc_user ();
+      tglf_fetch_alloc_user ();
     }
     assert (fetch_int () == (int)CODE_updates_state);
     bl_do_set_pts (fetch_int ());
@@ -2815,7 +2807,7 @@ int get_suggested_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = 0; i < m; i++) {
-    peer_t *U = (void *)fetch_alloc_user ();
+    peer_t *U = (void *)tglf_fetch_alloc_user ();
     assert (get_peer_id (U->id) == l[2 * i]);
     print_user_name (U->id, U);
     printf (" phone %s: %d mutual friends\n", U->user.phone, l[2 * i + 1]);

@@ -343,11 +343,7 @@ void *lua_ptr[MAX_LUA_COMMANDS];
 static int pos;
 
 static peer_t *get_peer (const char *s) { 
-  int index = 0;
-  while (index < peer_num && (!Peers[index]->print_name || strcmp (Peers[index]->print_name, s))) {
-    index ++;
-  }
-  return index == peer_num ? 0 : Peers[index];
+  return peer_lookup_name (s);
 }
 
 void lua_do_all (void) {

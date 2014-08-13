@@ -779,7 +779,6 @@ int auth_work_start (struct connection *c UU) {
 void rpc_execute_answer (struct connection *c, long long msg_id UU);
 
 int unread_messages;
-int our_id;
 int pts;
 int qts;
 int last_date;
@@ -881,8 +880,8 @@ void work_update_binlog (void) {
         } else {
           assert (y == CODE_user_profile_photo);
           U->photo_id = fetch_long ();
-          fetch_file_location (&U->photo_small);
-          fetch_file_location (&U->photo_big);
+          tglf_fetch_file_location (&U->photo_small);
+          tglf_fetch_file_location (&U->photo_big);
         }
       } else {
         struct file_location t;
@@ -891,8 +890,8 @@ void work_update_binlog (void) {
         } else {
           assert (y == CODE_user_profile_photo);
           fetch_long (); // photo_id
-          fetch_file_location (&t);
-          fetch_file_location (&t);
+          tglf_fetch_file_location (&t);
+          tglf_fetch_file_location (&t);
         }
       }
       fetch_bool ();
@@ -908,7 +907,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   switch (op) {
   case CODE_update_new_message:
     {
-      struct message *M = fetch_alloc_message ();
+      struct message *M = tglf_fetch_alloc_message ();
       assert (M);
       fetch_pts ();
       unread_messages ++;
@@ -990,7 +989,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       peer_id_t user_id = MK_USER (fetch_int ());
       peer_t *U = peer_get (user_id);
       if (U) {
-        fetch_user_status (&U->user.status);
+        tglf_fetch_user_status (&U->user.status);
         if (log_level >= 3) {
           print_start ();
           push_color (COLOR_YELLOW);
@@ -1004,7 +1003,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         }
       } else {
         struct user_status t;
-        fetch_user_status (&t);
+        tglf_fetch_user_status (&t);
       }
     }
     break;
@@ -1055,8 +1054,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         } else {
           assert (y == CODE_user_profile_photo);
           photo_id = fetch_long ();
-          fetch_file_location (&small);
-          fetch_file_location (&big);
+          tglf_fetch_file_location (&small);
+          tglf_fetch_file_location (&big);
         }
         bl_do_set_user_profile_photo (U, photo_id, &big, &small);
         
@@ -1075,8 +1074,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         } else {
           assert (y == CODE_user_profile_photo);
           fetch_long (); // photo_id
-          fetch_file_location (&t);
-          fetch_file_location (&t);
+          tglf_fetch_file_location (&t);
+          tglf_fetch_file_location (&t);
         }
       }
       fetch_bool ();
@@ -1228,7 +1227,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_new_geo_chat_message:
     {
-      struct message *M = fetch_alloc_geo_message ();
+      struct message *M = tglf_fetch_alloc_geo_message ();
       unread_messages ++;
       print_message (M);
       update_prompt ();
@@ -1236,7 +1235,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_new_encrypted_message:
     {
-      struct message *M = fetch_alloc_encrypted_message ();
+      struct message *M = tglf_fetch_alloc_encrypted_message ();
       unread_messages ++;
       print_message (M);
       update_prompt ();
@@ -1245,7 +1244,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     break;
   case CODE_update_encryption:
     {
-      struct secret_chat *E = fetch_alloc_encrypted_chat ();
+      struct secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
       if (verbosity >= 2) {
         logprintf ("Secret chat state = %d\n", E->state);
       }
@@ -1441,12 +1440,12 @@ void work_updates (struct connection *c, long long msg_id) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   bl_do_set_date (fetch_int ());
   bl_do_set_seq (fetch_int ());
@@ -1455,7 +1454,7 @@ void work_updates (struct connection *c, long long msg_id) {
 
 void work_update_short_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_update_short_message);
-  struct message *M = fetch_alloc_message_short ();  
+  struct message *M = tglf_fetch_alloc_message_short ();  
   unread_messages ++;
   print_message (M);
   update_prompt ();
@@ -1466,7 +1465,7 @@ void work_update_short_message (struct connection *c UU, long long msg_id UU) {
 
 void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == CODE_update_short_chat_message);
-  struct message *M = fetch_alloc_message_short_chat ();  
+  struct message *M = tglf_fetch_alloc_message_short_chat ();  
   unread_messages ++;
   print_message (M);
   update_prompt ();

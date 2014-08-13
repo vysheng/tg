@@ -33,6 +33,11 @@
 
 #define COLOR_INVERSE "\033[7m"
 
+#define E_ERROR 0
+#define E_WARNING 1
+#define E_NOTICE 2
+#define E_DEBUG 3
+
 char *get_default_prompt (void);
 char *complete_none (const char *text, int state);
 char **complete_text (char *text, int start, int end);
@@ -40,6 +45,15 @@ void interpreter (char *line);
 
 void rprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
+
+#define vlogprintf(v,...) \
+  do { \
+    if (tgl_params.verbosity >= (v)) {\
+      logprintf (__VA_ARGS__);\
+    }\
+  } while (0);\
+
+
 void hexdump (int *in_ptr, int *in_end);
 
 struct message;

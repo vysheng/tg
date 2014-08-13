@@ -52,6 +52,9 @@
 #include "loop.h"
 #include "binlog.h"
 #include "lua-tg.h"
+#include "structures.h"
+
+#include "tgl.h"
 
 #include "auto.h"
 
@@ -177,7 +180,6 @@ void write_dc (int auth_file_fd, struct dc *DC) {
   assert (write (auth_file_fd, &DC->has_auth, 4) == 4);
 }
 
-int our_id;
 void write_auth_file (void) {
   if (binlog_enabled) { return; }
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
@@ -199,7 +201,7 @@ void write_auth_file (void) {
       assert (write (auth_file_fd, &x, 4) == 4);
     }
   }
-  assert (write (auth_file_fd, &our_id, 4) == 4);
+  assert (write (auth_file_fd, &tgl_state.our_id, 4) == 4);
   close (auth_file_fd);
 }
 
@@ -227,7 +229,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 }
 
 void empty_auth_file (void) {
-  alloc_dc (1, tstrdup (test_dc ? TG_SERVER_TEST : TG_SERVER), 443);
+  alloc_dc (1, tstrdup (tgl_params.test_mode ? TG_SERVER_TEST : TG_SERVER), 443);
   dc_working_num = 1;
   auth_state = 0;
   write_auth_file ();
@@ -263,7 +265,7 @@ void read_auth_file (void) {
       read_dc (auth_file_fd, i, m);
     }
   }
-  int l = read (auth_file_fd, &our_id, 4);
+  int l = read (auth_file_fd, &tgl_state.our_id, 4);
   if (l < 4) {
     assert (!l);
   }
@@ -387,6 +389,40 @@ void read_secret_chat_file (void) {
   close (fd);
 }
 
+void count_encr_peer (peer_t *P, void *cc) {
+  if (get_peer_type (P->id) == PEER_ENCR_CHAT && P->encr_chat.state != sc_none && P->encr_chat.state != sc_deleted) {  
+    (*(int *)cc) ++;
+  }
+}
+
+void write_encr_peer (peer_t *P, void *pfd) {
+  int fd = *(int *)pfd;
+  if (get_peer_type (P->id) == PEER_ENCR_CHAT && P->encr_chat.state != sc_none && P->encr_chat.state != sc_deleted) {  
+    int t = get_peer_id (P->id);
+    assert (write (fd, &t, 4) == 4);
+    t = P->flags;
+    assert (write (fd, &t, 4) == 4);
+    t = strlen (P->print_name);
+    assert (write (fd, &t, 4) == 4);
+    assert (write (fd, P->print_name, t) == t);
+      
+    assert (write (fd, &P->encr_chat.state, 4) == 4);
+
+    assert (write (fd, &P->encr_chat.user_id, 4) == 4);
+    assert (write (fd, &P->encr_chat.admin_id, 4) == 4);
+    assert (write (fd, &P->encr_chat.ttl, 4) == 4);
+    assert (write (fd, &P->encr_chat.access_hash, 8) == 8);
+    if (P->encr_chat.state != sc_waiting) {
+      assert (write (fd, P->encr_chat.g_key, 256) == 256);
+    }
+    if (P->encr_chat.state != sc_waiting) {
+      assert (write (fd, P->encr_chat.nonce, 256) == 256);
+    }
+    assert (write (fd, P->encr_chat.key, 256) == 256);
+    assert (write (fd, &P->encr_chat.key_fingerprint, 8) == 8);      
+  }
+}
+
 void write_secret_chat_file (void) {
   if (binlog_enabled) { return; }
   int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
@@ -397,40 +433,11 @@ void write_secret_chat_file (void) {
   x[0] = SECRET_CHAT_FILE_MAGIC;
   x[1] = 1;
   assert (write (fd, x, 8) == 8);
-  int i;
-  int cc = 0;
-  for (i = 0; i < peer_num; i++) if (get_peer_type (Peers[i]->id) == PEER_ENCR_CHAT) {
-    if (Peers[i]->encr_chat.state != sc_none && Peers[i]->encr_chat.state != sc_deleted) {
-      cc ++;
-    }
-  }
-  assert (write (fd, &cc, 4) == 4);
-  for (i = 0; i < peer_num; i++) if (get_peer_type (Peers[i]->id) == PEER_ENCR_CHAT) {
-    if (Peers[i]->encr_chat.state != sc_none && Peers[i]->encr_chat.state != sc_deleted) {
-      int t = get_peer_id (Peers[i]->id);
-      assert (write (fd, &t, 4) == 4);
-      t = Peers[i]->flags;
-      assert (write (fd, &t, 4) == 4);
-      t = strlen (Peers[i]->print_name);
-      assert (write (fd, &t, 4) == 4);
-      assert (write (fd, Peers[i]->print_name, t) == t);
-      
-      assert (write (fd, &Peers[i]->encr_chat.state, 4) == 4);
 
-      assert (write (fd, &Peers[i]->encr_chat.user_id, 4) == 4);
-      assert (write (fd, &Peers[i]->encr_chat.admin_id, 4) == 4);
-      assert (write (fd, &Peers[i]->encr_chat.ttl, 4) == 4);
-      assert (write (fd, &Peers[i]->encr_chat.access_hash, 8) == 8);
-      if (Peers[i]->encr_chat.state != sc_waiting) {
-        assert (write (fd, Peers[i]->encr_chat.g_key, 256) == 256);
-      }
-      if (Peers[i]->encr_chat.state != sc_waiting) {
-        assert (write (fd, Peers[i]->encr_chat.nonce, 256) == 256);
-      }
-      assert (write (fd, Peers[i]->encr_chat.key, 256) == 256);
-      assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);      
-    }
-  }
+  int cc = 0;
+  peer_iterator_ex (count_encr_peer, &cc);
+  peer_iterator_ex (write_encr_peer, &fd);
+  
   assert (write (fd, &encr_root, 4) == 4);
   if (encr_root) {
     assert (write (fd, &encr_param_version, 4) == 4);

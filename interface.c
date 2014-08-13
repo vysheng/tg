@@ -46,6 +46,8 @@
 
 #include "mtproto-common.h"
 
+#include "tgl.h"
+
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
@@ -144,12 +146,12 @@ peer_id_t next_token_user (void) {
     else { return PEER_NOT_FOUND; }
   }
 
-  int index = 0;
-  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_USER)) {
-    index ++;
-  }
-  if (index < peer_num) {
-    return Peers[index]->id;
+  char c = s[l];
+  peer_t *P = peer_lookup_name (s); 
+  s[l] = c;
+  
+  if (P && get_peer_type (P->id) == PEER_USER) {
+    return P->id;
   } else {
     return PEER_NOT_FOUND;
   }
@@ -168,12 +170,12 @@ peer_id_t next_token_chat (void) {
     else { return PEER_NOT_FOUND; }
   }
 
-  int index = 0;
-  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
-    index ++;
-  }
-  if (index < peer_num) {
-    return Peers[index]->id;
+  char c = s[l];
+  peer_t *P = peer_lookup_name (s); 
+  s[l] = c;
+  
+  if (P && get_peer_type (P->id) == PEER_CHAT) {
+    return P->id;
   } else {
     return PEER_NOT_FOUND;
   }
@@ -184,12 +186,12 @@ peer_id_t next_token_encr_chat (void) {
   char *s = next_token (&l);
   if (!s) { return PEER_NOT_FOUND; }
 
-  int index = 0;
-  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name) || get_peer_type (Peers[index]->id) != PEER_ENCR_CHAT)) {
-    index ++;
-  }
-  if (index < peer_num) {
-    return Peers[index]->id;
+  char c = s[l];
+  peer_t *P = peer_lookup_name (s); 
+  s[l] = c;
+  
+  if (P && get_peer_type (P->id) == PEER_ENCR_CHAT) {
+    return P->id;
   } else {
     return PEER_NOT_FOUND;
   }
@@ -214,13 +216,13 @@ peer_id_t next_token_peer (void) {
     if (r >= 0) { return set_peer_id (PEER_CHAT, r); }
     else { return PEER_NOT_FOUND; }
   }
-
-  int index = 0;
-  while (index < peer_num && (!is_same_word (s, l, Peers[index]->print_name))) {
-    index ++;
-  }
-  if (index < peer_num) {
-    return Peers[index]->id;
+  
+  char c = s[l];
+  peer_t *P = peer_lookup_name (s); 
+  s[l] = c;
+  
+  if (P) {
+    return P->id;
   } else {
     return PEER_NOT_FOUND;
   }
@@ -431,58 +433,6 @@ int get_complete_mode (void) {
   }
 }
 
-int complete_user_list (int index, const char *text, int len, char **R) {
-  index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_USER)) {
-    index ++;
-  }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
-    return index;
-  } else {
-    return -1;
-  }
-}
-
-int complete_chat_list (int index, const char *text, int len, char **R) {
-  index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
-    index ++;
-  }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
-    return index;
-  } else {
-    return -1;
-  }
-}
-
-int complete_encr_chat_list (int index, const char *text, int len, char **R) {
-  index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_ENCR_CHAT)) {
-    index ++;
-  }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
-    return index;
-  } else {
-    return -1;
-  }
-}
-
-int complete_user_chat_list (int index, const char *text, int len, char **R) {
-  index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
-    index ++;
-  }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
-    return index;
-  } else {
-    return -1;
-  }
-}
-
 int complete_string_list (char **list, int index, const char *text, int len, char **R) {
   index ++;
   while (list[index] && strncmp (list[index], text, len)) {
@@ -533,7 +483,7 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 2:
-    index = complete_user_chat_list (index, text, len, &R);
+    index = complete_peer_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case 3:
@@ -674,7 +624,7 @@ void interpreter (char *line UU) {
     do_get_dialog_list ();
   } else if (IS_WORD ("stats")) {
     static char stat_buf[1 << 15];
-    print_stat (stat_buf, (1 << 15) - 1);
+    tgl_print_stat (stat_buf, (1 << 15) - 1);
     printf ("%s\n", stat_buf);
   } else if (IS_WORD ("msg")) {
     GET_PEER;
@@ -1392,8 +1342,6 @@ void print_date_full (long t) {
   printf ("[%04d/%02d/%02d %02d:%02d:%02d]", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
-int our_id;
-
 void print_service_message (struct message *M) {
   assert (M);
   print_start ();
@@ -1578,7 +1526,7 @@ void print_message (struct message *M) {
     print_chat_name (M->to_id, peer_get (M->to_id));
     printf (" ");
     print_user_name (M->from_id, peer_get (M->from_id));
-    if ((get_peer_type (M->from_id) == PEER_USER) && (get_peer_id (M->from_id) == our_id)) {
+    if ((get_peer_type (M->from_id) == PEER_USER) && (get_peer_id (M->from_id) == tgl_state.our_id)) {
       push_color (COLOR_GREEN);
     } else {
       push_color (COLOR_BLUE);

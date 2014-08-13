@@ -57,6 +57,8 @@
 #  include "lua-tg.h"
 #endif
 
+#include "tgl.h"
+
 #define PROGNAME "telegram-client"
 #define VERSION "0.01"
 
@@ -79,7 +81,6 @@ char *auth_token;
 int msg_num_mode;
 char *config_filename;
 char *prefix;
-int test_dc;
 char *auth_file_name;
 char *state_file_name;
 char *secret_chat_file_name;
@@ -296,9 +297,10 @@ void parse_config (void) {
     memcpy (buf, prefix, l);
     buf[l ++] = '.';
   }
-  test_dc = 0;
+  
+  tgl_params.test_mode = 0;
   strcpy (buf + l, "test");
-  config_lookup_bool (&conf, buf, &test_dc);
+  config_lookup_bool (&conf, buf, &tgl_params.test_mode);
   
   strcpy (buf + l, "log_level");
   long long t = log_level;
@@ -369,7 +371,6 @@ void usage (void) {
 }
 
 extern char *rsa_public_key_name;
-extern int verbosity;
 extern int default_dc_num;
 
 char *log_net_file;
@@ -392,7 +393,7 @@ void args_parse (int argc, char **argv) {
       rsa_public_key_name = tstrdup (optarg);
       break;
     case 'v':
-      verbosity ++;
+      tgl_params.verbosity ++;
       break;
     case 'N':
       msg_num_mode ++;

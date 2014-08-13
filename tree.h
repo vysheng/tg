@@ -134,6 +134,13 @@ void tree_act_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE)) {\
   tree_act_ ## X_NAME (T->right, act); \
 }\
 \
+void tree_act_ex_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE, void *), void *extra) {\
+  if (!T) { return; } \
+  tree_act_ex_ ## X_NAME (T->left, act, extra); \
+  act (T->x, extra); \
+  tree_act_ex_ ## X_NAME (T->right, act, extra); \
+}\
+\
 int tree_count_ ## X_NAME (struct tree_ ## X_NAME *T) { \
   if (!T) { return 0; }\
   return 1 + tree_count_ ## X_NAME (T->left) + tree_count_ ## X_NAME (T->right); \

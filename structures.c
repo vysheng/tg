@@ -33,7 +33,10 @@
 #include "queries.h"
 #include "binlog.h"
 
+#include "tgl.h"
+
 #define sha1 SHA1
+
 
 static int id_cmp (struct message *M1, struct message *M2);
 #define peer_cmp(a,b) (cmp_peer_id (a->id, b->id))
@@ -43,28 +46,25 @@ DEFINE_TREE(peer_by_name,peer_t *,peer_cmp_name,0)
 DEFINE_TREE(message,struct message *,id_cmp,0)
 
 
-struct message message_list = {
+static struct message message_list = {
   .next_use = &message_list,
   .prev_use = &message_list
 };
 
-struct tree_peer *peer_tree;
-struct tree_peer_by_name *peer_by_name_tree;
-struct tree_message *message_tree;
-struct tree_message *message_unsent_tree;
+static struct tree_peer *peer_tree;
+static struct tree_peer_by_name *peer_by_name_tree;
+static struct tree_message *message_tree;
+static struct tree_message *message_unsent_tree;
 
-int users_allocated;
-int chats_allocated;
-int messages_allocated;
-int peer_num;
-int encr_chats_allocated;
-int geo_chats_allocated;
+static int users_allocated;
+static int chats_allocated;
+static int messages_allocated;
+static int peer_num;
+static int encr_chats_allocated;
+static int geo_chats_allocated;
 
-int our_id;
-int verbosity;
+static peer_t *Peers[MAX_PEER_NUM];
 
-peer_t *Peers[MAX_PEER_NUM];
-extern int binlog_enabled;
 
 
 char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4) {
@@ -106,7 +106,7 @@ char *create_print_name (peer_id_t id, const char *a1, const char *a2, const cha
  *
  */
 
-int fetch_file_location (struct file_location *loc) {
+int tglf_fetch_file_location (struct file_location *loc) {
   int x = fetch_int ();
   assert (x == CODE_file_location_unavailable || x == CODE_file_location);
 
@@ -124,7 +124,7 @@ int fetch_file_location (struct file_location *loc) {
   return 0;
 }
 
-int fetch_user_status (struct user_status *S) {
+int tglf_fetch_user_status (struct user_status *S) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_status_empty || x == CODE_user_status_online || x == CODE_user_status_offline);
   switch (x) {
@@ -152,7 +152,7 @@ int fetch_user_status (struct user_status *S) {
  *
  */
 
-long long fetch_user_photo (struct user *U) {
+long long tglf_fetch_user_photo (struct user *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_profile_photo || x == CODE_user_profile_photo_old || x == CODE_user_profile_photo_empty);
   if (x == CODE_user_profile_photo_empty) {
@@ -165,14 +165,14 @@ long long fetch_user_photo (struct user *U) {
   }
   static struct file_location big;
   static struct file_location small;
-  assert (fetch_file_location (&small) >= 0);
-  assert (fetch_file_location (&big) >= 0);
+  assert (tglf_fetch_file_location (&small) >= 0);
+  assert (tglf_fetch_file_location (&big) >= 0);
 
   bl_do_set_user_profile_photo (U, photo_id, &big, &small);
   return 0;
 }
 
-int fetch_user (struct user *U) {
+int tglf_fetch_user (struct user *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_empty || x == CODE_user_self || x == CODE_user_contact ||  x == CODE_user_request || x == CODE_user_foreign || x == CODE_user_deleted);
   U->id = MK_USER (fetch_int ());
@@ -181,11 +181,7 @@ int fetch_user (struct user *U) {
   }
   
   if (x == CODE_user_self) {
-    assert (!our_id || (our_id == get_peer_id (U->id)));
-    if (!our_id) {
-      bl_do_set_our_id (get_peer_id (U->id));
-      write_auth_file ();
-    }
+    bl_do_set_our_id (get_peer_id (U->id));
   }
   
   int new = !(U->flags & FLAG_CREATED);
@@ -202,9 +198,9 @@ int fetch_user (struct user *U) {
       bl_do_user_delete (U);
     }
     if (x != CODE_user_deleted) {
-      long long access_token = 0;
+      long long access_hash = 0;
       if (x != CODE_user_self) {
-        access_token = fetch_long ();
+        access_hash = fetch_long ();
       }
       int phone_len = 0;
       char *phone = 0;
@@ -213,10 +209,10 @@ int fetch_user (struct user *U) {
         assert (phone_len >= 0);
         phone = fetch_str (phone_len);
       }
-      bl_do_user_add (get_peer_id (U->id), s1, l1, s2, l2, access_token, phone, phone_len, x == CODE_user_contact);
-      if (fetch_user_photo (U) < 0) { return -1; }
-    
-      if (fetch_user_status (&U->status) < 0) { return -1; }
+      bl_do_user_add (get_peer_id (U->id), s1, l1, s2, l2, access_hash, phone, phone_len, x == CODE_user_contact);
+      assert (tglf_fetch_user_photo (U) >= 0);
+      assert (tglf_fetch_user_status (&U->status) >= 0);
+
       if (x == CODE_user_self) {
         fetch_bool ();
       }
@@ -241,9 +237,9 @@ int fetch_user (struct user *U) {
         char *s = fetch_str (l);
         bl_do_user_set_phone (U, s, l);
       }
-      assert (fetch_user_photo (U) >= 0);
+      assert (tglf_fetch_user_photo (U) >= 0);
     
-      fetch_user_status (&U->status);
+      tglf_fetch_user_status (&U->status);
       if (x == CODE_user_self) {
         fetch_bool ();
       }
@@ -258,7 +254,26 @@ int fetch_user (struct user *U) {
   return 0;
 }
 
-void fetch_encrypted_chat (struct secret_chat *U) {
+void tglf_fetch_user_full (struct user *U) {
+  assert (fetch_int () == CODE_user_full);
+  tglf_fetch_alloc_user ();
+  assert (skip_type_any (TYPE_TO_PARAM (contacts_link)) >= 0);
+
+  int *start = in_ptr;
+  assert (skip_type_any (TYPE_TO_PARAM (photo)) >= 0);
+  bl_do_user_set_full_photo (U, start, 4 * (in_ptr - start));
+
+  assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
+  
+  bl_do_user_set_blocked (U, fetch_bool ());
+  int l1 = prefetch_strlen ();
+  char *s1 = fetch_str (l1);
+  int l2 = prefetch_strlen ();
+  char *s2 = fetch_str (l2);
+  bl_do_user_set_real_name (U, s1, l1, s2, l2);
+}
+
+void tglf_fetch_encrypted_chat (struct secret_chat *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_encrypted_chat_empty || x == CODE_encrypted_chat_waiting || x == CODE_encrypted_chat_requested ||  x == CODE_encrypted_chat || x == CODE_encrypted_chat_discarded);
   U->id = MK_ENCR_CHAT (fetch_int ());
@@ -269,7 +284,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
  
   if (x == CODE_encrypted_chat_discarded) {
     if (new) {
-      logprintf ("Unknown chat in deleted state. May be we forgot something...\n");
+      vlogprintf (E_WARNING, "Unknown chat in deleted state. May be we forgot something...\n");
       return;
     }
     bl_do_encr_chat_delete (U);
@@ -283,10 +298,10 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     long long access_hash = fetch_long ();
     int date = fetch_int ();
     int admin_id = fetch_int ();
-    int user_id = fetch_int () + admin_id - our_id;
+    int user_id = fetch_int () + admin_id - tgl_state.our_id;
 
     if (x == CODE_encrypted_chat_waiting) {
-      logprintf ("Unknown chat in waiting state. May be we forgot something...\n");
+      vlogprintf (E_WARNING, "Unknown chat in waiting state. May be we forgot something...\n");
       return;
     }
     if (x == CODE_encrypted_chat_requested || x == CODE_encrypted_chat) {
@@ -300,7 +315,7 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     }
 
     if (x == CODE_encrypted_chat) {
-      logprintf ("Unknown chat in ok state. May be we forgot something...\n");
+      vlogprintf (E_WARNING, "Unknown chat in ok state. May be we forgot something...\n");
       return;
     }
 
@@ -310,11 +325,11 @@ void fetch_encrypted_chat (struct secret_chat *U) {
     bl_do_encr_chat_set_access_hash (U, fetch_long ());
     bl_do_encr_chat_set_date (U, fetch_int ());
     if (fetch_int () != U->admin_id) {
-      logprintf ("Changed admin in secret chat. WTF?\n");
+      vlogprintf (E_WARNING, "Changed admin in secret chat. WTF?\n");
       return;
     }
-    if (U->user_id != U->admin_id + fetch_int () - our_id) {
-      logprintf ("Changed partner in secret chat. WTF?\n");
+    if (U->user_id != U->admin_id + fetch_int () - tgl_state.our_id) {
+      vlogprintf (E_WARNING, "Changed partner in secret chat. WTF?\n");
       return;
     }
     if (x == CODE_encrypted_chat_waiting) {
@@ -333,27 +348,8 @@ void fetch_encrypted_chat (struct secret_chat *U) {
       return; // Duplicate?
     }
     bl_do_encr_chat_accepted (U, (void *)g_key, (void *)nonce, fetch_long ());
+    write_secret_chat_file ();
   }
-  write_secret_chat_file ();
-}
-
-void fetch_user_full (struct user *U) {
-  assert (fetch_int () == CODE_user_full);
-  fetch_alloc_user ();
-  assert (skip_type_any (TYPE_TO_PARAM (contacts_link)) >= 0);
-
-  int *start = in_ptr;
-  assert (skip_type_any (TYPE_TO_PARAM (photo)) >= 0);
-  bl_do_user_set_full_photo (U, start, 4 * (in_ptr - start));
-
-  assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
-  
-  bl_do_user_set_blocked (U, fetch_bool ());
-  int l1 = prefetch_strlen ();
-  char *s1 = fetch_str (l1);
-  int l2 = prefetch_strlen ();
-  char *s2 = fetch_str (l2);
-  bl_do_user_set_real_name (U, s1, l1, s2, l2);
 }
 
 void fetch_chat (struct chat *C) {
@@ -387,8 +383,8 @@ void fetch_chat (struct chat *C) {
         big.dc = -2;
       } else {
         assert (z == CODE_chat_photo);
-        fetch_file_location (&small);
-        fetch_file_location (&big);
+        tglf_fetch_file_location (&small);
+        tglf_fetch_file_location (&big);
       }
       users_num = fetch_int ();
       date = fetch_int ();
@@ -427,8 +423,8 @@ void fetch_chat (struct chat *C) {
         big.dc = -2;
       } else {
         assert (y == CODE_chat_photo);
-        fetch_file_location (&small);
-        fetch_file_location (&big);
+        tglf_fetch_file_location (&small);
+        tglf_fetch_file_location (&big);
       }
       bl_do_chat_set_photo (C, &big, &small);
       int users_num = fetch_int ();
@@ -446,8 +442,6 @@ void fetch_chat_full (struct chat *C) {
   assert (x == CODE_messages_chat_full);
   assert (fetch_int () == CODE_chat_full); 
   C->id = MK_CHAT (fetch_int ());
-  //C->flags &= ~(FLAG_DELETED | FLAG_FORBIDDEN | FLAG_CHAT_IN_CHAT);
-  //C->flags |= FLAG_CREATED;
   x = fetch_int ();
   int version = 0;
   struct chat_user *users = 0;
@@ -478,12 +472,12 @@ void fetch_chat_full (struct chat *C) {
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   if (admin_id) {
     bl_do_chat_set_admin (C, admin_id);
@@ -495,22 +489,20 @@ void fetch_chat_full (struct chat *C) {
   bl_do_chat_set_full_photo (C, start, 4 * (end - start));
 }
 
-void fetch_photo_size (struct photo_size *S) {
+void tglf_fetch_photo_size (struct photo_size *S) {
   memset (S, 0, sizeof (*S));
   unsigned x = fetch_int ();
   assert (x == CODE_photo_size || x == CODE_photo_cached_size || x == CODE_photo_size_empty);
   S->type = fetch_str_dup ();
   if (x != CODE_photo_size_empty) {
-    fetch_file_location (&S->loc);
+    tglf_fetch_file_location (&S->loc);
     S->w = fetch_int ();
     S->h = fetch_int ();
     if (x == CODE_photo_size) {
       S->size = fetch_int ();
     } else {
       S->size = prefetch_strlen ();
-//      S->data = talloc (S->size);
       fetch_str (S->size);
-//      memcpy (S->data, fetch_str (S->size), S->size);
     }
   }
 }
@@ -527,7 +519,7 @@ void fetch_geo (struct geo *G) {
   }
 }
 
-void fetch_photo (struct photo *P) {
+void tglf_fetch_photo (struct photo *P) {
   memset (P, 0, sizeof (*P));
   unsigned x = fetch_int ();
   assert (x == CODE_photo_empty || x == CODE_photo);
@@ -543,7 +535,7 @@ void fetch_photo (struct photo *P) {
   P->sizes = talloc (sizeof (struct photo_size) * P->sizes_num);
   int i;
   for (i = 0; i < P->sizes_num; i++) {
-    fetch_photo_size (&P->sizes[i]);
+    tglf_fetch_photo_size (&P->sizes[i]);
   }
 }
 
@@ -559,7 +551,7 @@ void fetch_video (struct video *V) {
   V->duration = fetch_int ();
   V->mime_type = fetch_str_dup ();
   V->size = fetch_int ();
-  fetch_photo_size (&V->thumb);
+  tglf_fetch_photo_size (&V->thumb);
   V->dc_id = fetch_int ();
   V->w = fetch_int ();
   V->h = fetch_int ();
@@ -590,11 +582,11 @@ void fetch_document (struct document *V) {
   V->caption = fetch_str_dup ();
   V->mime_type = fetch_str_dup ();
   V->size = fetch_int ();
-  fetch_photo_size (&V->thumb);
+  tglf_fetch_photo_size (&V->thumb);
   V->dc_id = fetch_int ();
 }
 
-void fetch_message_action (struct message_action *M) {
+void tglf_fetch_message_action (struct message_action *M) {
   memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
   M->type = x;
@@ -607,7 +599,7 @@ void fetch_message_action (struct message_action *M) {
       char *s = fetch_str (l);
       int l2 = prefetch_strlen (); // checkin
       char *s2 = fetch_str (l2);
-      logprintf ("Message action: Created geochat %.*s in address %.*s\n", l, s, l2, s2);
+      vlogprintf (E_ERROR, "Message action: Created geochat %.*s in address %.*s. You are in magic land now, since nobody ever tested geochats in this app\n", l, s, l2, s2);
     }
     break;
   case CODE_message_action_geo_chat_checkin:
@@ -623,7 +615,7 @@ void fetch_message_action (struct message_action *M) {
     M->new_title = fetch_str_dup ();
     break;
   case CODE_message_action_chat_edit_photo:
-    fetch_photo (&M->photo);
+    tglf_fetch_photo (&M->photo);
     break;
   case CODE_message_action_chat_delete_photo:
     break;
@@ -638,13 +630,13 @@ void fetch_message_action (struct message_action *M) {
   }
 }
 
-void fetch_message_short (struct message *M) {
+void tglf_fetch_message_short (struct message *M) {
   int new = !(M->flags & FLAG_CREATED);
 
   if (new) {
     int id = fetch_int ();
     int from_id = fetch_int ();
-    int to_id = our_id;
+    int to_id = tgl_state.our_id;
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     
@@ -666,7 +658,7 @@ void fetch_message_short (struct message *M) {
   }
 }
 
-void fetch_message_short_chat (struct message *M) {
+void tglf_fetch_message_short_chat (struct message *M) {
   int new = !(M->flags & FLAG_CREATED);
 
   if (new) {
@@ -696,14 +688,14 @@ void fetch_message_short_chat (struct message *M) {
 }
 
 
-void fetch_message_media (struct message_media *M) {
+void tglf_fetch_message_media (struct message_media *M) {
   memset (M, 0, sizeof (*M));
   M->type = fetch_int ();
   switch (M->type) {
   case CODE_message_media_empty:
     break;
   case CODE_message_media_photo:
-    fetch_photo (&M->photo);
+    tglf_fetch_photo (&M->photo);
     break;
   case CODE_message_media_video:
     fetch_video (&M->video);
@@ -729,12 +721,12 @@ void fetch_message_media (struct message_media *M) {
     memcpy (M->data, fetch_str (M->data_size), M->data_size);
     break;
   default:
-    logprintf ("type = 0x%08x\n", M->type);
+    vlogprintf (E_ERROR, "type = 0x%08x\n", M->type);
     assert (0);
   }
 }
 
-void fetch_message_media_encrypted (struct message_media *M) {
+void tglf_fetch_message_media_encrypted (struct message_media *M) {
   memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
   int l;
@@ -886,12 +878,12 @@ void fetch_message_media_encrypted (struct message_media *M) {
     M->user_id = fetch_int ();
     break;
   default:
-    logprintf ("type = 0x%08x\n", x);
+    vlogprintf (E_ERROR, "type = 0x%08x\n", x);
     assert (0);
   }
 }
 
-void fetch_message_action_encrypted (struct secret_chat *E, struct message_action *M) {
+void tglf_fetch_message_action_encrypted (struct message_action *M) {
   unsigned x = fetch_int ();
   switch (x) {
   case CODE_decrypted_message_action_set_message_t_t_l:
@@ -938,20 +930,17 @@ void fetch_message_action_encrypted (struct secret_chat *E, struct message_actio
   case CODE_decrypted_message_action_notify_layer: 
     M->type = x;
     M->layer = fetch_int ();
-    //if (M->from_id != our_id) {
-    //  E->layer = M->layer;
-    //}
     break;
   case CODE_decrypted_message_action_flush_history:
     M->type = x;
     break;
   default:
-    logprintf ("x = 0x%08x\n", x);
+    vlogprintf (E_ERROR, "x = 0x%08x\n", x);
     assert (0);
   }
 }
 
-peer_id_t fetch_peer_id (void) {
+peer_id_t tglf_fetch_peer_id (void) {
   unsigned x =fetch_int ();
   if (x == CODE_peer_user) {
     return MK_USER (fetch_int ());
@@ -977,7 +966,7 @@ void fetch_message (struct message *M) {
     fwd_date = fetch_int ();
   }
   int from_id = fetch_int ();
-  peer_id_t to_id = fetch_peer_id ();
+  peer_id_t to_id = tglf_fetch_peer_id ();
 
   fetch_bool (); // out.
 
@@ -1030,11 +1019,11 @@ void fetch_geo_message (struct message *M) {
   M->date = fetch_int ();
   if (x == CODE_geo_chat_message_service) {
     M->service = 1;
-    fetch_message_action (&M->action);
+    tglf_fetch_message_action (&M->action);
   } else {
     M->message = fetch_str_dup ();
     M->message_len = strlen (M->message);
-    fetch_message_media (&M->media);
+    tglf_fetch_message_media (&M->media);
   }
 }
 
@@ -1092,13 +1081,13 @@ int decrypt_encrypted_message (struct secret_chat *E) {
   sha1 ((void *)decr_ptr, 4 + x, sha1a_buffer);
 
   if (memcmp (sha1a_buffer + 4, msg_key, 16)) {
-    logprintf ("Sha1 mismatch\n");
+    vlogprintf (E_WARNING, "Sha1 mismatch\n");
     return -1;
   }
   return 0;
 }
 
-void fetch_encrypted_message (struct message *M) {
+void tglf_fetch_encrypted_message (struct message *M) {
   unsigned x = fetch_int ();
   assert (x == CODE_encrypted_message || x == CODE_encrypted_message_service);
   unsigned sx = x;
@@ -1110,7 +1099,7 @@ void fetch_encrypted_message (struct message *M) {
   
   peer_t *P = peer_get (chat);
   if (!P) {
-    logprintf ("Encrypted message to unknown chat. Dropping\n");
+    vlogprintf (E_WARNING, "Encrypted message to unknown chat. Dropping\n");
     M->flags |= FLAG_MESSAGE_EMPTY;
   }
 
@@ -1122,7 +1111,7 @@ void fetch_encrypted_message (struct message *M) {
   int ok = 0;
   if (P) {
     if (*(long long *)decr_ptr != P->encr_chat.key_fingerprint) {
-      logprintf ("Encrypted message with bad fingerprint to chat %s\n", P->print_name);
+      vlogprintf (E_WARNING, "Encrypted message with bad fingerprint to chat %s\n", P->print_name);
       P = 0;
     }
     decr_ptr += 2;
@@ -1163,12 +1152,7 @@ void fetch_encrypted_message (struct message *M) {
     }
     in_ptr = save_in_ptr;
     in_end = save_in_end;
-  } else {
-    if (P && new) {
-      assert (0);
-    }
-  }
- 
+  } 
   if (sx == CODE_encrypted_message) {
     if (ok) {
       int *start_file = in_ptr;
@@ -1189,7 +1173,7 @@ void fetch_encrypted_message (struct message *M) {
   }
 }
 
-void fetch_encrypted_message_file (struct message_media *M) {
+void tglf_fetch_encrypted_message_file (struct message_media *M) {
   unsigned x = fetch_int ();
   assert (x == CODE_encrypted_file || x == CODE_encrypted_file_empty);
   if (x == CODE_encrypted_file_empty) {
@@ -1215,7 +1199,7 @@ static int id_cmp (struct message *M1, struct message *M2) {
   else { return 0; }
 }
 
-struct user *fetch_alloc_user (void) {
+struct user *tglf_fetch_alloc_user (void) {
   int data[2];
   prefetch_data (data, 8);
   peer_t *U = peer_get (MK_USER (data[1]));
@@ -1227,11 +1211,11 @@ struct user *fetch_alloc_user (void) {
     assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
   }
-  fetch_user (&U->user);
+  tglf_fetch_user (&U->user);
   return &U->user;
 }
 
-struct secret_chat *fetch_alloc_encrypted_chat (void) {
+struct secret_chat *tglf_fetch_alloc_encrypted_chat (void) {
   int data[2];
   prefetch_data (data, 8);
   peer_t *U = peer_get (MK_ENCR_CHAT (data[1]));
@@ -1243,7 +1227,7 @@ struct secret_chat *fetch_alloc_encrypted_chat (void) {
     assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
   }
-  fetch_encrypted_chat (&U->encr_chat);
+  tglf_fetch_encrypted_chat (&U->encr_chat);
   return &U->encr_chat;
 }
 
@@ -1268,19 +1252,19 @@ void insert_chat (peer_t *P) {
   Peers[peer_num ++] = P;
 }
 
-struct user *fetch_alloc_user_full (void) {
+struct user *tglf_fetch_alloc_user_full (void) {
   int data[3];
   prefetch_data (data, 12);
   peer_t *U = peer_get (MK_USER (data[2]));
   if (U) {
-    fetch_user_full (&U->user);
+    tglf_fetch_user_full (&U->user);
     return &U->user;
   } else {
     users_allocated ++;
     U = talloc0 (sizeof (*U));
     U->id = MK_USER (data[2]);
     peer_tree = tree_insert_peer (peer_tree, U, lrand48 ());
-    fetch_user_full (&U->user);
+    tglf_fetch_user_full (&U->user);
     assert (peer_num < MAX_PEER_NUM);
     Peers[peer_num ++] = U;
     return &U->user;
@@ -1359,7 +1343,7 @@ void free_message_media (struct message_media *M) {
   case 0:
     break;
   default:
-    logprintf ("%08x\n", M->type);
+    vlogprintf (E_ERROR, "type = 0x%08x\n", M->type);
     assert (0);
   }
 }
@@ -1414,7 +1398,7 @@ void message_add_use (struct message *M) {
 
 void message_add_peer (struct message *M) {
   peer_id_t id;
-  if (!cmp_peer_id (M->to_id, MK_USER (our_id))) {
+  if (!cmp_peer_id (M->to_id, MK_USER (tgl_state.our_id))) {
     id = M->from_id;
   } else {
     id = M->to_id;
@@ -1472,7 +1456,7 @@ void message_add_peer (struct message *M) {
 
 void message_del_peer (struct message *M) {
   peer_id_t id;
-  if (!cmp_peer_id (M->to_id, MK_USER (our_id))) {
+  if (!cmp_peer_id (M->to_id, MK_USER (tgl_state.our_id))) {
     id = M->from_id;
   } else {
     id = M->to_id;
@@ -1489,22 +1473,27 @@ void message_del_peer (struct message *M) {
   }
 }
 
-struct message *fetch_alloc_message (void) {
+struct message *message_alloc (long long id) {
+  struct message *M = talloc0 (sizeof (*M));
+  M->id = id;
+  message_insert_tree (M);
+  messages_allocated ++;
+  return M;
+}
+
+struct message *tglf_fetch_alloc_message (void) {
   int data[2];
   prefetch_data (data, 8);
   struct message *M = message_get (data[1]);
 
   if (!M) {
-    M = talloc0 (sizeof (*M));
-    M->id = data[1];
-    message_insert_tree (M);
-    messages_allocated ++;
+    M = message_alloc (data[1]);
   }
   fetch_message (M);
   return M;
 }
 
-struct message *fetch_alloc_geo_message (void) {
+struct message *tglf_fetch_alloc_geo_message (void) {
   struct message *M = talloc (sizeof (*M));
   fetch_geo_message (M);
   struct message *M1 = tree_lookup_message (message_tree, M);
@@ -1527,7 +1516,7 @@ struct message *fetch_alloc_geo_message (void) {
   }
 }
 
-struct message *fetch_alloc_encrypted_message (void) {
+struct message *tglf_fetch_alloc_encrypted_message (void) {
   int data[3];
   prefetch_data (data, 12);
   struct message *M = message_get (*(long long *)(data + 1));
@@ -1539,11 +1528,11 @@ struct message *fetch_alloc_encrypted_message (void) {
     messages_allocated ++;
     assert (message_get (M->id) == M);
   }
-  fetch_encrypted_message (M);
+  tglf_fetch_encrypted_message (M);
   return M;
 }
 
-struct message *fetch_alloc_message_short (void) {
+struct message *tglf_fetch_alloc_message_short (void) {
   int data[1];
   prefetch_data (data, 4);
   struct message *M = message_get (data[0]);
@@ -1554,11 +1543,11 @@ struct message *fetch_alloc_message_short (void) {
     message_insert_tree (M);
     messages_allocated ++;
   }
-  fetch_message_short (M);
+  tglf_fetch_message_short (M);
   return M;
 }
 
-struct message *fetch_alloc_message_short_chat (void) {
+struct message *tglf_fetch_alloc_message_short_chat (void) {
   int data[1];
   prefetch_data (data, 4);
   struct message *M = message_get (data[0]);
@@ -1569,11 +1558,11 @@ struct message *fetch_alloc_message_short_chat (void) {
     message_insert_tree (M);
     messages_allocated ++;
   }
-  fetch_message_short_chat (M);
+  tglf_fetch_message_short_chat (M);
   return M;
 }
 
-struct chat *fetch_alloc_chat (void) {
+struct chat *tglf_fetch_alloc_chat (void) {
   int data[2];
   prefetch_data (data, 8);
   peer_t *U = peer_get (MK_CHAT (data[1]));
@@ -1589,7 +1578,7 @@ struct chat *fetch_alloc_chat (void) {
   return &U->chat;
 }
 
-struct chat *fetch_alloc_chat_full (void) {
+struct chat *tglf_fetch_alloc_chat_full (void) {
   int data[3];
   prefetch_data (data, 12);
   peer_t *U = peer_get (MK_CHAT (data[2]));
@@ -1613,7 +1602,7 @@ void free_chat (struct chat *U) {
   if (U->print_title) { tfree_str (U->print_title); }
 }
 
-int print_stat (char *s, int len) {
+int tgl_print_stat (char *s, int len) {
   return tsnprintf (s, len, 
     "users_allocated\t%d\n"
     "chats_allocated\t%d\n"
@@ -1669,8 +1658,8 @@ void message_remove_unsent (struct message *M) {
   message_unsent_tree = tree_delete_message (message_unsent_tree, M);
 }
 
-void __send_msg (struct message *M) {
-  logprintf ("Resending message...\n");
+static void __send_msg (struct message *M) {
+  vlogprintf (E_NOTICE, "Resending message...\n");
   print_message (M);
 
   do_send_msg (M);
@@ -1681,14 +1670,10 @@ void send_all_unsent (void ) {
 }
 
 void peer_insert_name (peer_t *P) {
-  //if (!P->print_name || !strlen (P->print_name)) { return; }
-  //logprintf ("+%s\n", P->print_name);
   peer_by_name_tree = tree_insert_peer_by_name (peer_by_name_tree, P, lrand48 ());
 }
 
 void peer_delete_name (peer_t *P) {
-  //if (!P->print_name || !strlen (P->print_name)) { return; }
-  //logprintf ("-%s\n", P->print_name);
   peer_by_name_tree = tree_delete_peer_by_name (peer_by_name_tree, P);
 }
 
@@ -1697,4 +1682,60 @@ peer_t *peer_lookup_name (const char *s) {
   P.print_name = (void *)s;
   peer_t *R = tree_lookup_peer_by_name (peer_by_name_tree, &P);
   return R;
+}
+
+void peer_iterator_ex (void (*it)(peer_t *P, void *extra), void *extra) {
+  tree_act_ex_peer (peer_tree, it, extra);
+}
+
+int complete_user_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_USER)) {
+    index ++;
+  }
+  if (index < peer_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
+}
+
+int complete_chat_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_CHAT)) {
+    index ++;
+  }
+  if (index < peer_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
+}
+
+int complete_encr_chat_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || get_peer_type (Peers[index]->id) != PEER_ENCR_CHAT)) {
+    index ++;
+  }
+  if (index < peer_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
+}
+
+int complete_peer_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+    index ++;
+  }
+  if (index < peer_num) {
+    *R = strdup (Peers[index]->print_name);
+    return index;
+  } else {
+    return -1;
+  }
 }
