@@ -48,6 +48,7 @@
 //#include "mtproto-client.h"
 //#include "mtproto-common.h"
 #include "tree.h"
+#include "tools.h"
 
 #ifndef POLLRDHUP
 #define POLLRDHUP 0
@@ -66,11 +67,11 @@ static void ping_alarm (evutil_socket_t fd, short what, void *arg) {
   struct connection *c = arg;
   vlogprintf (E_DEBUG + 2,"ping alarm\n");
   assert (c->state == conn_ready || c->state == conn_connecting);
-  if (get_double_time () - c->last_receive_time > 20 * PING_TIMEOUT) {
+  if (tglt_get_double_time () - c->last_receive_time > 20 * PING_TIMEOUT) {
     vlogprintf (E_WARNING, "fail connection: reason: ping timeout\n");
     c->state = conn_failed;
     fail_connection (c);
-  } else if (get_double_time () - c->last_receive_time > 5 * PING_TIMEOUT && c->state == conn_ready) {
+  } else if (tglt_get_double_time () - c->last_receive_time > 5 * PING_TIMEOUT && c->state == conn_ready) {
     tgl_do_send_ping (c);
     start_ping_timer (c);
   } else {
@@ -117,6 +118,7 @@ static void delete_connection_buffer (struct connection_buffer *b) {
 }
 
 int tgln_write_out (struct connection *c, const void *_data, int len) {
+  vlogprintf (E_DEBUG, "write_out: %d bytes\n", len);
   const unsigned char *data = _data;
   if (!len) { return 0; }
   assert (len > 0);
@@ -234,10 +236,15 @@ static void try_write (struct connection *c);
 
 static void conn_try_read (evutil_socket_t fd, short what, void *arg) {
   struct connection *c = arg;
+  vlogprintf (2, "Try read. Fd = %d\n", c->fd);
   try_read (c);
 }
 static void conn_try_write (evutil_socket_t fd, short what, void *arg) {
   struct connection *c = arg;
+  if (c->state == conn_connecting) {
+    c->state = conn_ready;
+    c->methods->ready (c);
+  }
   try_write (c);
   if (c->out_bytes) {
     event_add (c->write_ev, 0);
@@ -269,6 +276,7 @@ struct connection *tgln_create_connection (const char *host, int port, struct se
   fcntl (fd, F_SETFL, O_NONBLOCK);
 
   if (connect (fd, (struct sockaddr *) &addr, sizeof (addr)) == -1) {
+    //vlogprintf (E_ERROR, "Can not connect to %s:%d %m\n", host, port);
     if (errno != EINPROGRESS) {
       vlogprintf (E_ERROR, "Can not connect to %s:%d %m\n", host, port);
       close (fd);
@@ -279,7 +287,7 @@ struct connection *tgln_create_connection (const char *host, int port, struct se
 
   c->fd = fd;
   c->state = conn_connecting;
-  c->last_receive_time = get_double_time ();
+  c->last_receive_time = tglt_get_double_time ();
   c->ip = tstrdup (host);
   c->flags = 0;
   c->port = port;
@@ -288,9 +296,11 @@ struct connection *tgln_create_connection (const char *host, int port, struct se
  
   c->ping_ev = evtimer_new (tgl_state.ev_base, ping_alarm, c);
   c->fail_ev = evtimer_new (tgl_state.ev_base, fail_alarm, c);
-  c->read_ev = event_new (tgl_state.ev_base, c->fd, EV_READ | EV_PERSIST, conn_try_read, c);
   c->write_ev = event_new (tgl_state.ev_base, c->fd, EV_WRITE, conn_try_write, c);
-  event_add (c->read_ev, 0);
+
+  struct timeval tv = {5, 0};
+  c->read_ev = event_new (tgl_state.ev_base, c->fd, EV_READ | EV_PERSIST, conn_try_read, c);
+  event_add (c->read_ev, &tv);
 
   start_ping_timer (c);
 
@@ -345,7 +355,7 @@ static void restart_connection (struct connection *c) {
 
   c->fd = fd;
   c->state = conn_connecting;
-  c->last_receive_time = get_double_time ();
+  c->last_receive_time = tglt_get_double_time ();
   start_ping_timer (c);
   Connections[fd] = c;
   
@@ -499,7 +509,7 @@ static void try_read (struct connection *c) {
       fflush (log_net_f);
     }*/
     if (r > 0) {
-      c->last_receive_time = get_double_time ();
+      c->last_receive_time = tglt_get_double_time ();
       stop_ping_timer (c);
       start_ping_timer (c);
     }
@@ -565,7 +575,7 @@ void tgl_connections_poll_result (struct pollfd *fds, int max) {
       if (c->state == conn_connecting) {
         vlogprintf (E_DEBUG, "connection ready\n");
         c->state = conn_ready;
-        c->last_receive_time = get_double_time ();
+        c->last_receive_time = tglt_get_double_time ();
       }
       if (c->out_bytes) {
         try_write (c);

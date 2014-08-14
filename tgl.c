@@ -8,6 +8,9 @@
 #include "net.h"
 
 #include <event2/event.h>
+
+#include <assert.h>
+
 struct tgl_state tgl_state;
 
     

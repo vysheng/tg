@@ -76,7 +76,7 @@
 
 //int verbosity;
 static int auth_success;
-static enum dc_state c_state;
+//static enum dc_state c_state;
 static char nonce[256];
 static char new_nonce[256];
 static char server_nonce[256];
@@ -197,6 +197,7 @@ static int rpc_send_packet (struct connection *c) {
   int total_len = len + 20;
   assert (total_len > 0 && !(total_len & 0xfc000003));
   total_len >>= 2;
+  vlogprintf (E_DEBUG, "writing packet: total_len = %d, len = %d\n", total_len, len);
   if (total_len < 0x7f) {
     assert (tgl_state.net_methods->write_out (c, &total_len, 1) == 1);
   } else {
@@ -257,7 +258,7 @@ static int process_respq_answer (struct connection *c, char *packet, int len) {
   unsigned long long what;
   unsigned p1, p2;
   int i;
-  vlogprintf (E_DEBUG, "process_respq_answer(), len=%d\n", len);
+  vlogprintf (E_DEBUG, "process_respq_answer(), len=%d, op=0x%08x\n", len, *(int *)(packet + 20));
   assert (len >= 76);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -414,7 +415,7 @@ static int process_respq_answer (struct connection *c, char *packet, int len) {
   out_long (pk_fingerprint);
   out_cstring ((char *) encrypt_buffer, l);
 
-  c_state = st_reqdh_sent;
+  tgl_state.net_methods->get_dc (c)->state = st_reqdh_sent;
   
   return rpc_send_packet (c);
 }
@@ -608,7 +609,7 @@ static int process_dh_answer (struct connection *c, char *packet, int len) {
   out_ints ((int *) server_nonce, 4);
   out_cstring ((char *) encrypt_buffer, l);
 
-  c_state = st_client_dh_sent;
+  tgl_state.net_methods->get_dc (c)->state = st_client_dh_sent;
 
   return rpc_send_packet (c);
 }
@@ -642,7 +643,7 @@ static int process_auth_complete (struct connection *c UU, char *packet, int len
   //c->status = conn_error;
   //sleep (1);
 
-  c_state = st_authorized;
+  tgl_state.net_methods->get_dc (c)->state = st_authorized;
   //return 1;
   vlogprintf (E_DEBUG, "Auth success\n");
   auth_success ++;
@@ -1038,7 +1039,7 @@ static int rpc_execute (struct connection *c, int op, int len) {
 #endif
     return 0;
   default:
-    vlogprintf (E_ERROR, "fatal: cannot receive answer in state %d\n", c_state);
+    vlogprintf (E_ERROR, "fatal: cannot receive answer in state %d\n", D->state);
     exit (2);
   }
  
@@ -1053,9 +1054,9 @@ static int tc_close (struct connection *c, int who) {
 
 static int tc_becomes_ready (struct connection *c) {
   vlogprintf (E_DEBUG, "outbound rpc connection from dc #%d becomed ready\n", tgl_state.net_methods->get_dc(c)->id);
-  char byte = 0xef;
-  assert (tgl_state.net_methods->write_out (c, &byte, 1) == 1);
-  tgl_state.net_methods->flush_out (c);
+  //char byte = 0xef;
+  //assert (tgl_state.net_methods->write_out (c, &byte, 1) == 1);
+  //tgl_state.net_methods->flush_out (c);
   
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
 //  setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
@@ -1067,8 +1068,10 @@ static int tc_becomes_ready (struct connection *c) {
   case st_init:
     send_req_pq_packet (c);
     break;
+  case st_authorized:
+    break;
   default:
-    vlogprintf (E_DEBUG, "c_state = %d\n", c_state);
+    vlogprintf (E_DEBUG, "c_state = %d\n", D->state);
     assert (0);
   }
   return 0;

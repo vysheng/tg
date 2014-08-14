@@ -279,7 +279,7 @@ void tglf_fetch_encrypted_chat (struct tgl_secret_chat *U) {
       return;
     }
     bl_do_encr_chat_delete (U);
-    write_secret_chat_file ();
+    //write_secret_chat_file ();
     return;
   }
 
@@ -311,7 +311,7 @@ void tglf_fetch_encrypted_chat (struct tgl_secret_chat *U) {
     }
 
     bl_do_encr_chat_requested (U, access_hash, date, admin_id, user_id, (void *)g_key, (void *)nonce);
-    write_secret_chat_file ();
+    //write_secret_chat_file ();
   } else {
     bl_do_encr_chat_set_access_hash (U, fetch_long ());
     bl_do_encr_chat_set_date (U, fetch_int ());
@@ -325,7 +325,7 @@ void tglf_fetch_encrypted_chat (struct tgl_secret_chat *U) {
     }
     if (x == CODE_encrypted_chat_waiting) {
       bl_do_encr_chat_set_state (U, sc_waiting);
-      write_secret_chat_file ();
+      //write_secret_chat_file ();
       return; // We needed only access hash from here
     }
     
@@ -339,7 +339,7 @@ void tglf_fetch_encrypted_chat (struct tgl_secret_chat *U) {
       return; // Duplicate?
     }
     bl_do_encr_chat_accepted (U, (void *)g_key, (void *)nonce, fetch_long ());
-    write_secret_chat_file ();
+    //write_secret_chat_file ();
   }
 }
 

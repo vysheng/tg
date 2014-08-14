@@ -3,6 +3,7 @@
 #include "mtproto-common.h"
 #include "binlog.h"
 #include "auto.h"
+#include "structures.h"
 
 #include <assert.h>
 

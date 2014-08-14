@@ -75,6 +75,7 @@
   "# This is an empty config file\n" \
   "# Feel free to put something here\n"
 
+int verbosity;
 char *default_username;
 char *auth_token;
 int msg_num_mode;
@@ -410,6 +411,7 @@ void args_parse (int argc, char **argv) {
       break;
     case 'v':
       tgl_incr_verbosity ();
+      verbosity ++;
       break;
     case 'N':
       msg_num_mode ++;

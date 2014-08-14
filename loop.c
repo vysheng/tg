@@ -62,7 +62,7 @@ extern int unknown_user_list_pos;
 extern int unknown_user_list[];
 int register_mode;
 extern int safe_quit;
-extern int queries_num;
+int queries_num;
 
 void got_it (char *line, int len);
 
@@ -77,6 +77,9 @@ static void stdin_read_callback (evutil_socket_t fd, short what, void *arg) {
   }
 }
 void net_loop (int flags, int (*is_end)(void)) {
+  if (verbosity) {
+    logprintf ("Starting netloop\n");
+  }
   struct event *ev = 0;
   if (flags & 3) {
     ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback, (void *)(long)flags);
@@ -105,6 +108,10 @@ void net_loop (int flags, int (*is_end)(void)) {
 
   if (ev) {
     event_free (ev);
+  }
+  
+  if (verbosity) {
+    logprintf ("End of netloop\n");
   }
 }
 
@@ -201,6 +208,16 @@ void export_auth_callback (void *DC, int success) {
   }
 }
 
+int d_got_ok;
+void get_difference_callback (void *extra, int success) {
+  assert (success);
+  d_got_ok = 1;
+}
+
+int dgot (void) {
+  return d_got_ok;
+}
+
 int zero[512];
 
 
@@ -208,8 +225,11 @@ int readline_active;
 int new_dc_num;
 int wait_dialog_list;
 
+extern struct tgl_update_callback upd_cb;
+
 int loop (void) {
   //on_start ();
+  tgl_set_callback (&upd_cb);
   tgl_init ();
 
   double t = tglt_get_double_time ();
@@ -328,7 +348,7 @@ int loop (void) {
     }
 
     net_loop (0, signed_in);    
-    bl_do_dc_signed (tgl_state.DC_working);
+    //bl_do_dc_signed (tgl_state.DC_working);
   }
 
   for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_signed_dc (tgl_state.DC_list[i])) {
@@ -346,7 +366,7 @@ int loop (void) {
 
   set_interface_callbacks ();
 
-  tgl_do_get_difference (0, 0);
+  tgl_do_get_difference (0, get_difference_callback, 0);
   net_loop (0, dgot);
   #ifdef USE_LUA
     lua_diff_end ();
@@ -354,11 +374,11 @@ int loop (void) {
   tglm_send_all_unsent ();
 
 
-  tgl_do_get_dialog_list ();
+  /*tgl_do_get_dialog_list (get_dialogs_callback, 0);
   if (wait_dialog_list) {
     dialog_list_got = 0;
     net_loop (0, dlgot);
-  }
+  }*/
 
   return main_loop ();
 }

@@ -7,7 +7,7 @@ DEFS=@DEFS@
 COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter
 
 EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@
-LOCAL_LDFLAGS=-rdynamic -ggdb ${EXTRA_LIBS}
+LOCAL_LDFLAGS=-rdynamic -ggdb -levent ${EXTRA_LIBS}
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 
 DEP=${srcdir}/dep

@@ -46,6 +46,8 @@
 #include "tgl.h"
 #include "auto.h"
 
+#include "structures.h"
+
 #include <openssl/sha.h>
 
 #define BINLOG_BUFFER_SIZE (1 << 20)
@@ -1327,7 +1329,7 @@ void bl_do_set_our_id (int id) {
   ev[0] = CODE_binlog_our_id;
   ev[1] = id;
   add_log_event (ev, 8);
-  write_auth_file ();
+  //write_auth_file ();
 }
 
 void bl_do_user_add (int id, const char *f, int fl, const char *l, int ll, long long access_token, const char *p, int pl, int contact) {

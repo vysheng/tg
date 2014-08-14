@@ -13,14 +13,11 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include <event2/event.h>
 lua_State *luaState;
 
-#include "structures.h"
 #include "interface.h"
 #include "auto/constants.h"
-#include "tools.h"
-#include "queries.h"
-#include "net.h"
 #include "tgl.h"
 
 extern int verbosity;
@@ -183,7 +180,7 @@ void push_message (struct tgl_message *M) {
   lua_newtable (luaState);
 
   static char s[30];
-  tsnprintf (s, 30, "%lld", M->id);
+  snprintf (s, 30, "%lld", M->id);
   lua_add_string_field ("id", s);
   lua_add_num_field ("flags", M->flags);
   
@@ -355,19 +352,19 @@ void lua_do_all (void) {
     int f = (long)lua_ptr[p ++];
     switch (f) {
     case 0:
-      tgl_do_send_message (((tgl_peer_t *)lua_ptr[p])->id, lua_ptr[p + 1], strlen (lua_ptr[p + 1]));
-      tfree_str (lua_ptr[p + 1]);
+      tgl_do_send_message (((tgl_peer_t *)lua_ptr[p])->id, lua_ptr[p + 1], strlen (lua_ptr[p + 1]), 0, 0);
+      free (lua_ptr[p + 1]);
       p += 2;
       break;
     case 1:
-      tgl_do_forward_message (((tgl_peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1]);
+      tgl_do_forward_message (((tgl_peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1], 0, 0);
       p += 2;
       break;
     case 2:
       #ifdef DEBUG
         texists (lua_ptr[p], sizeof (tgl_peer_t));
       #endif
-      tgl_do_mark_read (((tgl_peer_t *)lua_ptr[p])->id);
+      tgl_do_mark_read (((tgl_peer_t *)lua_ptr[p])->id, 0, 0);
       p += 1;
       break;
     default:
@@ -404,7 +401,7 @@ static int send_msg_from_lua (lua_State *L) {
   lua_ptr[pos ++] = (void *)2l;
   lua_ptr[pos ++] = (void *)0l;
   lua_ptr[pos ++] = P;
-  lua_ptr[pos ++] = tstrdup (msg);
+  lua_ptr[pos ++] = strdup (msg);
   logprintf ("msg = %s\n", msg);
   
   lua_pushboolean (L, 1);
@@ -469,8 +466,8 @@ static int mark_read_from_lua (lua_State *L) {
   return 1;
 }
 
-int lua_postpone_alarm (void *self) {
-  int *t = self;
+static void lua_postpone_alarm (evutil_socket_t fd, short what, void *arg) {
+  int *t = arg;
   
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
@@ -488,9 +485,7 @@ int lua_postpone_alarm (void *self) {
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
-  tfree (*(void **)(t + 2), sizeof (struct event_timer));
-  tfree (t, 16);
-  return 0;
+
 }
 
 static int postpone_from_lua (lua_State *L) {
@@ -510,16 +505,14 @@ static int postpone_from_lua (lua_State *L) {
   int a1 = luaL_ref (L, LUA_REGISTRYINDEX);
   int a2 = luaL_ref (L, LUA_REGISTRYINDEX);
 
-  struct event_timer *ev = talloc (sizeof (*ev));
-  int *t = talloc (16);
+  int *t = malloc (16);
+  struct event *ev = evtimer_new (tgl_state.ev_base, lua_postpone_alarm, t);
   t[0] = a1;
   t[1] = a2;
   *(void **)(t + 2) = ev;
   
-  ev->timeout = get_double_time () + timeout;
-  ev->alarm = (void *)lua_postpone_alarm;
-  ev->self = t;
-  insert_event_timer (ev);
+  struct timeval  ts= { timeout, 0};
+  event_add (ev, &ts);
   
   lua_pushboolean (L, 1);
   return 1;

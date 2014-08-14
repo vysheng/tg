@@ -20,6 +20,7 @@
 #define __BINLOG_H__
 
 //#include "structures.h"
+#include "tgl.h"
 
 void bl_do_set_auth_key_id (int num, unsigned char *buf);
 
