@@ -26,9 +26,11 @@
 #include <openssl/aes.h>
 #include <stdio.h>
 
-#include "interface.h"
+//#include "interface.h"
 #include "tools.h"
 #include "auto/constants.h"
+
+#include "tgl.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
 #define CODE_resPQ			0x05162463
@@ -178,9 +180,7 @@ static inline int prefetch_strlen (void) {
 extern int verbosity;
 static inline char *fetch_str (int len) {
   assert (len >= 0);
-  if (verbosity > 6) {
-    logprintf ("fetch_string: len = %d\n", len);
-  }
+  vlogprintf (E_DEBUG + 3, "fetch_string: len = %d\n", len);    
   if (len < 254) {
     char *str = (char *) in_ptr + 1;
     in_ptr += 1 + (len >> 2);
@@ -272,16 +272,12 @@ int fetch_bignum (BIGNUM *x);
 
 static inline int fetch_int (void) {
   assert (in_ptr + 1 <= in_end);
-  if (verbosity > 6) {
-    logprintf ("fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
-  }
+  vlogprintf (E_DEBUG + 3, "fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   return *(in_ptr ++);
 }
 
 static inline int fetch_bool (void) {
-  if (verbosity > 6) {
-    logprintf ("fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
-  }
+  vlogprintf (E_DEBUG + 3, "fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   assert (in_ptr + 1 <= in_end);
   assert (*(in_ptr) == (int)CODE_bool_true || *(in_ptr) == (int)CODE_bool_false);
   return *(in_ptr ++) == (int)CODE_bool_true;
@@ -349,14 +345,14 @@ void init_aes_unauth (const char server_nonce[16], const char hidden_client_nonc
 void init_aes_auth (char auth_key[192], char msg_key[16], int encrypt);
 int pad_aes_encrypt (char *from, int from_len, char *to, int size);
 int pad_aes_decrypt (char *from, int from_len, char *to, int size);
-
+/*
 static inline void hexdump_in (void) {
   hexdump (in_ptr, in_end);
 }
 
 static inline void hexdump_out (void) {
   hexdump (packet_buffer, packet_ptr);
-}
+}*/
 
 #ifdef __MACH__
 #define CLOCK_REALTIME 0

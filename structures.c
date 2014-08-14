@@ -1628,9 +1628,9 @@ void tglm_message_remove_unsent (struct tgl_message *M) {
 
 static void __send_msg (struct tgl_message *M) {
   vlogprintf (E_NOTICE, "Resending message...\n");
-  print_message (M);
+  //print_message (M);
 
-  tgl_do_send_msg (M);
+  tgl_do_send_msg (M, 0, 0);
 }
 
 void tglm_send_all_unsent (void ) {

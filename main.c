@@ -49,7 +49,6 @@
 
 #include "telegram.h"
 #include "loop.h"
-#include "mtproto-client.h"
 #include "interface.h"
 #include "tools.h"
 
@@ -59,8 +58,8 @@
 
 #include "tgl.h"
 
-#define PROGNAME "telegram-client"
-#define VERSION "0.01"
+#define PROGNAME "telegram-cli"
+#define VERSION "0.07"
 
 #define CONFIG_DIRECTORY "." PROG_NAME
 #define CONFIG_FILE "config"
@@ -319,13 +318,20 @@ void parse_config (void) {
   config_directory = make_full_path (config_directory);
 
   parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
-  parse_config_val (&conf, &state_file_name, "state_file", STATE_FILE, config_directory);
-  parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
   parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
   
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
+
+  if (binlog_enabled) {
+    tgl_set_binlog_mode (1);
+    tgl_set_binlog_path (binlog_file_name);
+  } else {
+    tgl_set_binlog_mode (0);
+    tgl_set_auth_file_path (auth_file_name);
+  }
+  tgl_set_download_directory (downloads_directory);
   
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
     printf ("[%s] created\n", config_directory);
@@ -338,10 +344,17 @@ void parse_config (void) {
 void parse_config (void) {
   printf ("libconfig not enabled\n");
   tasprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE);
-  tasprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE);
-  tasprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE);
   tasprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY);
   tasprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE);
+  
+  if (binlog_enabled) {
+    tgl_set_binlog_mode (1);
+    tgl_set_binlog_path (binlog_file_name);
+  } else {
+    tgl_set_binlog_mode (0);
+    tgl_set_auth_file_path (auth_file_name;
+  }
+  tgl_set_download_directory (downloads_directory);
 }
 #endif
 
@@ -488,7 +501,7 @@ int main (int argc, char **argv) {
   
   args_parse (argc, argv);
   printf (
-    "Telegram-client version " TG_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
+    "Telegram-client version " TGL_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
     "Telegram-client comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; type `show_license' for details.\n"

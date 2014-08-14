@@ -39,7 +39,6 @@
 #include <openssl/sha.h>
 
 #include "mtproto-common.h"
-#include "interface.h"
 #include "include.h"
 
 #ifdef __MACH__
@@ -61,9 +60,7 @@ int get_random_bytes (unsigned char *buf, int n) {
   if (h >= 0) {
     r = read (h, buf, n);
     if (r > 0) {
-      if (verbosity >= 3) {
-        logprintf ( "added %d bytes of real entropy to secure random numbers seed\n", r);
-      }
+      vlogprintf (E_DEBUG, "added %d bytes of real entropy to secure random numbers seed\n", r);
     } else {
       r = 0;
     }
@@ -143,16 +140,14 @@ void prng_seed (const char *password_filename, int password_length) {
   if (password_filename && password_length > 0) {
     int fd = open (password_filename, O_RDONLY);
     if (fd < 0) {
-      logprintf ( "Warning: fail to open password file - \"%s\", %m.\n", password_filename);
+      vlogprintf (E_WARNING, "Warning: fail to open password file - \"%s\", %m.\n", password_filename);
     } else {
       unsigned char *a = talloc0 (password_length);
       int l = read (fd, a, password_length);
       if (l < 0) {
-        logprintf ( "Warning: fail to read password file - \"%s\", %m.\n", password_filename);
+        vlogprintf (E_WARNING, "Warning: fail to read password file - \"%s\", %m.\n", password_filename);
       } else {
-        if (verbosity > 0) {
-          logprintf ( "read %d bytes from password file.\n", l);
-        }
+        vlogprintf (E_DEBUG, "read %d bytes from password file.\n", l);
         RAND_add (a, l, l);
       }
       close (fd);

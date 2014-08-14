@@ -50,7 +50,6 @@
 #include "include.h"
 #include "queries.h"
 #include "loop.h"
-#include "interface.h"
 #include "structures.h"
 #include "binlog.h"
 #include "auto.h"
@@ -142,18 +141,18 @@ static int rsa_load_public_key (const char *public_key_name) {
   pubKey = NULL;
   FILE *f = fopen (public_key_name, "r");
   if (f == NULL) {
-    logprintf ( "Couldn't open public key file: %s\n", public_key_name);
+    vlogprintf (E_WARNING, "Couldn't open public key file: %s\n", public_key_name);
     return -1;
   }
   pubKey = PEM_read_RSAPublicKey (f, NULL, NULL, NULL);
   fclose (f);
   if (pubKey == NULL) {
-    logprintf ( "PEM_read_RSAPublicKey returns NULL.\n");
+    vlogprintf (E_WARNING, "PEM_read_RSAPublicKey returns NULL.\n");
     return -1;
   }
 
   if (verbosity) {
-    logprintf ( "public key '%s' loaded successfully\n", rsa_public_key_name);
+    vlogprintf (E_WARNING, "public key '%s' loaded successfully\n", rsa_public_key_name);
   }
 
   return 0;
@@ -267,9 +266,7 @@ unsigned p1, p2;
 
 int process_respq_answer (struct connection *c, char *packet, int len) {
   int i;
-  if (verbosity) {
-    logprintf ( "process_respq_answer(), len=%d\n", len);
-  }
+  vlogprintf (E_DEBUG, "process_respq_answer(), len=%d\n", len);
   assert (len >= 76);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -288,10 +285,6 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   while (((unsigned long)from) & 3) ++from;
 
   p1 = 0, p2 = 0;
-
-  if (verbosity >= 2) {
-    logprintf ( "%lld received\n", what);
-  }
 
   int it = 0;
   unsigned long long g = 0;
@@ -337,10 +330,6 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   }
   
 
-  if (verbosity) {
-    logprintf ( "p1 = %d, p2 = %d, %d iterations\n", p1, p2, it);
-  }
-
   /// ++p1; ///
 
   assert (*(int *) (from) == CODE_vector);
@@ -354,7 +343,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
     }
   }
   if (i == fingerprints_num) {
-    logprintf ( "fatal: don't have any matching keys (%016llx expected)\n", pk_fingerprint);
+    vlogprintf (E_ERROR, "fatal: don't have any matching keys (%016llx expected)\n", pk_fingerprint);
     exit (2);
   }
   // create inner part (P_Q_inner_data)
@@ -519,7 +508,7 @@ int check_g (unsigned char p[256], BIGNUM *g) {
       ok = 1;
       break;
     } else if (s[i] > p[i]) {
-      logprintf ("i = %d (%d %d)\n", i, (int)s[i], (int)p[i]);
+      vlogprintf (E_WARNING, "i = %d (%d %d)\n", i, (int)s[i], (int)p[i]);
       return -1;
     }
   }
@@ -536,11 +525,9 @@ int check_g_bn (BIGNUM *p, BIGNUM *g) {
 }
 
 int process_dh_answer (struct connection *c, char *packet, int len) {
-  if (verbosity) {
-    logprintf ( "process_dh_answer(), len=%d\n", len);
-  }
+  vlogprintf (E_DEBUG, "process_dh_answer(), len=%d\n", len);
   if (len < 116) {
-    logprintf ( "%u * %u = %llu", p1, p2, what);
+    vlogprintf (E_ERROR, "%u * %u = %llu", p1, p2, what);
   }
   assert (len >= 116);
   assert (!*(long long *) packet);
@@ -636,9 +623,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
 
 
 int process_auth_complete (struct connection *c UU, char *packet, int len) {
-  if (verbosity) {
-    logprintf ( "process_dh_answer(), len=%d\n", len);
-  }
+  vlogprintf (E_DEBUG, "process_dh_answer(), len=%d\n", len);
   assert (len == 72);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -659,9 +644,6 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   assert (!memcmp (packet + 56, sha1_buffer + 4, 16));
   GET_DC(c)->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
   
-  if (verbosity >= 3) {
-    logprintf ( "auth_key_id=%016llx\n", GET_DC(c)->auth_key_id);
-  }
   //kprintf ("OK\n");
 
   //c->status = conn_error;
@@ -669,9 +651,7 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
 
   c_state = st_authorized;
   //return 1;
-  if (verbosity) {
-    logprintf ( "Auth success\n");
-  }
+  vlogprintf (E_DEBUG, "Auth success\n");
   auth_success ++;
   GET_DC(c)->flags |= 1;
   write_auth_file ();
@@ -735,9 +715,7 @@ int aes_encrypt_message (struct dc *DC, struct encrypted_message *enc) {
   assert (enc->msg_len >= 0 && enc->msg_len <= MAX_MESSAGE_INTS * 4 - 16 && !(enc->msg_len & 3));
   sha1 ((unsigned char *) &enc->server_salt, enc_len, sha1_buffer);
   //printf ("enc_len is %d\n", enc_len);
-  if (verbosity >= 2) {
-    logprintf ( "sending message with sha1 %08x\n", *(int *)sha1_buffer);
-  }
+  vlogprintf (E_DEBUG, "sending message with sha1 %08x\n", *(int *)sha1_buffer);
   memcpy (enc->msg_key, sha1_buffer + 4, 16);
   init_aes_auth (DC->auth_key, enc->msg_key, AES_ENCRYPT);
   //hexdump ((char *)enc, (char *)enc + enc_len + 24);
@@ -831,7 +809,7 @@ void fetch_date (void) {
 void fetch_seq (void) {
   int x = fetch_int ();
   if (x > seq + 1) {
-    logprintf ("Hole in seq: seq = %d, x = %d\n", seq, x);
+    vlogprintf (E_NOTICE, "Hole in seq: seq = %d, x = %d\n", seq, x);
     //tgl_do_get_difference ();
     //seq = x;
   } else if (x == seq + 1) {
@@ -911,9 +889,11 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       struct tgl_message *M = tglf_fetch_alloc_message ();
       assert (M);
       fetch_pts ();
-      unread_messages ++;
-      print_message (M);
-      update_prompt ();
+
+      tgl_state.callback.new_msg (M);
+      //unread_messages ++;
+      //print_message (M);
+      //update_prompt ();
       break;
     };
   case CODE_update_message_i_d:
@@ -930,30 +910,38 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       assert (fetch_int () == (int)CODE_vector);
       int n = fetch_int ();
+      
+      struct tgl_message **ML = talloc (n * sizeof (void *));
+      int p = 0;
       int i;
       for (i = 0; i < n; i++) {
         int id = fetch_int ();
         struct tgl_message *M = tgl_message_get (id);
         if (M) {
           bl_do_set_unread (M, 0);
+          ML[p ++] = M;
         }
       }
       fetch_pts ();
-      if (log_level >= 1) {
+      tgl_state.callback.marked_read (p, ML);
+      tfree (ML, sizeof (void *) * n);
+      /*if (log_level >= 1) {
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
         printf (" %d messages marked as read\n", n);
         pop_color ();
         print_end ();
-      }
+      }*/
     }
     break;
   case CODE_update_user_typing:
     {
       tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *U = tgl_peer_get (id);
-      if (log_level >= 2) {
+
+      tgl_state.callback.type_notification (id, (void *)U);
+      /*if (log_level >= 2) {
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
@@ -962,7 +950,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         printf (" is typing....\n");
         pop_color ();
         print_end ();
-      }
+      }*/
     }
     break;
   case CODE_update_chat_user_typing:
@@ -971,7 +959,9 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *C = tgl_peer_get (chat_id);
       tgl_peer_t *U = tgl_peer_get (id);
-      if (log_level >= 2) {
+      
+      tgl_state.callback.type_in_chat_notification (id, (void *)U, chat_id, (void *)C);
+      /*if (log_level >= 2) {
         print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
@@ -982,7 +972,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         printf ("....\n");
         pop_color ();
         print_end ();
-      }
+      }*/
     }
     break;
   case CODE_update_user_status:
@@ -991,7 +981,8 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       tgl_peer_t *U = tgl_peer_get (user_id);
       if (U) {
         tglf_fetch_user_status (&U->user.status);
-        if (log_level >= 3) {
+        tgl_state.callback.status_notification ((void *)U);
+        /*if (log_level >= 3) {
           print_start ();
           push_color (COLOR_YELLOW);
           print_date (time (0));
@@ -1001,7 +992,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
           pop_color ();
           print_end ();
-        }
+        }*/
       } else {
         struct tgl_user_status t;
         tglf_fetch_user_status (&t);
@@ -1019,7 +1010,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         char *l = fetch_str (l2);
         struct tgl_user *U = &UC->user;
         bl_do_user_set_real_name (U, f, l1, l, l2);
-        print_start ();
+        /*print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
         printf (" User ");
@@ -1028,7 +1019,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         print_user_name (user_id, UC);
         printf ("\n");
         pop_color ();
-        print_end ();
+        print_end ();*/
       } else {
         fetch_skip_str ();
         fetch_skip_str ();
@@ -1060,14 +1051,14 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         }
         bl_do_set_user_profile_photo (U, photo_id, &big, &small);
         
-        print_start ();
+        /*print_start ();
         push_color (COLOR_YELLOW);
         print_date (time (0));
         printf (" User ");
         print_user_name (user_id, UC);
         printf (" updated profile photo\n");
         pop_color ();
-        print_end ();
+        print_end ();*/
       } else {
         struct tgl_file_location t;
         unsigned y = fetch_int ();
@@ -1086,12 +1077,12 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       assert (fetch_int () == CODE_vector);
       int n = fetch_int ();
-      print_start ();
+      /*print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Restored %d messages\n", n);
       pop_color ();
-      print_end ();
+      print_end ();*/
       fetch_skip (n);
       fetch_pts ();
     }
@@ -1100,12 +1091,12 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     {
       assert (fetch_int () == CODE_vector);
       int n = fetch_int ();
-      print_start ();
+      /*print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Deleted %d messages\n", n);
       pop_color ();
-      print_end ();
+      print_end ();*/
       fetch_skip (n);
       fetch_pts ();
     }
@@ -1142,7 +1133,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
           fetch_int (); // version
         }
       }
-      print_start ();
+      /*print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Chat ");
@@ -1153,7 +1144,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
         printf (" changed list, but we are forbidden to know about it (Why this update even was sent to us?\n");
       }
       pop_color ();
-      print_end ();
+      print_end ();*/
     }
     break;
   case CODE_update_contact_registered:
@@ -1161,28 +1152,29 @@ void work_update (struct connection *c UU, long long msg_id UU) {
       tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *U = tgl_peer_get (user_id);
       fetch_int (); // date
-      print_start ();
+      tgl_state.callback.user_registered (U);
+      /*print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" User ");
       print_user_name (user_id, U);
       printf (" registered\n");
       pop_color ();
-      print_end ();
+      print_end ();*/
     }
     break;
   case CODE_update_contact_link:
     {
       tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *U = tgl_peer_get (user_id);
-      print_start ();
+      /*print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
       printf (" Updated link with user ");
       print_user_name (user_id, U);
       printf ("\n");
       pop_color ();
-      print_end ();
+      print_end ();*/
       unsigned t = fetch_int ();
       assert (t == CODE_contacts_my_link_empty || t == CODE_contacts_my_link_requested || t == CODE_contacts_my_link_contact);
       if (t == CODE_contacts_my_link_requested) {
@@ -1246,9 +1238,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
   case CODE_update_encryption:
     {
       struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
-      if (verbosity >= 2) {
-        logprintf ("Secret chat state = %d\n", E->state);
-      }
+      vlogprintf (E_DEBUG, "Secret chat state = %d\n", E->state);
       print_start ();
       push_color (COLOR_YELLOW);
       print_date (time (0));
@@ -1415,7 +1405,7 @@ void work_update (struct connection *c UU, long long msg_id UU) {
     }
     break;
   default:
-    logprintf ("Unknown update type %08x\n", op);
+    vlogprintf (E_ERROR, "Unknown update type %08x\n", op);
     ;
   }
 }
@@ -1476,9 +1466,7 @@ void work_update_short_chat_message (struct connection *c UU, long long msg_id U
 }
 
 void work_container (struct connection *c, long long msg_id UU) {
-  if (verbosity) {
-    logprintf ( "work_container: msg_id = %lld\n", msg_id);
-  }
+  vlogprintf (E_DEBUG, "work_container: msg_id = %lld\n", msg_id);
   assert (fetch_int () == CODE_msg_container);
   int n = fetch_int ();
   int i;
@@ -1499,9 +1487,7 @@ void work_container (struct connection *c, long long msg_id UU) {
 }
 
 void work_new_session_created (struct connection *c, long long msg_id UU) {
-  if (verbosity) {
-    logprintf ( "work_new_session_created: msg_id = %lld\n", msg_id);
-  }
+  vlogprintf (E_DEBUG, "work_new_session_created: msg_id = %lld\n", msg_id);
   assert (fetch_int () == (int)CODE_new_session_created);
   fetch_long (); // first message id
   //DC->session_id = fetch_long ();
@@ -1511,26 +1497,20 @@ void work_new_session_created (struct connection *c, long long msg_id UU) {
 }
 
 void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
-  if (verbosity) {
-    logprintf ( "work_msgs_ack: msg_id = %lld\n", msg_id);
-  }
+  vlogprintf (E_DEBUG, "work_msgs_ack: msg_id = %lld\n", msg_id);
   assert (fetch_int () == CODE_msgs_ack);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   int i;
   for (i = 0; i < n; i++) {
     long long id = fetch_long ();
-    if (verbosity) {
-      logprintf ("ack for %lld\n", id);
-    }
+    vlogprintf (E_DEBUG + 1, "ack for %lld\n", id);
     query_ack (id);
   }
 }
 
 void work_rpc_result (struct connection *c UU, long long msg_id UU) {
-  if (verbosity) {
-    logprintf ( "work_rpc_result: msg_id = %lld\n", msg_id);
-  }
+  vlogprintf (E_DEBUG, "work_rpc_result: msg_id = %lld\n", msg_id);
   assert (fetch_int () == (int)CODE_rpc_result);
   long long id = fetch_long ();
   int op = prefetch_int ();
@@ -1558,10 +1538,6 @@ void work_packed (struct connection *c, long long msg_id) {
   //assert (total_out % 4 == 0);
   in_ptr = buf;
   in_end = in_ptr + total_out / 4;
-  if (verbosity >= 4) {
-    logprintf ( "Unzipped data: ");
-    hexdump_in ();
-  }
   rpc_execute_answer (c, msg_id);
   in_ptr = end;
   in_end = eend;
@@ -1601,7 +1577,7 @@ void work_new_detailed_info (struct connection *c UU, long long msg_id UU) {
 
 void work_updates_to_long (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_updates_too_long);
-  logprintf ("updates to long... Getting difference\n");
+  vlogprintf (E_NOTICE, "updates to long... Getting difference\n");
   tgl_do_get_difference ();
 }
 
@@ -1610,14 +1586,10 @@ void work_bad_msg_notification (struct connection *c UU, long long msg_id UU) {
   long long m1 = fetch_long ();
   int s = fetch_int ();
   int e = fetch_int ();
-  logprintf ("bad_msg_notification: msg_id = %lld, seq = %d, error = %d\n", m1, s, e);
+  vlogprintf (E_NOTICE, "bad_msg_notification: msg_id = %lld, seq = %d, error = %d\n", m1, s, e);
 }
 
 void rpc_execute_answer (struct connection *c, long long msg_id UU) {
-  if (verbosity >= 5) {
-    logprintf ("rpc_execute_answer: fd=%d\n", c->fd);
-    hexdump_in ();
-  }
   int op = prefetch_int ();
   switch (op) {
   case CODE_msg_container:
@@ -1666,17 +1638,14 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     work_bad_msg_notification (c, msg_id);
     return;
   }
-  logprintf ( "Unknown message: \n");
-  hexdump_in ();
+  vlogprintf (E_WARNING, "Unknown message: %08x\n", op);
   in_ptr = in_end; // Will not fail due to assertion in_ptr == in_end
 }
 
 int process_rpc_message (struct connection *c UU, struct encrypted_message *enc, int len) {
   const int MINSZ = offsetof (struct encrypted_message, message);
   const int UNENCSZ = offsetof (struct encrypted_message, server_salt);
-  if (verbosity) {
-    logprintf ( "process_rpc_message(), len=%d\n", len);  
-  }
+  vlogprintf (E_DEBUG, "process_rpc_message(), len=%d\n", len);  
   assert (len >= MINSZ && (len & 15) == (UNENCSZ & 15));
   struct dc *DC = GET_DC(c);
   assert (enc->auth_key_id == DC->auth_key_id);
@@ -1702,10 +1671,9 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   }
   double st = get_server_time (DC);
   if (this_server_time < st - 300 || this_server_time > st + 30) {
-    logprintf ("salt = %lld, session_id = %lld, msg_id = %lld, seq_no = %d, st = %lf, now = %lf\n", enc->server_salt, enc->session_id, enc->msg_id, enc->seq_no, st, get_utime (CLOCK_REALTIME));
+    vlogprintf (E_WARNING, "salt = %lld, session_id = %lld, msg_id = %lld, seq_no = %d, st = %lf, now = %lf\n", enc->server_salt, enc->session_id, enc->msg_id, enc->seq_no, st, get_utime (CLOCK_REALTIME));
     in_ptr = enc->message;
     in_end = in_ptr + (enc->msg_len / 4);
-    hexdump_in ();
   }
 
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);

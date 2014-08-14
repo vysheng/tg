@@ -50,10 +50,12 @@ struct query {
   struct dc *DC;
   struct session *session;
   void *extra;
+  void *callback;
+  void *callback_extra;
 };
 
 
-struct query *send_query (struct dc *DC, int len, void *data, struct query_methods *methods, void *extra);
+struct query *send_query (struct dc *DC, int len, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra);
 void query_ack (long long id);
 void query_error (long long id);
 void query_result (long long id);
@@ -64,13 +66,13 @@ void remove_event_timer (struct event_timer *ev);
 double next_timer_in (void);
 void work_timers (void);
 
-extern struct query_methods help_get_config_methods;
+//extern struct query_methods help_get_config_methods;
 
 double get_double_time (void);
 
 
 // For binlog
 
-int get_dh_config_on_answer (struct query *q);
-void fetch_dc_option (void);
+//int get_dh_config_on_answer (struct query *q);
+//void fetch_dc_option (void);
 #endif

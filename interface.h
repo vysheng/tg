@@ -34,11 +34,6 @@
 
 #define COLOR_INVERSE "\033[7m"
 
-#define E_ERROR 0
-#define E_WARNING 1
-#define E_NOTICE 2
-#define E_DEBUG 3
-
 char *get_default_prompt (void);
 char *complete_none (const char *text, int state);
 char **complete_text (char *text, int start, int end);

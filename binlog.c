@@ -1126,9 +1126,7 @@ static void replay_log_event (void) {
   assert (rptr < wptr);
   int op = *rptr;
 
-  if (verbosity >= 2) {
-    logprintf ("log_pos %lld, op 0x%08x\n", binlog_pos, op);
-  }
+  vlogprintf (E_DEBUG, "replay_log_event: log_pos=%lld, op=0x%08x\n", binlog_pos, op);
 
   in_ptr = rptr;
   in_end = wptr;
@@ -1201,7 +1199,7 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_set_msg_id)
   FETCH_COMBINATOR_FUNCTION (binlog_delete_msg)
   default:
-    logprintf ("Unknown op 0x%08x\n", op);
+    vlogprintf (E_ERROR, "Unknown op 0x%08x\n", op);
     assert (0);
   }
   assert (ok >= 0);
@@ -1287,9 +1285,7 @@ void tgl_reopen_binlog_for_writing (void) {
 }
 
 static void add_log_event (const int *data, int len) {
-  if (verbosity) {
-    logprintf ("Add log event: magic = 0x%08x, len = %d\n", data[0], len);
-  }
+  vlogprintf (E_DEBUG, "Add log event: magic = 0x%08x, len = %d\n", data[0], len);
   assert (!(len & 3));
   rptr = (void *)data;
   wptr = rptr + (len / 4);
@@ -1297,7 +1293,7 @@ static void add_log_event (const int *data, int len) {
   int *end = in_end;
   replay_log_event ();
   if (rptr != wptr) {
-    logprintf ("Unread %lld ints. Len = %d\n", (long long)(wptr - rptr), len);
+    vlogprintf (E_ERROR, "Unread %lld ints. Len = %d\n", (long long)(wptr - rptr), len);
     assert (rptr == wptr);
   }
   if (tgl_state.binlog_enabled) {

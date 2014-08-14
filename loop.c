@@ -155,7 +155,7 @@ char *get_state_filename (void);
 char *get_secret_chat_filename (void);
 int zero[512];
 
-
+/*
 void write_dc (int auth_file_fd, struct dc *DC) {
   assert (write (auth_file_fd, &DC->port, 4) == 4);
   int l = strlen (DC->ip);
@@ -436,7 +436,7 @@ void write_secret_chat_file (void) {
     assert (write (fd, encr_prime, 256) == 256);
   }
   close (fd);
-}
+}*/
 
 extern int max_chat_size;
 int mcs (void) {
