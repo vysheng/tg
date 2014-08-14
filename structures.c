@@ -32,6 +32,7 @@
 #include <openssl/sha.h>
 #include "queries.h"
 #include "binlog.h"
+#include "updates.h"
 
 #include "tgl.h"
 
@@ -497,7 +498,7 @@ void tglf_fetch_photo_size (struct tgl_photo_size *S) {
   }
 }
 
-void fetch_geo (struct tgl_geo *G) {
+void tglf_fetch_geo (struct tgl_geo *G) {
   unsigned x = fetch_int ();
   if (x == CODE_geo_point) {
     G->longitude = fetch_double ();
@@ -519,7 +520,7 @@ void tglf_fetch_photo (struct tgl_photo *P) {
   P->user_id = fetch_int ();
   P->date = fetch_int ();
   P->caption = fetch_str_dup ();
-  fetch_geo (&P->geo);
+  tglf_fetch_geo (&P->geo);
   assert (fetch_int () == CODE_vector);
   P->sizes_num = fetch_int ();
   P->sizes = talloc (sizeof (struct tgl_photo_size) * P->sizes_num);
@@ -630,10 +631,10 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     
-    fetch_pts ();
+    tglu_fetch_pts ();
     
     int date = fetch_int ();
-    fetch_seq ();
+    tglu_fetch_seq ();
 
     bl_do_create_message_text (id, from_id, TGL_PEER_USER, to_id, date, l, s);
   } else {
@@ -642,9 +643,9 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     int l = prefetch_strlen (); 
     fetch_str (l); // text
     
-    fetch_pts ();
+    tglu_fetch_pts ();
     fetch_int ();
-    fetch_seq ();
+    tglu_fetch_seq ();
   }
 }
 
@@ -658,10 +659,10 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     
-    fetch_pts ();
+    tglu_fetch_pts ();
     
     int date = fetch_int ();
-    fetch_seq ();
+    tglu_fetch_seq ();
 
     bl_do_create_message_text (id, from_id, TGL_PEER_CHAT, to_id, date, l, s);
   } else {
@@ -671,9 +672,9 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
     int l = prefetch_strlen (); 
     fetch_str (l); // text
     
-    fetch_pts ();
+    tglu_fetch_pts ();
     fetch_int ();
-    fetch_seq ();
+    tglu_fetch_seq ();
   }
 }
 
@@ -697,7 +698,7 @@ void tglf_fetch_message_media (struct tgl_message_media *M) {
     tglf_fetch_document (&M->document);
     break;
   case CODE_message_media_geo:
-    fetch_geo (&M->geo);
+    tglf_fetch_geo (&M->geo);
     break;
   case CODE_message_media_contact:
     M->phone = fetch_str_dup ();
@@ -995,7 +996,7 @@ void tglf_fetch_message (struct tgl_message *M) {
   bl_do_set_unread (M, unread);
 }
 
-void tglf_fetch_geo_message (struct tgl_message *M) {
+void tglf_tglf_fetch_geo_message (struct tgl_message *M) {
   memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
   assert (x == CODE_geo_chat_message_empty || x == CODE_geo_chat_message || x == CODE_geo_chat_message_service);
@@ -1254,7 +1255,7 @@ struct tgl_message *tglf_fetch_alloc_message (void) {
 
 struct tgl_message *tglf_fetch_alloc_geo_message (void) {
   struct tgl_message *M = talloc (sizeof (*M));
-  tglf_fetch_geo_message (M);
+  tglf_tglf_fetch_geo_message (M);
   struct tgl_message *M1 = tree_lookup_message (message_tree, M);
   messages_allocated ++;
   if (M1) {

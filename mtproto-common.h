@@ -25,12 +25,14 @@
 #include <openssl/bn.h>
 #include <openssl/aes.h>
 #include <stdio.h>
+#include <assert.h>
 
 //#include "interface.h"
 #include "tools.h"
 #include "auto/constants.h"
 
 #include "tgl.h"
+#include "tgl-inner.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
 #define CODE_resPQ			0x05162463
@@ -157,10 +159,10 @@ static inline void out_bignum (BIGNUM *n) {
 
 extern int *in_ptr, *in_end;
 
-void fetch_pts (void);
-void fetch_qts (void);
-void fetch_date (void);
-void fetch_seq (void);
+//void fetch_pts (void);
+//void fetch_qts (void);
+//void fetch_date (void);
+//void fetch_seq (void);
 static inline int prefetch_strlen (void) {
   if (in_ptr >= in_end) { 
     return -1; 
@@ -331,7 +333,7 @@ static inline void fetch256 (void *buf) {
   }
 }
 
-int get_random_bytes (unsigned char *buf, int n);
+//int get_random_bytes (unsigned char *buf, int n);
 
 int pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
 int pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);

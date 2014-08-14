@@ -20,6 +20,8 @@
 #ifndef __TOOLS_H__
 #define __TOOLS_H__
 
+double get_double_time (void);
+
 void *talloc (size_t size);
 void *trealloc (void *ptr, size_t old_size, size_t size);
 void *talloc0 (size_t size);
@@ -36,6 +38,8 @@ void tfree_secure (void *ptr, int size);
 
 int tsnprintf (char *buf, int len, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 int tasprintf (char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
+
+void tglt_secure_random (void *s, int l);
 
 #ifdef DEBUG
 void tcheck (void);

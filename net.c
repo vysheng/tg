@@ -37,81 +37,73 @@
 #include <poll.h>
 #include <openssl/rand.h>
 #include <arpa/inet.h>
+#include <event2/event.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "net.h"
 #include "include.h"
-#include "mtproto-client.h"
-#include "mtproto-common.h"
+#include "tgl.h"
+#include "tgl-inner.h"
+//#include "mtproto-client.h"
+//#include "mtproto-common.h"
 #include "tree.h"
-#include "interface.h"
 
 #ifndef POLLRDHUP
 #define POLLRDHUP 0
 #endif
 
-#define long_cmp(a,b) ((a) > (b) ? 1 : (a) == (b) ? 0 : -1)
-DEFINE_TREE(long,long long,long_cmp,0)
-double get_utime (int clock_id);
+//double get_utime (int clock_id);
 
-int verbosity;
-extern struct connection_methods auth_methods;
-extern FILE *log_net_f;
+//extern struct mtproto_methods auth_methods;
 
-void fail_connection (struct connection *c);
+static void fail_connection (struct connection *c);
 
 #define PING_TIMEOUT 10
 
-void start_ping_timer (struct connection *c);
-int ping_alarm (struct connection *c) {
-  if (verbosity > 2) {
-    logprintf ("ping alarm\n");
-  }
+static void start_ping_timer (struct connection *c);
+static void ping_alarm (evutil_socket_t fd, short what, void *arg) {
+  struct connection *c = arg;
+  vlogprintf (E_DEBUG + 2,"ping alarm\n");
   assert (c->state == conn_ready || c->state == conn_connecting);
   if (get_double_time () - c->last_receive_time > 20 * PING_TIMEOUT) {
-    if (verbosity) {
-      logprintf ( "fail connection: reason: ping timeout\n");
-    }
+    vlogprintf (E_WARNING, "fail connection: reason: ping timeout\n");
     c->state = conn_failed;
     fail_connection (c);
   } else if (get_double_time () - c->last_receive_time > 5 * PING_TIMEOUT && c->state == conn_ready) {
-    int x[3];
-    x[0] = CODE_ping;
-    *(long long *)(x + 1) = lrand48 () * (1ll << 32) + lrand48 ();
-    encrypt_send_message (c, x, 3, 0);
+    tgl_do_send_ping (c);
     start_ping_timer (c);
   } else {
     start_ping_timer (c);
   }
-  return 0;
 }
 
-void stop_ping_timer (struct connection *c) {
-  remove_event_timer (&c->ev);
+static void stop_ping_timer (struct connection *c) {
+  event_del (c->ping_ev);
 }
 
-void start_ping_timer (struct connection *c) {
-  c->ev.timeout = get_double_time () + PING_TIMEOUT;
-  c->ev.alarm = (void *)ping_alarm;
-  c->ev.self = c;
-  insert_event_timer (&c->ev);
+static void start_ping_timer (struct connection *c) {
+  static struct timeval ptimeout = { PING_TIMEOUT, 0};
+  event_add (c->ping_ev, &ptimeout);
 }
 
-void restart_connection (struct connection *c);
-int fail_alarm (void *ev) {
-  ((struct connection *)ev)->in_fail_timer = 0;
-  restart_connection (ev);
-  return 0;
+static void restart_connection (struct connection *c);
+
+static void fail_alarm (evutil_socket_t fd, short what, void *arg) {
+  struct connection *c = arg;
+  c->in_fail_timer = 0;
+  restart_connection (c);
 }
-void start_fail_timer (struct connection *c) {
+
+static void start_fail_timer (struct connection *c) {
   if (c->in_fail_timer) { return; }
   c->in_fail_timer = 1;  
-  c->ev.timeout = get_double_time () + 10;
-  c->ev.alarm = (void *)fail_alarm;
-  c->ev.self = c;
-  insert_event_timer (&c->ev);
+
+  static struct timeval ptimeout = { 10, 0};
+  event_add (c->fail_ev, &ptimeout);
 }
 
-struct connection_buffer *new_connection_buffer (int size) {
+static struct connection_buffer *new_connection_buffer (int size) {
   struct connection_buffer *b = talloc0 (sizeof (*b));
   b->start = talloc (size);
   b->end = b->start + size;
@@ -119,16 +111,19 @@ struct connection_buffer *new_connection_buffer (int size) {
   return b;
 }
 
-void delete_connection_buffer (struct connection_buffer *b) {
+static void delete_connection_buffer (struct connection_buffer *b) {
   tfree (b->start, b->end - b->start);
   tfree (b, sizeof (*b));
 }
 
-int write_out (struct connection *c, const void *_data, int len) {
+int tgln_write_out (struct connection *c, const void *_data, int len) {
   const unsigned char *data = _data;
   if (!len) { return 0; }
   assert (len > 0);
   int x = 0;
+  if (!c->out_bytes) {
+    event_add (c->write_ev, 0);
+  }
   if (!c->out_head) {
     struct connection_buffer *b = new_connection_buffer (1 << 20);
     c->out_head = c->out_tail = b;
@@ -156,7 +151,7 @@ int write_out (struct connection *c, const void *_data, int len) {
   return x;
 }
 
-int read_in (struct connection *c, void *_data, int len) {
+int tgln_read_in (struct connection *c, void *_data, int len) {
   unsigned char *data = _data;
   if (!len) { return 0; }
   assert (len > 0);
@@ -188,7 +183,7 @@ int read_in (struct connection *c, void *_data, int len) {
   return x;
 }
 
-int read_in_lookup (struct connection *c, void *_data, int len) {
+int tgln_read_in_lookup (struct connection *c, void *_data, int len) {
   unsigned char *data = _data;
   if (!len || !c->in_bytes) { return 0; }
   assert (len > 0);
@@ -213,14 +208,14 @@ int read_in_lookup (struct connection *c, void *_data, int len) {
   return x;
 }
 
-void flush_out (struct connection *c UU) {
+void tgln_flush_out (struct connection *c UU) {
 }
 
 #define MAX_CONNECTIONS 100
-struct connection *Connections[MAX_CONNECTIONS];
-int max_connection_fd;
+static struct connection *Connections[MAX_CONNECTIONS];
+static int max_connection_fd;
 
-void rotate_port (struct connection *c) {
+static void rotate_port (struct connection *c) {
   switch (c->port) {
   case 443:
     c->port = 80;
@@ -234,11 +229,26 @@ void rotate_port (struct connection *c) {
   }
 }
 
-struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods) {
+static void try_read (struct connection *c);
+static void try_write (struct connection *c);
+
+static void conn_try_read (evutil_socket_t fd, short what, void *arg) {
+  struct connection *c = arg;
+  try_read (c);
+}
+static void conn_try_write (evutil_socket_t fd, short what, void *arg) {
+  struct connection *c = arg;
+  try_write (c);
+  if (c->out_bytes) {
+    event_add (c->write_ev, 0);
+  }
+}
+
+struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct mtproto_methods *methods) {
   struct connection *c = talloc0 (sizeof (*c));
   int fd = socket (AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
-    logprintf ("Can not create socket: %m\n");
+    vlogprintf (E_ERROR, "Can not create socket: %m\n");
     exit (1);
   }
   assert (fd >= 0 && fd < MAX_CONNECTIONS);
@@ -260,51 +270,38 @@ struct connection *create_connection (const char *host, int port, struct session
 
   if (connect (fd, (struct sockaddr *) &addr, sizeof (addr)) == -1) {
     if (errno != EINPROGRESS) {
-      logprintf ( "Can not connect to %s:%d %m\n", host, port);
+      vlogprintf (E_ERROR, "Can not connect to %s:%d %m\n", host, port);
       close (fd);
       tfree (c, sizeof (*c));
       return 0;
     }
   }
 
-  struct pollfd s;
-  s.fd = fd;
-  s.events = POLLOUT | POLLERR | POLLRDHUP | POLLHUP;
-  errno = 0;
-  
-  while (poll (&s, 1, 10000) <= 0 || !(s.revents & POLLOUT)) {
-    if (errno == EINTR) { continue; }
-    if (errno) {
-      logprintf ("Problems in poll: %m\n");
-      exit (1);
-    }
-    logprintf ("Connect with %s:%d timeout\n", host, port);
-    close (fd);
-    tfree (c, sizeof (*c));
-    return 0;
-  }
-
-  c->session = session;
-  c->fd = fd; 
+  c->fd = fd;
+  c->state = conn_connecting;
+  c->last_receive_time = get_double_time ();
   c->ip = tstrdup (host);
   c->flags = 0;
-  c->state = conn_ready;
-  c->methods = methods;
   c->port = port;
   assert (!Connections[fd]);
   Connections[fd] = c;
-  if (verbosity) {
-    logprintf ( "connect to %s:%d successful\n", host, port);
-  }
-  if (c->methods->ready) {
-    c->methods->ready (c);
-  }
-  c->last_receive_time = get_double_time ();
+ 
+  c->ping_ev = evtimer_new (tgl_state.ev_base, ping_alarm, c);
+  c->fail_ev = evtimer_new (tgl_state.ev_base, fail_alarm, c);
+  c->read_ev = event_new (tgl_state.ev_base, c->fd, EV_READ | EV_PERSIST, conn_try_read, c);
+  c->write_ev = event_new (tgl_state.ev_base, c->fd, EV_WRITE, conn_try_write, c);
+  event_add (c->read_ev, 0);
+
   start_ping_timer (c);
+
+  char byte = 0xef;
+  assert (tgln_write_out (c, &byte, 1) == 1);
+  tgln_flush_out (c);
+
   return c;
 }
 
-void restart_connection (struct connection *c) {
+static void restart_connection (struct connection *c) {
   if (c->last_connect_time == time (0)) {
     start_fail_timer (c);
     return;
@@ -313,7 +310,7 @@ void restart_connection (struct connection *c) {
   c->last_connect_time = time (0);
   int fd = socket (AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
-    logprintf ("Can not create socket: %m\n");
+    vlogprintf (E_ERROR, "Can not create socket: %m\n");
     exit (1);
   }
   assert (fd >= 0 && fd < MAX_CONNECTIONS);
@@ -335,7 +332,7 @@ void restart_connection (struct connection *c) {
 
   if (connect (fd, (struct sockaddr *) &addr, sizeof (addr)) == -1) {
     if (errno != EINPROGRESS) {
-      logprintf ( "Can not connect to %s:%d %m\n", c->ip, c->port);
+      vlogprintf (E_WARNING, "Can not connect to %s:%d %m\n", c->ip, c->port);
       start_fail_timer (c);
       close (fd);
       return;
@@ -349,14 +346,15 @@ void restart_connection (struct connection *c) {
   Connections[fd] = c;
   
   char byte = 0xef;
-  assert (write_out (c, &byte, 1) == 1);
-  flush_out (c);
+  assert (tgln_write_out (c, &byte, 1) == 1);
+  tgln_flush_out (c);
 }
 
-void fail_connection (struct connection *c) {
+static void fail_connection (struct connection *c) {
   if (c->state == conn_ready || c->state == conn_connecting) {
     stop_ping_timer (c);
   }
+  event_del (c->write_ev);
   rotate_port (c);
   struct connection_buffer *b = c->out_head;
   while (b) {
@@ -375,19 +373,17 @@ void fail_connection (struct connection *c) {
   c->out_bytes = c->in_bytes = 0;
   close (c->fd);
   Connections[c->fd] = 0;
-  logprintf ("Lost connection to server... %s:%d\n", c->ip, c->port);
+  vlogprintf (E_NOTICE, "Lost connection to server... %s:%d\n", c->ip, c->port);
   restart_connection (c);
 }
 
-extern FILE *log_net_f;
-void try_write (struct connection *c) {
-  if (verbosity) {
-    logprintf ( "try write: fd = %d\n", c->fd);
-  }
+//extern FILE *log_net_f;
+static void try_write (struct connection *c) {
+  vlogprintf (E_DEBUG, "try write: fd = %d\n", c->fd);
   int x = 0;
   while (c->out_head) {
     int r = write (c->fd, c->out_head->rptr, c->out_head->wptr - c->out_head->rptr);
-    if (r > 0 && log_net_f) {
+    /*if (r > 0 && log_net_f) {
       fprintf (log_net_f, "%.02lf %d OUT %s:%d", get_utime (CLOCK_REALTIME), r, c->ip, c->port);
       int i;
       for (i = 0; i < r; i++) {
@@ -395,7 +391,7 @@ void try_write (struct connection *c) {
       }
       fprintf (log_net_f, "\n");
       fflush (log_net_f);
-    }
+    }*/
     if (r >= 0) {
       x += r;
       c->out_head->rptr += r;
@@ -410,9 +406,7 @@ void try_write (struct connection *c) {
       delete_connection_buffer (b);
     } else {
       if (errno != EAGAIN && errno != EWOULDBLOCK) {
-        if (verbosity) {
-          logprintf ("fail_connection: write_error %m\n");
-        }
+        vlogprintf (E_NOTICE, "fail_connection: write_error %m\n");
         fail_connection (c);
         return;
       } else {
@@ -420,13 +414,11 @@ void try_write (struct connection *c) {
       }
     }
   }
-  if (verbosity) {
-    logprintf ( "Sent %d bytes to %d\n", x, c->fd);
-  }
+  vlogprintf (E_DEBUG, "Sent %d bytes to %d\n", x, c->fd);
   c->out_bytes -= x;
 }
 
-void hexdump_buf (struct connection_buffer *b) {
+/*static void hexdump_buf (struct connection_buffer *b) {
   int pos = 0;
   int rem = 8;
   while (b) { 
@@ -448,57 +440,52 @@ void hexdump_buf (struct connection_buffer *b) {
   }
   printf ("\n");
     
-}
+}*/
 
-void try_rpc_read (struct connection *c) {
+static void try_rpc_read (struct connection *c) {
   assert (c->in_head);
-  if (verbosity >= 3) {
-    hexdump_buf (c->in_head);
-  }
 
   while (1) {
     if (c->in_bytes < 1) { return; }
     unsigned len = 0;
     unsigned t = 0;
-    assert (read_in_lookup (c, &len, 1) == 1);
+    assert (tgln_read_in_lookup (c, &len, 1) == 1);
     if (len >= 1 && len <= 0x7e) {
       if (c->in_bytes < (int)(1 + 4 * len)) { return; }
     } else {
       if (c->in_bytes < 4) { return; }
-      assert (read_in_lookup (c, &len, 4) == 4);
+      assert (tgln_read_in_lookup (c, &len, 4) == 4);
       len = (len >> 8);
       if (c->in_bytes < (int)(4 + 4 * len)) { return; }
       len = 0x7f;
     }
 
     if (len >= 1 && len <= 0x7e) {
-      assert (read_in (c, &t, 1) == 1);    
+      assert (tgln_read_in (c, &t, 1) == 1);    
       assert (t == len);
       assert (len >= 1);
     } else {
       assert (len == 0x7f);
-      assert (read_in (c, &len, 4) == 4);
+      assert (tgln_read_in (c, &len, 4) == 4);
       len = (len >> 8);
       assert (len >= 1);
     }
     len *= 4;
     int op;
-    assert (read_in_lookup (c, &op, 4) == 4);
+    assert (tgln_read_in_lookup (c, &op, 4) == 4);
     c->methods->execute (c, op, len);
   }
 }
 
-void try_read (struct connection *c) {
-  if (verbosity) {
-    logprintf ( "try read: fd = %d\n", c->fd);
-  }
+static void try_read (struct connection *c) {
+  vlogprintf (E_DEBUG, "try read: fd = %d\n", c->fd);
   if (!c->in_tail) {
     c->in_head = c->in_tail = new_connection_buffer (1 << 20);
   }
   int x = 0;
   while (1) {
     int r = read (c->fd, c->in_tail->wptr, c->in_tail->end - c->in_tail->wptr);
-    if (r > 0 && log_net_f) {
+    /*if (r > 0 && log_net_f) {
       fprintf (log_net_f, "%.02lf %d IN %s:%d", get_utime (CLOCK_REALTIME), r, c->ip, c->port);
       int i;
       for (i = 0; i < r; i++) {
@@ -506,7 +493,7 @@ void try_read (struct connection *c) {
       }
       fprintf (log_net_f, "\n");
       fflush (log_net_f);
-    }
+    }*/
     if (r > 0) {
       c->last_receive_time = get_double_time ();
       stop_ping_timer (c);
@@ -523,9 +510,7 @@ void try_read (struct connection *c) {
       c->in_tail = b;
     } else {
       if (errno != EAGAIN && errno != EWOULDBLOCK) {
-        if (verbosity) {
-          logprintf ("fail_connection: read_error %m\n");
-        }
+        vlogprintf (E_NOTICE, "fail_connection: read_error %m\n");
         fail_connection (c);
         return;
       } else {
@@ -533,16 +518,14 @@ void try_read (struct connection *c) {
       }
     }
   }
-  if (verbosity) {
-    logprintf ( "Received %d bytes from %d\n", x, c->fd);
-  }
+  vlogprintf (E_DEBUG, "Received %d bytes from %d\n", x, c->fd);
   c->in_bytes += x;
   if (x) {
     try_rpc_read (c);
   }
 }
 
-int connections_make_poll_array (struct pollfd *fds, int max) {
+int tgl_connections_make_poll_array (struct pollfd *fds, int max) {
   int _max = max;
   int i;
   for (i = 0; i <= max_connection_fd; i++) {
@@ -561,16 +544,10 @@ int connections_make_poll_array (struct pollfd *fds, int max) {
       max --;
     }
   }
-  if (verbosity >= 10) {
-    logprintf ( "%d connections in poll\n", _max - max);
-  }
   return _max - max;
 }
 
-void connections_poll_result (struct pollfd *fds, int max) {
-  if (verbosity >= 10) {
-    logprintf ( "connections_poll_result: max = %d\n", max);
-  }
+void tgl_connections_poll_result (struct pollfd *fds, int max) {
   int i;
   for (i = 0; i < max; i++) {
     struct connection *c = Connections[fds[i].fd];
@@ -578,13 +555,11 @@ void connections_poll_result (struct pollfd *fds, int max) {
       try_read (c);
     }
     if (fds[i].revents & (POLLHUP | POLLERR | POLLRDHUP)) {
-      if (verbosity) {
-        logprintf ("fail_connection: events_mask=0x%08x\n", fds[i].revents);
-      }
+      vlogprintf (E_NOTICE, "fail_connection: events_mask=0x%08x\n", fds[i].revents);
       fail_connection (c);
     } else if (fds[i].revents & POLLOUT) {
       if (c->state == conn_connecting) {
-        logprintf ("connection ready\n");
+        vlogprintf (E_DEBUG, "connection ready\n");
         c->state = conn_ready;
         c->last_receive_time = get_double_time ();
       }
@@ -593,55 +568,4 @@ void connections_poll_result (struct pollfd *fds, int max) {
       }
     }
   }
-}
-
-int send_all_acks (struct session *S) {
-  clear_packet ();
-  out_int (CODE_msgs_ack);
-  out_int (CODE_vector);
-  out_int (tree_count_long (S->ack_tree));
-  while (S->ack_tree) {
-    long long x = tree_get_min_long (S->ack_tree); 
-    out_long (x);
-    S->ack_tree = tree_delete_long (S->ack_tree, x);
-  }
-  encrypt_send_message (S->c, packet_buffer, packet_ptr - packet_buffer, 0);
-  return 0;
-}
-
-void insert_msg_id (struct session *S, long long id) {
-  if (!S->ack_tree) {
-    S->ev.alarm = (void *)send_all_acks;
-    S->ev.self = (void *)S;
-    S->ev.timeout = get_double_time () + ACK_TIMEOUT;
-    insert_event_timer (&S->ev);
-  }
-  if (!tree_lookup_long (S->ack_tree, id)) {
-    S->ack_tree = tree_insert_long (S->ack_tree, id, lrand48 ());
-  }
-}
-
-extern struct dc *DC_list[];
-
-struct dc *alloc_dc (int id, char *ip, int port UU) {
-  assert (!DC_list[id]);
-  struct dc *DC = talloc0 (sizeof (*DC));
-  DC->id = id;
-  DC->ip = ip;
-  DC->port = port;
-  DC_list[id] = DC;
-  return DC;
-}
-
-void dc_create_session (struct dc *DC) {
-  struct session *S = talloc0 (sizeof (*S));
-  assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
-  S->dc = DC;
-  S->c = create_connection (DC->ip, DC->port, S, &auth_methods);
-  if (!S->c) {
-    logprintf ("Can not create connection to DC. Is network down?\n");
-    exit (1);
-  }
-  assert (!DC->sessions[0]);
-  DC->sessions[0] = S;
 }

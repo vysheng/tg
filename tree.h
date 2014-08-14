@@ -32,7 +32,7 @@ struct tree_ ## X_NAME { \
   int y;\
 };\
 \
-struct tree_ ## X_NAME *new_tree_node_ ## X_NAME (X_TYPE x, int y) {\
+static inline struct tree_ ## X_NAME *new_tree_node_ ## X_NAME (X_TYPE x, int y) {\
   struct tree_ ## X_NAME *T = talloc (sizeof (*T));\
   T->x = x;\
   T->y = y;\
@@ -40,11 +40,11 @@ struct tree_ ## X_NAME *new_tree_node_ ## X_NAME (X_TYPE x, int y) {\
   return T;\
 }\
 \
-void delete_tree_node_ ## X_NAME (struct tree_ ## X_NAME *T) {\
+static inline void delete_tree_node_ ## X_NAME (struct tree_ ## X_NAME *T) {\
   tfree (T, sizeof (*T));\
 }\
 \
-void tree_split_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, struct tree_ ## X_NAME **L, struct tree_ ## X_NAME **R) {\
+static inline void tree_split_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, struct tree_ ## X_NAME **L, struct tree_ ## X_NAME **R) {\
   if (!T) {\
     *L = *R = 0;\
   } else {\
@@ -59,8 +59,8 @@ void tree_split_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, struct tree_ ##
   }\
 }\
 \
-struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, int y) __attribute__ ((warn_unused_result));\
-struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, int y) {\
+static inline struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, int y) __attribute__ ((warn_unused_result));\
+static inline struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x, int y) {\
   if (!T) {\
     return new_tree_node_ ## X_NAME  (x, y);\
   } else {\
@@ -81,7 +81,7 @@ struct tree_ ## X_NAME *tree_insert_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYP
   }\
 }\
 \
-struct tree_ ## X_NAME *tree_merge_ ## X_NAME (struct tree_ ## X_NAME *L, struct tree_ ## X_NAME *R) {\
+static inline struct tree_ ## X_NAME *tree_merge_ ## X_NAME (struct tree_ ## X_NAME *L, struct tree_ ## X_NAME *R) {\
   if (!L || !R) {\
     return L ? L : R;\
   } else {\
@@ -95,8 +95,8 @@ struct tree_ ## X_NAME *tree_merge_ ## X_NAME (struct tree_ ## X_NAME *L, struct
   }\
 }\
 \
-struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) __attribute__ ((warn_unused_result));\
-struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
+static inline struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) __attribute__ ((warn_unused_result));\
+static inline struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
   assert (T);\
   int c = X_CMP (x, T->x);\
   if (!c) {\
@@ -113,13 +113,13 @@ struct tree_ ## X_NAME *tree_delete_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYP
   }\
 }\
 \
-X_TYPE tree_get_min_ ## X_NAME (struct tree_ ## X_NAME *T) {\
+static inline X_TYPE tree_get_min_ ## X_NAME (struct tree_ ## X_NAME *T) {\
   if (!T) { return X_UNSET; } \
   while (T->left) { T = T->left; }\
   return T->x; \
 } \
 \
-X_TYPE tree_lookup_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
+static inline X_TYPE tree_lookup_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
   int c;\
   while (T && (c = X_CMP (x, T->x))) {\
     T = (c < 0 ? T->left : T->right);\
@@ -127,25 +127,25 @@ X_TYPE tree_lookup_ ## X_NAME (struct tree_ ## X_NAME *T, X_TYPE x) {\
   return T ? T->x : X_UNSET;\
 }\
 \
-void tree_act_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE)) {\
+static inline void tree_act_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE)) {\
   if (!T) { return; } \
   tree_act_ ## X_NAME (T->left, act); \
   act (T->x); \
   tree_act_ ## X_NAME (T->right, act); \
 }\
 \
-void tree_act_ex_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE, void *), void *extra) {\
+static inline void tree_act_ex_ ## X_NAME (struct tree_ ## X_NAME *T, void (*act)(X_TYPE, void *), void *extra) {\
   if (!T) { return; } \
   tree_act_ex_ ## X_NAME (T->left, act, extra); \
   act (T->x, extra); \
   tree_act_ex_ ## X_NAME (T->right, act, extra); \
 }\
 \
-int tree_count_ ## X_NAME (struct tree_ ## X_NAME *T) { \
+static inline int tree_count_ ## X_NAME (struct tree_ ## X_NAME *T) { \
   if (!T) { return 0; }\
   return 1 + tree_count_ ## X_NAME (T->left) + tree_count_ ## X_NAME (T->right); \
 }\
-void tree_check_ ## X_NAME (struct tree_ ## X_NAME *T) { \
+static inline void tree_check_ ## X_NAME (struct tree_ ## X_NAME *T) { \
   if (!T) { return; }\
   if (T->left) { \
     assert (T->left->y <= T->y);\
@@ -158,7 +158,7 @@ void tree_check_ ## X_NAME (struct tree_ ## X_NAME *T) { \
   tree_check_ ## X_NAME (T->left); \
   tree_check_ ## X_NAME (T->right); \
 }\
-struct tree_ ## X_NAME *tree_clear_ ## X_NAME (struct tree_ ## X_NAME *T) { \
+static inline struct tree_ ## X_NAME *tree_clear_ ## X_NAME (struct tree_ ## X_NAME *T) { \
   if (!T) { return 0; }\
   tree_clear_ ## X_NAME (T->left); \
   tree_clear_ ## X_NAME (T->right); \

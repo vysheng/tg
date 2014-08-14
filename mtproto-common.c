@@ -53,9 +53,9 @@ int *packet_buffer = __packet_buffer + 16;
 long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
 BN_CTX *BN_ctx;
-int verbosity;
+//int verbosity;
 
-int get_random_bytes (unsigned char *buf, int n) {
+static int get_random_bytes (unsigned char *buf, int n) {
   int r = 0, h = open ("/dev/random", O_RDONLY | O_NONBLOCK);
   if (h >= 0) {
     r = read (h, buf, n);
@@ -87,20 +87,6 @@ int get_random_bytes (unsigned char *buf, int n) {
   return r;
 }
 
-void my_clock_gettime (int clock_id UU, struct timespec *T) {
-#ifdef __MACH__
-  // We are ignoring MONOTONIC and hope time doesn't go back too often
-  clock_serv_t cclock;
-  mach_timespec_t mts;
-  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-  clock_get_time(cclock, &mts);
-  mach_port_deallocate(mach_task_self(), cclock);
-  T->tv_sec = mts.tv_sec;
-  T->tv_nsec = mts.tv_nsec;
-#else
-  assert (clock_gettime(clock_id, T) >= 0);
-#endif
-}
 
 /* RDTSC */
 #if defined(__i386__)

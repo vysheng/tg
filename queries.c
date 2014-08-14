@@ -44,7 +44,7 @@
 #include "loop.h"
 #include "structures.h"
 //#include "interface.h"
-#include "net.h"
+//#include "net.h"
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/aes.h>
@@ -53,8 +53,10 @@
 
 #include "no-preview.h"
 #include "binlog.h"
+#include "updates.h"
 #include "auto.h"
 #include "tgl.h"
+#include <event2/event.h>
 
 #define sha1 SHA1
 
@@ -85,25 +87,23 @@ static void out_peer_id (tgl_peer_id_t id);
 DEFINE_TREE (query, struct query *, memcmp8, 0) ;
 struct tree_query *queries_tree;
 
-double get_double_time (void) {
-  struct timespec tv;
-  my_clock_gettime (CLOCK_REALTIME, &tv);
-  return tv.tv_sec + 1e-9 * tv.tv_nsec;
-}
-
-struct query *query_get (long long id) {
+struct query *tglq_query_get (long long id) {
   return tree_lookup_query (queries_tree, (void *)&id);
 }
 
-int alarm_query (struct query *q) {
+static int alarm_query (struct query *q) {
   assert (q);
   vlogprintf (E_DEBUG, "Alarm query %lld\n", q->msg_id);
-  q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
-  insert_event_timer (&q->ev);
+  //q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
+  //insert_event_timer (&q->ev);
+  
+  
+  static struct timeval ptimeout = { QUERY_TIMEOUT, 0};
+  event_add (q->ev, &ptimeout);
 
-  if (q->session->c->out_bytes >= 100000) {
+  /*if (q->session->c->out_bytes >= 100000) {
     return 0;
-  }
+  }*/
 
   clear_packet ();
   out_int (CODE_msg_container);
@@ -113,30 +113,35 @@ int alarm_query (struct query *q) {
   out_int (4 * q->data_len);
   out_ints (q->data, q->data_len);
   
-  encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, 0);
+  tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, 0);
   return 0;
 }
 
-void query_restart (long long id) {
-  struct query *q = query_get (id);
+void tglq_query_restart (long long id) {
+  struct query *q = tglq_query_get (id);
   if (q) {
-    remove_event_timer (&q->ev);
+    event_del (q->ev);
     alarm_query (q);
   }
 }
 
-struct query *send_query (struct dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
+static void alarm_query_gateway (evutil_socket_t fd, short what, void *arg) {
+  alarm_query (arg);
+}
+
+
+struct query *tglq_send_query (struct dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
   assert (DC);
   assert (DC->auth_key_id);
   if (!DC->sessions[0]) {
-    dc_create_session (DC);
+    tglmp_dc_create_session (DC);
   }
   vlogprintf (E_DEBUG, "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
   struct query *q = talloc0 (sizeof (*q));
   q->data_len = ints;
   q->data = talloc (4 * ints);
   memcpy (q->data, data, 4 * ints);
-  q->msg_id = encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
+  q->msg_id = tglmp_encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
   q->session = DC->sessions[0];
   q->seq_no = DC->sessions[0]->seq_no - 1; 
   vlogprintf (E_DEBUG, "Msg_id is %lld %p\n", q->msg_id, q);
@@ -147,10 +152,14 @@ struct query *send_query (struct dc *DC, int ints, void *data, struct query_meth
   }
   queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
 
-  q->ev.alarm = (void *)alarm_query;
-  q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
-  q->ev.self = (void *)q;
-  insert_event_timer (&q->ev);
+  //q->ev.alarm = (void *)alarm_query;
+  //q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
+  //q->ev.self = (void *)q;
+  //insert_event_timer (&q->ev);
+
+  q->ev = evtimer_new (tgl_state.ev_base, alarm_query_gateway, q);
+  static struct timeval ptimeout = { QUERY_TIMEOUT, 0};
+  event_add (q->ev, &ptimeout);
 
   q->extra = extra;
   q->callback = callback;
@@ -165,27 +174,27 @@ static int fail_on_error (struct query *q UU, int error_code UU, int l UU, char 
   return 0;
 }
 
-void query_ack (long long id) {
-  struct query *q = query_get (id);
+void tglq_query_ack (long long id) {
+  struct query *q = tglq_query_get (id);
   if (q && !(q->flags & QUERY_ACK_RECEIVED)) { 
     assert (q->msg_id == id);
     q->flags |= QUERY_ACK_RECEIVED; 
-    remove_event_timer (&q->ev);
+    event_del (q->ev);
   }
 }
 
-void query_error (long long id) {
+void tglq_query_error (long long id) {
   assert (fetch_int () == CODE_rpc_error);
   int error_code = fetch_int ();
   int error_len = prefetch_strlen ();
   char *error = fetch_str (error_len);
   vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
-  struct query *q = query_get (id);
+  struct query *q = tglq_query_get (id);
   if (!q) {
     vlogprintf (E_WARNING, "No such query\n");
   } else {
     if (!(q->flags & QUERY_ACK_RECEIVED)) {
-      remove_event_timer (&q->ev);
+      event_del (q->ev);
     }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_error) {
@@ -194,6 +203,7 @@ void query_error (long long id) {
       vlogprintf ( E_WARNING, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
     }
     tfree (q->data, q->data_len * 4);
+    event_free (q->ev);
     tfree (q, sizeof (*q));
   }
   queries_num --;
@@ -202,7 +212,7 @@ void query_error (long long id) {
 #define MAX_PACKED_SIZE (1 << 24)
 static int packed_buffer[MAX_PACKED_SIZE / 4];
 
-void query_result (long long id UU) {
+void tglq_query_result (long long id UU) {
   vlogprintf (E_DEBUG, "result for query #%lld\n", id);
   /*if (verbosity  >= 4) {
     logprintf ( "result: ");
@@ -226,7 +236,7 @@ void query_result (long long id UU) {
       hexdump_in ();
     }*/
   }
-  struct query *q = query_get (id);
+  struct query *q = tglq_query_get (id);
   if (!q) {
     //if (verbosity) {
     //  logprintf ( "No such query\n");
@@ -235,7 +245,7 @@ void query_result (long long id UU) {
     in_ptr = in_end;
   } else {
     if (!(q->flags & QUERY_ACK_RECEIVED)) {
-      remove_event_timer (&q->ev);
+      event_del (q->ev);
     }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_answer) {
@@ -253,6 +263,7 @@ void query_result (long long id UU) {
       assert (in_ptr == in_end);
     }
     tfree (q->data, 4 * q->data_len);
+    event_free (q->ev);
     tfree (q, sizeof (*q));
   }
   if (end) {
@@ -262,37 +273,6 @@ void query_result (long long id UU) {
   queries_num --;
 } 
 
-#define event_timer_cmp(a,b) ((a)->timeout > (b)->timeout ? 1 : ((a)->timeout < (b)->timeout ? -1 : (memcmp (a, b, sizeof (struct event_timer)))))
-DEFINE_TREE (timer, struct event_timer *, event_timer_cmp, 0)
-struct tree_timer *timer_tree;
-
-void insert_event_timer (struct event_timer *ev) {
-  vlogprintf (E_DEBUG + 2, "INSERT: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
-  timer_tree = tree_insert_timer (timer_tree, ev, lrand48 ());
-}
-
-void remove_event_timer (struct event_timer *ev) {
-  vlogprintf (E_DEBUG + 2, "REMOVE: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
-  timer_tree = tree_delete_timer (timer_tree, ev);
-}
-
-double next_timer_in (void) {
-  if (!timer_tree) { return 1e100; }
-  return tree_get_min_timer (timer_tree)->timeout;
-}
-
-void work_timers (void) {
-  double t = get_double_time ();
-  while (timer_tree) {
-    struct event_timer *ev = tree_get_min_timer (timer_tree);
-    assert (ev);
-    if (ev->timeout > t) { break; }
-    remove_event_timer (ev);
-    assert (ev->alarm);
-    vlogprintf (E_DEBUG, "Alarm\n");
-    ev->alarm (ev->self);
-  }
-}
 
 int max_chat_size;
 int max_bcast_size;
@@ -304,7 +284,7 @@ extern struct dc *DC_working;
 static void out_random (int n) {
   assert (n <= 32);
   static char buf[32];
-  secure_random (buf, n);
+  tglt_secure_random (buf, n);
   out_cstring (buf, n);
 }
 
@@ -383,7 +363,7 @@ void tgl_do_help_get_config (void (*callback)(void *, int), void *callback_extra
   clear_packet ();  
   tgl_do_insert_header ();
   out_int (CODE_help_get_config);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -447,7 +427,7 @@ void tgl_do_send_code (const char *user, void (*callback)(void *callback_extra, 
   out_string (TG_APP_HASH);
   out_string ("en");
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0, callback, callback_extra);
 }
 
 
@@ -474,7 +454,7 @@ void tgl_do_phone_call (const char *user, void (*callback)(void *callback_extra,
   out_string (user);
   out_string (phone_code_hash);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -534,10 +514,10 @@ int tgl_do_auth_check_phone (const char *user) {
   out_int (CODE_auth_check_phone);
   out_string (user);
   check_phone_result = -1;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
   net_loop (0, cr_f);
   check_phone_result = -1;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
   net_loop (0, cr_f);
   return check_phone_result;
 }*/
@@ -571,7 +551,7 @@ int tgl_do_get_nearest_dc (void) {
   clear_packet ();
   out_int (CODE_help_get_nearest_dc);
   nearest_dc_num = -1;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &nearest_dc_methods, 0);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &nearest_dc_methods, 0);
   net_loop (0, nr_f);
   return nearest_dc_num;
 }*/
@@ -607,7 +587,7 @@ int tgl_do_send_code_result (const char *user, const char *code, void (*callback
   out_string (user);
   out_string (phone_code_hash);
   out_string (code);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
   return 0;
 }
 
@@ -619,7 +599,7 @@ int tgl_do_send_code_result_auth (const char *user, const char *code, const char
   out_string (code);
   out_string (first_name);
   out_string (last_name);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
   return 0;
 }
 /* }}} */
@@ -688,7 +668,7 @@ void tgl_do_update_contact_list (void (*callback) (void *callback_extra, int suc
   clear_packet ();
   out_int (CODE_contacts_get_contacts);
   out_string ("");
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -745,7 +725,7 @@ static char *encrypt_decrypted_message (struct tgl_secret_chat *E) {
   return (void *)msg_key;
 }
 
-void encr_start (void) {
+static void encr_start (void) {
   encr_extra = packet_ptr;
   packet_ptr += 1; // str len
   packet_ptr += 2; // fingerprint
@@ -754,11 +734,11 @@ void encr_start (void) {
 }
 
 
-void encr_finish (struct tgl_secret_chat *E) {
+static void encr_finish (struct tgl_secret_chat *E) {
   int l = packet_ptr - (encr_extra +  8);
   while (((packet_ptr - encr_extra) - 3) & 3) {  
     int t;
-    secure_random (&t, 4);
+    tglt_secure_random (&t, 4);
     out_int (t);
   }
 
@@ -775,7 +755,7 @@ void encr_finish (struct tgl_secret_chat *E) {
 
 void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
   long long t;
-  secure_random (&t, 8);
+  tglt_secure_random (&t, 8);
   int action[2];
   action[0] = CODE_decrypted_message_action_notify_layer;
   action[1] = 15;
@@ -807,9 +787,9 @@ static int msg_send_on_answer (struct query *q UU) {
   int id = fetch_int (); // id
   struct tgl_message *M = q->extra;
   bl_do_set_msg_id (M, id);
-  fetch_date ();
-  fetch_pts ();
-  fetch_seq ();
+  tglu_fetch_date ();
+  tglu_fetch_pts ();
+  tglu_fetch_seq ();
   if (x == CODE_messages_sent_message_link) {
     assert (skip_type_any (TYPE_TO_PARAM_1 (vector, TYPE_TO_PARAM (contacts_link))) >= 0);
   }
@@ -902,7 +882,7 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   out_int (CODE_decrypted_message_service);
   out_long (M->id);
   static int buf[4];
-  secure_random (buf, 16);
+  tglt_secure_random (buf, 16);
   out_cstring ((void *)buf, 16);
 
   switch (M->action.type) {
@@ -915,7 +895,7 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   }
   encr_finish (&P->encr_chat);
   
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
 }
 
 void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
@@ -942,13 +922,13 @@ void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callbac
   out_int (CODE_decrypted_message);
   out_long (M->id);
   static int buf[4];
-  secure_random (buf, 16);
+  tglt_secure_random (buf, 16);
   out_cstring ((void *)buf, 16);
   out_cstring ((void *)M->message, M->message_len);
   out_int (CODE_decrypted_message_media_empty);
   encr_finish (&P->encr_chat);
   
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
 }
 
 void tgl_do_send_msg (struct tgl_message *M, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
@@ -961,7 +941,7 @@ void tgl_do_send_msg (struct tgl_message *M, void (*callback)(void *callback_ext
   out_peer_id (M->to_id);
   out_cstring (M->message, M->message_len);
   out_long (M->id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M, callback, callback_extra);
 }
 
 void tgl_do_send_message (tgl_peer_id_t id, const char *msg, int len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
@@ -983,7 +963,7 @@ void tgl_do_send_message (tgl_peer_id_t id, const char *msg, int len, void (*cal
     }
   }
   long long t;
-  secure_random (&t, 8);
+  tglt_secure_random (&t, 8);
   vlogprintf (E_DEBUG, "t = %lld, len = %d\n", t, len);
   bl_do_send_message_text (t, tgl_state.our_id, tgl_get_peer_type (id), tgl_get_peer_id (id), time (0), len, msg);
   struct tgl_message *M = tgl_message_get (t);
@@ -1024,8 +1004,8 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void 
 /* {{{ Mark read */
 static int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
-  fetch_pts ();
-  fetch_seq ();
+  tglu_fetch_pts ();
+  tglu_fetch_seq ();
   fetch_int (); // offset
   if (q->callback) {
     ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
@@ -1057,7 +1037,7 @@ void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, void (*callback)(v
   out_peer_id (id);
   out_int (max_id);
   out_int (0);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0, callback, callback_extra);
 }
 
 void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, int last_time, void (*callback)(void *callback_extra, int), void *callback_extra) {
@@ -1067,7 +1047,7 @@ void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, in
   out_int (tgl_get_peer_id (id));
   out_long (access_hash);
   out_int (last_time);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_encr_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_encr_methods, 0, callback, callback_extra);
 }
 
 void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
@@ -1177,7 +1157,7 @@ void tgl_do_get_history (tgl_peer_id_t id, int limit, int offline_mode, void (*c
   out_int (0);
   out_int (0);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id, callback, callback_extra);
 }
 /* }}} */
 
@@ -1264,7 +1244,7 @@ void tgl_do_get_dialog_list (void (*callback)(void *callback_extra, int success,
   out_int (0);
   out_int (0);
   out_int (1000);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -1332,8 +1312,8 @@ static int send_file_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  fetch_pts ();
-  fetch_seq ();
+  tglu_fetch_pts ();
+  tglu_fetch_seq ();
 
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback)(q->callback_extra, 1, M);
@@ -1402,7 +1382,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
     if (f->encr) {
       if (x & 15) {
         assert (f->offset == f->size);
-        secure_random (buf + x, (-x) & 15);
+        tglt_secure_random (buf + x, (-x) & 15);
         x = (x + 15) & ~15;
       }
       
@@ -1420,7 +1400,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       assert (f->part_size == x);
     }
     //update_prompt ();
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
+    tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
   } else {
     tgl_state.cur_uploaded_bytes -= f->size;
     tgl_state.cur_uploading_bytes -= f->size;
@@ -1467,7 +1447,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       }
 
       out_long (-lrand48 () * (1ll << 32) - lrand48 ());
-      send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
+      tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
     } else {
       struct tgl_message *M = talloc0 (sizeof (*M));
 
@@ -1558,7 +1538,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       M->id = r;
       M->date = time (0);
       
-      send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M, callback, callback_extra);
+      tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M, callback, callback_extra);
     }
     tfree_str (f->file_name);
     tfree (f, sizeof (*f));
@@ -1572,7 +1552,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
   out_long (f->thumb_id);
   out_int (0);
   out_cstring ((void *)thumb_file, thumb_file_size);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
 }*/
 
 void tgl_do_send_photo (int type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
@@ -1617,11 +1597,11 @@ void tgl_do_send_photo (int type, tgl_peer_id_t to_id, char *file_name, void (*c
   if (tgl_get_peer_type (f->to_id) == TGL_PEER_ENCR_CHAT) {
     f->encr = 1;
     f->iv = talloc (32);
-    secure_random (f->iv, 32);
+    tglt_secure_random (f->iv, 32);
     f->init_iv = talloc (32);
     memcpy (f->init_iv, f->iv, 32);
     f->key = talloc (32);
-    secure_random (f->key, 32);
+    tglt_secure_random (f->key, 32);
   }
   /*if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
     f->media_type = CODE_input_media_uploaded_thumb_video;
@@ -1651,8 +1631,8 @@ static int fwd_msg_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  fetch_pts ();
-  fetch_seq ();
+  tglu_fetch_pts ();
+  tglu_fetch_seq ();
   //print_message (M);
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
@@ -1676,7 +1656,7 @@ void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *cal
   out_peer_id (id);
   out_int (n);
   out_long (lrand48 () * (1ll << 32) + lrand48 ());
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -1695,8 +1675,8 @@ static int rename_chat_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  fetch_pts ();
-  fetch_seq ();
+  tglu_fetch_pts ();
+  tglu_fetch_seq ();
   //print_message (M);
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
@@ -1715,7 +1695,7 @@ void tgl_do_rename_chat (tgl_peer_id_t id, char *name UU, void (*callback)(void 
   assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
   out_int (tgl_get_peer_id (id));
   out_string (name);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -1774,7 +1754,7 @@ void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(
   out_int (CODE_messages_get_full_chat);
   assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
   out_int (tgl_get_peer_id (id));
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -1836,7 +1816,7 @@ void tgl_do_get_user_info (tgl_peer_id_t id, int offline_mode, void (*callback)(
     out_int (CODE_input_user_contact);
     out_int (tgl_get_peer_id (id));
   }
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -1867,7 +1847,7 @@ void tgl_do_get_user_list_info_silent (int num, int *list) {
     out_int (list[i]);
     //out_long (0);
   }
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
 }*/
 /* }}} */
 
@@ -2012,8 +1992,8 @@ static void load_next_part (struct download *D, void *callback, void *callback_e
   }
   out_int (D->offset);
   out_int (1 << 14);
-  send_query (DC_list[D->dc], packet_ptr - packet_buffer, packet_buffer, &download_methods, D, callback, callback_extra);
-  //send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
+  tglq_send_query (DC_list[D->dc], packet_ptr - packet_buffer, packet_buffer, &download_methods, D, callback, callback_extra);
+  //tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
 }
 
 void tgl_do_load_photo_size (struct tgl_photo_size *P, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
@@ -2160,7 +2140,7 @@ static int export_auth_on_answer (struct query *q UU) {
   out_int (CODE_auth_import_authorization);
   out_int (tgl_state.our_id);
   out_cstring (s, l);
-  send_query (q->extra, packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0, q->callback, q->callback_extra);
+  tglq_send_query (q->extra, packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0, q->callback, q->callback_extra);
   tfree (s, l);
   return 0;
 }
@@ -2175,7 +2155,7 @@ void tgl_do_export_auth (int num, void (*callback) (void *callback_extra, int su
   clear_packet ();
   out_int (CODE_auth_export_authorization);
   out_int (num);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &export_auth_methods, DC_list[num], callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &export_auth_methods, DC_list[num], callback, callback_extra);
 }
 /* }}} */
 
@@ -2262,7 +2242,7 @@ void tgl_do_add_contact (const char *phone, int phone_len, const char *first_nam
   out_cstring (first_name, first_name_len);
   out_cstring (last_name, last_name_len);
   out_int (force ? CODE_bool_true : CODE_bool_false);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -2298,7 +2278,7 @@ void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, const cha
   out_int (0); // offset
   out_int (0); // max_id
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -2348,7 +2328,7 @@ void tgl_do_contacts_search (int limit, const char *s, void (*callback) (void *c
   out_int (CODE_contacts_search);
   out_string (s);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &contacts_search_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &contacts_search_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -2437,7 +2417,7 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
     return; 
   } // Already generated key for this chat
   unsigned char random_here[256];
-  secure_random (random_here, 256);
+  tglt_secure_random (random_here, 256);
   for (i = 0; i < 256; i++) {
     random[i] ^= random_here[i];
   }
@@ -2445,7 +2425,7 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
   ensure_ptr (b);
   BIGNUM *g_a = BN_bin2bn (E->g_key, 256, 0);
   ensure_ptr (g_a);
-  assert (check_g (tgl_state.encr_prime, g_a) >= 0);
+  assert (tglmp_check_g (tgl_state.encr_prime, g_a) >= 0);
   if (!ctx) {
     ctx = BN_CTX_new ();
     ensure_ptr (ctx);
@@ -2485,14 +2465,14 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
   BN_clear_free (p);
   BN_clear_free (r);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E, callback, callback_extra);
 }
 
 void tgl_do_create_keys_end (struct tgl_secret_chat *U) {
   assert (tgl_state.encr_prime);
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
   ensure_ptr (g_b);
-  assert (check_g (tgl_state.encr_prime, g_b) >= 0);
+  assert (tglmp_check_g (tgl_state.encr_prime, g_b) >= 0);
   if (!ctx) {
     ctx = BN_CTX_new ();
     ensure_ptr (ctx);
@@ -2535,7 +2515,7 @@ void tgl_do_send_create_encr_chat (void *x, unsigned char *random, void (*callba
   int user_id = (long)x;
   int i;
   unsigned char random_here[256];
-  secure_random (random_here, 256);
+  tglt_secure_random (random_here, 256);
   for (i = 0; i < 256; i++) {
     random[i] ^= random_here[i];
   }
@@ -2595,7 +2575,7 @@ void tgl_do_send_create_encr_chat (void *x, unsigned char *random, void (*callba
   BN_clear_free (p);
   BN_clear_free (r);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_request_methods, E, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_request_methods, E, callback, callback_extra);
 }
 
 static int get_dh_config_on_answer (struct query *q UU) {
@@ -2611,7 +2591,7 @@ static int get_dh_config_on_answer (struct query *q UU) {
 
     BIGNUM *p = BN_bin2bn ((void *)s, 256, 0);
     ensure_ptr (p);
-    assert (check_DH_params (p, a) >= 0);
+    assert (tglmp_check_DH_params (p, a) >= 0);
     BN_free (p);      
   }
   int l = prefetch_strlen ();
@@ -2644,7 +2624,7 @@ void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback
   void **x = talloc (2 * sizeof (void *));
   x[0] = tgl_do_send_accept_encr_chat;
   x[1] = E;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x, callback, callback_extra);
 }
 
 void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
@@ -2655,7 +2635,7 @@ void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callba
   void **x = talloc (2 * sizeof (void *));
   x[0] = tgl_do_send_create_encr_chat;
   x[1] = (void *)(long)(user_id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x, callback, callback_extra);
 }
 /* }}} */
 
@@ -2711,7 +2691,7 @@ static int get_difference_on_answer (struct query *q UU) {
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
-      work_update (0, 0);
+      tglu_work_update (0, 0);
     }
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
@@ -2780,10 +2760,10 @@ void tgl_do_get_difference (int sync_from_start, void (*callback)(void *callback
     out_int (tgl_state.pts);
     out_int (tgl_state.date);
     out_int (tgl_state.qts);
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_difference_methods, 0, callback, callback_extra);
+    tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_difference_methods, 0, callback, callback_extra);
   } else {
     out_int (CODE_updates_get_state);
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_state_methods, 0, callback, callback_extra);
+    tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_state_methods, 0, callback, callback_extra);
   }
 }
 /* }}} */
@@ -2872,7 +2852,7 @@ void tgl_do_get_suggested (void) {
   clear_packet ();
   out_int (CODE_contacts_get_suggested);
   out_int (100);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_suggested_methods, 0);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_suggested_methods, 0);
 }*/
 /* }}} */
 
@@ -2899,7 +2879,7 @@ void tgl_do_add_user_to_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, int limit
     out_int (tgl_get_peer_id (id));
   }
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0, callback, callback_extra);
 }
 
 void tgl_do_del_user_from_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
@@ -2917,7 +2897,7 @@ void tgl_do_del_user_from_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, void (*
     out_int (CODE_input_user_contact);
     out_int (tgl_get_peer_id (id));
   }
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -2962,7 +2942,7 @@ void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callba
     out_int (tgl_get_peer_id (id));
   }
   out_string (chat_topic);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -2991,7 +2971,7 @@ void tgl_do_delete_msg (long long id, void (*callback)(void *callback_extra, int
   out_int (CODE_vector);
   out_int (1);
   out_int (id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &delete_msg_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &delete_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -3020,11 +3000,11 @@ void tgl_do_restore_msg (long long id, void (*callback)(void *callback_extra, in
   out_int (CODE_vector);
   out_int (1);
   out_int (id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &restore_msg_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &restore_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
-int update_status_on_answer (struct query *q UU) {
+static int update_status_on_answer (struct query *q UU) {
   fetch_bool ();
   
   if (q->callback) {
@@ -3042,5 +3022,5 @@ void tgl_do_update_status (int online UU, void (*callback)(void *callback_extra,
   clear_packet ();
   out_int (CODE_account_update_status);
   out_int (online ? CODE_bool_false : CODE_bool_true);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &update_status_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &update_status_methods, 0, callback, callback_extra);
 }

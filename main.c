@@ -386,8 +386,8 @@ void usage (void) {
   exit (1);
 }
 
-extern char *rsa_public_key_name;
-extern int default_dc_num;
+//extern char *rsa_public_key_name;
+//extern int default_dc_num;
 
 char *log_net_file;
 FILE *log_net_f;
@@ -406,7 +406,8 @@ void args_parse (int argc, char **argv) {
       set_default_username (optarg);
       break;
     case 'k':
-      rsa_public_key_name = tstrdup (optarg);
+      //rsa_public_key_name = tstrdup (optarg);
+      tgl_set_rsa_key (optarg);
       break;
     case 'v':
       tgl_incr_verbosity ();

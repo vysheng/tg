@@ -46,14 +46,18 @@
 #include <poll.h>
 
 #include "telegram.h"
-#include "net.h"
 #include "include.h"
 #include "queries.h"
-#include "loop.h"
+//#include "loop.h"
 #include "structures.h"
 #include "binlog.h"
 #include "auto.h"
 #include "tgl.h"
+#include "mtproto-client.h"
+#include "tools.h"
+#include "tree.h"
+#include "updates.h"
+#include <event2/event.h>
 
 #if defined(__FreeBSD__)
 #define __builtin_bswap32(x) bswap32(x)
@@ -68,35 +72,29 @@
 #include "mtproto-common.h"
 
 #define MAX_NET_RES        (1L << 16)
-extern int log_level;
+//extern int log_level;
 
-int verbosity;
-int auth_success;
-enum dc_state c_state;
-char nonce[256];
-char new_nonce[256];
-char server_nonce[256];
-extern int binlog_enabled;
-extern int disable_auto_accept;
-extern int allow_weak_random;
+//int verbosity;
+static int auth_success;
+static enum dc_state c_state;
+static char nonce[256];
+static char new_nonce[256];
+static char server_nonce[256];
+//extern int binlog_enabled;
+//extern int disable_auto_accept;
+//extern int allow_weak_random;
 
-int total_packets_sent;
-long long total_data_sent;
+static int total_packets_sent;
+static long long total_data_sent;
 
 
-int rpc_execute (struct connection *c, int op, int len);
-int rpc_becomes_ready (struct connection *c);
-int rpc_close (struct connection *c);
+static int rpc_execute (struct connection *c, int op, int len);
+static int rpc_becomes_ready (struct connection *c);
+static int rpc_close (struct connection *c);
 
-struct connection_methods auth_methods = {
-  .execute = rpc_execute,
-  .ready = rpc_becomes_ready,
-  .close = rpc_close
-};
+static long long precise_time;
 
-long long precise_time;
-
-double get_utime (int clock_id) {
+static double get_utime (int clock_id) {
   struct timespec T;
   my_clock_gettime (clock_id, &T);
   double res = T.tv_sec + (double) T.tv_nsec * 1e-9;
@@ -106,25 +104,15 @@ double get_utime (int clock_id) {
   return res;
 }
 
-void secure_random (void *s, int l) {
-  if (RAND_bytes (s, l) < 0) {
-    if (allow_weak_random) {
-      RAND_pseudo_bytes (s, l);
-    } else {
-      assert (0 && "End of random. If you want, you can start with -w");
-    }
-  }
-}
 
-
-#define STATS_BUFF_SIZE        (64 << 10)
-int stats_buff_len;
-char stats_buff[STATS_BUFF_SIZE];
+//#define STATS_BUFF_SIZE        (64 << 10)
+//static int stats_buff_len;
+//static char stats_buff[STATS_BUFF_SIZE];
 
 #define MAX_RESPONSE_SIZE        (1L << 24)
 
-char Response[MAX_RESPONSE_SIZE];
-int Response_len;
+static char Response[MAX_RESPONSE_SIZE];
+//static int Response_len;
 
 /*
  *
@@ -133,9 +121,9 @@ int Response_len;
  */
 
 #define TG_SERVER_PUBKEY_FILENAME     "tg-server.pub"
-char *rsa_public_key_name; // = TG_SERVER_PUBKEY_FILENAME;
-RSA *pubKey;
-long long pk_fingerprint;
+static char *rsa_public_key_name; // = TG_SERVER_PUBKEY_FILENAME;
+static RSA *pubKey;
+static long long pk_fingerprint;
 
 static int rsa_load_public_key (const char *public_key_name) {
   pubKey = NULL;
@@ -162,18 +150,16 @@ static int rsa_load_public_key (const char *public_key_name) {
 
 
 
-int auth_work_start (struct connection *c);
-
 /*
  *
  *        UNAUTHORIZED (DH KEY EXCHANGE) PROTOCOL PART
  *
  */
 
-BIGNUM dh_prime, dh_g, g_a, dh_power, auth_key_num;
-char s_power [256];
+static BIGNUM dh_prime, dh_g, g_a, auth_key_num;
+static char s_power [256];
 
-struct {
+static struct {
   long long auth_key_id;
   long long out_msg_id;
   int msg_len;
@@ -181,24 +167,25 @@ struct {
 
 
 #define ENCRYPT_BUFFER_INTS        16384
-int encrypt_buffer[ENCRYPT_BUFFER_INTS];
+static int encrypt_buffer[ENCRYPT_BUFFER_INTS];
 
 #define DECRYPT_BUFFER_INTS        16384
-int decrypt_buffer[ENCRYPT_BUFFER_INTS];
+static int decrypt_buffer[ENCRYPT_BUFFER_INTS];
 
-int encrypt_packet_buffer (void) {
+static int encrypt_packet_buffer (void) {
   return pad_rsa_encrypt ((char *) packet_buffer, (packet_ptr - packet_buffer) * 4, (char *) encrypt_buffer, ENCRYPT_BUFFER_INTS * 4, pubKey->n, pubKey->e);
 }
 
-int encrypt_packet_buffer_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32]) {
+static int encrypt_packet_buffer_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32]) {
   init_aes_unauth (server_nonce, hidden_client_nonce, AES_ENCRYPT);
   return pad_aes_encrypt ((char *) packet_buffer, (packet_ptr - packet_buffer) * 4, (char *) encrypt_buffer, ENCRYPT_BUFFER_INTS * 4);
 }
 
 
-int rpc_send_packet (struct connection *c) {
+static int rpc_send_packet (struct connection *c) {
   int len = (packet_ptr - packet_buffer) * 4;
-  c->out_packet_num ++;
+  //c->out_packet_num ++;
+  tgl_state.net_methods->incr_out_packet_num (c);
   long long next_msg_id = (long long) ((1LL << 32) * get_utime (CLOCK_REALTIME)) & -4;
   if (next_msg_id <= unenc_msg_header.out_msg_id) {
     unenc_msg_header.out_msg_id += 4;
@@ -211,60 +198,64 @@ int rpc_send_packet (struct connection *c) {
   assert (total_len > 0 && !(total_len & 0xfc000003));
   total_len >>= 2;
   if (total_len < 0x7f) {
-    assert (write_out (c, &total_len, 1) == 1);
+    assert (tgl_state.net_methods->write_out (c, &total_len, 1) == 1);
   } else {
     total_len = (total_len << 8) | 0x7f;
-    assert (write_out (c, &total_len, 4) == 4);
+    assert (tgl_state.net_methods->write_out (c, &total_len, 4) == 4);
   }
-  write_out (c, &unenc_msg_header, 20);
-  write_out (c, packet_buffer, len);
-  flush_out (c);
+  tgl_state.net_methods->write_out (c, &unenc_msg_header, 20);
+  tgl_state.net_methods->write_out (c, packet_buffer, len);
+  tgl_state.net_methods->flush_out (c);
 
   total_packets_sent ++;
   total_data_sent += total_len;
   return 1;
 }
 
-int rpc_send_message (struct connection *c, void *data, int len) {
+static int rpc_send_message (struct connection *c, void *data, int len) {
   assert (len > 0 && !(len & 0xfc000003));
   int total_len = len >> 2;
   if (total_len < 0x7f) {
-    assert (write_out (c, &total_len, 1) == 1);
+    assert (tgl_state.net_methods->write_out (c, &total_len, 1) == 1);
   } else {
     total_len = (total_len << 8) | 0x7f;
-    assert (write_out (c, &total_len, 4) == 4);
+    assert (tgl_state.net_methods->write_out (c, &total_len, 4) == 4);
   }
-  c->out_packet_num ++;
-  assert (write_out (c, data, len) == len);
-  flush_out (c);
+  
+  tgl_state.net_methods->incr_out_packet_num (c);
+  assert (tgl_state.net_methods->write_out (c, data, len) == len);
+  tgl_state.net_methods->flush_out (c);
 
   total_packets_sent ++;
   total_data_sent += total_len;
   return 1;
 }
 
-int send_req_pq_packet (struct connection *c) {
-  assert (c_state == st_init);
-  secure_random (nonce, 16);
+static int send_req_pq_packet (struct connection *c) {
+  struct dc *D = tgl_state.net_methods->get_dc (c);
+  assert (D->state == st_init);
+
+  tglt_secure_random (nonce, 16);
   unenc_msg_header.out_msg_id = 0;
   clear_packet ();
   out_int (CODE_req_pq);
   out_ints ((int *)nonce, 4);
   rpc_send_packet (c);    
-  c_state = st_reqpq_sent;
+  
+  D->state = st_reqpq_sent;
   return 1;
 }
 
 
-unsigned long long gcd (unsigned long long a, unsigned long long b) {
+static unsigned long long gcd (unsigned long long a, unsigned long long b) {
   return b ? gcd (b, a % b) : a;
 }
 
 //typedef unsigned int uint128_t __attribute__ ((mode(TI)));
-unsigned long long what;
-unsigned p1, p2;
 
-int process_respq_answer (struct connection *c, char *packet, int len) {
+static int process_respq_answer (struct connection *c, char *packet, int len) {
+  unsigned long long what;
+  unsigned p1, p2;
   int i;
   vlogprintf (E_DEBUG, "process_respq_answer(), len=%d\n", len);
   assert (len >= 76);
@@ -383,7 +374,7 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   //out_int (0x0501);  // q=5
   out_ints ((int *) nonce, 4);
   out_ints ((int *) server_nonce, 4);
-  secure_random (new_nonce, 32);
+  tglt_secure_random (new_nonce, 32);
   out_ints ((int *) new_nonce, 8);
   sha1 ((unsigned char *) (packet_buffer + 5), (packet_ptr - packet_buffer - 5) * 4, (unsigned char *) packet_buffer);
 
@@ -428,13 +419,13 @@ int process_respq_answer (struct connection *c, char *packet, int len) {
   return rpc_send_packet (c);
 }
 
-int check_prime (BIGNUM *p) {
+static int check_prime (BIGNUM *p) {
   int r = BN_is_prime (p, BN_prime_checks, 0, BN_ctx, 0);
   ensure (r >= 0);
   return r;
 }
 
-int check_DH_params (BIGNUM *p, int g) {
+int tglmp_check_DH_params (BIGNUM *p, int g) {
   if (g < 2 || g > 7) { return -1; }
   BIGNUM t;
   BN_init (&t);
@@ -480,7 +471,7 @@ int check_DH_params (BIGNUM *p, int g) {
   return 0;
 }
 
-int check_g (unsigned char p[256], BIGNUM *g) {
+int tglmp_check_g (unsigned char p[256], BIGNUM *g) {
   static unsigned char s[256];
   memset (s, 0, 256);
   assert (BN_num_bytes (g) <= 256);
@@ -516,19 +507,19 @@ int check_g (unsigned char p[256], BIGNUM *g) {
   return 0;
 }
 
-int check_g_bn (BIGNUM *p, BIGNUM *g) {
+int tglmp_check_g_bn (BIGNUM *p, BIGNUM *g) {
   static unsigned char s[256];
   memset (s, 0, 256);
   assert (BN_num_bytes (p) <= 256);
   BN_bn2bin (p, s);
-  return check_g (s, g);
+  return tglmp_check_g (s, g);
 }
 
-int process_dh_answer (struct connection *c, char *packet, int len) {
+static int process_dh_answer (struct connection *c, char *packet, int len) {
   vlogprintf (E_DEBUG, "process_dh_answer(), len=%d\n", len);
-  if (len < 116) {
-    vlogprintf (E_ERROR, "%u * %u = %llu", p1, p2, what);
-  }
+  //if (len < 116) {
+  //  vlogprintf (E_ERROR, "%u * %u = %llu", p1, p2, what);
+  //}
   assert (len >= 116);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -554,19 +545,20 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   BN_init (&g_a);
   assert (fetch_bignum (&dh_prime) > 0);
   assert (fetch_bignum (&g_a) > 0);
-  assert (check_g_bn (&dh_prime, &g_a) >= 0);
+  assert (tglmp_check_g_bn (&dh_prime, &g_a) >= 0);
   int server_time = *in_ptr++;
   assert (in_ptr <= in_end);
 
-  assert (check_DH_params (&dh_prime, g) >= 0);
+  assert (tglmp_check_DH_params (&dh_prime, g) >= 0);
 
   static char sha1_buffer[20];
   sha1 ((unsigned char *) decrypt_buffer + 20, (in_ptr - decrypt_buffer - 5) * 4, (unsigned char *) sha1_buffer);
   assert (!memcmp (decrypt_buffer, sha1_buffer, 20));
   assert ((char *) in_end - (char *) in_ptr < 16);
 
-  GET_DC(c)->server_time_delta = server_time - time (0);
-  GET_DC(c)->server_time_udelta = server_time - get_utime (CLOCK_MONOTONIC);
+  struct dc *D = tgl_state.net_methods->get_dc (c);
+  D->server_time_delta = server_time - time (0);
+  D->server_time_udelta = server_time - get_utime (CLOCK_MONOTONIC);
   //logprintf ( "server time is %d, delta = %d\n", server_time, server_time_delta);
 
   // Build set_client_DH_params answer
@@ -580,7 +572,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   BN_init (&dh_g);
   ensure (BN_set_word (&dh_g, g));
 
-  secure_random (s_power, 256);
+  tglt_secure_random (s_power, 256);
   BIGNUM *dh_power = BN_bin2bn ((unsigned char *)s_power, 256, 0);
   ensure_ptr (dh_power);
 
@@ -594,8 +586,8 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
   ensure (BN_mod_exp (&auth_key_num, &g_a, dh_power, &dh_prime, BN_ctx));
   l = BN_num_bytes (&auth_key_num);
   assert (l >= 250 && l <= 256);
-  assert (BN_bn2bin (&auth_key_num, (unsigned char *)GET_DC(c)->auth_key));
-  memset (GET_DC(c)->auth_key + l, 0, 256 - l);
+  assert (BN_bn2bin (&auth_key_num, (unsigned char *)D->auth_key));
+  memset (D->auth_key + l, 0, 256 - l);
   BN_free (dh_power);
   BN_free (&auth_key_num);
   BN_free (&dh_g);
@@ -622,7 +614,7 @@ int process_dh_answer (struct connection *c, char *packet, int len) {
 }
 
 
-int process_auth_complete (struct connection *c UU, char *packet, int len) {
+static int process_auth_complete (struct connection *c UU, char *packet, int len) {
   vlogprintf (E_DEBUG, "process_dh_answer(), len=%d\n", len);
   assert (len == 72);
   assert (!*(long long *) packet);
@@ -636,13 +628,14 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   tmp[32] = 1;
   //GET_DC(c)->auth_key_id = *(long long *)(sha1_buffer + 12);
 
-  bl_do_set_auth_key_id (GET_DC(c)->id, (unsigned char *)GET_DC(c)->auth_key);
-  sha1 ((unsigned char *)GET_DC(c)->auth_key, 256, sha1_buffer);
+  struct dc *D = tgl_state.net_methods->get_dc (c);
+  bl_do_set_auth_key_id (D->id, (unsigned char *)D->auth_key);
+  sha1 ((unsigned char *)D->auth_key, 256, sha1_buffer);
 
   memcpy (tmp + 33, sha1_buffer, 8);
   sha1 (tmp, 41, sha1_buffer);
   assert (!memcmp (packet + 56, sha1_buffer + 4, 16));
-  GET_DC(c)->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
+  D->server_salt = *(long long *)server_nonce ^ *(long long *)new_nonce;
   
   //kprintf ("OK\n");
 
@@ -653,8 +646,8 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
   //return 1;
   vlogprintf (E_DEBUG, "Auth success\n");
   auth_success ++;
-  GET_DC(c)->flags |= 1;
-  write_auth_file ();
+  D->flags |= 1;
+  //write_auth_file ();
   
   return 1;
 }
@@ -665,18 +658,18 @@ int process_auth_complete (struct connection *c UU, char *packet, int len) {
  *
  */
 
-struct encrypted_message enc_msg;
+static struct encrypted_message enc_msg;
 
-long long client_last_msg_id, server_last_msg_id;
+static long long client_last_msg_id, server_last_msg_id;
 
-double get_server_time (struct dc *DC) {
+static double get_server_time (struct dc *DC) {
   if (!DC->server_time_udelta) {
     DC->server_time_udelta = get_utime (CLOCK_REALTIME) - get_utime (CLOCK_MONOTONIC);
   }
   return get_utime (CLOCK_MONOTONIC) + DC->server_time_udelta;
 }
 
-long long generate_next_msg_id (struct dc *DC) {
+static long long generate_next_msg_id (struct dc *DC) {
   long long next_id = (long long) (get_server_time (DC) * (1LL << 32)) & -4;
   if (next_id <= client_last_msg_id) {
     next_id = client_last_msg_id += 4;
@@ -686,14 +679,14 @@ long long generate_next_msg_id (struct dc *DC) {
   return next_id;
 }
 
-void init_enc_msg (struct session *S, int useful) {
+static void init_enc_msg (struct session *S, int useful) {
   struct dc *DC = S->dc;
   assert (DC->auth_key_id);
   enc_msg.auth_key_id = DC->auth_key_id;
 //  assert (DC->server_salt);
   enc_msg.server_salt = DC->server_salt;
   if (!S->session_id) {
-    secure_random (&S->session_id, 8);
+    tglt_secure_random (&S->session_id, 8);
   }
   enc_msg.session_id = S->session_id;
   //enc_msg.auth_key_id2 = auth_key_id;
@@ -707,7 +700,7 @@ void init_enc_msg (struct session *S, int useful) {
   S->seq_no += 2;
 };
 
-int aes_encrypt_message (struct dc *DC, struct encrypted_message *enc) {
+static int aes_encrypt_message (struct dc *DC, struct encrypted_message *enc) {
   unsigned char sha1_buffer[20];
   const int MINSZ = offsetof (struct encrypted_message, message);
   const int UNENCSZ = offsetof (struct encrypted_message, server_salt);
@@ -722,10 +715,11 @@ int aes_encrypt_message (struct dc *DC, struct encrypted_message *enc) {
   return pad_aes_encrypt ((char *) &enc->server_salt, enc_len, (char *) &enc->server_salt, MAX_MESSAGE_INTS * 4 + (MINSZ - UNENCSZ));
 }
 
-long long encrypt_send_message (struct connection *c, int *msg, int msg_ints, int useful) {
-  struct dc *DC = GET_DC(c);
-  struct session *S = c->session;
+long long tglmp_encrypt_send_message (struct connection *c, int *msg, int msg_ints, int useful) {
+  struct dc *DC = tgl_state.net_methods->get_dc (c);
+  struct session *S = tgl_state.net_methods->get_session (c);
   assert (S);
+
   const int UNENCSZ = offsetof (struct encrypted_message, server_salt);
   if (msg_ints <= 0 || msg_ints > MAX_MESSAGE_INTS - 4) {
     return -1;
@@ -749,723 +743,17 @@ long long encrypt_send_message (struct connection *c, int *msg, int msg_ints, in
   return client_last_msg_id;
 }
 
-int longpoll_count, good_messages;
+static int good_messages;
 
-int auth_work_start (struct connection *c UU) {
-  return 1;
-}
+static void rpc_execute_answer (struct connection *c, long long msg_id UU);
 
-void rpc_execute_answer (struct connection *c, long long msg_id UU);
+//int unread_messages;
+//int pts;
+//int qts;
+//int last_date;
+//int seq;
 
-int unread_messages;
-int pts;
-int qts;
-int last_date;
-int seq;
-
-void fetch_pts (void) {
-  int p = fetch_int ();
-  if (p <= pts) { return; }
-  if (p != pts + 1) {
-    if (pts) {
-      //logprintf ("Hole in pts p = %d, pts = %d\n", p, pts);
-
-      // get difference should be here
-      pts = p;
-    } else {
-      pts = p;
-    }
-  } else {
-    pts ++;
-  }
-  bl_do_set_pts (pts);
-}
-
-void fetch_qts (void) {
-  int p = fetch_int ();
-  if (p <= qts) { return; }
-  if (p != qts + 1) {
-    if (qts) {
-      //logprintf ("Hole in qts\n");
-      // get difference should be here
-      qts = p;
-    } else {
-      qts = p;
-    }
-  } else {
-    qts ++;
-  }
-  bl_do_set_qts (qts);
-}
-
-void fetch_date (void) {
-  int p = fetch_int ();
-  if (p > last_date) {
-    last_date = p;
-    bl_do_set_date (last_date);
-  }
-}
-
-void fetch_seq (void) {
-  int x = fetch_int ();
-  if (x > seq + 1) {
-    vlogprintf (E_NOTICE, "Hole in seq: seq = %d, x = %d\n", seq, x);
-    //tgl_do_get_difference ();
-    //seq = x;
-  } else if (x == seq + 1) {
-    seq = x;
-    bl_do_set_seq (seq);
-  }
-}
-/*
-void work_update_binlog (void) {
-  unsigned op = fetch_int ();
-  switch (op) {
-  case CODE_update_user_name:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *UC = tgl_peer_get (user_id);
-      if (UC) {
-        struct tgl_user *U = &UC->user;
-        if (U->first_name) { tfree_str (U->first_name); }
-        if (U->last_name) { tfree_str (U->last_name); }
-        if (U->print_name) { 
-          tglp_peer_delete_name (UC);
-          tfree_str (U->print_name); 
-        }
-        U->first_name = fetch_str_dup ();
-        U->last_name = fetch_str_dup ();
-        U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
-        tglp_peer_insert_name ((void *)U);
-      } else {
-        fetch_skip_str ();
-        fetch_skip_str ();
-      }
-    }
-    break;
-  case CODE_update_user_photo:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *UC = tgl_peer_get (user_id);
-      fetch_date ();
-      if (UC) {
-        struct tgl_user *U = &UC->user;
-        
-        unsigned y = fetch_int ();
-        if (y == CODE_user_profile_photo_empty) {
-          U->photo_id = 0;
-          U->photo_big.dc = -2;
-          U->photo_small.dc = -2;
-        } else {
-          assert (y == CODE_user_profile_photo);
-          U->photo_id = fetch_long ();
-          tglf_fetch_file_location (&U->photo_small);
-          tglf_fetch_file_location (&U->photo_big);
-        }
-      } else {
-        struct tgl_file_location t;
-        unsigned y = fetch_int ();
-        if (y == CODE_user_profile_photo_empty) {
-        } else {
-          assert (y == CODE_user_profile_photo);
-          fetch_long (); // photo_id
-          tglf_fetch_file_location (&t);
-          tglf_fetch_file_location (&t);
-        }
-      }
-      fetch_bool ();
-    }
-    break;
-  default:
-    assert (0);
-  }
-}*/
-
-void work_update (struct connection *c UU, long long msg_id UU) {
-  unsigned op = fetch_int ();
-  switch (op) {
-  case CODE_update_new_message:
-    {
-      struct tgl_message *M = tglf_fetch_alloc_message ();
-      assert (M);
-      fetch_pts ();
-
-      tgl_state.callback.new_msg (M);
-      //unread_messages ++;
-      //print_message (M);
-      //update_prompt ();
-      break;
-    };
-  case CODE_update_message_i_d:
-    {
-      int id = fetch_int (); // id
-      int new = fetch_long (); // random_id
-      struct tgl_message *M = tgl_message_get (new);
-      if (M) {
-        bl_do_set_msg_id (M, id);
-      }
-    }
-    break;
-  case CODE_update_read_messages:
-    {
-      assert (fetch_int () == (int)CODE_vector);
-      int n = fetch_int ();
-      
-      struct tgl_message **ML = talloc (n * sizeof (void *));
-      int p = 0;
-      int i;
-      for (i = 0; i < n; i++) {
-        int id = fetch_int ();
-        struct tgl_message *M = tgl_message_get (id);
-        if (M) {
-          bl_do_set_unread (M, 0);
-          ML[p ++] = M;
-        }
-      }
-      fetch_pts ();
-      tgl_state.callback.marked_read (p, ML);
-      tfree (ML, sizeof (void *) * n);
-      /*if (log_level >= 1) {
-        print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" %d messages marked as read\n", n);
-        pop_color ();
-        print_end ();
-      }*/
-    }
-    break;
-  case CODE_update_user_typing:
-    {
-      tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *U = tgl_peer_get (id);
-
-      tgl_state.callback.type_notification (id, (void *)U);
-      /*if (log_level >= 2) {
-        print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" User ");
-        print_user_name (id, U);
-        printf (" is typing....\n");
-        pop_color ();
-        print_end ();
-      }*/
-    }
-    break;
-  case CODE_update_chat_user_typing:
-    {
-      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
-      tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *C = tgl_peer_get (chat_id);
-      tgl_peer_t *U = tgl_peer_get (id);
-      
-      tgl_state.callback.type_in_chat_notification (id, (void *)U, chat_id, (void *)C);
-      /*if (log_level >= 2) {
-        print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" User ");
-        print_user_name (id, U);
-        printf (" is typing in chat ");
-        print_chat_name (chat_id, C);
-        printf ("....\n");
-        pop_color ();
-        print_end ();
-      }*/
-    }
-    break;
-  case CODE_update_user_status:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *U = tgl_peer_get (user_id);
-      if (U) {
-        tglf_fetch_user_status (&U->user.status);
-        tgl_state.callback.status_notification ((void *)U);
-        /*if (log_level >= 3) {
-          print_start ();
-          push_color (COLOR_YELLOW);
-          print_date (time (0));
-          printf (" User ");
-          print_user_name (user_id, U);
-          printf (" is now ");
-          printf ("%s\n", (U->user.status.online > 0) ? "online" : "offline");
-          pop_color ();
-          print_end ();
-        }*/
-      } else {
-        struct tgl_user_status t;
-        tglf_fetch_user_status (&t);
-      }
-    }
-    break;
-  case CODE_update_user_name:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *UC = tgl_peer_get (user_id);
-      if (UC && (UC->flags & FLAG_CREATED)) {
-        int l1 = prefetch_strlen ();
-        char *f = fetch_str (l1);
-        int l2 = prefetch_strlen ();
-        char *l = fetch_str (l2);
-        struct tgl_user *U = &UC->user;
-        bl_do_user_set_real_name (U, f, l1, l, l2);
-        /*print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" User ");
-        print_user_name (user_id, UC);
-        printf (" changed name to ");
-        print_user_name (user_id, UC);
-        printf ("\n");
-        pop_color ();
-        print_end ();*/
-      } else {
-        fetch_skip_str ();
-        fetch_skip_str ();
-      }
-    }
-    break;
-  case CODE_update_user_photo:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *UC = tgl_peer_get (user_id);
-      fetch_date ();
-      if (UC && (UC->flags & FLAG_CREATED)) {
-        struct tgl_user *U = &UC->user;
-        unsigned y = fetch_int ();
-        long long photo_id;
-        struct tgl_file_location big;
-        struct tgl_file_location small;
-        memset (&big, 0, sizeof (big));
-        memset (&small, 0, sizeof (small));
-        if (y == CODE_user_profile_photo_empty) {
-          photo_id = 0;
-          big.dc = -2;
-          small.dc = -2;
-        } else {
-          assert (y == CODE_user_profile_photo);
-          photo_id = fetch_long ();
-          tglf_fetch_file_location (&small);
-          tglf_fetch_file_location (&big);
-        }
-        bl_do_set_user_profile_photo (U, photo_id, &big, &small);
-        
-        /*print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" User ");
-        print_user_name (user_id, UC);
-        printf (" updated profile photo\n");
-        pop_color ();
-        print_end ();*/
-      } else {
-        struct tgl_file_location t;
-        unsigned y = fetch_int ();
-        if (y == CODE_user_profile_photo_empty) {
-        } else {
-          assert (y == CODE_user_profile_photo);
-          fetch_long (); // photo_id
-          tglf_fetch_file_location (&t);
-          tglf_fetch_file_location (&t);
-        }
-      }
-      fetch_bool ();
-    }
-    break;
-  case CODE_update_restore_messages:
-    {
-      assert (fetch_int () == CODE_vector);
-      int n = fetch_int ();
-      /*print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Restored %d messages\n", n);
-      pop_color ();
-      print_end ();*/
-      fetch_skip (n);
-      fetch_pts ();
-    }
-    break;
-  case CODE_update_delete_messages:
-    {
-      assert (fetch_int () == CODE_vector);
-      int n = fetch_int ();
-      /*print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Deleted %d messages\n", n);
-      pop_color ();
-      print_end ();*/
-      fetch_skip (n);
-      fetch_pts ();
-    }
-    break;
-  case CODE_update_chat_participants:
-    {
-      unsigned x = fetch_int ();
-      assert (x == CODE_chat_participants || x == CODE_chat_participants_forbidden);
-      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
-      int n = 0;
-      tgl_peer_t *C = tgl_peer_get (chat_id);
-      if (C && (C->flags & FLAG_CREATED)) {
-        if (x == CODE_chat_participants) {
-          bl_do_chat_set_admin (&C->chat, fetch_int ());
-          assert (fetch_int () == CODE_vector);
-          n = fetch_int ();
-          struct tgl_chat_user *users = talloc (12 * n);
-          int i;
-          for (i = 0; i < n; i++) {
-            assert (fetch_int () == (int)CODE_chat_participant);
-            users[i].user_id = fetch_int ();
-            users[i].inviter_id = fetch_int ();
-            users[i].date = fetch_int ();
-          }
-          int version = fetch_int (); 
-          bl_do_chat_set_participants (&C->chat, version, n, users);
-        }
-      } else {
-        if (x == CODE_chat_participants) {
-          fetch_int (); // admin_id
-          assert (fetch_int () == CODE_vector);
-          n = fetch_int ();
-          fetch_skip (n * 4);
-          fetch_int (); // version
-        }
-      }
-      /*print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Chat ");
-      print_chat_name (chat_id, C);
-      if (x == CODE_chat_participants) {
-        printf (" changed list: now %d members\n", n);
-      } else {
-        printf (" changed list, but we are forbidden to know about it (Why this update even was sent to us?\n");
-      }
-      pop_color ();
-      print_end ();*/
-    }
-    break;
-  case CODE_update_contact_registered:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *U = tgl_peer_get (user_id);
-      fetch_int (); // date
-      tgl_state.callback.user_registered (U);
-      /*print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" User ");
-      print_user_name (user_id, U);
-      printf (" registered\n");
-      pop_color ();
-      print_end ();*/
-    }
-    break;
-  case CODE_update_contact_link:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *U = tgl_peer_get (user_id);
-      /*print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Updated link with user ");
-      print_user_name (user_id, U);
-      printf ("\n");
-      pop_color ();
-      print_end ();*/
-      unsigned t = fetch_int ();
-      assert (t == CODE_contacts_my_link_empty || t == CODE_contacts_my_link_requested || t == CODE_contacts_my_link_contact);
-      if (t == CODE_contacts_my_link_requested) {
-        fetch_bool (); // has_phone
-      }
-      t = fetch_int ();
-      assert (t == CODE_contacts_foreign_link_unknown || t == CODE_contacts_foreign_link_requested || t == CODE_contacts_foreign_link_mutual);
-      if (t == CODE_contacts_foreign_link_requested) {
-        fetch_bool (); // has_phone
-      }
-    }
-    break;
-  case CODE_update_activation:
-    {
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_t *U = tgl_peer_get (user_id);
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" User ");
-      print_user_name (user_id, U);
-      printf (" activated\n");
-      pop_color ();
-      print_end ();
-    }
-    break;
-  case CODE_update_new_authorization:
-    {
-      fetch_long (); // auth_key_id
-      fetch_int (); // date
-      char *s = fetch_str_dup ();
-      char *location = fetch_str_dup ();
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" New autorization: device='%s' location='%s'\n",
-        s, location);
-      pop_color ();
-      print_end ();
-      tfree_str (s);
-      tfree_str (location);
-    }
-    break;
-  case CODE_update_new_geo_chat_message:
-    {
-      struct tgl_message *M = tglf_fetch_alloc_geo_message ();
-      unread_messages ++;
-      print_message (M);
-      update_prompt ();
-    }
-    break;
-  case CODE_update_new_encrypted_message:
-    {
-      struct tgl_message *M = tglf_fetch_alloc_encrypted_message ();
-      unread_messages ++;
-      print_message (M);
-      update_prompt ();
-      fetch_qts ();
-    }
-    break;
-  case CODE_update_encryption:
-    {
-      struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
-      vlogprintf (E_DEBUG, "Secret chat state = %d\n", E->state);
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      switch (E->state) {
-      case sc_none:
-        break;
-      case sc_waiting:
-        printf (" Encrypted chat ");
-        print_encr_chat_name (E->id, (void *)E);
-        printf (" is now in wait state\n");
-        break;
-      case sc_request:
-        printf (" Encrypted chat ");
-        print_encr_chat_name (E->id, (void *)E);
-        printf (" is now in request state. Sending request ok\n");
-        break;
-      case sc_ok:
-        printf (" Encrypted chat ");
-        print_encr_chat_name (E->id, (void *)E);
-        printf (" is now in ok state\n");
-        break;
-      case sc_deleted:
-        printf (" Encrypted chat ");
-        print_encr_chat_name (E->id, (void *)E);
-        printf (" is now in deleted state\n");
-        break;
-      }
-      pop_color ();
-      print_end ();
-      if (E->state == sc_request && !disable_auto_accept) {
-        tgl_do_accept_encr_chat_request (E);
-      }
-      if (E->state == sc_ok) {
-        tgl_do_send_encr_chat_layer (E);
-      }
-      fetch_int (); // date
-    }
-    break;
-  case CODE_update_encrypted_chat_typing:
-    {
-      tgl_peer_id_t id = TGL_MK_ENCR_CHAT (fetch_int ());
-      tgl_peer_t *P = tgl_peer_get (id);
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      if (P) {
-        printf (" User ");
-        tgl_peer_id_t user_id = TGL_MK_USER (P->encr_chat.user_id);
-        print_user_name (user_id, tgl_peer_get (user_id));
-        printf (" typing in secret chat ");
-        print_encr_chat_name (id, P);
-        printf ("\n");
-      } else {
-        printf (" Some user is typing in unknown secret chat\n");
-      }
-      pop_color ();
-      print_end ();
-    }
-    break;
-  case CODE_update_encrypted_messages_read:
-    {
-      tgl_peer_id_t id = TGL_MK_ENCR_CHAT (fetch_int ()); // chat_id
-      fetch_int (); // max_date
-      fetch_int (); // date
-      tgl_peer_t *P = tgl_peer_get (id);
-      int x = -1;
-      if (P && P->last) {
-        x = 0;
-        struct tgl_message *M = P->last;
-        while (M && (!M->out || M->unread)) {
-          if (M->out) {
-            M->unread = 0;
-            x ++;
-          }
-          M = M->next;
-        }
-      }
-      if (log_level >= 1) {
-        print_start ();
-        push_color (COLOR_YELLOW);
-        print_date (time (0));
-        printf (" Encrypted chat ");
-        print_encr_chat_name_full (id, tgl_peer_get (id));
-        printf (": %d messages marked read \n", x);
-        pop_color ();
-        print_end ();
-      }
-    }
-    break;
-  case CODE_update_chat_participant_add:
-    {
-      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      tgl_peer_id_t inviter_id = TGL_MK_USER (fetch_int ());
-      int  version = fetch_int (); 
-      
-      tgl_peer_t *C = tgl_peer_get (chat_id);
-      if (C && (C->flags & FLAG_CREATED)) {
-        bl_do_chat_add_user (&C->chat, version, tgl_get_peer_id (user_id), tgl_get_peer_id (inviter_id), time (0));
-      }
-
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Chat ");
-      print_chat_name (chat_id, tgl_peer_get (chat_id));
-      printf (": user ");
-      print_user_name (user_id, tgl_peer_get (user_id));
-      printf (" added by user ");
-      print_user_name (inviter_id, tgl_peer_get (inviter_id));
-      printf ("\n");
-      pop_color ();
-      print_end ();
-    }
-    break;
-  case CODE_update_chat_participant_delete:
-    {
-      tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
-      tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
-      int version = fetch_int ();
-      
-      tgl_peer_t *C = tgl_peer_get (chat_id);
-      if (C && (C->flags & FLAG_CREATED)) {
-        bl_do_chat_del_user (&C->chat, version, tgl_get_peer_id (user_id));
-      }
-
-      print_start ();
-      push_color (COLOR_YELLOW);
-      print_date (time (0));
-      printf (" Chat ");
-      print_chat_name (chat_id, tgl_peer_get (chat_id));
-      printf (": user ");
-      print_user_name (user_id, tgl_peer_get (user_id));
-      printf (" deleted\n");
-      pop_color ();
-      print_end ();
-    }
-    break;
-  case CODE_update_dc_options:
-    {
-      assert (fetch_int () == CODE_vector);
-      int n = fetch_int ();
-      assert (n >= 0);
-      int i;
-      for (i = 0; i < n; i++) {
-        fetch_dc_option ();
-      }
-    }
-    break;
-  case CODE_update_user_blocked:
-    {
-       int id = fetch_int ();
-       int blocked = fetch_bool ();
-       tgl_peer_t *P = tgl_peer_get (TGL_MK_USER (id));
-       if (P && (P->flags & FLAG_CREATED)) {
-         bl_do_user_set_blocked (&P->user, blocked);
-       }
-    }
-    break;
-  case CODE_update_notify_settings:
-    {
-       assert (skip_type_any (TYPE_TO_PARAM (notify_peer)) >= 0);
-       assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
-    }
-    break;
-  default:
-    vlogprintf (E_ERROR, "Unknown update type %08x\n", op);
-    ;
-  }
-}
-
-void work_update_short (struct connection *c, long long msg_id) {
-  assert (fetch_int () == CODE_update_short);
-  work_update (c, msg_id);
-  fetch_date ();
-}
-
-void work_updates (struct connection *c, long long msg_id) {
-  int *save = in_ptr;
-  assert (!skip_type_any (TYPE_TO_PARAM (updates)));
-  int *save_end = in_ptr;
-  in_ptr = save;
-  assert (fetch_int () == CODE_updates);
-  assert (fetch_int () == CODE_vector);
-  int n = fetch_int ();
-  int i;
-  for (i = 0; i < n; i++) {
-    work_update (c, msg_id);
-  }
-  assert (fetch_int () == CODE_vector);
-  n = fetch_int ();
-  for (i = 0; i < n; i++) {
-    tglf_fetch_alloc_user ();
-  }
-  assert (fetch_int () == CODE_vector);
-  n = fetch_int ();
-  for (i = 0; i < n; i++) {
-    tglf_fetch_alloc_chat ();
-  }
-  bl_do_set_date (fetch_int ());
-  bl_do_set_seq (fetch_int ());
-  assert (save_end == in_ptr);
-}
-
-void work_update_short_message (struct connection *c UU, long long msg_id UU) {
-  assert (fetch_int () == (int)CODE_update_short_message);
-  struct tgl_message *M = tglf_fetch_alloc_message_short ();  
-  unread_messages ++;
-  print_message (M);
-  update_prompt ();
-  if (M->date > last_date) {
-    last_date = M->date;
-  }
-}
-
-void work_update_short_chat_message (struct connection *c UU, long long msg_id UU) {
-  assert (fetch_int () == CODE_update_short_chat_message);
-  struct tgl_message *M = tglf_fetch_alloc_message_short_chat ();  
-  unread_messages ++;
-  print_message (M);
-  update_prompt ();
-  if (M->date > last_date) {
-    last_date = M->date;
-  }
-}
-
-void work_container (struct connection *c, long long msg_id UU) {
+static void work_container (struct connection *c, long long msg_id UU) {
   vlogprintf (E_DEBUG, "work_container: msg_id = %lld\n", msg_id);
   assert (fetch_int () == CODE_msg_container);
   int n = fetch_int ();
@@ -1475,7 +763,7 @@ void work_container (struct connection *c, long long msg_id UU) {
     //int seqno = fetch_int (); 
     fetch_int (); // seq_no
     if (id & 1) {
-      insert_msg_id (c->session, id);
+      tgln_insert_msg_id (tgl_state.net_methods->get_session (c), id);
     }
     int bytes = fetch_int ();
     int *t = in_end;
@@ -1486,17 +774,17 @@ void work_container (struct connection *c, long long msg_id UU) {
   }
 }
 
-void work_new_session_created (struct connection *c, long long msg_id UU) {
+static void work_new_session_created (struct connection *c, long long msg_id UU) {
   vlogprintf (E_DEBUG, "work_new_session_created: msg_id = %lld\n", msg_id);
   assert (fetch_int () == (int)CODE_new_session_created);
   fetch_long (); // first message id
   //DC->session_id = fetch_long ();
   fetch_long (); // unique_id
-  GET_DC(c)->server_salt = fetch_long ();
+  tgl_state.net_methods->get_dc (c)->server_salt = fetch_long ();
   
 }
 
-void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
+static void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
   vlogprintf (E_DEBUG, "work_msgs_ack: msg_id = %lld\n", msg_id);
   assert (fetch_int () == CODE_msgs_ack);
   assert (fetch_int () == CODE_vector);
@@ -1505,24 +793,24 @@ void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
   for (i = 0; i < n; i++) {
     long long id = fetch_long ();
     vlogprintf (E_DEBUG + 1, "ack for %lld\n", id);
-    query_ack (id);
+    tglq_query_ack (id);
   }
 }
 
-void work_rpc_result (struct connection *c UU, long long msg_id UU) {
+static void work_rpc_result (struct connection *c UU, long long msg_id UU) {
   vlogprintf (E_DEBUG, "work_rpc_result: msg_id = %lld\n", msg_id);
   assert (fetch_int () == (int)CODE_rpc_result);
   long long id = fetch_long ();
   int op = prefetch_int ();
   if (op == CODE_rpc_error) {
-    query_error (id);
+    tglq_query_error (id);
   } else {
-    query_result (id);
+    tglq_query_result (id);
   }
 }
 
 #define MAX_PACKED_SIZE (1 << 24)
-void work_packed (struct connection *c, long long msg_id) {
+static void work_packed (struct connection *c, long long msg_id) {
   assert (fetch_int () == CODE_gzip_packed);
   static int in_gzip;
   static int buf[MAX_PACKED_SIZE >> 2];
@@ -1544,23 +832,23 @@ void work_packed (struct connection *c, long long msg_id) {
   in_gzip = 0;
 }
 
-void work_bad_server_salt (struct connection *c UU, long long msg_id UU) {
+static void work_bad_server_salt (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_bad_server_salt);
   long long id = fetch_long ();
-  query_restart (id);
+  tglq_query_restart (id);
   fetch_int (); // seq_no
   fetch_int (); // error_code
   long long new_server_salt = fetch_long ();
-  GET_DC(c)->server_salt = new_server_salt;
+  tgl_state.net_methods->get_dc (c)->server_salt = new_server_salt;
 }
 
-void work_pong (struct connection *c UU, long long msg_id UU) {
+static void work_pong (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == CODE_pong);
   fetch_long (); // msg_id
   fetch_long (); // ping_id
 }
 
-void work_detailed_info (struct connection *c UU, long long msg_id UU) {
+static void work_detailed_info (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == CODE_msg_detailed_info);
   fetch_long (); // msg_id
   fetch_long (); // answer_msg_id
@@ -1568,20 +856,14 @@ void work_detailed_info (struct connection *c UU, long long msg_id UU) {
   fetch_int (); // status
 }
 
-void work_new_detailed_info (struct connection *c UU, long long msg_id UU) {
+static void work_new_detailed_info (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_msg_new_detailed_info);
   fetch_long (); // answer_msg_id
   fetch_int (); // bytes
   fetch_int (); // status
 }
 
-void work_updates_to_long (struct connection *c UU, long long msg_id UU) {
-  assert (fetch_int () == (int)CODE_updates_too_long);
-  vlogprintf (E_NOTICE, "updates to long... Getting difference\n");
-  tgl_do_get_difference ();
-}
-
-void work_bad_msg_notification (struct connection *c UU, long long msg_id UU) {
+static void work_bad_msg_notification (struct connection *c UU, long long msg_id UU) {
   assert (fetch_int () == (int)CODE_bad_msg_notification);
   long long m1 = fetch_long ();
   int s = fetch_int ();
@@ -1589,7 +871,7 @@ void work_bad_msg_notification (struct connection *c UU, long long msg_id UU) {
   vlogprintf (E_NOTICE, "bad_msg_notification: msg_id = %lld, seq = %d, error = %d\n", m1, s, e);
 }
 
-void rpc_execute_answer (struct connection *c, long long msg_id UU) {
+static void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   int op = prefetch_int ();
   switch (op) {
   case CODE_msg_container:
@@ -1605,16 +887,16 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     work_rpc_result (c, msg_id);
     return;
   case CODE_update_short:
-    work_update_short (c, msg_id);
+    tglu_work_update_short (c, msg_id);
     return;
   case CODE_updates:
-    work_updates (c, msg_id);
+    tglu_work_updates (c, msg_id);
     return;
   case CODE_update_short_message:
-    work_update_short_message (c, msg_id);
+    tglu_work_update_short_message (c, msg_id);
     return;
   case CODE_update_short_chat_message:
-    work_update_short_chat_message (c, msg_id);
+    tglu_work_update_short_chat_message (c, msg_id);
     return;
   case CODE_gzip_packed:
     work_packed (c, msg_id);
@@ -1632,7 +914,7 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
     work_new_detailed_info (c, msg_id);
     return;
   case CODE_updates_too_long:
-    work_updates_to_long (c, msg_id);
+    tglu_work_updates_to_long (c, msg_id);
     return;
   case CODE_bad_msg_notification:
     work_bad_msg_notification (c, msg_id);
@@ -1642,12 +924,12 @@ void rpc_execute_answer (struct connection *c, long long msg_id UU) {
   in_ptr = in_end; // Will not fail due to assertion in_ptr == in_end
 }
 
-int process_rpc_message (struct connection *c UU, struct encrypted_message *enc, int len) {
+static int process_rpc_message (struct connection *c UU, struct encrypted_message *enc, int len) {
   const int MINSZ = offsetof (struct encrypted_message, message);
   const int UNENCSZ = offsetof (struct encrypted_message, server_salt);
   vlogprintf (E_DEBUG, "process_rpc_message(), len=%d\n", len);  
   assert (len >= MINSZ && (len & 15) == (UNENCSZ & 15));
-  struct dc *DC = GET_DC(c);
+  struct dc *DC = tgl_state.net_methods->get_dc (c);
   assert (enc->auth_key_id == DC->auth_key_id);
   assert (DC->auth_key_id);
   init_aes_auth (DC->auth_key + 8, enc->msg_key, AES_DECRYPT);
@@ -1661,7 +943,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   //assert (enc->server_salt == server_salt); //in fact server salt can change
   if (DC->server_salt != enc->server_salt) {
     DC->server_salt = enc->server_salt;
-    write_auth_file ();
+    //write_auth_file ();
   }
   
   int this_server_time = enc->msg_id >> 32LL;
@@ -1678,10 +960,7 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
 
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);
   //assert (enc->msg_id > server_last_msg_id && (enc->msg_id & 3) == 1);
-  if (verbosity >= 1) {
-    logprintf ( "received mesage id %016llx\n", enc->msg_id);
-    hexdump_in ();
-  }
+  vlogprintf (E_DEBUG, "received mesage id %016llx\n", enc->msg_id);
   server_last_msg_id = enc->msg_id;
 
   //*(long long *)(longpoll_query + 3) = *(long long *)((char *)(&enc->msg_id) + 0x3c);
@@ -1694,77 +973,72 @@ int process_rpc_message (struct connection *c UU, struct encrypted_message *enc,
   in_ptr = enc->message;
   in_end = in_ptr + (enc->msg_len / 4);
  
+  struct session *S = tgl_state.net_methods->get_session (c);
   if (enc->msg_id & 1) {
-    insert_msg_id (c->session, enc->msg_id);
+    tgln_insert_msg_id (S, enc->msg_id);
   }
-  assert (c->session->session_id == enc->session_id);
+  assert (S->session_id == enc->session_id);
   rpc_execute_answer (c, enc->msg_id);
   assert (in_ptr == in_end);
   return 0;
 }
 
 
-int rpc_execute (struct connection *c, int op, int len) {
-  if (verbosity) {
-    logprintf ( "outbound rpc connection #%d : received rpc answer %d with %d content bytes\n", c->fd, op, len);
-  }
+static int rpc_execute (struct connection *c, int op, int len) {
+  vlogprintf (E_DEBUG, "outbound rpc connection from dc #%d : received rpc answer %d with %d content bytes\n", tgl_state.net_methods->get_dc(c)->id, op, len);
 /*  if (op < 0) {
-    assert (read_in (c, Response, Response_len) == Response_len);
+    assert (tgl_state.net_methods->read_in (c, Response, Response_len) == Response_len);
     return 0;
   }*/
 
   if (len >= MAX_RESPONSE_SIZE/* - 12*/ || len < 0/*12*/) {
-    logprintf ( "answer too long (%d bytes), skipping\n", len);
+    vlogprintf (E_WARNING, "answer too long (%d bytes), skipping\n", len);
     return 0;
   }
 
   int Response_len = len;
 
-  if (verbosity >= 2) {
-    logprintf ("Response_len = %d\n", Response_len);
-  }
-  assert (read_in (c, Response, Response_len) == Response_len);
+  vlogprintf (E_DEBUG, "Response_len = %d\n", Response_len);
+  assert (tgl_state.net_methods->read_in (c, Response, Response_len) == Response_len);
   Response[Response_len] = 0;
-  if (verbosity >= 2) {
-    logprintf ( "have %d Response bytes\n", Response_len);
-  }
 
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
-  setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+//  setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
-  int o = c_state;
-  if (GET_DC(c)->flags & 1) { o = st_authorized;}
+  struct dc *D = tgl_state.net_methods->get_dc (c);
+  int o = D->state;
+  if (D->flags & 1) { o = st_authorized;}
   switch (o) {
   case st_reqpq_sent:
     process_respq_answer (c, Response/* + 8*/, Response_len/* - 12*/);
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
-    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+//    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_reqdh_sent:
     process_dh_answer (c, Response/* + 8*/, Response_len/* - 12*/);
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
-    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+//    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_client_dh_sent:
     process_auth_complete (c, Response/* + 8*/, Response_len/* - 12*/);
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
-    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+//    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   case st_authorized:
     if (op < 0 && op >= -999) {
-      logprintf ("Server error %d\n", op);
+      vlogprintf (E_WARNING, "Server error %d\n", op);
     } else {
       process_rpc_message (c, (void *)(Response/* + 8*/), Response_len/* - 12*/);
     }
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
-    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+//    setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
     return 0;
   default:
-    logprintf ( "fatal: cannot receive answer in state %d\n", c_state);
+    vlogprintf (E_ERROR, "fatal: cannot receive answer in state %d\n", c_state);
     exit (2);
   }
  
@@ -1772,60 +1046,50 @@ int rpc_execute (struct connection *c, int op, int len) {
 }
 
 
-int tc_close (struct connection *c, int who) {
-  if (verbosity) {
-    logprintf ( "outbound http connection #%d : closing by %d\n", c->fd, who);
-  }
+static int tc_close (struct connection *c, int who) {
+  vlogprintf (E_DEBUG, "outbound rpc connection from dc #%d : closing by %d\n", tgl_state.net_methods->get_dc(c)->id, who);
   return 0;
 }
 
-int tc_becomes_ready (struct connection *c) {
-  if (verbosity) {
-    logprintf ( "outbound connection #%d becomes ready\n", c->fd);
-  }
+static int tc_becomes_ready (struct connection *c) {
+  vlogprintf (E_DEBUG, "outbound rpc connection from dc #%d becomed ready\n", tgl_state.net_methods->get_dc(c)->id);
   char byte = 0xef;
-  assert (write_out (c, &byte, 1) == 1);
-  flush_out (c);
+  assert (tgl_state.net_methods->write_out (c, &byte, 1) == 1);
+  tgl_state.net_methods->flush_out (c);
   
 #if !defined(__MACH__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined (__CYGWIN__)
-  setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
+//  setsockopt (c->fd, IPPROTO_TCP, TCP_QUICKACK, (int[]){0}, 4);
 #endif
-  int o = c_state;
-  if (GET_DC(c)->flags & 1) { o = st_authorized; }
+  struct dc *D = tgl_state.net_methods->get_dc (c);
+  int o = D->state;
+  if (D->flags & 1) { o = st_authorized; }
   switch (o) {
   case st_init:
     send_req_pq_packet (c);
     break;
-  case st_authorized:
-    auth_work_start (c);
-    break;
   default:
-    logprintf ( "c_state = %d\n", c_state);
+    vlogprintf (E_DEBUG, "c_state = %d\n", c_state);
     assert (0);
   }
   return 0;
 }
 
-int rpc_becomes_ready (struct connection *c) {
+static int rpc_becomes_ready (struct connection *c) {
   return tc_becomes_ready (c);
 }
 
-int rpc_close (struct connection *c) {
+static int rpc_close (struct connection *c) {
   return tc_close (c, 0);
-}
-
-int auth_is_success (void) {
-  return auth_success;
 }
 
 
 #define RANDSEED_PASSWORD_FILENAME     NULL
 #define RANDSEED_PASSWORD_LENGTH       0
-void on_start (void) {
+void tglmp_on_start (const char *key) {
   prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
 
-  if (rsa_public_key_name) {
-    if (rsa_load_public_key (rsa_public_key_name) < 0) {
+  if (key) {
+    if (rsa_load_public_key (key) < 0) {
       perror ("rsa_load_public_key");
       exit (1);
     }
@@ -1839,18 +1103,87 @@ void on_start (void) {
   pk_fingerprint = compute_rsa_key_fingerprint (pubKey);
 }
 
-int auth_ok (void) {
-  return auth_success;
+//int auth_ok (void) {
+//  return auth_success;
+//}
+
+void tgl_dc_authorize (struct dc *DC) {
+  //c_state = 0;
+  //auth_success = 0;
+  if (!DC->sessions[0]) {
+    tglmp_dc_create_session (DC);
+  }
+  vlogprintf (E_DEBUG, "Starting authorization for DC #%d: %s:%d\n", DC->id, DC->ip, DC->port);
+  //net_loop (0, auth_ok);
 }
 
-void dc_authorize (struct dc *DC) {
-  c_state = 0;
-  auth_success = 0;
-  if (!DC->sessions[0]) {
-    dc_create_session (DC);
+#define long_cmp(a,b) ((a) > (b) ? 1 : (a) == (b) ? 0 : -1)
+DEFINE_TREE(long,long long,long_cmp,0)
+
+static int send_all_acks (struct session *S) {
+  clear_packet ();
+  out_int (CODE_msgs_ack);
+  out_int (CODE_vector);
+  out_int (tree_count_long (S->ack_tree));
+  while (S->ack_tree) {
+    long long x = tree_get_min_long (S->ack_tree); 
+    out_long (x);
+    S->ack_tree = tree_delete_long (S->ack_tree, x);
   }
-  if (verbosity) {
-    logprintf ( "Starting authorization for DC #%d: %s:%d\n", DC->id, DC->ip, DC->port);
+  tglmp_encrypt_send_message (S->c, packet_buffer, packet_ptr - packet_buffer, 0);
+  return 0;
+}
+
+static void send_all_acks_gateway (evutil_socket_t fd, short what, void *arg) {
+  send_all_acks (arg);
+}
+
+
+void tgln_insert_msg_id (struct session *S, long long id) {
+  if (!S->ack_tree) {
+    static struct timeval ptimeout = { ACK_TIMEOUT, 0};
+    event_add (S->ev, &ptimeout);
   }
-  net_loop (0, auth_ok);
+  if (!tree_lookup_long (S->ack_tree, id)) {
+    S->ack_tree = tree_insert_long (S->ack_tree, id, lrand48 ());
+  }
+}
+
+//extern struct dc *DC_list[];
+
+struct dc *tglmp_alloc_dc (int id, char *ip, int port UU) {
+  assert (!tgl_state.DC_list[id]);
+  struct dc *DC = talloc0 (sizeof (*DC));
+  DC->id = id;
+  DC->ip = ip;
+  DC->port = port;
+  tgl_state.DC_list[id] = DC;
+  return DC;
+}
+
+static struct mtproto_methods mtproto_methods = {
+  .execute = rpc_execute,
+  .ready = rpc_becomes_ready,
+  .close = rpc_close
+};
+
+void tglmp_dc_create_session (struct dc *DC) {
+  struct session *S = talloc0 (sizeof (*S));
+  assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
+  S->dc = DC;
+  S->c = tgl_state.net_methods->create_connection (DC->ip, DC->port, DC, S, &mtproto_methods);
+  if (!S->c) {
+    vlogprintf (E_DEBUG, "Can not create connection to DC. Is network down?\n");
+    exit (1);
+  }
+  S->ev = evtimer_new (tgl_state.ev_base, send_all_acks_gateway, S);
+  assert (!DC->sessions[0]);
+  DC->sessions[0] = S;
+}
+
+void tgl_do_send_ping (struct connection *c) {
+  int x[3];
+  x[0] = CODE_ping;
+  *(long long *)(x + 1) = lrand48 () * (1ll << 32) + lrand48 ();
+  tglmp_encrypt_send_message (c, x, 3, 0);
 }

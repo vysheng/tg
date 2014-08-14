@@ -28,9 +28,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/err.h>
+#include <openssl/rand.h>
 #include <zlib.h>
+#include <time.h>
+#include <sys/time.h>
 
-#include "interface.h"
+//#include "interface.h"
 #include "tools.h"
 
 #ifdef DEBUG
@@ -42,6 +45,15 @@ void *free_blocks[MAX_BLOCKS];
 int used_blocks;
 int free_blocks_cnt;
 #endif
+
+
+void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2), weak));
+void logprintf (const char *format, ...) {
+  va_list ap;
+  va_start (ap, format);
+  vfprintf (stdout, format, ap);
+  va_end (ap);
+}
 
 extern int verbosity;
 
@@ -269,3 +281,35 @@ void texists (void *ptr, int size) {
   assert (block_num < used_blocks);
 }
 #endif
+
+void my_clock_gettime (int clock_id, struct timespec *T) {
+#ifdef __MACH__
+  // We are ignoring MONOTONIC and hope time doesn't go back too often
+  clock_serv_t cclock;
+  mach_timespec_t mts;
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+  clock_get_time(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
+  T->tv_sec = mts.tv_sec;
+  T->tv_nsec = mts.tv_nsec;
+#else
+  assert (clock_gettime(clock_id, T) >= 0);
+#endif
+}
+
+double get_double_time (void) {
+  struct timespec tv;
+  my_clock_gettime (CLOCK_REALTIME, &tv);
+  return tv.tv_sec + 1e-9 * tv.tv_nsec;
+}
+
+void tglt_secure_random (void *s, int l) {
+  if (RAND_bytes (s, l) < 0) {
+    /*if (allow_weak_random) {
+      RAND_pseudo_bytes (s, l);
+    } else {*/
+      assert (0 && "End of random. If you want, you can start with -w");
+    //}
+  }
+}
+

@@ -20,59 +20,6 @@
 #define __NET_H__
 
 #include <poll.h>
-struct dc;
-#include "queries.h"
-#define TG_SERVER "173.240.5.1"
-#define TG_SERVER_TEST "173.240.5.253"
-#define TG_APP_HASH "36722c72256a24c1225de00eb6a1ca74"
-#define TG_APP_ID 2899
-
-#define ACK_TIMEOUT 1
-#define MAX_DC_ID 10
-
-enum dc_state {
-  st_init,
-  st_reqpq_sent,
-  st_reqdh_sent,
-  st_client_dh_sent,
-  st_authorized,
-  st_error
-} ;
-
-struct connection;
-struct connection_methods {
-  int (*ready) (struct connection *c);
-  int (*close) (struct connection *c);
-  int (*execute) (struct connection *c, int op, int len);
-};
-
-
-#define MAX_DC_SESSIONS 3
-
-struct session {
-  struct dc *dc;
-  long long session_id;
-  int seq_no;
-  struct connection *c;
-  struct tree_long *ack_tree;
-  struct event_timer ev;
-};
-
-struct dc {
-  int id;
-  int port;
-  int flags;
-  char *ip;
-  char *user;
-  struct session *sessions[MAX_DC_SESSIONS];
-  char auth_key[256];
-  long long auth_key_id;
-  long long server_salt;
-
-  int server_time_delta;
-  double server_time_udelta;
-  int has_auth;
-};
 
 #define DC_SERIALIZED_MAGIC 0x64582faa
 #define DC_SERIALIZED_MAGIC_V2 0x94032abb
@@ -122,27 +69,32 @@ struct connection {
   int out_packet_num;
   int last_connect_time;
   int in_fail_timer;
-  struct connection_methods *methods;
+  struct mtproto_methods *methods;
   struct session *session;
   void *extra;
-  struct event_timer ev;
+  struct event *ping_ev;
+  struct event *fail_ev;
+  struct event *read_ev;
+  struct event *write_ev;
   double last_receive_time;
 };
 
-extern struct connection *Connections[];
+//extern struct connection *Connections[];
 
-int write_out (struct connection *c, const void *data, int len);
-void flush_out (struct connection *c);
-int read_in (struct connection *c, void *data, int len);
+int tgln_write_out (struct connection *c, const void *data, int len);
+void tgln_flush_out (struct connection *c);
+int tgln_read_in (struct connection *c, void *data, int len);
+int tgln_read_in_lookup (struct connection *c, void *data, int len);
 
-void create_all_outbound_connections (void);
+void tgln_insert_msg_id (struct session *S, long long id);
 
-struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods);
-int connections_make_poll_array (struct pollfd *fds, int max);
-void connections_poll_result (struct pollfd *fds, int max);
-void dc_create_session (struct dc *DC);
-void insert_msg_id (struct session *S, long long id);
-struct dc *alloc_dc (int id, char *ip, int port);
+
+//void create_all_outbound_connections (void);
+
+//struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods);
+struct dc *tgln_alloc_dc (int id, char *ip, int port);
+void tgln_dc_create_session (struct dc *DC, struct mtproto_methods *methods);
+struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct mtproto_methods *methods);
 
 #define GET_DC(c) (c->session->dc)
 #endif

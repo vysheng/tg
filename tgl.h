@@ -10,22 +10,37 @@
 #define TGL_VERSION "0.9-beta"
 
 // Do not modify this structure, unless you know what you do
+struct connection;
+struct mtproto_methods;
+struct session;
+struct dc;
 struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);
   void (*marked_read)(int num, struct tgl_message *list[]);
   void (*logprintf)(const char *format, ...)  __attribute__ ((format (printf, 1, 2)));
-  void (*type_notification)(tgl_peer_id_t id, struct tgl_user *U);
-  void (*type_in_chat_notification)(tgl_peer_id_t id, struct tgl_user *U, tgl_peer_id_t chat_id, struct tgl_chat *C);
+  void (*type_notification)(struct tgl_user *U);
+  void (*type_in_chat_notification)(struct tgl_user *U, struct tgl_chat *C);
+  void (*type_in_secret_chat_notification)(struct tgl_secret_chat *E);
   void (*status_notification)(struct tgl_user *U);
   void (*user_registered)(struct tgl_user *U);
+  void (*user_activated)(struct tgl_user *U);
+  void (*new_authorization)(const char *device, const char *location);
+  void (*secret_chat_request)(struct tgl_secret_chat *E);
+  void (*secret_chat_established)(struct tgl_secret_chat *E);
+  void (*secret_chat_deleted)(struct tgl_secret_chat *E);
 };
 
-#define vlogprintf(verbosity_level,...) \
-  do { \
-    if (tgl_state.verbosity >= verbosity_level) { \
-      tgl_state.callback.logprintf (__VA_ARGS__); \
-    } \
-  } while (0)
+struct tgl_net_methods {
+  int (*write_out) (struct connection *c, void *data, int len);
+  int (*read_in) (struct connection *c, void *data, int len);
+  int (*read_in_lookup) (struct connection *c, void *data, int len);
+  int (*flush_out) (struct connection *c);
+  void (*incr_out_packet_num) (struct connection *c);
+  struct dc *(*get_dc) (struct connection *c);
+  struct session *(*get_session) (struct connection *c);
+
+  struct connection *(*create_connection) (const char *host, int port, struct dc *dc, struct session *session, struct mtproto_methods *methods);
+};
 
 
 #define E_ERROR 0
@@ -61,6 +76,10 @@ struct tgl_state {
   char *downloads_directory;
 
   struct tgl_update_callback callback;
+  struct tgl_net_methods *net_methods;
+  struct event_base *ev_base;
+
+  char *rsa_key;
 };
 extern struct tgl_state tgl_state;
 
@@ -94,6 +113,8 @@ void tgl_set_binlog_mode (int mode);
 void tgl_set_binlog_path (const char *path);
 void tgl_set_auth_file_path (const char *path);
 void tgl_set_download_directory (const char *path);
+void tgl_set_callback (struct tgl_update_callback *cb);
+void tgl_set_rsa_key (const char *key);
 
 
 static inline int tgl_get_peer_type (tgl_peer_id_t id) {
@@ -126,6 +147,10 @@ static inline void tgl_set_verbosity (int val) {
 static inline void tgl_set_test_mode (void) {
   tgl_state.test_mode ++;
 }
+
+struct pollfd;
+int tgl_connections_make_poll_array (struct pollfd *fds, int max);
+void tgl_connections_poll_result (struct pollfd *fds, int max);
 
 void tgl_do_help_get_config (void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_send_code (const char *user, void (*callback)(void *callback_extra, int success, int registered, const char *hash), void *callback_extra);
@@ -168,8 +193,19 @@ void tgl_do_update_status (int online, void (*callback)(void *callback_extra, in
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);
 
+void tgl_do_send_ping (struct connection *c);
+
 //void tgl_do_get_suggested (void);
 
 void tgl_do_create_keys_end (struct tgl_secret_chat *U);
 void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E);
+
+struct mtproto_methods {
+  int (*ready) (struct connection *c);
+  int (*close) (struct connection *c);
+  int (*execute) (struct connection *c, int op, int len);
+};
+
+void tgl_init (void);
+void tgl_dc_authorize (struct dc *DC);
 #endif
