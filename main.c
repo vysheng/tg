@@ -374,7 +374,6 @@ void usage (void) {
   printf (" -N                 message num mode\n");
   printf (" -c config-file     specify config file\n");
   printf (" -p prefix          specify prefix\n");
-  printf (" -R                 register mode\n");
   printf (" -f                 sync from start\n");
   printf (" -B                 enable binlog\n");
   printf (" -E                 disable auto accept\n");
@@ -400,7 +399,7 @@ char *lua_file;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:RfBL:Es:wW")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:fBEs:wW")) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -425,23 +424,23 @@ void args_parse (int argc, char **argv) {
     case 'l':
       log_level = atoi (optarg);
       break;
-    case 'R':
-      register_mode = 1;
-      break;
+    //case 'R':
+    //  register_mode = 1;
+    //  break;
     case 'f':
       sync_from_start = 1;
       break;
     case 'B':
       binlog_enabled = 1;
       break;
-    case 'L':
-      if (log_net_file) { 
-        usage ();
-      }
-      log_net_file = tstrdup (optarg);
-      log_net_f = fopen (log_net_file, "a");
-      assert (log_net_f);
-      break;
+    //case 'L':
+    //  if (log_net_file) { 
+    //    usage ();
+    //  }
+    //  log_net_file = tstrdup (optarg);
+    //  log_net_f = fopen (log_net_file, "a");
+    //  assert (log_net_f);
+    //  break;
     case 'E':
       disable_auto_accept = 1;
       break;

@@ -71,6 +71,7 @@ struct connection {
   int in_fail_timer;
   struct mtproto_methods *methods;
   struct session *session;
+  struct dc *dc;
   void *extra;
   struct event *ping_ev;
   struct event *fail_ev;
@@ -88,13 +89,14 @@ int tgln_read_in_lookup (struct connection *c, void *data, int len);
 
 void tgln_insert_msg_id (struct session *S, long long id);
 
+extern struct tgl_net_methods tgl_conn_methods;
 
 //void create_all_outbound_connections (void);
 
 //struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods);
 struct dc *tgln_alloc_dc (int id, char *ip, int port);
 void tgln_dc_create_session (struct dc *DC, struct mtproto_methods *methods);
-struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct mtproto_methods *methods);
+struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct dc *dc, struct mtproto_methods *methods);
 
 #define GET_DC(c) (c->session->dc)
 #endif

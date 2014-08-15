@@ -5,6 +5,7 @@
 #include "tgl.h"
 #include "tools.h"
 #include "mtproto-client.h"
+#include "net.h"
 
 #include <event2/event.h>
 struct tgl_state tgl_state;
@@ -36,5 +37,19 @@ void tgl_set_rsa_key (const char *key) {
 
 void tgl_init (void) {
   tgl_state.ev_base = event_base_new ();
+
+  if (!tgl_state.net_methods) {
+    tgl_state.net_methods = &tgl_conn_methods;
+  }
   tglmp_on_start (tgl_state.rsa_key);
+}
+
+int tgl_authorized_dc (struct dc *DC) {
+  assert (DC);
+  return DC->auth_key_id;
+}
+
+int tgl_signed_dc (struct dc *DC) {
+  assert (DC);
+  return DC->has_auth;
 }

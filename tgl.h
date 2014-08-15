@@ -31,15 +31,15 @@ struct tgl_update_callback {
 };
 
 struct tgl_net_methods {
-  int (*write_out) (struct connection *c, void *data, int len);
+  int (*write_out) (struct connection *c, const void *data, int len);
   int (*read_in) (struct connection *c, void *data, int len);
   int (*read_in_lookup) (struct connection *c, void *data, int len);
-  int (*flush_out) (struct connection *c);
+  void (*flush_out) (struct connection *c);
   void (*incr_out_packet_num) (struct connection *c);
   struct dc *(*get_dc) (struct connection *c);
   struct session *(*get_session) (struct connection *c);
 
-  struct connection *(*create_connection) (const char *host, int port, struct dc *dc, struct session *session, struct mtproto_methods *methods);
+  struct connection *(*create_connection) (const char *host, int port, struct session *session, struct dc *dc, struct mtproto_methods *methods);
 };
 
 
@@ -64,6 +64,7 @@ struct tgl_state {
 
   struct dc *DC_list[TGL_MAX_DC_NUM];
   struct dc *DC_working;
+  int max_dc_num;
   int dc_working_num;
 
   long long cur_uploading_bytes;
@@ -154,9 +155,9 @@ void tgl_connections_poll_result (struct pollfd *fds, int max);
 
 void tgl_do_help_get_config (void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_send_code (const char *user, void (*callback)(void *callback_extra, int success, int registered, const char *hash), void *callback_extra);
-void tgl_do_phone_call (const char *user, void (*callback)(void *callback_extra, int success), void *callback_extra);
-int tgl_do_send_code_result (const char *user, const char *code, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) ;
-int tgl_do_send_code_result_auth (const char *user, const char *code, const char *first_name, const char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra);
+void tgl_do_phone_call (const char *user, const char *hash, void (*callback)(void *callback_extra, int success), void *callback_extra);
+int tgl_do_send_code_result (const char *user, const char *hash, const char *code, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) ;
+int tgl_do_send_code_result_auth (const char *user, const char *hash, const char *code, const char *first_name, const char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra);
 void tgl_do_update_contact_list (void (*callback) (void *callback_extra, int success, int size, struct tgl_user *contacts[]), void *callback_extra);
 void tgl_do_send_message (tgl_peer_id_t id, const char *msg, int len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_send_msg (struct tgl_message *M, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
@@ -195,6 +196,9 @@ void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);
 
 void tgl_do_send_ping (struct connection *c);
 
+int tgl_authorized_dc (struct dc *DC);
+int tgl_signed_dc (struct dc *DC);
+
 //void tgl_do_get_suggested (void);
 
 void tgl_do_create_keys_end (struct tgl_secret_chat *U);
@@ -208,4 +212,7 @@ struct mtproto_methods {
 
 void tgl_init (void);
 void tgl_dc_authorize (struct dc *DC);
+
+
+double tglt_get_double_time (void);
 #endif

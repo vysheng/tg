@@ -82,6 +82,7 @@ static int fetch_comb_binlog_dc_option (void *extra) {
   vlogprintf (E_NOTICE, "DC%d '%.*s' update: %.*s:%d\n", id, l1, name, l2, ip, port);
 
   tglmp_alloc_dc (id, tstrndup (ip, l2), port);
+
   return 0;
 }
 

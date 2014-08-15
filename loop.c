@@ -43,11 +43,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <event2/event.h>
+
 #include "interface.h"
 #include "telegram.h"
 #include "loop.h"
 #include "lua-tg.h"
 #include "tgl.h"
+
+int verbosity;
 
 extern char *default_username;
 extern char *auth_token;
@@ -61,37 +65,27 @@ extern int safe_quit;
 extern int queries_num;
 
 void got_it (char *line, int len);
-void net_loop (int flags, int (*is_end)(void)) {
-  while (!is_end ()) {
-    struct pollfd fds[101];
-    int cc = 0;
-    if (flags & 3) {
-      fds[0].fd = 0;
-      fds[0].events = POLLIN;
-      cc ++;
-    }
 
-    //write_state_file ();
-    int x = connections_make_poll_array (fds + cc, 101 - cc) + cc;
-    double timer = next_timer_in ();
-    if (timer > 1000) { timer = 1000; }
-    if (poll (fds, x, timer) < 0) {
-      work_timers ();
-      continue;
-    }
-    work_timers ();
-    if ((flags & 3) && (fds[0].revents & POLLIN)) {
-      tgl_state.unread_messages = 0;
-      if (flags & 1) {
-        rl_callback_read_char ();
-      } else {
-        char *line = 0;        
-        size_t len = 0;
-        assert (getline (&line, &len, stdin) >= 0);
-        got_it (line, strlen (line));
-      }
-    }
-    connections_poll_result (fds + cc, x - cc);
+static void stdin_read_callback (evutil_socket_t fd, short what, void *arg) {
+  if (((long)arg) & 1) {
+    rl_callback_read_char ();
+  } else {
+    char *line = 0;        
+    size_t len = 0;
+    assert (getline (&line, &len, stdin) >= 0);
+    got_it (line, strlen (line));
+  }
+}
+void net_loop (int flags, int (*is_end)(void)) {
+  struct event *ev = 0;
+  if (flags & 3) {
+    ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback, (void *)(long)flags);
+    event_add (ev, 0);
+  }
+  while (!is_end || !is_end ()) {
+
+    event_base_loop (tgl_state.ev_base, EVLOOP_ONCE);
+
     #ifdef USE_LUA
       lua_do_all ();
     #endif
@@ -101,9 +95,16 @@ void net_loop (int flags, int (*is_end)(void)) {
       exit (0);
     }
     if (unknown_user_list_pos) {
-      tgl_do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
+      int i;
+      for (i = 0; i < unknown_user_list_pos; i++) {
+        tgl_do_get_user_info (TGL_MK_USER (unknown_user_list[i]), 0, 0, 0);
+      }
       unknown_user_list_pos = 0;
     }   
+  }
+
+  if (ev) {
+    event_free (ev);
   }
 }
 
@@ -134,30 +135,74 @@ int net_getline (char **s, size_t *l) {
   return 0;
 }
 
-int ret1 (void) { return 0; }
-
 int main_loop (void) {
-  net_loop (1, ret1);
+  net_loop (1, 0);
   return 0;
 }
 
-char *get_auth_key_filename (void);
-char *get_state_filename (void);
-char *get_secret_chat_filename (void);
+struct dc *cur_a_dc;
+int is_authorized (void) {
+  return tgl_authorized_dc (cur_a_dc);
+}
+
+int config_got;
+
+int got_config (void) {
+  return config_got;
+}
+
+void on_get_config (void *extra, int success) {
+  if (!success) {
+    logprintf ("Can not get config.\n");
+    exit (1);
+  }
+  config_got = 1;
+
+}
+
+int should_register;
+char *hash;
+void sign_in_callback (void *extra, int success, int registered, const char *mhash) {
+  if (!success) {
+    logprintf ("Can not send code\n");
+    exit (1);
+  }
+  should_register = !registered;
+  hash = strdup (mhash);
+}
+
+
+int signed_in_ok;
+
+void sign_in_result (void *extra, int success, struct tgl_user *U) {
+  if (!success) {
+    logprintf ("Can not login\n");
+    exit (1);
+  }
+  signed_in_ok = 1;
+}
+
+int signed_in (void) {
+  return signed_in_ok;
+}
+
+int sent_code (void) {
+  return hash != 0;
+}
+
+int dc_signed_in (void) {
+  return tgl_signed_dc (cur_a_dc);
+}
+
+void export_auth_callback (void *DC, int success) {
+  if (!success) {
+    logprintf ("Can not export auth\n");
+    exit (1);
+  }
+}
+
 int zero[512];
 
-extern int max_chat_size;
-int mcs (void) {
-  return max_chat_size;
-}
-
-extern int difference_got;
-int dgot (void) {
-  return difference_got;
-}
-int dlgot (void) {
-  return dialog_list_got;
-}
 
 int readline_active;
 int new_dc_num;
@@ -167,43 +212,37 @@ int loop (void) {
   //on_start ();
   tgl_init ();
 
-  double t = get_double_time ();
+  double t = tglt_get_double_time ();
   logprintf ("replay log start\n");
   tgl_replay_log ();
-  logprintf ("replay log end in %lf seconds\n", get_double_time () - t);
+  logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
   tgl_reopen_binlog_for_writing ();
   #ifdef USE_LUA
     lua_binlog_end ();
   #endif
   update_prompt ();
 
-  assert (DC_list[dc_working_num]);
-  if (!DC_working || !DC_working->auth_key_id) {
-//  if (auth_state == 0) {
-    DC_working = DC_list[dc_working_num];
-    assert (!DC_working->auth_key_id);
-    dc_authorize (DC_working);
-    assert (DC_working->auth_key_id);
-    auth_state = 100;
-    write_auth_file ();
+  if (!tgl_authorized_dc (tgl_state.DC_working)) {
+    cur_a_dc = tgl_state.DC_working;
+    tgl_dc_authorize (tgl_state.DC_working);
+    net_loop (0, is_authorized);
   }
   
-  if (verbosity) {
-    logprintf ("Requesting info about DC...\n");
-  }
-  tgl_do_help_get_config ();
-  net_loop (0, mcs);
+  tgl_do_help_get_config (on_get_config, 0);
+  net_loop (0, got_config);
+
   if (verbosity) {
     logprintf ("DC_info: %d new DC got\n", new_dc_num);
   }
+
   int i;
-  for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->auth_key_id) {
-    dc_authorize (DC_list[i]);
-    assert (DC_list[i]->auth_key_id);
-    write_auth_file ();
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_authorized_dc (tgl_state.DC_list[i])) {
+    cur_a_dc = tgl_state.DC_list[i];
+    tgl_dc_authorize (cur_a_dc);
+    net_loop (0, is_authorized);
   }
 
-  if (auth_state == 100 || !(DC_working->has_auth)) {
+  if (!tgl_signed_dc (tgl_state.DC_working)) {
     if (!default_username) {
       size_t size = 0;
       char *user = 0;
@@ -217,11 +256,11 @@ int loop (void) {
         set_default_username (user);
       }
     }
-    int res = tgl_do_auth_check_phone (default_username);
-    assert (res >= 0);
-    logprintf ("%s\n", res > 0 ? "phone registered" : "phone not registered");
-    if (res > 0 && !register_mode) {
-      tgl_do_send_code (default_username);
+    tgl_do_send_code (default_username, sign_in_callback, 0);
+    net_loop (0, sent_code);
+    
+    logprintf ("%s\n", should_register ? "phone not registered" : "phone registered");
+    if (!should_register) {
       char *code = 0;
       size_t size = 0;
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
@@ -232,17 +271,16 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          tgl_do_phone_call (default_username);
+          tgl_do_phone_call (default_username, hash, 0, 0);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (tgl_do_send_code_result (code) >= 0) {
+        if (tgl_do_send_code_result (default_username, hash, code, sign_in_result, 0) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
-        tfree_str (code);
+        free (code);
       }
-      auth_state = 300;
     } else {
       printf ("User is not registered. Do you want to register? [Y/n] ");
       char *code;
@@ -269,13 +307,6 @@ int loop (void) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
-
-      int dc_num = tgl_do_get_nearest_dc ();
-      assert (dc_num >= 0 && dc_num <= MAX_DC_NUM && DC_list[dc_num]);
-      dc_working_num = dc_num;
-      DC_working = DC_list[dc_working_num];
-      
-      tgl_do_send_code (default_username);
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
         if (net_getline (&code, &size) == -1) {
@@ -284,37 +315,38 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          tgl_do_phone_call (default_username);
+          tgl_do_phone_call (default_username, hash, 0, 0);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (tgl_do_send_code_result_auth (code, first_name, last_name) >= 0) {
+        if (tgl_do_send_code_result_auth (default_username, hash, code, first_name, last_name, sign_in_result, 0) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
-        tfree_str (code);
+        free (code);
       }
-      auth_state = 300;
     }
+
+    net_loop (0, signed_in);    
+    bl_do_dc_signed (tgl_state.DC_working);
   }
 
-  for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->has_auth) {
-    tgl_do_export_auth (i);
-    tgl_do_import_auth (i);
-    bl_do_dc_signed (i);
-    write_auth_file ();
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_signed_dc (tgl_state.DC_list[i])) {
+    tgl_do_export_auth (i, export_auth_callback, (void*)(long)tgl_state.DC_list[i]);    
+    cur_a_dc = tgl_state.DC_working;
+    net_loop (0, dc_signed_in);
   }
-  write_auth_file ();
+  //write_auth_file ();
 
   fflush (stdout);
   fflush (stderr);
 
-  read_state_file ();
-  read_secret_chat_file ();
+  //read_state_file ();
+  //read_secret_chat_file ();
 
   set_interface_callbacks ();
 
-  tgl_do_get_difference ();
+  tgl_do_get_difference (0, 0);
   net_loop (0, dgot);
   #ifdef USE_LUA
     lua_diff_end ();

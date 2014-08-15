@@ -20,7 +20,7 @@
 #ifndef __TOOLS_H__
 #define __TOOLS_H__
 
-double get_double_time (void);
+double tglt_get_double_time (void);
 
 void *talloc (size_t size);
 void *trealloc (void *ptr, size_t old_size, size_t size);

@@ -1158,6 +1158,9 @@ struct dc *tglmp_alloc_dc (int id, char *ip, int port UU) {
   DC->ip = ip;
   DC->port = port;
   tgl_state.DC_list[id] = DC;
+  if (id > tgl_state.max_dc_num) {
+    tgl_state.max_dc_num = id;
+  }
   return DC;
 }
 
@@ -1171,7 +1174,7 @@ void tglmp_dc_create_session (struct dc *DC) {
   struct session *S = talloc0 (sizeof (*S));
   assert (RAND_pseudo_bytes ((unsigned char *) &S->session_id, 8) >= 0);
   S->dc = DC;
-  S->c = tgl_state.net_methods->create_connection (DC->ip, DC->port, DC, S, &mtproto_methods);
+  S->c = tgl_state.net_methods->create_connection (DC->ip, DC->port, S, DC, &mtproto_methods);
   if (!S->c) {
     vlogprintf (E_DEBUG, "Can not create connection to DC. Is network down?\n");
     exit (1);

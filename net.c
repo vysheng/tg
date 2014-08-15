@@ -244,7 +244,7 @@ static void conn_try_write (evutil_socket_t fd, short what, void *arg) {
   }
 }
 
-struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct mtproto_methods *methods) {
+struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct dc *dc, struct mtproto_methods *methods) {
   struct connection *c = talloc0 (sizeof (*c));
   int fd = socket (AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
@@ -293,6 +293,10 @@ struct connection *tgln_create_connection (const char *host, int port, struct se
   event_add (c->read_ev, 0);
 
   start_ping_timer (c);
+
+  c->dc = dc;
+  c->session = session;
+  c->methods = methods;
 
   char byte = 0xef;
   assert (tgln_write_out (c, &byte, 1) == 1);
@@ -569,3 +573,26 @@ void tgl_connections_poll_result (struct pollfd *fds, int max) {
     }
   }
 }
+
+static void incr_out_packet_num (struct connection *c) {
+  c->out_packet_num ++;
+}
+
+static struct dc *get_dc (struct connection *c) {
+  return c->dc;
+}
+
+static struct session *get_session (struct connection *c) {
+  return c->session;
+}
+
+struct tgl_net_methods tgl_conn_methods = {
+  .write_out = tgln_write_out,
+  .read_in = tgln_read_in,
+  .read_in_lookup = tgln_read_in_lookup,
+  .flush_out = tgln_flush_out,
+  .incr_out_packet_num = incr_out_packet_num,
+  .get_dc = get_dc,
+  .get_session = get_session,
+  .create_connection = tgln_create_connection
+};

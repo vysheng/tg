@@ -19,7 +19,7 @@
 #ifndef __BINLOG_H__
 #define __BINLOG_H__
 
-#include "structures.h"
+//#include "structures.h"
 
 void bl_do_set_auth_key_id (int num, unsigned char *buf);
 

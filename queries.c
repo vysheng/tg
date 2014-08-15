@@ -368,8 +368,8 @@ void tgl_do_help_get_config (void (*callback)(void *, int), void *callback_extra
 /* }}} */
 
 /* {{{ Send code */
-static char *phone_code_hash;
 static int send_code_on_answer (struct query *q UU) {
+  static char *phone_code_hash;  
   assert (fetch_int () == (int)CODE_auth_sent_code);
   int registered = fetch_bool ();
   int l = prefetch_strlen ();
@@ -380,7 +380,8 @@ static int send_code_on_answer (struct query *q UU) {
   phone_code_hash = tstrndup (s, l);
   fetch_int (); 
   fetch_bool ();
-  want_dc_num = -1;
+  tfree_str (q->extra);
+  
   if (q->callback) {
     ((void (*)(void *, int, int, const char *))(q->callback)) (q->callback_extra, 1, registered, phone_code_hash);
   }
@@ -390,6 +391,7 @@ static int send_code_on_answer (struct query *q UU) {
 static int send_code_on_error (struct query *q UU, int error_code, int l, char *error) {
   int s = strlen ("PHONE_MIGRATE_");
   int s2 = strlen ("NETWORK_MIGRATE_");
+  int want_dc_num = 0;
   if (l >= s && !memcmp (error, "PHONE_MIGRATE_", s)) {
     int i = error[s] - '0';
     want_dc_num = i;
@@ -400,9 +402,13 @@ static int send_code_on_error (struct query *q UU, int error_code, int l, char *
     vlogprintf (E_ERROR, "error_code = %d, error = %.*s\n", error_code, l, error);
     assert (0);
   }
-  if (q->callback) {
-    ((void (*)(void *, int, int, const char *))(q->callback)) (q->callback_extra, 0, 0, 0);
-  }
+  bl_do_set_working_dc (want_dc_num);
+  //if (q->callback) {
+  //  ((void (*)(void *, int, int, const char *))(q->callback)) (q->callback_extra, 0, 0, 0);
+  //}
+  assert (DC_working->id == want_dc_num);
+  tgl_do_send_code (q->extra, q->callback, q->callback_extra);
+  tfree_str (q->extra);
   return 0;
 }
 
@@ -413,11 +419,10 @@ static struct query_methods send_code_methods  = {
 };
 
 //char *suser;
-extern int dc_working_num;
+//extern int dc_working_num;
 void tgl_do_send_code (const char *user, void (*callback)(void *callback_extra, int success, int registered, const char *hash), void *callback_extra) {
-  vlogprintf (E_DEBUG, "sending code to dc %d\n", dc_working_num);
+  vlogprintf (E_DEBUG, "sending code to dc %d\n", tgl_state.dc_working_num);
   //suser = tstrdup (user);
-  want_dc_num = 0;
   clear_packet ();
   tgl_do_insert_header ();
   out_int (CODE_auth_send_code);
@@ -427,7 +432,7 @@ void tgl_do_send_code (const char *user, void (*callback)(void *callback_extra, 
   out_string (TG_APP_HASH);
   out_string ("en");
 
-  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0, callback, callback_extra);
+  tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, tstrdup (user), callback, callback_extra);
 }
 
 
@@ -444,7 +449,7 @@ static struct query_methods phone_call_methods  = {
   .type = TYPE_TO_PARAM(bool)
 };
 
-void tgl_do_phone_call (const char *user, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+void tgl_do_phone_call (const char *user, const char *hash,void (*callback)(void *callback_extra, int success), void *callback_extra) {
   vlogprintf (E_DEBUG, "calling user\n");
   //suser = tstrdup (user);
   want_dc_num = 0;
@@ -452,7 +457,7 @@ void tgl_do_phone_call (const char *user, void (*callback)(void *callback_extra,
   tgl_do_insert_header ();
   out_int (CODE_auth_send_call);
   out_string (user);
-  out_string (phone_code_hash);
+  out_string (hash);
 
   tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0, callback, callback_extra);
 }
@@ -581,21 +586,21 @@ static struct query_methods sign_in_methods  = {
   .type = TYPE_TO_PARAM(auth_authorization)
 };
 
-int tgl_do_send_code_result (const char *user, const char *code, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) {
+int tgl_do_send_code_result (const char *user, const char *hash, const char *code, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) {
   clear_packet ();
   out_int (CODE_auth_sign_in);
   out_string (user);
-  out_string (phone_code_hash);
+  out_string (hash);
   out_string (code);
   tglq_send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
   return 0;
 }
 
-int tgl_do_send_code_result_auth (const char *user, const char *code, const char *first_name, const char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) {
+int tgl_do_send_code_result_auth (const char *user, const char *hash, const char *code, const char *first_name, const char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) {
   clear_packet ();
   out_int (CODE_auth_sign_up);
   out_string (user);
-  out_string (phone_code_hash);
+  out_string (hash);
   out_string (code);
   out_string (first_name);
   out_string (last_name);
@@ -2115,6 +2120,8 @@ static int import_auth_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   fetch_int (); // expires
   tglf_fetch_alloc_user ();
+  
+  bl_do_dc_signed (((struct dc *)q->extra)->id);
 
   if (q->callback) {
     ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
@@ -2140,7 +2147,7 @@ static int export_auth_on_answer (struct query *q UU) {
   out_int (CODE_auth_import_authorization);
   out_int (tgl_state.our_id);
   out_cstring (s, l);
-  tglq_send_query (q->extra, packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0, q->callback, q->callback_extra);
+  tglq_send_query (q->extra, packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, q->extra, q->callback, q->callback_extra);
   tfree (s, l);
   return 0;
 }
