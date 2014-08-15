@@ -106,7 +106,7 @@ double get_utime (int clock_id) {
 }
 
 void secure_random (void *s, int l) {
-  if (RAND_bytes (s, l) < 0) {
+  if (RAND_bytes (s, l) <= 0) {
     if (allow_weak_random) {
       RAND_pseudo_bytes (s, l);
     } else {
