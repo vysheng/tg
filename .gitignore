@@ -11,3 +11,4 @@ bin/
 objs/
 dep/
 auto/
+libs/

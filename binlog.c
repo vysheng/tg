@@ -198,6 +198,9 @@ static int fetch_comb_binlog_user_add (void *extra) {
   #ifdef USE_LUA
     lua_user_update (U);
   #endif
+  if (tgl_state.callback.new_user) {
+    tgl_state.callback.new_user (U);
+  }
   return 0;
 }
 
@@ -210,6 +213,9 @@ static int fetch_comb_binlog_user_delete (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.delete_user) {
+    tgl_state.callback.delete_user ((void *)U);
+  }
   return 0;
 }
 
@@ -237,6 +243,10 @@ static int fetch_comb_binlog_user_set_phone (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -254,6 +264,9 @@ static int fetch_comb_binlog_user_set_friend (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -269,6 +282,9 @@ static int fetch_comb_binlog_user_set_full_photo (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -282,6 +298,9 @@ static int fetch_comb_binlog_user_set_blocked (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -298,6 +317,9 @@ static int fetch_comb_binlog_user_set_real_name (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -320,6 +342,9 @@ static int fetch_comb_binlog_user_set_name (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -344,6 +369,9 @@ static int fetch_comb_binlog_user_set_photo (void *extra) {
   #ifdef USE_LUA
     lua_user_update (&U->user);
   #endif
+  if (tgl_state.callback.update_user_info) {
+    tgl_state.callback.update_user_info ((void *)U);
+  }
   return 0;
 }
 
@@ -367,6 +395,9 @@ static int fetch_comb_binlog_encr_chat_delete (void *extra) {
   #ifdef USE_LUA
     lua_secret_chat_update (U);
   #endif
+  if (tgl_state.callback.secret_chat_deleted) {
+    tgl_state.callback.secret_chat_deleted (U);
+  }
   return 0;
 }
 
@@ -407,6 +438,9 @@ static int fetch_comb_binlog_encr_chat_requested (void *extra) {
   #ifdef USE_LUA
     lua_secret_chat_update (U);
   #endif
+  if (tgl_state.callback.secret_chat_request) {
+    tgl_state.callback.secret_chat_request (U);
+  }
   return 0;
 }
 
@@ -470,6 +504,9 @@ static int fetch_comb_binlog_encr_chat_accepted (void *extra) {
   #ifdef USE_LUA
     lua_secret_chat_update (U);
   #endif
+  if (tgl_state.callback.secret_chat_accepted) {
+    tgl_state.callback.secret_chat_accepted (U);
+  }
   return 0;
 }
 
@@ -507,6 +544,9 @@ static int fetch_comb_binlog_encr_chat_init (void *extra) {
   #ifdef USE_LUA
     lua_secret_chat_update (U);
   #endif
+  if (tgl_state.callback.secret_chat_created) {
+    tgl_state.callback.secret_chat_created ((void *)P);
+  }
   return 0;
 }
 
@@ -536,6 +576,9 @@ static int fetch_comb_binlog_chat_create (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (C);
   #endif
+  if (tgl_state.callback.chat_created) {
+    tgl_state.callback.chat_created (C);
+  }
   return 0;
 }
 
@@ -548,6 +591,9 @@ static int fetch_comb_binlog_chat_change_flags (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -567,6 +613,9 @@ static int fetch_comb_binlog_chat_set_title (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -579,6 +628,9 @@ static int fetch_comb_binlog_chat_set_photo (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -590,6 +642,9 @@ static int fetch_comb_binlog_chat_set_date (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -602,6 +657,9 @@ static int fetch_comb_binlog_chat_set_version (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -613,6 +671,9 @@ static int fetch_comb_binlog_chat_set_admin (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -628,6 +689,9 @@ static int fetch_comb_binlog_chat_set_participants (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -644,6 +708,9 @@ static int fetch_comb_binlog_chat_set_full_photo (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (&C->chat);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update ((void *)C);
+  }
   return 0;
 }
 
@@ -674,6 +741,9 @@ static int fetch_comb_binlog_chat_add_participant (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (C);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update (C);
+  }
   return 0;
 }
 
@@ -704,6 +774,9 @@ static int fetch_comb_binlog_chat_del_participant (void *extra) {
   #ifdef USE_LUA
     lua_chat_update (C);
   #endif
+  if (tgl_state.callback.chat_update) {
+    tgl_state.callback.chat_update (C);
+  }
   return 0;
 }
 
@@ -734,9 +807,9 @@ static int fetch_comb_binlog_create_message_text (void *extra) {
   M->message_len = l;
 
   if (t == TGL_PEER_ENCR_CHAT) {
-    M->media.type = CODE_decrypted_message_media_empty;
+    M->media.type = tgl_message_media_none;
   } else {
-    M->media.type = CODE_message_media_empty;
+    M->media.type = tgl_message_media_none;
   }
   
   M->unread = 1;
@@ -777,9 +850,9 @@ static int fetch_comb_binlog_send_message_text (void *extra) {
   M->message_len = l;
 
   if (t == TGL_PEER_ENCR_CHAT) {
-    M->media.type = CODE_decrypted_message_media_empty;
+    M->media.type = tgl_message_media_none;
   } else {
-    M->media.type = CODE_message_media_empty;
+    M->media.type = tgl_message_media_none;
   }
   
   M->unread = 1;
@@ -812,7 +885,7 @@ static int fetch_comb_binlog_send_message_action_encr (void *extra) {
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
       
-  M->media.type = CODE_decrypted_message_media_empty;
+  M->media.type = tgl_message_media_none;
   tglf_fetch_message_action_encrypted (&M->action);
   
   M->unread = 1;
@@ -859,9 +932,9 @@ static int fetch_comb_binlog_create_message_text_fwd (void *extra) {
   M->message_len = l;
 
   if (t == TGL_PEER_ENCR_CHAT) {
-    M->media.type = CODE_decrypted_message_media_empty;
+    M->media.type = tgl_message_media_none;
   } else {
-    M->media.type = CODE_message_media_empty;
+    M->media.type = tgl_message_media_none;
   }
   
   M->unread = 1;

@@ -757,7 +757,7 @@ void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
   long long t;
   tglt_secure_random (&t, 8);
   int action[2];
-  action[0] = CODE_decrypted_message_action_notify_layer;
+  action[0] = tgl_message_action_notify_layer;
   action[1] = 15;
   bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
 
@@ -886,7 +886,7 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   out_cstring ((void *)buf, 16);
 
   switch (M->action.type) {
-  case CODE_decrypted_message_action_notify_layer:
+  case tgl_message_action_notify_layer:
     out_int (M->action.type);
     out_int (M->action.layer);
     break;
@@ -1081,6 +1081,9 @@ static int get_history_on_answer (struct query *q UU) {
   int i;
   int x = fetch_int ();
   assert (x == (int)CODE_messages_messages_slice || x == (int)CODE_messages_messages);
+  if (x == (int)CODE_messages_messages_slice) {
+    fetch_int ();
+  }
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   struct tgl_message **ML = talloc (sizeof (void *) * n);
@@ -1555,7 +1558,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
 }*/
 
-void tgl_do_send_photo (int type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     vlogprintf (E_WARNING, "No such file '%s'\n", file_name);
@@ -1592,7 +1595,26 @@ void tgl_do_send_photo (int type, tgl_peer_id_t to_id, char *file_name, void (*c
 
   f->id = lrand48 () * (1ll << 32) + lrand48 ();
   f->to_id = to_id;
-  f->media_type = type;
+  switch (type) {
+  case tgl_message_media_photo:
+    f->media_type = CODE_input_media_uploaded_photo;
+    break;
+  case tgl_message_media_video:
+    f->media_type = CODE_input_media_uploaded_video;
+    break;
+  case tgl_message_media_audio:
+    f->media_type = CODE_input_media_uploaded_audio;
+    break;
+  case tgl_message_media_document:
+    f->media_type = CODE_input_media_uploaded_document;
+    break;
+  default:
+    close (fd);
+    vlogprintf (E_WARNING, "Unknown type %d.\n", type);
+    tfree (f, sizeof (*f));
+    callback (callback_extra, 0, 0);
+    return;
+  }
   f->file_name = tstrdup (file_name);
   if (tgl_get_peer_type (f->to_id) == TGL_PEER_ENCR_CHAT) {
     f->encr = 1;
@@ -1728,7 +1750,7 @@ static int chat_info_on_answer (struct query *q UU) {
   struct tgl_chat *C = tglf_fetch_alloc_chat_full ();
   //print_chat_info (C);
   if (q->callback) {
-    ((void (*)(void *, int, struct tgl_chat *))q->callback) (q->callback_extra, 0, C);
+    ((void (*)(void *, int, struct tgl_chat *))q->callback) (q->callback_extra, 1, C);
   }
   return 0;
 }
@@ -1783,7 +1805,7 @@ void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(
 static int user_info_on_answer (struct query *q UU) {
   struct tgl_user *U = tglf_fetch_alloc_user_full ();
   if (q->callback) {
-    ((void (*)(void *, int, struct tgl_user *))q->callback) (q->callback_extra, 0, U);
+    ((void (*)(void *, int, struct tgl_user *))q->callback) (q->callback_extra, 1, U);
   }
   return 0;
 }

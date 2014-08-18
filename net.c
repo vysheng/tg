@@ -236,7 +236,7 @@ static void try_write (struct connection *c);
 
 static void conn_try_read (evutil_socket_t fd, short what, void *arg) {
   struct connection *c = arg;
-  vlogprintf (2, "Try read. Fd = %d\n", c->fd);
+  vlogprintf (E_DEBUG + 1, "Try read. Fd = %d\n", c->fd);
   try_read (c);
 }
 static void conn_try_write (evutil_socket_t fd, short what, void *arg) {

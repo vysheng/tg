@@ -25,9 +25,20 @@ struct tgl_update_callback {
   void (*user_registered)(struct tgl_user *U);
   void (*user_activated)(struct tgl_user *U);
   void (*new_authorization)(const char *device, const char *location);
+  void (*secret_chat_created)(struct tgl_secret_chat *E);
   void (*secret_chat_request)(struct tgl_secret_chat *E);
   void (*secret_chat_established)(struct tgl_secret_chat *E);
   void (*secret_chat_deleted)(struct tgl_secret_chat *E);
+  void (*secret_chat_accepted)(struct tgl_secret_chat *E);
+  void (*new_user)(struct tgl_user *U);
+  void (*delete_user)(struct tgl_user *U);
+  void (*update_user_info)(struct tgl_user *U);
+  //void (*secret_chat_delete)(struct tgl_secret_chat *U);
+  //void (*secret_chat_requested)(struct tgl_secret_chat *U);
+  //void (*secret_chat_accepted)(struct tgl_secret_chat *U);
+  //void (*secret_chat_created)(struct tgl_secret_chat *U);
+  void (*chat_created)(struct tgl_chat *C);
+  void (*chat_update)(struct tgl_chat *C);
 };
 
 struct tgl_net_methods {
@@ -109,7 +120,7 @@ int tgl_complete_peer_list (int index, const char *text, int len, char **R);
 #define TGL_MK_CHAT(id) tgl_set_peer_id (TGL_PEER_CHAT,id)
 #define TGL_MK_GEO_CHAT(id) tgl_set_peer_id (TGL_PEER_GEO_CHAT,id)
 #define TGL_MK_ENCR_CHAT(id) tgl_set_peer_id (TGL_PEER_ENCR_CHAT,id)
-    
+
 void tgl_set_binlog_mode (int mode);
 void tgl_set_binlog_path (const char *path);
 void tgl_set_auth_file_path (const char *path);
@@ -165,7 +176,7 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file, void (*callback)(void *call
 void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_get_history (tgl_peer_id_t id, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
 void tgl_do_get_dialog_list (void (*callback)(void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[]), void *callback_extra);
-void tgl_do_send_photo (int type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
+void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_rename_chat (tgl_peer_id_t id, char *name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(void *callback_extra, int success, struct tgl_chat *C), void *callback_extra);

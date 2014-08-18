@@ -580,12 +580,13 @@ void tglf_fetch_document (struct tgl_document *V) {
 void tglf_fetch_message_action (struct tgl_message_action *M) {
   memset (M, 0, sizeof (*M));
   unsigned x = fetch_int ();
-  M->type = x;
   switch (x) {
   case CODE_message_action_empty:
+    M->type = tgl_message_action_none;
     break;
   case CODE_message_action_geo_chat_create:
     {
+      M->type = tgl_message_action_geo_chat_create;
       int l = prefetch_strlen (); // title
       char *s = fetch_str (l);
       int l2 = prefetch_strlen (); // checkin
@@ -594,8 +595,10 @@ void tglf_fetch_message_action (struct tgl_message_action *M) {
     }
     break;
   case CODE_message_action_geo_chat_checkin:
+    M->type = tgl_message_action_geo_chat_checkin;
     break;
   case CODE_message_action_chat_create:
+    M->type = tgl_message_action_chat_create;
     M->title = fetch_str_dup ();
     assert (fetch_int () == (int)CODE_vector);
     M->user_num = fetch_int ();
@@ -603,17 +606,22 @@ void tglf_fetch_message_action (struct tgl_message_action *M) {
     fetch_ints (M->users, M->user_num);
     break;
   case CODE_message_action_chat_edit_title:
+    M->type = tgl_message_action_chat_edit_title;
     M->new_title = fetch_str_dup ();
     break;
   case CODE_message_action_chat_edit_photo:
+    M->type = tgl_message_action_chat_edit_photo;
     tglf_fetch_photo (&M->photo);
     break;
   case CODE_message_action_chat_delete_photo:
+    M->type = tgl_message_action_chat_delete_photo;
     break;
   case CODE_message_action_chat_add_user:
+    M->type = tgl_message_action_chat_add_user;
     M->user = fetch_int ();
     break;
   case CODE_message_action_chat_delete_user:
+    M->type = tgl_message_action_chat_delete_user;
     M->user = fetch_int ();
     break;
   default:
@@ -681,32 +689,41 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
 
 void tglf_fetch_message_media (struct tgl_message_media *M) {
   memset (M, 0, sizeof (*M));
-  M->type = fetch_int ();
-  switch (M->type) {
+  //M->type = fetch_int ();
+  int x = fetch_int ();
+  switch (x) {
   case CODE_message_media_empty:
+    M->type = tgl_message_media_none;
     break;
   case CODE_message_media_photo:
+    M->type = tgl_message_media_photo;
     tglf_fetch_photo (&M->photo);
     break;
   case CODE_message_media_video:
+    M->type = tgl_message_media_video;
     tglf_fetch_video (&M->video);
     break;
   case CODE_message_media_audio:
+    M->type = tgl_message_media_audio;
     tglf_fetch_audio (&M->audio);
     break;
   case CODE_message_media_document:
+    M->type = tgl_message_media_document;
     tglf_fetch_document (&M->document);
     break;
   case CODE_message_media_geo:
+    M->type = tgl_message_media_geo;
     tglf_fetch_geo (&M->geo);
     break;
   case CODE_message_media_contact:
+    M->type = tgl_message_media_contact;
     M->phone = fetch_str_dup ();
     M->first_name = fetch_str_dup ();
     M->last_name = fetch_str_dup ();
     M->user_id = fetch_int ();
     break;
   case CODE_message_media_unsupported:
+    M->type = tgl_message_media_unsupported;
     M->data_size = prefetch_strlen ();
     M->data = talloc (M->data_size);
     memcpy (M->data, fetch_str (M->data_size), M->data_size);
@@ -723,10 +740,12 @@ void tglf_fetch_message_media_encrypted (struct tgl_message_media *M) {
   int l;
   switch (x) {
   case CODE_decrypted_message_media_empty:
-    M->type = CODE_message_media_empty;
+    M->type = tgl_message_media_none;
+    //M->type = CODE_message_media_empty;
     break;
   case CODE_decrypted_message_media_photo:
-    M->type = x;
+    M->type = tgl_message_media_photo_encr;
+    //M->type = x;
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     fetch_int (); // thumb_w
@@ -756,7 +775,8 @@ void tglf_fetch_message_media_encrypted (struct tgl_message_media *M) {
     break;
   case CODE_decrypted_message_media_video:
   case CODE_decrypted_message_media_video_l12:
-    M->type = CODE_decrypted_message_media_video;
+    //M->type = CODE_decrypted_message_media_video;
+    M->type = tgl_message_media_video_encr;
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     fetch_int (); // thumb_w
@@ -789,7 +809,8 @@ void tglf_fetch_message_media_encrypted (struct tgl_message_media *M) {
     break;
   case CODE_decrypted_message_media_audio:
   case CODE_decrypted_message_media_audio_l12:
-    M->type = CODE_decrypted_message_media_audio;
+    //M->type = CODE_decrypted_message_media_audio;
+    M->type = tgl_message_media_audio_encr;
     M->encr_audio.duration = fetch_int ();
     if (x == CODE_decrypted_message_media_audio) {
       M->encr_audio.mime_type = fetch_str_dup ();
@@ -814,7 +835,7 @@ void tglf_fetch_message_media_encrypted (struct tgl_message_media *M) {
     }
     break;
   case CODE_decrypted_message_media_document:
-    M->type = x;
+    M->type = tgl_message_media_document_encr;
     l = prefetch_strlen ();
     fetch_str (l); // thumb
     fetch_int (); // thumb_w
@@ -857,12 +878,12 @@ void tglf_fetch_message_media_encrypted (struct tgl_message_media *M) {
     break;
   */  
   case CODE_decrypted_message_media_geo_point:
+    M->type = tgl_message_media_geo;
     M->geo.longitude = fetch_double ();
     M->geo.latitude = fetch_double ();
-    M->type = CODE_message_media_geo;
     break;
   case CODE_decrypted_message_media_contact:
-    M->type = CODE_message_media_contact;
+    M->type = tgl_message_media_contact;
     M->phone = fetch_str_dup ();
     M->first_name = fetch_str_dup ();
     M->last_name = fetch_str_dup ();
@@ -878,11 +899,11 @@ void tglf_fetch_message_action_encrypted (struct tgl_message_action *M) {
   unsigned x = fetch_int ();
   switch (x) {
   case CODE_decrypted_message_action_set_message_t_t_l:
-    M->type = x;
+    M->type = tgl_message_action_set_message_ttl;
     M->ttl = fetch_int ();
     break;
   case CODE_decrypted_message_action_read_messages: 
-    M->type = x;
+    M->type = tgl_message_action_read_messages;
     { 
       assert (fetch_int () == CODE_vector);
       int n = fetch_int ();
@@ -897,7 +918,7 @@ void tglf_fetch_message_action_encrypted (struct tgl_message_action *M) {
     }
     break;
   case CODE_decrypted_message_action_delete_messages: 
-    M->type = x;
+    M->type = tgl_message_action_delete_messages;
     { 
       assert (fetch_int () == CODE_vector);
       int n = fetch_int ();
@@ -908,7 +929,7 @@ void tglf_fetch_message_action_encrypted (struct tgl_message_action *M) {
     }
     break;
   case CODE_decrypted_message_action_screenshot_messages: 
-    M->type = x;
+    M->type = tgl_message_action_screenshot_messages;
     { 
       assert (fetch_int () == CODE_vector);
       int n = fetch_int ();
@@ -919,11 +940,11 @@ void tglf_fetch_message_action_encrypted (struct tgl_message_action *M) {
     }
     break;
   case CODE_decrypted_message_action_notify_layer: 
-    M->type = x;
+    M->type = tgl_message_action_notify_layer;
     M->layer = fetch_int ();
     break;
   case CODE_decrypted_message_action_flush_history:
-    M->type = x;
+    M->type = tgl_message_action_flush_history;
     break;
   default:
     vlogprintf (E_ERROR, "x = 0x%08x\n", x);
@@ -1168,9 +1189,9 @@ void tglf_fetch_encrypted_message_file (struct tgl_message_media *M) {
   unsigned x = fetch_int ();
   assert (x == CODE_encrypted_file || x == CODE_encrypted_file_empty);
   if (x == CODE_encrypted_file_empty) {
-    assert (M->type != CODE_decrypted_message_media_photo && M->type != CODE_decrypted_message_media_video);
+    assert (M->type != tgl_message_media_photo_encr && M->type != tgl_message_media_video_encr);
   } else {
-    assert (M->type == CODE_decrypted_message_media_document || M->type == CODE_decrypted_message_media_photo || M->type == CODE_decrypted_message_media_video || M->type == CODE_decrypted_message_media_audio);
+    assert (M->type == tgl_message_media_document_encr || M->type == tgl_message_media_photo_encr || M->type == tgl_message_media_video_encr || M->type == tgl_message_media_audio_encr);
 
     M->encr_photo.id = fetch_long();
     M->encr_photo.access_hash = fetch_long();
@@ -1421,36 +1442,34 @@ void tgls_free_document (struct tgl_document *D) {
 
 void tgls_free_message_media (struct tgl_message_media *M) {
   switch (M->type) {
-  case CODE_message_media_empty:
-  case CODE_message_media_geo:
-  case CODE_message_media_audio:
+  case tgl_message_media_none:
+  case tgl_message_media_geo:
+  case tgl_message_media_audio:
     return;
-  case CODE_message_media_photo:
+  case tgl_message_media_photo:
     tgls_free_photo (&M->photo);
     return;
-  case CODE_message_media_video:
+  case tgl_message_media_video:
     tgls_free_video (&M->video);
     return;
-  case CODE_message_media_contact:
+  case tgl_message_media_contact:
     tfree_str (M->phone);
     tfree_str (M->first_name);
     tfree_str (M->last_name);
     return;
-  case CODE_message_media_document:
+  case tgl_message_media_document:
     tgls_free_document (&M->document);
     return;
-  case CODE_message_media_unsupported:
+  case tgl_message_media_unsupported:
     tfree (M->data, M->data_size);
     return;
-  case CODE_decrypted_message_media_photo:
-  case CODE_decrypted_message_media_video:
-  case CODE_decrypted_message_media_audio:
-  case CODE_decrypted_message_media_document:
+  case tgl_message_media_photo_encr:
+  case tgl_message_media_video_encr:
+  case tgl_message_media_audio_encr:
+  case tgl_message_media_document_encr:
     tfree_secure (M->encr_photo.key, 32);
     tfree_secure (M->encr_photo.iv, 32);
     return;
-  case 0:
-    break;
   default:
     vlogprintf (E_ERROR, "type = 0x%08x\n", M->type);
     assert (0);
@@ -1459,25 +1478,23 @@ void tgls_free_message_media (struct tgl_message_media *M) {
 
 void tgls_free_message_action (struct tgl_message_action *M) {
   switch (M->type) {
-  case CODE_message_action_empty:
+  case tgl_message_action_none:
     break;
-  case CODE_message_action_chat_create:
+  case tgl_message_action_chat_create:
     tfree_str (M->title);
     tfree (M->users, M->user_num * 4);
     break;
-  case CODE_message_action_chat_edit_title:
+  case tgl_message_action_chat_edit_title:
     tfree_str (M->new_title);
     break;
-  case CODE_message_action_chat_edit_photo:
+  case tgl_message_action_chat_edit_photo:
     tgls_free_photo (&M->photo);
     break;
-  case CODE_message_action_chat_delete_photo:
+  case tgl_message_action_chat_delete_photo:
     break;
-  case CODE_message_action_chat_add_user:
+  case tgl_message_action_chat_add_user:
     break;
-  case CODE_message_action_chat_delete_user:
-    break;
-  case 0:
+  case tgl_message_action_chat_delete_user:
     break;
   default:
     assert (0);

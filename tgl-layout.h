@@ -22,6 +22,39 @@
 
 typedef struct { int type; int id; } tgl_peer_id_t;
 
+enum tgl_message_media_type {
+  tgl_message_media_none,
+  tgl_message_media_photo,
+  tgl_message_media_video,
+  tgl_message_media_audio,
+  tgl_message_media_document,
+  tgl_message_media_geo,
+  tgl_message_media_contact,
+  tgl_message_media_unsupported,
+  tgl_message_media_photo_encr,
+  tgl_message_media_video_encr,
+  tgl_message_media_audio_encr,
+  tgl_message_media_document_encr,
+};
+
+enum tgl_message_action_type {
+  tgl_message_action_none,
+  tgl_message_action_geo_chat_create,
+  tgl_message_action_geo_chat_checkin,
+  tgl_message_action_chat_create,
+  tgl_message_action_chat_edit_title,
+  tgl_message_action_chat_edit_photo,
+  tgl_message_action_chat_delete_photo,
+  tgl_message_action_chat_add_user,
+  tgl_message_action_chat_delete_user,
+  tgl_message_action_set_message_ttl,
+  tgl_message_action_read_messages,
+  tgl_message_action_delete_messages,
+  tgl_message_action_screenshot_messages,
+  tgl_message_action_flush_history,
+  tgl_message_action_notify_layer
+};
+
 struct tgl_file_location {
   int dc;
   long long volume;
@@ -251,7 +284,7 @@ struct tgl_document {
 };
 
 struct tgl_message_action {
-  unsigned type;
+  enum tgl_message_action_type type;
   union {
     struct {
       char *title;
@@ -270,7 +303,7 @@ struct tgl_message_action {
 };
 
 struct tgl_message_media {
-  unsigned type;
+  enum tgl_message_media_type type;
   union {
     struct tgl_photo photo;
     struct tgl_video video;
