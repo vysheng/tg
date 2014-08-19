@@ -736,11 +736,9 @@ struct tgl_update_callback upd_cb = {
   .user_registered = 0,
   .user_activated = 0,
   .new_authorization = 0,
-  .secret_chat_created = 0,
-  .secret_chat_request = 0,
-  .secret_chat_established = 0,
-  .secret_chat_deleted = 0,
-  .secret_chat_accepted = 0
+  .user_update = 0,
+  .chat_update = 0,
+  .secret_chat_update = 0
 };
 
 

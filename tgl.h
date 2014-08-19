@@ -14,6 +14,22 @@ struct connection;
 struct mtproto_methods;
 struct session;
 struct dc;
+
+#define TGL_UPDATE_CREATED 1
+#define TGL_UPDATE_DELETED 2
+#define TGL_UPDATE_PHONE 4
+#define TGL_UPDATE_CONTACT 8
+#define TGL_UPDATE_PHOTO 16
+#define TGL_UPDATE_BLOCKED 32
+#define TGL_UPDATE_REAL_NAME 64
+#define TGL_UPDATE_NAME 128
+#define TGL_UPDATE_REQUESTED 256
+#define TGL_UPDATE_WORKING 512
+#define TGL_UPDATE_FLAGS 1024
+#define TGL_UPDATE_TITLE 2048
+#define TGL_UPDATE_ADMIN 4096
+#define TGL_UPDATE_MEMBERS 8192
+
 struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);
   void (*marked_read)(int num, struct tgl_message *list[]);
@@ -25,20 +41,23 @@ struct tgl_update_callback {
   void (*user_registered)(struct tgl_user *U);
   void (*user_activated)(struct tgl_user *U);
   void (*new_authorization)(const char *device, const char *location);
-  void (*secret_chat_created)(struct tgl_secret_chat *E);
-  void (*secret_chat_request)(struct tgl_secret_chat *E);
-  void (*secret_chat_established)(struct tgl_secret_chat *E);
-  void (*secret_chat_deleted)(struct tgl_secret_chat *E);
-  void (*secret_chat_accepted)(struct tgl_secret_chat *E);
-  void (*new_user)(struct tgl_user *U);
-  void (*delete_user)(struct tgl_user *U);
-  void (*update_user_info)(struct tgl_user *U);
+  //void (*secret_chat_created)(struct tgl_secret_chat *E);
+  //void (*secret_chat_request)(struct tgl_secret_chat *E);
+  //void (*secret_chat_established)(struct tgl_secret_chat *E);
+  //void (*secret_chat_deleted)(struct tgl_secret_chat *E);
+  //void (*secret_chat_accepted)(struct tgl_secret_chat *E);
+  //void (*new_user)(struct tgl_user *U);
+  //void (*delete_user)(struct tgl_user *U);
+  //void (*update_user_info)(struct tgl_user *U);
   //void (*secret_chat_delete)(struct tgl_secret_chat *U);
   //void (*secret_chat_requested)(struct tgl_secret_chat *U);
   //void (*secret_chat_accepted)(struct tgl_secret_chat *U);
   //void (*secret_chat_created)(struct tgl_secret_chat *U);
-  void (*chat_created)(struct tgl_chat *C);
-  void (*chat_update)(struct tgl_chat *C);
+  //void (*chat_created)(struct tgl_chat *C);
+  //void (*chat_update)(struct tgl_chat *C);
+  void (*chat_update)(struct tgl_chat *C, unsigned flags);
+  void (*user_update)(struct tgl_user *C, unsigned flags);
+  void (*secret_chat_update)(struct tgl_secret_chat *C, unsigned flags);
 };
 
 struct tgl_net_methods {
