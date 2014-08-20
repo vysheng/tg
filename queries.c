@@ -220,7 +220,7 @@ void tglq_query_result (long long id UU) {
     fetch_int ();
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
-    int total_out = tinflate (s, l, packed_buffer, MAX_PACKED_SIZE);
+    int total_out = tgl_inflate (s, l, packed_buffer, MAX_PACKED_SIZE);
     end = in_ptr;
     eend = in_end;
     //assert (total_out % 4 == 0);
@@ -2468,7 +2468,7 @@ static struct query_methods send_encr_request_methods  = {
 //int encr_root;
 //unsigned char *encr_prime;
 //int encr_param_version;
-static BN_CTX *ctx;
+//static BN_CTX *ctx;
 
 void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *random, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
   int i;
@@ -2493,15 +2493,15 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
   BIGNUM *g_a = BN_bin2bn (E->g_key, 256, 0);
   ensure_ptr (g_a);
   assert (tglmp_check_g (tgl_state.encr_prime, g_a) >= 0);
-  if (!ctx) {
-    ctx = BN_CTX_new ();
-    ensure_ptr (ctx);
-  }
+  //if (!ctx) {
+  //  ctx = BN_CTX_new ();
+  //  ensure_ptr (ctx);
+  //}
   BIGNUM *p = BN_bin2bn (tgl_state.encr_prime, 256, 0); 
   ensure_ptr (p);
   BIGNUM *r = BN_new ();
   ensure_ptr (r);
-  ensure (BN_mod_exp (r, g_a, b, p, ctx));
+  ensure (BN_mod_exp (r, g_a, b, p, tgl_state.BN_ctx));
   static unsigned char kk[256];
   memset (kk, 0, sizeof (kk));
   BN_bn2bin (r, kk);
@@ -2520,7 +2520,7 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
   out_long (E->access_hash);
   
   ensure (BN_set_word (g_a, tgl_state.encr_root));
-  ensure (BN_mod_exp (r, g_a, b, p, ctx));
+  ensure (BN_mod_exp (r, g_a, b, p, tgl_state.BN_ctx));
   static unsigned char buf[256];
   memset (buf, 0, sizeof (buf));
   BN_bn2bin (r, buf);
@@ -2540,17 +2540,13 @@ void tgl_do_create_keys_end (struct tgl_secret_chat *U) {
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
   ensure_ptr (g_b);
   assert (tglmp_check_g (tgl_state.encr_prime, g_b) >= 0);
-  if (!ctx) {
-    ctx = BN_CTX_new ();
-    ensure_ptr (ctx);
-  }
   BIGNUM *p = BN_bin2bn (tgl_state.encr_prime, 256, 0); 
   ensure_ptr (p);
   BIGNUM *r = BN_new ();
   ensure_ptr (r);
   BIGNUM *a = BN_bin2bn ((void *)U->key, 256, 0);
   ensure_ptr (a);
-  ensure (BN_mod_exp (r, g_b, a, p, ctx));
+  ensure (BN_mod_exp (r, g_b, a, p, tgl_state.BN_ctx));
 
   unsigned char *t = talloc (256);
   memcpy (t, U->key, 256);
@@ -2586,10 +2582,6 @@ void tgl_do_send_create_encr_chat (void *x, unsigned char *random, void (*callba
   for (i = 0; i < 256; i++) {
     random[i] ^= random_here[i];
   }
-  if (!ctx) {
-    ctx = BN_CTX_new ();
-    ensure_ptr (ctx);
-  }
   BIGNUM *a = BN_bin2bn (random, 256, 0);
   ensure_ptr (a);
   BIGNUM *p = BN_bin2bn (tgl_state.encr_prime, 256, 0); 
@@ -2603,7 +2595,7 @@ void tgl_do_send_create_encr_chat (void *x, unsigned char *random, void (*callba
   BIGNUM *r = BN_new ();
   ensure_ptr (r);
 
-  ensure (BN_mod_exp (r, g, a, p, ctx));
+  ensure (BN_mod_exp (r, g, a, p, tgl_state.BN_ctx));
 
   BN_clear_free (a);
 

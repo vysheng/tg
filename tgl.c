@@ -5,6 +5,7 @@
 #include "tgl.h"
 #include "tools.h"
 #include "mtproto-client.h"
+#include "structures.h"
 #include "net.h"
 
 #include <event2/event.h>
@@ -43,6 +44,9 @@ void tgl_init (void) {
 
   if (!tgl_state.net_methods) {
     tgl_state.net_methods = &tgl_conn_methods;
+  }
+  if (!tgl_state.callback.create_print_name) {
+    tgl_state.callback.create_print_name = tgls_default_create_print_name;
   }
   tglmp_on_start (tgl_state.rsa_key);
 }

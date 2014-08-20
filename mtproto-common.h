@@ -111,14 +111,17 @@ struct encrypted_message {
 
 #pragma pack(pop)
 
-BN_CTX *BN_ctx;
+//BN_CTX *BN_ctx;
 
-void prng_seed (const char *password_filename, int password_length);
-int serialize_bignum (BIGNUM *b, char *buffer, int maxlen);
-long long compute_rsa_key_fingerprint (RSA *key);
+void tgl_prng_seed (const char *password_filename, int password_length);
+int tgl_serialize_bignum (BIGNUM *b, char *buffer, int maxlen);
+long long tgl_do_compute_rsa_key_fingerprint (RSA *key);
 
-extern int *packet_buffer;
-extern int *packet_ptr;
+#define packet_buffer tgl_packet_buffer
+#define packet_ptr tgl_packet_ptr
+
+extern int *tgl_packet_buffer;
+extern int *tgl_packet_ptr;
 
 static inline void out_ints (const int *what, int len) {
   assert (packet_ptr + len <= packet_buffer + PACKET_BUFFER_SIZE);
@@ -143,21 +146,28 @@ static inline void clear_packet (void) {
   packet_ptr = packet_buffer;
 }
 
-void out_cstring (const char *str, long len);
-void out_cstring_careful (const char *str, long len);
-void out_data (const void *data, long len);
+void tgl_out_cstring (const char *str, long len);
+void tgl_out_cstring_careful (const char *str, long len);
+void tgl_out_data (const void *data, long len);
+
+#define out_cstring tgl_out_cstring
+#define out_cstring_careful tgl_out_cstring_careful
+#define out_data tgl_out_data
 
 static inline void out_string (const char *str) {
   out_cstring (str, strlen (str));
 }
 
 static inline void out_bignum (BIGNUM *n) {
-  int l = serialize_bignum (n, (char *)packet_ptr, (PACKET_BUFFER_SIZE - (packet_ptr - packet_buffer)) * 4);
+  int l = tgl_serialize_bignum (n, (char *)packet_ptr, (PACKET_BUFFER_SIZE - (packet_ptr - packet_buffer)) * 4);
   assert (l > 0);
   packet_ptr += l >> 2;
 }
 
-extern int *in_ptr, *in_end;
+#define in_ptr tgl_in_ptr
+#define in_end tgl_in_end
+extern int *tgl_in_ptr, *tgl_in_end;
+
 
 //void fetch_pts (void);
 //void fetch_qts (void);
@@ -179,7 +189,6 @@ static inline int prefetch_strlen (void) {
   }
 }
 
-extern int verbosity;
 static inline char *fetch_str (int len) {
   assert (len >= 0);
   vlogprintf (E_DEBUG + 3, "fetch_string: len = %d\n", len);    
@@ -270,7 +279,8 @@ static inline long have_prefetch_ints (void) {
   return in_end - in_ptr;
 }
 
-int fetch_bignum (BIGNUM *x);
+int tgl_fetch_bignum (BIGNUM *x);
+#define fetch_bignum tgl_fetch_bignum
 
 static inline int fetch_int (void) {
   assert (in_ptr + 1 <= in_end);
@@ -335,18 +345,18 @@ static inline void fetch256 (void *buf) {
 
 //int get_random_bytes (unsigned char *buf, int n);
 
-int pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
-int pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
+int tgl_pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
+int tgl_pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
 
-extern long long rsa_encrypted_chunks, rsa_decrypted_chunks;
+//extern long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
-extern unsigned char aes_key_raw[32], aes_iv[32];
-extern AES_KEY aes_key;
+//extern unsigned char aes_key_raw[32], aes_iv[32];
+//extern AES_KEY aes_key;
 
-void init_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32], int encrypt);
-void init_aes_auth (char auth_key[192], char msg_key[16], int encrypt);
-int pad_aes_encrypt (char *from, int from_len, char *to, int size);
-int pad_aes_decrypt (char *from, int from_len, char *to, int size);
+void tgl_init_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32], int encrypt);
+void tgl_init_aes_auth (char auth_key[192], char msg_key[16], int encrypt);
+int tgl_pad_aes_encrypt (char *from, int from_len, char *to, int size);
+int tgl_pad_aes_decrypt (char *from, int from_len, char *to, int size);
 /*
 static inline void hexdump_in (void) {
   hexdump (in_ptr, in_end);
@@ -360,5 +370,4 @@ static inline void hexdump_out (void) {
 #define CLOCK_REALTIME 0
 #define CLOCK_MONOTONIC 1
 #endif
-void my_clock_gettime (int clock_id, struct timespec *T);
 #endif

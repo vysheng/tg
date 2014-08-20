@@ -23,7 +23,7 @@
 #include "tgl-layout.h"
 #include "tgl-fetch.h"
 
-char *create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
+char *tgls_default_create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 
 
 void tgls_free_user (struct tgl_user *U);

@@ -40,10 +40,10 @@
 #define RES_PRE 8
 #define RES_AFTER 8
 #define MAX_BLOCKS 1000000
-void *blocks[MAX_BLOCKS];
-void *free_blocks[MAX_BLOCKS];
-int used_blocks;
-int free_blocks_cnt;
+static void *blocks[MAX_BLOCKS];
+static void *free_blocks[MAX_BLOCKS];
+static int used_blocks;
+static int free_blocks_cnt;
 #endif
 
 
@@ -58,11 +58,6 @@ void logprintf (const char *format, ...) {
 extern int verbosity;
 
 long long total_allocated_bytes;
-
-static void out_of_memory (void) {
-  fprintf (stderr, "Out of memory\n");
-  exit (1);
-}
 
 int tsnprintf (char *buf, int len, const char *format, ...) {
   va_list ap;
@@ -201,21 +196,8 @@ char *tstrndup (const char *s, size_t n) {
 #endif
 }
 
-void ensure (int r) {
-  if (!r) {
-    logprintf ("Open SSL error\n");
-    ERR_print_errors_fp (stderr);
-    assert (0);
-  }
-}
 
-void ensure_ptr (void *p) {
-  if (p == NULL) {
-    out_of_memory ();
-  }
-}
-
-int tinflate (void *input, int ilen, void *output, int olen) {
+int tgl_inflate (void *input, int ilen, void *output, int olen) {
   z_stream strm;
   memset (&strm, 0, sizeof (strm));
   assert (inflateInit2 (&strm, 16 + MAX_WBITS) == Z_OK);
@@ -282,7 +264,7 @@ void texists (void *ptr, int size) {
 }
 #endif
 
-void my_clock_gettime (int clock_id, struct timespec *T) {
+void tgl_my_clock_gettime (int clock_id, struct timespec *T) {
 #ifdef __MACH__
   // We are ignoring MONOTONIC and hope time doesn't go back too often
   clock_serv_t cclock;
@@ -299,7 +281,7 @@ void my_clock_gettime (int clock_id, struct timespec *T) {
 
 double tglt_get_double_time (void) {
   struct timespec tv;
-  my_clock_gettime (CLOCK_REALTIME, &tv);
+  tgl_my_clock_gettime (CLOCK_REALTIME, &tv);
   return tv.tv_sec + 1e-9 * tv.tv_nsec;
 }
 

@@ -182,7 +182,7 @@ static int fetch_comb_binlog_user_add (void *extra) {
   U->first_name = fetch_str_dup ();
   U->last_name = fetch_str_dup ();
   assert (!U->print_name);
-  U->print_name = create_print_name (U->id, U->first_name, U->last_name, 0, 0);
+  U->print_name = tgl_state.callback.create_print_name (U->id, U->first_name, U->last_name, 0, 0);
 
   tglp_peer_insert_name ((void *)U);
   U->access_hash = fetch_long ();
@@ -311,7 +311,7 @@ static int fetch_comb_binlog_user_set_name (void *extra) {
     tglp_peer_delete_name (U);
     tfree_str (U->print_name); 
   }
-  U->print_name = create_print_name (U->id, U->user.first_name, U->user.last_name, 0, 0);
+  U->print_name = tgl_state.callback.create_print_name (U->id, U->user.first_name, U->user.last_name, 0, 0);
   tglp_peer_insert_name ((void *)U);
   
   if (tgl_state.callback.user_update) {
@@ -386,11 +386,11 @@ static int fetch_comb_binlog_encr_chat_requested (void *extra) {
   tgl_peer_t *Us = tgl_peer_get (TGL_MK_USER (U->user_id));
   assert (!U->print_name);
   if (Us) {
-    U->print_name = create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
+    U->print_name = tgl_state.callback.create_print_name (id, "!", Us->user.first_name, Us->user.last_name, 0);
   } else {
     static char buf[100];
     tsnprintf (buf, 99, "user#%d", U->user_id);
-    U->print_name = create_print_name (id, "!", buf, 0, 0);
+    U->print_name = tgl_state.callback.create_print_name (id, "!", buf, 0, 0);
   }
   tglp_peer_insert_name ((void *)U);
   U->g_key = talloc (256);
@@ -480,7 +480,7 @@ static int fetch_comb_binlog_encr_chat_init (void *extra) {
   tglp_insert_encrypted_chat (P);
   tgl_peer_t *Us = tgl_peer_get (TGL_MK_USER (P->encr_chat.user_id));
   assert (Us);
-  P->print_name = create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
+  P->print_name = tgl_state.callback.create_print_name (P->id, "!", Us->user.first_name, Us->user.last_name, 0);
   tglp_peer_insert_name (P);
 
   P->encr_chat.g_key = talloc (256);
@@ -508,7 +508,7 @@ static int fetch_comb_binlog_chat_create (void *extra) {
   C->flags = FLAG_CREATED | fetch_int ();
   C->title = fetch_str_dup ();
   assert (!C->print_title);
-  C->print_title = create_print_name (id, C->title, 0, 0, 0);
+  C->print_title = tgl_state.callback.create_print_name (id, C->title, 0, 0, 0);
   tglp_peer_insert_name ((void *)C);
   C->users_num = fetch_int ();
   C->date = fetch_int ();
@@ -545,7 +545,7 @@ static int fetch_comb_binlog_chat_set_title (void *extra) {
     tglp_peer_delete_name ((void *)C);
     tfree_str (C->print_name); 
   }
-  C->print_name = create_print_name (C->id, C->chat.title, 0, 0, 0);
+  C->print_name = tgl_state.callback.create_print_name (C->id, C->chat.title, 0, 0, 0);
   tglp_peer_insert_name ((void *)C);
   
   if (tgl_state.callback.chat_update) {

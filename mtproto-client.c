@@ -96,7 +96,7 @@ static long long precise_time;
 
 static double get_utime (int clock_id) {
   struct timespec T;
-  my_clock_gettime (clock_id, &T);
+  tgl_my_clock_gettime (clock_id, &T);
   double res = T.tv_sec + (double) T.tv_nsec * 1e-9;
   if (clock_id == CLOCK_REALTIME) {
     precise_time = (long long) (res * (1LL << 32));
@@ -139,9 +139,7 @@ static int rsa_load_public_key (const char *public_key_name) {
     return -1;
   }
 
-  if (verbosity) {
-    vlogprintf (E_WARNING, "public key '%s' loaded successfully\n", rsa_public_key_name);
-  }
+  vlogprintf (E_WARNING, "public key '%s' loaded successfully\n", rsa_public_key_name);
 
   return 0;
 }
@@ -173,12 +171,12 @@ static int encrypt_buffer[ENCRYPT_BUFFER_INTS];
 static int decrypt_buffer[ENCRYPT_BUFFER_INTS];
 
 static int encrypt_packet_buffer (void) {
-  return pad_rsa_encrypt ((char *) packet_buffer, (packet_ptr - packet_buffer) * 4, (char *) encrypt_buffer, ENCRYPT_BUFFER_INTS * 4, pubKey->n, pubKey->e);
+  return tgl_pad_rsa_encrypt ((char *) packet_buffer, (packet_ptr - packet_buffer) * 4, (char *) encrypt_buffer, ENCRYPT_BUFFER_INTS * 4, pubKey->n, pubKey->e);
 }
 
 static int encrypt_packet_buffer_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32]) {
-  init_aes_unauth (server_nonce, hidden_client_nonce, AES_ENCRYPT);
-  return pad_aes_encrypt ((char *) packet_buffer, (packet_ptr - packet_buffer) * 4, (char *) encrypt_buffer, ENCRYPT_BUFFER_INTS * 4);
+  tgl_init_aes_unauth (server_nonce, hidden_client_nonce, AES_ENCRYPT);
+  return tgl_pad_aes_encrypt ((char *) packet_buffer, (packet_ptr - packet_buffer) * 4, (char *) encrypt_buffer, ENCRYPT_BUFFER_INTS * 4);
 }
 
 
@@ -421,7 +419,7 @@ static int process_respq_answer (struct connection *c, char *packet, int len) {
 }
 
 static int check_prime (BIGNUM *p) {
-  int r = BN_is_prime (p, BN_prime_checks, 0, BN_ctx, 0);
+  int r = BN_is_prime (p, BN_prime_checks, 0, tgl_state.BN_ctx, 0);
   ensure (r >= 0);
   return r;
 }
@@ -434,7 +432,7 @@ int tglmp_check_DH_params (BIGNUM *p, int g) {
   BN_init (&dh_g);
   ensure (BN_set_word (&dh_g, 4 * g));
 
-  ensure (BN_mod (&t, p, &dh_g, BN_ctx));
+  ensure (BN_mod (&t, p, &dh_g, tgl_state.BN_ctx));
   int x = BN_get_word (&t);
   assert (x >= 0 && x < 4 * g);
 
@@ -465,7 +463,7 @@ int tglmp_check_DH_params (BIGNUM *p, int g) {
   BIGNUM b;
   BN_init (&b);
   ensure (BN_set_word (&b, 2));
-  ensure (BN_div (&t, 0, p, &b, BN_ctx));
+  ensure (BN_div (&t, 0, p, &b, tgl_state.BN_ctx));
   if (!check_prime (&t)) { return -1; }
   BN_free (&b);
   BN_free (&t);
@@ -528,12 +526,12 @@ static int process_dh_answer (struct connection *c, char *packet, int len) {
   assert (*(int *) (packet + 20) == (int)CODE_server_DH_params_ok);
   assert (!memcmp (packet + 24, nonce, 16));
   assert (!memcmp (packet + 40, server_nonce, 16));
-  init_aes_unauth (server_nonce, new_nonce, AES_DECRYPT);
+  tgl_init_aes_unauth (server_nonce, new_nonce, AES_DECRYPT);
   in_ptr = (int *)(packet + 56);
   in_end = (int *)(packet + len);
   int l = prefetch_strlen ();
   assert (l > 0);
-  l = pad_aes_decrypt (fetch_str (l), l, (char *) decrypt_buffer, DECRYPT_BUFFER_INTS * 4 - 16);
+  l = tgl_pad_aes_decrypt (fetch_str (l), l, (char *) decrypt_buffer, DECRYPT_BUFFER_INTS * 4 - 16);
   assert (in_ptr == in_end);
   assert (l >= 60);
   assert (decrypt_buffer[5] == (int)CODE_server_DH_inner_data);
@@ -579,12 +577,12 @@ static int process_dh_answer (struct connection *c, char *packet, int len) {
 
   BIGNUM *y = BN_new ();
   ensure_ptr (y);
-  ensure (BN_mod_exp (y, &dh_g, dh_power, &dh_prime, BN_ctx));
+  ensure (BN_mod_exp (y, &dh_g, dh_power, &dh_prime, tgl_state.BN_ctx));
   out_bignum (y);
   BN_free (y);
 
   BN_init (&auth_key_num);
-  ensure (BN_mod_exp (&auth_key_num, &g_a, dh_power, &dh_prime, BN_ctx));
+  ensure (BN_mod_exp (&auth_key_num, &g_a, dh_power, &dh_prime, tgl_state.BN_ctx));
   l = BN_num_bytes (&auth_key_num);
   assert (l >= 250 && l <= 256);
   assert (BN_bn2bin (&auth_key_num, (unsigned char *)D->auth_key));
@@ -711,9 +709,9 @@ static int aes_encrypt_message (struct dc *DC, struct encrypted_message *enc) {
   //printf ("enc_len is %d\n", enc_len);
   vlogprintf (E_DEBUG, "sending message with sha1 %08x\n", *(int *)sha1_buffer);
   memcpy (enc->msg_key, sha1_buffer + 4, 16);
-  init_aes_auth (DC->auth_key, enc->msg_key, AES_ENCRYPT);
+  tgl_init_aes_auth (DC->auth_key, enc->msg_key, AES_ENCRYPT);
   //hexdump ((char *)enc, (char *)enc + enc_len + 24);
-  return pad_aes_encrypt ((char *) &enc->server_salt, enc_len, (char *) &enc->server_salt, MAX_MESSAGE_INTS * 4 + (MINSZ - UNENCSZ));
+  return tgl_pad_aes_encrypt ((char *) &enc->server_salt, enc_len, (char *) &enc->server_salt, MAX_MESSAGE_INTS * 4 + (MINSZ - UNENCSZ));
 }
 
 long long tglmp_encrypt_send_message (struct connection *c, int *msg, int msg_ints, int useful) {
@@ -821,7 +819,7 @@ static void work_packed (struct connection *c, long long msg_id) {
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
 
-  int total_out = tinflate (s, l, buf, MAX_PACKED_SIZE);
+  int total_out = tgl_inflate (s, l, buf, MAX_PACKED_SIZE);
   int *end = in_ptr;
   int *eend = in_end;
   //assert (total_out % 4 == 0);
@@ -933,8 +931,8 @@ static int process_rpc_message (struct connection *c UU, struct encrypted_messag
   struct dc *DC = tgl_state.net_methods->get_dc (c);
   assert (enc->auth_key_id == DC->auth_key_id);
   assert (DC->auth_key_id);
-  init_aes_auth (DC->auth_key + 8, enc->msg_key, AES_DECRYPT);
-  int l = pad_aes_decrypt ((char *)&enc->server_salt, len - UNENCSZ, (char *)&enc->server_salt, len - UNENCSZ);
+  tgl_init_aes_auth (DC->auth_key + 8, enc->msg_key, AES_DECRYPT);
+  int l = tgl_pad_aes_decrypt ((char *)&enc->server_salt, len - UNENCSZ, (char *)&enc->server_salt, len - UNENCSZ);
   assert (l == len - UNENCSZ);
   //assert (enc->auth_key_id2 == enc->auth_key_id);
   assert (!(enc->msg_len & 3) && enc->msg_len > 0 && enc->msg_len <= len - MINSZ && len - MINSZ - enc->msg_len <= 12);
@@ -1089,7 +1087,7 @@ static int rpc_close (struct connection *c) {
 #define RANDSEED_PASSWORD_FILENAME     NULL
 #define RANDSEED_PASSWORD_LENGTH       0
 void tglmp_on_start (const char *key) {
-  prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
+  tgl_prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
 
   if (key) {
     if (rsa_load_public_key (key) < 0) {
@@ -1103,7 +1101,7 @@ void tglmp_on_start (const char *key) {
       exit (1);
     }
   }
-  pk_fingerprint = compute_rsa_key_fingerprint (pubKey);
+  pk_fingerprint = tgl_do_compute_rsa_key_fingerprint (pubKey);
 }
 
 //int auth_ok (void) {

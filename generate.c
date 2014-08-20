@@ -871,7 +871,9 @@ int parse_tlo_file (void) {
     printf ("#include \"auto.h\"\n");
     printf ("#include <assert.h>\n");
 
-    printf ("extern int *in_ptr, *in_end;\n");
+    printf ("extern int *tgl_in_ptr, *tgl_in_end;\n");
+    printf ("#define in_ptr tgl_in_ptr\n");
+    printf ("#define in_end tgl_in_end\n");
 
     printf ("#include \"auto-static.c\"\n");
     for (i = 0; i < tn; i++) {

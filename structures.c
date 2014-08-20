@@ -68,7 +68,7 @@ static tgl_peer_t *Peers[TGL_MAX_PEER_NUM];
 
 
 
-char *create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4) {
+char *tgls_default_create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4) {
   const char *d[4];
   d[0] = a1; d[1] = a2; d[2] = a3; d[3] = a4;
   static char buf[10000];

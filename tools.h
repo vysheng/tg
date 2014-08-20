@@ -19,6 +19,9 @@
 
 #ifndef __TOOLS_H__
 #define __TOOLS_H__
+#include <time.h>
+#include <openssl/err.h>
+#include <assert.h>
 
 double tglt_get_double_time (void);
 
@@ -27,9 +30,28 @@ void *trealloc (void *ptr, size_t old_size, size_t size);
 void *talloc0 (size_t size);
 char *tstrdup (const char *s);
 char *tstrndup (const char *s, size_t n);
-int tinflate (void *input, int ilen, void *output, int olen);
-void ensure (int r);
-void ensure_ptr (void *p);
+int tgl_inflate (void *input, int ilen, void *output, int olen);
+//void ensure (int r);
+//void ensure_ptr (void *p);
+
+static inline void out_of_memory (void) {
+  fprintf (stderr, "Out of memory\n");
+  exit (1);
+}
+
+static inline void ensure (int r) {
+  if (!r) {
+    fprintf (stderr, "Open SSL error\n");
+    ERR_print_errors_fp (stderr);
+    assert (0);
+  }
+}
+
+static inline void ensure_ptr (void *p) {
+  if (p == NULL) {
+    out_of_memory ();
+  }
+}
 
 void tfree (void *ptr, int size);
 void tfree_str (void *ptr);
@@ -40,9 +62,11 @@ int tsnprintf (char *buf, int len, const char *format, ...) __attribute__ ((form
 int tasprintf (char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
 
 void tglt_secure_random (void *s, int l);
+void tgl_my_clock_gettime (int clock_id, struct timespec *T);
 
 #ifdef DEBUG
 void tcheck (void);
 void texists (void *ptr, int size);
+
 #endif
 #endif

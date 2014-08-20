@@ -6,14 +6,15 @@
 
 #define TGL_MAX_DC_NUM 100
 
+// JUST RANDOM STRING
 #define TGL_BUILD "1828"
-#define TGL_VERSION "0.9-beta"
+#define TGL_VERSION "1.0-beta"
 
-// Do not modify this structure, unless you know what you do
 struct connection;
 struct mtproto_methods;
 struct session;
 struct dc;
+struct bingnum_ctx;
 
 #define TGL_UPDATE_CREATED 1
 #define TGL_UPDATE_DELETED 2
@@ -30,6 +31,21 @@ struct dc;
 #define TGL_UPDATE_ADMIN 4096
 #define TGL_UPDATE_MEMBERS 8192
 #define TGL_UPDATE_ACCESS_HASH 16384
+
+struct tgl_allocator {
+  void *(*talloc)(size_t size);
+  void *(*trealloc)(void *ptr, size_t old_size, size_t size);
+  void *(*talloc0)(size_t size);
+  char *(*tstrdup)(const char *s);
+  char *(*tstrndup)(const char *s, size_t n);
+  void (*tfree)(void *ptr, int size);
+  void (*tfree_str)(void *ptr);
+  void (*tfree_secure)(void *ptr, int size);
+  int (*tasprintf)(char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
+  int (*tsnprintf)(char *buf, int len, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
+  void (*tcheck)(void);
+  void (*texists)(void *ptr, int size);
+};
 
 struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);
@@ -59,6 +75,7 @@ struct tgl_update_callback {
   void (*secret_chat_update)(struct tgl_secret_chat *C, unsigned flags);
   void (*msg_receive)(struct tgl_message *M);
   void (*our_id)(int id);
+  char *(*create_print_name) (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 };
 
 struct tgl_net_methods {
@@ -81,6 +98,7 @@ struct tgl_net_methods {
 
 #define TGL_LOCK_DIFF 1
 
+// Do not modify this structure, unless you know what you do
 struct tgl_state {
   int our_id; // ID of logged in user
   int encr_root;
@@ -115,6 +133,9 @@ struct tgl_state {
   struct event_base *ev_base;
 
   char *rsa_key;
+  struct bignum_ctx *BN_ctx;
+
+  struct tgl_allocator allocator;
 };
 extern struct tgl_state tgl_state;
 
