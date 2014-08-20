@@ -39,6 +39,7 @@ struct tgl_update_callback {
   //void (*secret_chat_created)(struct tgl_secret_chat *U);
   void (*chat_created)(struct tgl_chat *C);
   void (*chat_update)(struct tgl_chat *C);
+  void (*msg_receive)(struct tgl_message *M);
 };
 
 struct tgl_net_methods {

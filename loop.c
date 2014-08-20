@@ -63,6 +63,7 @@ extern int unknown_user_list[];
 int register_mode;
 extern int safe_quit;
 int queries_num;
+extern int sync_from_start;
 
 void got_it (char *line, int len);
 
@@ -366,7 +367,7 @@ int loop (void) {
 
   set_interface_callbacks ();
 
-  tgl_do_get_difference (0, get_difference_callback, 0);
+  tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
   #ifdef USE_LUA
     lua_diff_end ();

@@ -657,10 +657,30 @@ void tglu_work_update_short (struct connection *c, long long msg_id) {
   
   assert (save_end == in_ptr);
 }
+  
+static int do_skip_seq (int seq) {
+  if (tgl_state.seq) {
+    if (seq <= tgl_state.seq) {
+      vlogprintf (E_NOTICE, "Duplicate message with seq=%d\n", seq);
+      return -1;
+    }
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq (seq = %d, cur_seq = %d)\n", seq, tgl_state.seq);
+      tgl_do_get_difference (0, 0, 0);
+      return -1;
+    }
+    return 0;
+  } else {
+    return -1;
+  }
+}
 
 void tglu_work_updates (struct connection *c, long long msg_id) {
   int *save = in_ptr;
   assert (!skip_type_any (TYPE_TO_PARAM (updates)));
+  if (do_skip_seq (*(in_ptr - 1)) < 0) {
+    return;
+  }
   int *save_end = in_ptr;
   in_ptr = save;
   assert (fetch_int () == CODE_updates);
@@ -681,13 +701,17 @@ void tglu_work_updates (struct connection *c, long long msg_id) {
     tglf_fetch_alloc_chat ();
   }
   bl_do_set_date (fetch_int ());
-  bl_do_set_seq (fetch_int ());
+  //bl_do_set_seq (fetch_int ());
+  fetch_int ();
   assert (save_end == in_ptr);
 }
 
 void tglu_work_update_short_message (struct connection *c, long long msg_id) {
   int *save = in_ptr;
   assert (!skip_type_any (TYPE_TO_PARAM (updates)));  
+  if (do_skip_seq (*(in_ptr - 1)) < 0) {
+    return;
+  }
   int *save_end = in_ptr;
   in_ptr = save;
 
@@ -707,6 +731,9 @@ void tglu_work_update_short_message (struct connection *c, long long msg_id) {
 void tglu_work_update_short_chat_message (struct connection *c, long long msg_id) {
   int *save = in_ptr;
   assert (!skip_type_any (TYPE_TO_PARAM (updates)));  
+  if (do_skip_seq (*(in_ptr - 1)) < 0) {
+    return;
+  }
   int *save_end = in_ptr;
   in_ptr = save;
 
@@ -720,6 +747,8 @@ void tglu_work_update_short_chat_message (struct connection *c, long long msg_id
     last_date = M->date;
   }*/
   assert (save_end == in_ptr);
+
+  bl_do_msg_seq_update (M->id);
 }
 
 void tglu_work_updates_to_long (struct connection *c, long long msg_id) {

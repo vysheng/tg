@@ -681,7 +681,7 @@ void interpreter_chat_mode (char *line) {
     return;
   }
   if (strlen (line)>0) {
-    tgl_do_send_message (chat_mode_id, line, strlen (line), print_msg_gw, 0);
+    tgl_do_send_message (chat_mode_id, line, strlen (line), 0, 0);
   }
 }
 
@@ -740,7 +740,8 @@ struct tgl_update_callback upd_cb = {
   .secret_chat_request = 0,
   .secret_chat_established = 0,
   .secret_chat_deleted = 0,
-  .secret_chat_accepted = 0
+  .secret_chat_accepted = 0,
+  .msg_receive = print_message_gw
 };
 
 
@@ -829,7 +830,7 @@ void interpreter (char *line UU) {
       printf ("Empty message\n");
       RET;
     }
-    tgl_do_send_message (id, s, strlen (s), print_msg_gw, 0);
+    tgl_do_send_message (id, s, strlen (s), 0, 0);
   } else if (IS_WORD ("rename_chat")) {
     GET_PEER_CHAT;
     int t;
@@ -838,7 +839,7 @@ void interpreter (char *line UU) {
       printf ("Empty new name\n");
       RET;
     }
-    tgl_do_rename_chat (id, s, print_msg_gw, 0);
+    tgl_do_rename_chat (id, s, 0, 0);
   } else if (IS_WORD ("send_photo")) {
     GET_PEER;
     int t;
@@ -847,7 +848,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_photo, id, strndup (s, t), print_msg_gw, 0);
+    tgl_do_send_photo (tgl_message_media_photo, id, strndup (s, t), 0, 0);
   } else if (IS_WORD("send_video")) {
     GET_PEER;
     int t;
@@ -856,7 +857,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_video, id, strndup (s, t), print_msg_gw, 0);
+    tgl_do_send_photo (tgl_message_media_video, id, strndup (s, t), 0, 0);
   } else if (IS_WORD ("send_text")) {
     GET_PEER;
     int t;
@@ -865,7 +866,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_text (id, strndup (s, t), print_msg_gw, 0);
+    tgl_do_send_text (id, strndup (s, t), 0, 0);
   } else if (IS_WORD ("fwd")) {
     GET_PEER;
     int num = next_token_int ();
@@ -873,7 +874,7 @@ void interpreter (char *line UU) {
       printf ("Bad msg id\n");
       RET;
     }
-    tgl_do_forward_message (id, num, print_msg_gw, 0);
+    tgl_do_forward_message (id, num, 0, 0);
   } else if (IS_WORD ("load_photo")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {
@@ -974,12 +975,12 @@ void interpreter (char *line UU) {
     GET_PEER_CHAT;    
     tgl_peer_id_t chat_id = id;
     GET_PEER_USER;
-    tgl_do_add_user_to_chat (chat_id, id, 100, print_msg_gw, 0);
+    tgl_do_add_user_to_chat (chat_id, id, 100, 0, 0);
   } else if (IS_WORD ("chat_del_user")) {
     GET_PEER_CHAT;    
     tgl_peer_id_t chat_id = id;
     GET_PEER_USER;
-    tgl_do_del_user_from_chat (chat_id, id, print_msg_gw, 0);
+    tgl_do_del_user_from_chat (chat_id, id, 0, 0);
   } else if (IS_WORD ("add_contact")) {
     int phone_len, first_name_len, last_name_len;
     char *phone, *first_name, *last_name;
@@ -1129,7 +1130,7 @@ void interpreter (char *line UU) {
       printf ("Empty chat topic\n");
       RET;
     }    
-    tgl_do_create_group_chat (id, s, print_msg_gw, 0);  
+    tgl_do_create_group_chat (id, s, 0, 0);  
   //} else if (IS_WORD ("suggested_contacts")) {
   //  tgl_do_get_suggested ();
   } else if (IS_WORD ("status_online")) {
@@ -1152,7 +1153,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_audio, id, strndup (s, t), print_msg_gw, 0);
+    tgl_do_send_photo (tgl_message_media_audio, id, strndup (s, t), 0, 0);
   } else if (IS_WORD("send_document")) {
     GET_PEER;
     int t;
@@ -1161,7 +1162,7 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_document, id, strndup (s, t), print_msg_gw, 0);
+    tgl_do_send_photo (tgl_message_media_document, id, strndup (s, t), 0, 0);
   } else if (IS_WORD ("load_audio")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {

@@ -774,6 +774,7 @@ static int msg_send_encr_on_answer (struct query *q UU) {
   //M->date = fetch_int ();
   fetch_int ();
   bl_do_set_message_sent (M);
+  bl_do_msg_update (M->id);
 
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
@@ -789,7 +790,14 @@ static int msg_send_on_answer (struct query *q UU) {
   bl_do_set_msg_id (M, id);
   tglu_fetch_date ();
   tglu_fetch_pts ();
-  tglu_fetch_seq ();
+  //tglu_fetch_seq ();
+  //bl_do_
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1) {
+    bl_do_msg_seq_update (id);
+  } else {
+    tgl_do_get_difference (0, 0, 0);
+  }
   if (x == CODE_messages_sent_message_link) {
     assert (skip_type_any (TYPE_TO_PARAM_1 (vector, TYPE_TO_PARAM (contacts_link))) >= 0);
   }
@@ -1005,7 +1013,8 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void 
 static int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
   tglu_fetch_pts ();
-  tglu_fetch_seq ();
+  //tglu_fetch_seq ();
+  fetch_int (); // seq
   fetch_int (); // offset
   if (q->callback) {
     ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
@@ -1316,7 +1325,14 @@ static int send_file_on_answer (struct query *q UU) {
     tglf_fetch_alloc_user ();
   }
   tglu_fetch_pts ();
-  tglu_fetch_seq ();
+  //tglu_fetch_seq ();
+  
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1) {
+    bl_do_msg_seq_update (M->id);
+  } else {
+    tgl_do_get_difference (0, 0, 0);
+  }
 
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback)(q->callback_extra, 1, M);
@@ -1338,6 +1354,7 @@ static int send_encr_file_on_answer (struct query *q UU) {
   assert (fetch_int () == M->media.encr_photo.key_fingerprint);
   //print_message (M);
   tglm_message_insert (M);
+  bl_do_msg_update (M->id);
   
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback)(q->callback_extra, 1, M);
@@ -1654,7 +1671,13 @@ static int fwd_msg_on_answer (struct query *q UU) {
     tglf_fetch_alloc_user ();
   }
   tglu_fetch_pts ();
-  tglu_fetch_seq ();
+  
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1) {
+    bl_do_msg_seq_update (M->id);
+  } else {
+    tgl_do_get_difference (0, 0, 0);
+  }
   //print_message (M);
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
@@ -1698,7 +1721,12 @@ static int rename_chat_on_answer (struct query *q UU) {
     tglf_fetch_alloc_user ();
   }
   tglu_fetch_pts ();
-  tglu_fetch_seq ();
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1) {
+    bl_do_msg_seq_update (M->id);
+  } else {
+    tgl_do_get_difference (0, 0, 0);
+  }
   //print_message (M);
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
@@ -2739,15 +2767,20 @@ static int get_difference_on_answer (struct query *q UU) {
       print_message (ML[i]);
     }*/
     for (i = 0; i < ml_pos; i++) {
-      tgl_state.callback.new_msg (ML[i]);
+      //tgl_state.callback.new_msg (ML[i]);
+      bl_do_msg_update (ML[i]->id);
     }
     for (i = 0; i < el_pos; i++) {
-      tgl_state.callback.new_msg (EL[i]);
+      //tgl_state.callback.new_msg (EL[i]);
+      bl_do_msg_update (EL[i]->id);
     }
     tfree (ML, ml_pos * sizeof (void *));
     tfree (EL, el_pos * sizeof (void *));
 
     if (x == CODE_updates_difference_slice) {
+      if (q->callback) {
+        ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+      }
       tgl_do_get_difference (0, q->callback, q->callback_extra);
     } else {
       //difference_got = 1;

@@ -83,4 +83,7 @@ void bl_do_set_unread (struct tgl_message *M, int unread);
 void bl_do_set_message_sent (struct tgl_message *M);
 void bl_do_set_msg_id (struct tgl_message *M, int id);
 void bl_do_delete_msg (struct tgl_message *M);
+
+void bl_do_msg_seq_update (long long id);
+void bl_do_msg_update (long long id);
 #endif

@@ -1193,6 +1193,28 @@ static int fetch_comb_binlog_delete_msg (void *extra) {
   return 0;
 }
 
+
+static int fetch_comb_binlog_msg_seq_update (void *extra) {
+  struct tgl_message *M = tgl_message_get (fetch_long ());
+  assert (M);
+  tgl_state.seq ++;
+
+  if (tgl_state.callback.msg_receive) {
+    tgl_state.callback.msg_receive (M);
+  }
+  return 0;
+}
+
+static int fetch_comb_binlog_msg_update (void *extra) {
+  struct tgl_message *M = tgl_message_get (fetch_long ());
+  assert (M);
+
+  if (tgl_state.callback.msg_receive) {
+    tgl_state.callback.msg_receive (M);
+  }
+  return 0;
+}
+
 #define FETCH_COMBINATOR_FUNCTION(NAME) \
   case CODE_ ## NAME:\
     ok = fetch_comb_ ## NAME (0); \
@@ -1275,6 +1297,8 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_set_message_sent)
   FETCH_COMBINATOR_FUNCTION (binlog_set_msg_id)
   FETCH_COMBINATOR_FUNCTION (binlog_delete_msg)
+  FETCH_COMBINATOR_FUNCTION (binlog_msg_seq_update)
+  FETCH_COMBINATOR_FUNCTION (binlog_msg_update)
   default:
     vlogprintf (E_ERROR, "Unknown op 0x%08x\n", op);
     assert (0);
@@ -1987,5 +2011,19 @@ void bl_do_delete_msg (struct tgl_message *M) {
   clear_packet ();
   out_int (CODE_binlog_delete_msg);
   out_long (M->id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_msg_seq_update (long long id) {
+  clear_packet ();
+  out_int (CODE_binlog_msg_seq_update);
+  out_long (id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_msg_update (long long id) {
+  clear_packet ();
+  out_int (CODE_binlog_msg_update);
+  out_long (id);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
