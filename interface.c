@@ -680,7 +680,7 @@ void interpreter_chat_mode (char *line) {
     tgl_do_mark_read (chat_mode_id, 0, 0);
     return;
   }
-  if (strlen (line)>0) {
+  if (strlen (line) > 0) {
     tgl_do_send_message (chat_mode_id, line, strlen (line), 0, 0);
   }
 }
@@ -736,11 +736,9 @@ struct tgl_update_callback upd_cb = {
   .user_registered = 0,
   .user_activated = 0,
   .new_authorization = 0,
-  .secret_chat_created = 0,
-  .secret_chat_request = 0,
-  .secret_chat_established = 0,
-  .secret_chat_deleted = 0,
-  .secret_chat_accepted = 0,
+  .user_update = 0,
+  .chat_update = 0,
+  .secret_chat_update = 0,
   .msg_receive = print_message_gw
 };
 

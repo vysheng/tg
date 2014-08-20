@@ -488,8 +488,8 @@ void tglu_work_update (struct connection *c, long long msg_id) {
       pop_color ();
       print_end ();*/
 
-      if (E->state == sc_request) {
-        if (tgl_state.callback.secret_chat_request) {
+      /*if (E->state == sc_request) {
+        if (tgl_state.callback.secret_chat_update) {
           tgl_state.callback.secret_chat_request (E);
         }
       } else if (E->state == sc_ok) {
@@ -500,7 +500,7 @@ void tglu_work_update (struct connection *c, long long msg_id) {
         if (tgl_state.callback.secret_chat_deleted) {
           tgl_state.callback.secret_chat_deleted (E);
         }
-      }
+      }*/
       if (E->state == sc_ok) {
         tgl_do_send_encr_chat_layer (E);
       }
@@ -753,6 +753,6 @@ void tglu_work_update_short_chat_message (struct connection *c, long long msg_id
 
 void tglu_work_updates_to_long (struct connection *c, long long msg_id) {
   assert (fetch_int () == (int)CODE_updates_too_long);
-  vlogprintf (E_NOTICE, "updates to long... Getting difference\n");
+  vlogprintf (E_NOTICE, "updates too long... Getting difference\n");
   tgl_do_get_difference (0, 0, 0);
 }

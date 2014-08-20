@@ -237,7 +237,7 @@ int tglf_fetch_user (struct tgl_user *U) {
 
       if (x == CODE_user_contact) {
         bl_do_user_set_friend (U, 1);
-      } else  {
+      } else {
         bl_do_user_set_friend (U, 0);
       }
     }
