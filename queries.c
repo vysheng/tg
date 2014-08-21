@@ -757,12 +757,13 @@ void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
   long long t;
   tglt_secure_random (&t, 8);
   int action[2];
-  action[0] = tgl_message_action_notify_layer;
+  action[0] = CODE_decrypted_message_action_notify_layer;
   action[1] = 15;
   bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
 
   struct tgl_message *M = tgl_message_get (t);
   assert (M);
+  assert (M->action.type == tgl_message_action_notify_layer);
   tgl_do_send_msg (M, 0, 0);
   //print_message (M);
 }
@@ -788,12 +789,14 @@ static int msg_send_on_answer (struct query *q UU) {
   int id = fetch_int (); // id
   struct tgl_message *M = q->extra;
   bl_do_set_msg_id (M, id);
-  tglu_fetch_date ();
-  tglu_fetch_pts ();
+  int date = fetch_int ();
+  int pts = fetch_int ();
   //tglu_fetch_seq ();
   //bl_do_
   int seq = fetch_int ();
   if (seq == tgl_state.seq + 1) {
+    bl_do_set_date (date);
+    bl_do_set_pts (pts);
     bl_do_msg_seq_update (id);
   } else {
     tgl_do_get_difference (0, 0, 0);
@@ -1012,7 +1015,8 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void 
 /* {{{ Mark read */
 static int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
-  tglu_fetch_pts ();
+  //tglu_fetch_pts ();
+  fetch_int ();
   //tglu_fetch_seq ();
   fetch_int (); // seq
   fetch_int (); // offset
@@ -1150,7 +1154,7 @@ void tgl_do_get_local_history (tgl_peer_id_t id, int limit, void (*callback)(voi
   count = 1;
   while (count < limit && M->next) {
     M = M->next;
-    ML[count ++] = M->next;
+    ML[count ++] = M;
   }
 
   callback (callback_extra, 1, count, ML);
@@ -1324,11 +1328,13 @@ static int send_file_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  tglu_fetch_pts ();
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
   //tglu_fetch_seq ();
   
   int seq = fetch_int ();
   if (seq == tgl_state.seq + 1) {
+    bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
     tgl_do_get_difference (0, 0, 0);
@@ -1670,10 +1676,12 @@ static int fwd_msg_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  tglu_fetch_pts ();
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
   
   int seq = fetch_int ();
   if (seq == tgl_state.seq + 1) {
+    bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
     tgl_do_get_difference (0, 0, 0);
@@ -1720,9 +1728,12 @@ static int rename_chat_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  tglu_fetch_pts ();
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
+
   int seq = fetch_int ();
   if (seq == tgl_state.seq + 1) {
+    bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
     tgl_do_get_difference (0, 0, 0);
@@ -2715,6 +2726,9 @@ static int get_state_on_answer (struct query *q UU) {
 //int get_difference_active;
 static int get_difference_on_answer (struct query *q UU) {
   //get_difference_active = 0;
+  assert (tgl_state.locks & TGL_LOCK_DIFF);
+  tgl_state.locks ^= TGL_LOCK_DIFF;
+
   unsigned x = fetch_int ();
   if (x == CODE_updates_difference_empty) {
     bl_do_set_date (fetch_int ());
@@ -2778,9 +2792,9 @@ static int get_difference_on_answer (struct query *q UU) {
     tfree (EL, el_pos * sizeof (void *));
 
     if (x == CODE_updates_difference_slice) {
-      if (q->callback) {
-        ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
-      }
+      //if (q->callback) {
+      //  ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+      //}
       tgl_do_get_difference (0, q->callback, q->callback_extra);
     } else {
       //difference_got = 1;
@@ -2807,6 +2821,13 @@ static struct query_methods get_difference_methods = {
 void tgl_do_get_difference (int sync_from_start, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   //get_difference_active = 1;
   //difference_got = 0;
+  if (tgl_state.locks & TGL_LOCK_DIFF) {
+    if (callback) {
+      callback (callback_extra, 0);
+    }
+    return;
+  }
+  tgl_state.locks |= TGL_LOCK_DIFF;
   clear_packet ();
   tgl_do_insert_header ();
   if (tgl_state.seq > 0 || sync_from_start) {

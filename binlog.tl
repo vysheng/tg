@@ -61,6 +61,7 @@ binlog.createMessageService id:int from_id:int to_type:int to_id:int date:int ac
 binlog.createMessageServiceEncr id:long from_id:int to_type:int to_id:int date:int action:DecryptedMessageAction = binlog.Update;
 binlog.createMessageServiceFwd id:int from_id:int to_type:int to_id:int date:int fwd_from_id:int fwd_date:int action:MessageAction = binlog.Update;
 binlog.messageSetUnread id:int = binlog.Update;
+binlog.messageSetUnreadLong id:long = binlog.Update;
 binlog.setMessageSent id:long = binlog.Update;
 binlog.setMsgId old_id:long new_id:int = binlog.Update;
 binlog.deleteMsg id:long = binlog.Update;

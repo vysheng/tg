@@ -91,6 +91,7 @@ int binlog_enabled;
 extern int log_level;
 int sync_from_start;
 int allow_weak_random;
+char *lua_file;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -271,7 +272,7 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
     if (path) {
       tasprintf (s, "%s/%s", path, default_name);
     } else {
-      *s  = tstrdup (default_name);
+      *s  = default_name ? tstrdup (default_name) : 0;
     }
   }
 }
@@ -321,6 +322,10 @@ void parse_config (void) {
   parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
   parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
+  
+  if (!lua_file) {
+    parse_config_val (&conf, &lua_file, "lua_script", 0, config_directory);
+  }
   
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
@@ -396,7 +401,6 @@ int register_mode;
 int disable_auto_accept;
 int wait_dialog_list;
 
-char *lua_file;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;

@@ -53,6 +53,7 @@
 
 int verbosity;
 
+int binlog_read;
 extern char *default_username;
 extern char *auth_token;
 void set_default_username (const char *s);
@@ -238,6 +239,8 @@ int loop (void) {
   tgl_replay_log ();
   logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
   tgl_reopen_binlog_for_writing ();
+  binlog_read = 1;
+  //exit (0);
   #ifdef USE_LUA
     lua_binlog_end ();
   #endif

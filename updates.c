@@ -10,7 +10,7 @@
 void tglu_fetch_pts (void) {
   int p = fetch_int ();
   if (p <= tgl_state.pts) { return; }
-  if (p != tgl_state.pts + 1) {
+  /*if (p != tgl_state.pts + 1) {
     if (tgl_state.pts) {
       //vlogprintf (E_NOTICE, "Hole in pts p = %d, pts = %d\n", p, tgl_state.pts);
 
@@ -21,14 +21,14 @@ void tglu_fetch_pts (void) {
     }
   } else {
     tgl_state.pts ++;
-  }
+  }*/
   bl_do_set_pts (tgl_state.pts);
 }
 
 void tglu_fetch_qts (void) {
   int p = fetch_int ();
   if (p <= tgl_state.qts) { return; }
-  if (p != tgl_state.qts + 1) {
+  /*if (p != tgl_state.qts + 1) {
     if (tgl_state.qts) {
       //logprintf ("Hole in qts\n");
       // get difference should be here
@@ -38,14 +38,14 @@ void tglu_fetch_qts (void) {
     }
   } else {
     tgl_state.qts ++;
-  }
+  }*/
   bl_do_set_qts (tgl_state.qts);
 }
 
 void tglu_fetch_date (void) {
   int p = fetch_int ();
   if (p > tgl_state.date) {
-    tgl_state.date = p;
+    //tgl_state.date = p;
     bl_do_set_date (tgl_state.date);
   }
 }
@@ -667,6 +667,9 @@ static int do_skip_seq (int seq) {
     if (seq > tgl_state.seq + 1) {
       vlogprintf (E_NOTICE, "Hole in seq (seq = %d, cur_seq = %d)\n", seq, tgl_state.seq);
       tgl_do_get_difference (0, 0, 0);
+      return -1;
+    }
+    if (tgl_state.locks & TGL_LOCK_DIFF) {
       return -1;
     }
     return 0;

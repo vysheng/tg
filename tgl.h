@@ -29,6 +29,7 @@ struct dc;
 #define TGL_UPDATE_TITLE 2048
 #define TGL_UPDATE_ADMIN 4096
 #define TGL_UPDATE_MEMBERS 8192
+#define TGL_UPDATE_ACCESS_HASH 16384
 
 struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);
@@ -57,6 +58,7 @@ struct tgl_update_callback {
   void (*user_update)(struct tgl_user *C, unsigned flags);
   void (*secret_chat_update)(struct tgl_secret_chat *C, unsigned flags);
   void (*msg_receive)(struct tgl_message *M);
+  void (*our_id)(int id);
 };
 
 struct tgl_net_methods {
@@ -77,6 +79,8 @@ struct tgl_net_methods {
 #define E_NOTICE 2
 #define E_DEBUG 3
 
+#define TGL_LOCK_DIFF 1
+
 struct tgl_state {
   int our_id; // ID of logged in user
   int encr_root;
@@ -91,6 +95,7 @@ struct tgl_state {
   int verbosity;
   int unread_messages;
 
+  long long locks; 
   struct dc *DC_list[TGL_MAX_DC_NUM];
   struct dc *DC_working;
   int max_dc_num;

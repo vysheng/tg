@@ -46,6 +46,10 @@
 //#include "tools.h"
 //#include "structures.h"
 
+#ifdef USE_LUA
+#  include "lua-tg.h"
+#endif
+
 //#include "mtproto-common.h"
 
 #include "tgl.h"
@@ -65,6 +69,7 @@ char *default_prompt = "> ";
 
 int msg_num_mode;
 int alert_sound;
+extern int binlog_read;
 
 int safe_quit;
 
@@ -686,10 +691,39 @@ void interpreter_chat_mode (char *line) {
 }
 
 void mark_read_upd (int num, struct tgl_message *list[]) {
+  if (!binlog_read) { return; }
   if (log_level < 1) { return; }
+
+  tgl_peer_id_t to_id = list[0]->from_id;
+  int ok = 1;
+  int i;
+  for (i = 1; i < num; i++) {
+    if (tgl_cmp_peer_id (to_id, list[i]->to_id)) {
+      ok = 0;
+    }
+  }
   print_start ();
   push_color (COLOR_YELLOW);
-  printf ("%d messages mark read\n", num);
+  if (!ok) {
+    printf ("%d messages mark read\n", num);
+  } else {
+    printf ("%d messages mark read in ", num);
+    switch (tgl_get_peer_type (to_id)) {
+    case TGL_PEER_USER:
+      printf (" user ");
+      print_user_name (to_id, tgl_peer_get (to_id));    
+      break;
+    case TGL_PEER_CHAT:
+      printf (" chat ");
+      print_chat_name (to_id, tgl_peer_get (to_id));    
+      break;
+    case TGL_PEER_ENCR_CHAT:
+      printf (" secret chat ");
+      print_chat_name (to_id, tgl_peer_get (to_id));    
+      break;
+    }
+    printf ("\n");
+  }
   pop_color ();
   print_end ();
 }
@@ -720,9 +754,133 @@ void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C) {
 
 
 void print_message_gw (struct tgl_message *M) {
+  #ifdef USE_LUA
+    lua_new_msg (M);
+  #endif
+  if (!binlog_read) { return; }
   print_start ();
   print_message (M);
   print_end ();
+}
+
+void our_id_gw (int id) {
+  #ifdef USE_LUA
+    lua_our_id (id);
+  #endif
+}
+
+void print_peer_updates (int flags) {
+  if (flags & TGL_UPDATE_PHONE) {
+    printf (" phone");
+  }
+  if (flags & TGL_UPDATE_CONTACT) {
+    printf (" contact");
+  }
+  if (flags & TGL_UPDATE_PHOTO) {
+    printf (" photo");
+  }
+  if (flags & TGL_UPDATE_BLOCKED) {
+    printf (" blocked");
+  }
+  if (flags & TGL_UPDATE_REAL_NAME) {
+    printf (" name");
+  }
+  if (flags & TGL_UPDATE_NAME) {
+    printf (" contact_name");
+  }
+  if (flags & TGL_UPDATE_REQUESTED) {
+    printf (" status");
+  }
+  if (flags & TGL_UPDATE_WORKING) {
+    printf (" status");
+  }
+  if (flags & TGL_UPDATE_FLAGS) {
+    printf (" flags");
+  }
+  if (flags & TGL_UPDATE_TITLE) {
+    printf (" title");
+  }
+  if (flags & TGL_UPDATE_ADMIN) {
+    printf (" admin");
+  }
+  if (flags & TGL_UPDATE_MEMBERS) {
+    printf (" members");
+  }
+  if (flags & TGL_UPDATE_ACCESS_HASH) {
+    printf (" access_hash");
+  }
+}
+
+void user_update_gw (struct tgl_user *U, unsigned flags) {
+  #ifdef USE_LUA
+    lua_user_update (U, flags);
+  #endif
+  
+  if (!binlog_read) { return; }
+
+  if (!(flags & TGL_UPDATE_CREATED)) {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("User ");
+    print_user_name (U->id, (void *)U);
+    if (!(flags & TGL_UPDATE_DELETED)) {
+      printf (" updated");
+      print_peer_updates (flags);
+    } else {
+      printf (" deleted");
+    }
+    printf ("\n");
+    pop_color ();
+    print_end ();
+  }
+}
+
+void chat_update_gw (struct tgl_chat *U, unsigned flags) {
+  #ifdef USE_LUA
+    lua_chat_update (U, flags);
+  #endif
+  
+  if (!binlog_read) { return; }
+
+  if (!(flags & TGL_UPDATE_CREATED)) {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("Chat ");
+    print_chat_name (U->id, (void *)U);
+    if (!(flags & TGL_UPDATE_DELETED)) {
+      printf (" updated");
+      print_peer_updates (flags);
+    } else {
+      printf (" deleted");
+    }
+    printf ("\n");
+    pop_color ();
+    print_end ();
+  }
+}
+
+void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
+  #ifdef USE_LUA
+    lua_secret_chat_update (U, flags);
+  #endif
+  
+  if (!binlog_read) { return; }
+
+  if (!(flags & TGL_UPDATE_CREATED)) {
+    print_start ();
+    push_color (COLOR_YELLOW);
+    printf ("Secret chat ");
+    print_encr_chat_name (U->id, (void *)U);
+    if (!(flags & TGL_UPDATE_DELETED)) {
+      printf (" updated");
+      print_peer_updates (flags);
+    } else {
+      printf (" deleted");
+    }
+    printf ("\n");
+    pop_color ();
+    print_end ();
+  }
 }
 
 struct tgl_update_callback upd_cb = {
@@ -736,10 +894,11 @@ struct tgl_update_callback upd_cb = {
   .user_registered = 0,
   .user_activated = 0,
   .new_authorization = 0,
-  .user_update = 0,
-  .chat_update = 0,
-  .secret_chat_update = 0,
-  .msg_receive = print_message_gw
+  .user_update = user_update_gw,
+  .chat_update = chat_update_gw,
+  .secret_chat_update = secret_chat_update_gw,
+  .msg_receive = print_message_gw,
+  .our_id = our_id_gw
 };
 
 

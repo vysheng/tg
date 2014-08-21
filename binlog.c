@@ -21,9 +21,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_LUA
-#  include "lua-tg.h"
-#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -107,9 +104,9 @@ static int fetch_comb_binlog_default_dc (void *extra) {
 
 static int fetch_comb_binlog_our_id (void *extra) {
   tgl_state.our_id = fetch_int ();
-  #ifdef USE_LUA
-    lua_our_id (tgl_state.our_id);
-  #endif
+  if (tgl_state.callback.our_id) {
+    tgl_state.callback.our_id (tgl_state.our_id);
+  }
   return 0;
 }
 
@@ -194,9 +191,6 @@ static int fetch_comb_binlog_user_add (void *extra) {
     U->flags |= FLAG_USER_CONTACT;
   }
       
-  #ifdef USE_LUA
-    lua_user_update (U, TGL_UPDATE_CREATED);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update (U, TGL_UPDATE_CREATED);
   }
@@ -209,9 +203,6 @@ static int fetch_comb_binlog_user_delete (void *extra) {
   assert (U);
   U->flags |= FLAG_DELETED;
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_DELETED);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_DELETED);
   }
@@ -223,6 +214,9 @@ static int fetch_comb_binlog_user_set_access_hash (void *extra) {
   tgl_peer_t *U = tgl_peer_get (id);
   assert (U);
   U->user.access_hash = fetch_long ();
+  if (tgl_state.callback.user_update) {
+    tgl_state.callback.user_update ((void *)U, TGL_UPDATE_ACCESS_HASH);
+  }
   return 0;
 }
 
@@ -235,9 +229,6 @@ static int fetch_comb_binlog_user_set_phone (void *extra) {
   }
   U->user.phone = fetch_str_dup ();
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_PHONE);
-  #endif
   
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_PHONE);
@@ -256,9 +247,6 @@ static int fetch_comb_binlog_user_set_friend (void *extra) {
   if (friend) { U->flags |= FLAG_USER_CONTACT; }
   else { U->flags &= ~FLAG_USER_CONTACT; }
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_CONTACT);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_CONTACT);
   }
@@ -274,9 +262,6 @@ static int fetch_comb_binlog_user_set_full_photo (void *extra) {
   }
   tglf_fetch_photo (&U->user.photo);
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_PHOTO);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_PHOTO);
   }
@@ -290,9 +275,6 @@ static int fetch_comb_binlog_user_set_blocked (void *extra) {
 
   U->user.blocked = fetch_int ();
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_BLOCKED);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_BLOCKED);
   }
@@ -303,15 +285,13 @@ static int fetch_comb_binlog_user_set_real_name (void *extra) {
   tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
   tgl_peer_t *U = tgl_peer_get (id);
   assert (U);
+  assert (U->flags & FLAG_CREATED);
 
   if (U->user.real_first_name) { tfree_str (U->user.real_first_name); }
   if (U->user.real_last_name) { tfree_str (U->user.real_last_name); }
   U->user.real_first_name = fetch_str_dup ();
   U->user.real_last_name = fetch_str_dup ();
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_REAL_NAME);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_REAL_NAME);
   }
@@ -334,9 +314,6 @@ static int fetch_comb_binlog_user_set_name (void *extra) {
   U->print_name = create_print_name (U->id, U->user.first_name, U->user.last_name, 0, 0);
   tglp_peer_insert_name ((void *)U);
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user, TGL_UPDATE_NAME);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_NAME);
   }
@@ -361,9 +338,6 @@ static int fetch_comb_binlog_user_set_photo (void *extra) {
     tglf_fetch_file_location (&U->user.photo_big);
   }
   
-  #ifdef USE_LUA
-    lua_user_update (&U->user);
-  #endif
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_PHOTO);
   }
@@ -387,9 +361,6 @@ static int fetch_comb_binlog_encr_chat_delete (void *extra) {
     U->g_key = 0;
   }
   
-  #ifdef USE_LUA
-    lua_secret_chat_update (U, TGL_UPDATE_DELETED);
-  #endif
   if (tgl_state.callback.secret_chat_update) {
     tgl_state.callback.secret_chat_update (U, TGL_UPDATE_DELETED);
   }
@@ -430,9 +401,6 @@ static int fetch_comb_binlog_encr_chat_requested (void *extra) {
   U->flags |= FLAG_CREATED;
   U->state = sc_request;
   
-  #ifdef USE_LUA
-    lua_secret_chat_update (U, TGL_UPDATE_REQUESTED);
-  #endif
   if (tgl_state.callback.secret_chat_update) {
     tgl_state.callback.secret_chat_update (U, TGL_UPDATE_REQUESTED);
   }
@@ -444,6 +412,9 @@ static int fetch_comb_binlog_encr_chat_set_access_hash (void *extra) {
   tgl_peer_t *U = tgl_peer_get (id);
   assert (U);
   U->encr_chat.access_hash = fetch_long ();
+  if (tgl_state.callback.secret_chat_update) {
+    tgl_state.callback.secret_chat_update ((void *)U, TGL_UPDATE_ACCESS_HASH);
+  }
   return 0;
 }
 
@@ -484,9 +455,6 @@ static int fetch_comb_binlog_encr_chat_accepted (void *extra) {
   }
   U->state = sc_ok;
   
-  #ifdef USE_LUA
-    lua_secret_chat_update (U, TGL_UPDATE_WORKING);
-  #endif
   if (tgl_state.callback.secret_chat_update) {
     tgl_state.callback.secret_chat_update (U, TGL_UPDATE_WORKING);
   }
@@ -520,9 +488,6 @@ static int fetch_comb_binlog_encr_chat_init (void *extra) {
   fetch_ints (P->encr_chat.g_key, 64);
   P->flags |= FLAG_CREATED;
   
-  #ifdef USE_LUA
-    lua_secret_chat_update (U, TGL_UPDATE_CREATED);
-  #endif
   if (tgl_state.callback.secret_chat_update) {
     tgl_state.callback.secret_chat_update ((void *)P, TGL_UPDATE_CREATED);
   }
@@ -552,9 +517,6 @@ static int fetch_comb_binlog_chat_create (void *extra) {
   fetch_data (&C->photo_big, sizeof (struct tgl_file_location));
   fetch_data (&C->photo_small, sizeof (struct tgl_file_location));
       
-  #ifdef USE_LUA
-    lua_chat_update (C, TGL_UPDATE_CREATED);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update (C, TGL_UPDATE_CREATED);
   }
@@ -567,9 +529,6 @@ static int fetch_comb_binlog_chat_change_flags (void *extra) {
   C->chat.flags |= fetch_int ();
   C->chat.flags &= ~fetch_int ();
   
-  #ifdef USE_LUA
-    lua_chat_update (&C->chat, TGL_UPDATE_FLAGS);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_FLAGS);
   }
@@ -589,9 +548,6 @@ static int fetch_comb_binlog_chat_set_title (void *extra) {
   C->print_name = create_print_name (C->id, C->chat.title, 0, 0, 0);
   tglp_peer_insert_name ((void *)C);
   
-  #ifdef USE_LUA
-    lua_chat_update (&C->chat, TGL_UPDATE_TITLE);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_TITLE);
   }
@@ -604,9 +560,6 @@ static int fetch_comb_binlog_chat_set_photo (void *extra) {
   fetch_data (&C->photo_big, sizeof (struct tgl_file_location));
   fetch_data (&C->photo_small, sizeof (struct tgl_file_location));
   
-  #ifdef USE_LUA
-    lua_chat_update (&C->chat, TGL_UPDATE_PHOTO);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_PHOTO);
   }
@@ -633,9 +586,6 @@ static int fetch_comb_binlog_chat_set_admin (void *extra) {
   assert (C && (C->flags & FLAG_CREATED));
   C->chat.admin_id = fetch_int ();
   
-  #ifdef USE_LUA
-    lua_chat_update (&C->chat, TGL_UPDATE_ADMIN);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_ADMIN);
   }
@@ -651,9 +601,6 @@ static int fetch_comb_binlog_chat_set_participants (void *extra) {
   C->chat.user_list = talloc (12 * C->chat.user_list_size);
   fetch_ints (C->chat.user_list, 3 * C->chat.user_list_size);
   
-  #ifdef USE_LUA
-    lua_chat_update (&C->chat, TGL_UPDATE_MEMBERS);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_MEMBERS);
   }
@@ -670,9 +617,6 @@ static int fetch_comb_binlog_chat_set_full_photo (void *extra) {
   }
   tglf_fetch_photo (&C->chat.photo);
   
-  #ifdef USE_LUA
-    lua_chat_update (&C->chat, TGL_UPDATE_PHOTO);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_PHOTO);
   }
@@ -703,9 +647,6 @@ static int fetch_comb_binlog_chat_add_participant (void *extra) {
   C->user_list[C->user_list_size - 1].date = date;
   C->user_list_version = version;
   
-  #ifdef USE_LUA
-    lua_chat_update (C, TGL_UPDATE_MEMBERS);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update (C, TGL_UPDATE_MEMBERS);
   }
@@ -736,9 +677,6 @@ static int fetch_comb_binlog_chat_del_participant (void *extra) {
   C->user_list = trealloc (C->user_list, 12 * C->user_list_size + 12, 12 * C->user_list_size);
   C->user_list_version = version;
   
-  #ifdef USE_LUA
-    lua_chat_update (C, TGL_UPDATE_MEMBERS);
-  #endif
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update (C, TGL_UPDATE_MEMBERS);
   }
@@ -781,10 +719,6 @@ static int fetch_comb_binlog_create_message_text (void *extra) {
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
-      
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -826,10 +760,6 @@ static int fetch_comb_binlog_send_message_text (void *extra) {
   tglm_message_insert (M);
   tglm_message_insert_unsent (M);
   M->flags |= FLAG_PENDING;
-      
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -860,10 +790,6 @@ static int fetch_comb_binlog_send_message_action_encr (void *extra) {
   tglm_message_insert (M);
   tglm_message_insert_unsent (M);
   M->flags |= FLAG_PENDING;
-      
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -907,9 +833,6 @@ static int fetch_comb_binlog_create_message_text_fwd (void *extra) {
 
   tglm_message_insert (M);
       
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -938,9 +861,6 @@ static int fetch_comb_binlog_create_message_media (void *extra) {
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -970,9 +890,6 @@ static int fetch_comb_binlog_create_message_media_encr (void *extra) {
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -1004,9 +921,6 @@ static int fetch_comb_binlog_create_message_media_fwd (void *extra) {
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -1030,9 +944,6 @@ static int fetch_comb_binlog_create_message_service (void *extra) {
   M->service = 1;
 
   tglm_message_insert (M);
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -1064,9 +975,6 @@ static int fetch_comb_binlog_create_message_service_encr (void *extra) {
   }
 
   tglm_message_insert (M);
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
   return 0;
 }
 
@@ -1093,19 +1001,30 @@ static int fetch_comb_binlog_create_message_service_fwd (void *extra) {
   M->service = 1;
 
   tglm_message_insert (M);
-  #ifdef USE_LUA
-    lua_new_msg (M);
-  #endif
+  return 0;
+}
+
+static int fetch_comb_binlog_message_set_unread_long (void *extra) {
+  struct tgl_message *M = tgl_message_get (fetch_long ());
+  assert (M);
+  if (M->unread) {
+    M->unread = 0;
+    if (tgl_state.callback.marked_read) {
+      tgl_state.callback.marked_read (1, &M);
+    }
+  }
   return 0;
 }
 
 static int fetch_comb_binlog_message_set_unread (void *extra) {
   struct tgl_message *M = tgl_message_get (fetch_int ());
   assert (M);
-  M->unread = 0;
-  #ifdef USE_LUA
-    lua_update_msg (M);
-  #endif
+  if (M->unread) {
+    M->unread = 0;
+    if (tgl_state.callback.marked_read) {
+      tgl_state.callback.marked_read (1, &M);
+    }
+  }
   return 0;
 }
 
@@ -1114,9 +1033,6 @@ static int fetch_comb_binlog_set_message_sent (void *extra) {
   assert (M);
   tglm_message_remove_unsent (M);
   M->flags &= ~FLAG_PENDING;
-  #ifdef USE_LUA
-    lua_update_msg (M);
-  #endif
   return 0;
 }
 
@@ -1137,9 +1053,6 @@ static int fetch_comb_binlog_set_msg_id (void *extra) {
     tglm_message_insert_tree (M);
     tglm_message_add_peer (M);
   }
-  #ifdef USE_LUA
-    lua_update_msg (M);
-  #endif
   return 0;
 }
 
@@ -1259,6 +1172,7 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_service_encr)
   FETCH_COMBINATOR_FUNCTION (binlog_create_message_service_fwd)
   FETCH_COMBINATOR_FUNCTION (binlog_message_set_unread)
+  FETCH_COMBINATOR_FUNCTION (binlog_message_set_unread_long)
   FETCH_COMBINATOR_FUNCTION (binlog_set_message_sent)
   FETCH_COMBINATOR_FUNCTION (binlog_set_msg_id)
   FETCH_COMBINATOR_FUNCTION (binlog_delete_msg)
@@ -1646,6 +1560,7 @@ void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned
 }
 
 void bl_do_set_pts (int pts) {
+  if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_pts;
   ev[1] = pts;
@@ -1660,6 +1575,7 @@ void bl_do_set_qts (int qts) {
 }
 
 void bl_do_set_date (int date) {
+  if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_date;
   ev[1] = date;
@@ -1667,6 +1583,7 @@ void bl_do_set_date (int date) {
 }
 
 void bl_do_set_seq (int seq) {
+  if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_seq;
   ev[1] = seq;
@@ -1947,7 +1864,16 @@ void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
+void bl_do_set_unread_long (struct tgl_message *M, int unread) {
+  if (unread || !M->unread) { return; }
+  clear_packet ();
+  out_int (CODE_binlog_message_set_unread_long);
+  out_long (M->id);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
 void bl_do_set_unread (struct tgl_message *M, int unread) {
+  if (M->id != (int)M->id) { bl_do_set_unread_long (M, unread); }
   if (unread || !M->unread) { return; }
   clear_packet ();
   out_int (CODE_binlog_message_set_unread);
@@ -1980,6 +1906,9 @@ void bl_do_delete_msg (struct tgl_message *M) {
 }
 
 void bl_do_msg_seq_update (long long id) {
+  if (tgl_state.locks & TGL_LOCK_DIFF) {
+    return; // We will receive this update in get_difference, that works now
+  }
   clear_packet ();
   out_int (CODE_binlog_msg_seq_update);
   out_long (id);
