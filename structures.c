@@ -645,7 +645,7 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     //tglu_fetch_seq ();
     fetch_int ();
 
-    bl_do_create_message_text (id, from_id, TGL_PEER_USER, to_id, date, l, s);
+    bl_do_create_message_text (id, from_id, TGL_PEER_USER, to_id, date, 0, l, s);
   } else {
     fetch_int (); // id
     fetch_int (); // from_id
@@ -675,7 +675,7 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
     //tglu_fetch_seq ();
 
     fetch_int ();
-    bl_do_create_message_text (id, from_id, TGL_PEER_CHAT, to_id, date, l, s);
+    bl_do_create_message_text (id, from_id, TGL_PEER_CHAT, to_id, date, 0, l, s);
   } else {
     fetch_int (); // id
     fetch_int (); // from_id
@@ -998,9 +998,9 @@ void tglf_fetch_message (struct tgl_message *M) {
     
     if (new) {
       if (fwd_from_id) {
-        bl_do_create_message_service_fwd (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, fwd_from_id, fwd_date, start, (in_ptr - start));
+        bl_do_create_message_service_fwd (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, fwd_from_id, fwd_date, unread, start, (in_ptr - start));
       } else {
-        bl_do_create_message_service (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, start, (in_ptr - start));
+        bl_do_create_message_service (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, unread, start, (in_ptr - start));
       }
     }
   } else {
@@ -1012,9 +1012,9 @@ void tglf_fetch_message (struct tgl_message *M) {
 
     if (new) {
       if (fwd_from_id) {
-        bl_do_create_message_media_fwd (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, fwd_from_id, fwd_date, l, s, start, in_ptr - start);
+        bl_do_create_message_media_fwd (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, fwd_from_id, fwd_date, unread, l, s, start, in_ptr - start);
       } else {
-        bl_do_create_message_media (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, l, s, start, in_ptr - start);
+        bl_do_create_message_media (id, from_id, tgl_get_peer_type (to_id), tgl_get_peer_id (to_id), date, unread, l, s, start, in_ptr - start);
       }
     }
   }

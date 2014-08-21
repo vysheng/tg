@@ -69,12 +69,12 @@ void bl_do_chat_set_full_photo (struct tgl_chat *U, const int *start, int len);
 void bl_do_chat_add_user (struct tgl_chat *C, int version, int user, int inviter, int date);
 void bl_do_chat_del_user (struct tgl_chat *C, int version, int user);
 
-void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s);
-void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s);
-void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len);
-void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, const int *data, int len);
-void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len);
-void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s, const int *data, int len);
+void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id, int date, int unread, int l, const char *s);
+void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int unread, int l, const char *s);
+void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_id, int date, int unread, const int *data, int len);
+void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int unread, const int *data, int len);
+void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id, int date, int unread, int l, const char *s, const int *data, int len);
+void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int unread, int l, const char *s, const int *data, int len);
 void bl_do_create_message_media_encr (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len, const int *data2, int len2);
 void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len);
 void bl_do_send_message_text (long long msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s);

@@ -42,6 +42,7 @@
 
 #include "interface.h"
 #include "telegram.h"
+#include <event2/event.h>
 //#include "auto/constants.h"
 //#include "tools.h"
 //#include "structures.h"
@@ -260,6 +261,7 @@ char *get_default_prompt (void) {
       l += snprintf (buf + l, 999 - l, "%lld%%Down", 100 * tgl_state.cur_downloaded_bytes / tgl_state.cur_downloading_bytes);
     }
     l += snprintf (buf + l, 999 - l, "]" COLOR_NORMAL);
+    l += snprintf (buf + l, 999 - l, "%s", default_prompt);
     return buf;
   } 
   l += snprintf (buf + l, 999 - l, "%s", default_prompt);
@@ -689,11 +691,96 @@ void interpreter_chat_mode (char *line) {
   }
 }
 
+#define MAX_UNREAD_MESSAGE_COUNT 10000
+struct tgl_message *unread_message_list[MAX_UNREAD_MESSAGE_COUNT];
+int unread_message_count;
+struct event *unread_message_event;
+
+void print_read_list (int num, struct tgl_message *list[]) {
+  int i;
+  print_start ();
+  for (i = 0; i < num; i++) if (list[i]) {
+    tgl_peer_id_t to_id;
+    if (tgl_get_peer_type (list[i]->to_id) == TGL_PEER_USER && tgl_get_peer_id (list[i]->to_id) == tgl_state.our_id) {
+      to_id = list[i]->from_id;
+    } else {
+      to_id = list[i]->to_id;
+    }
+    int j;
+    int c1 = 0;
+    int c2 = 0;
+    for (j = i; j < num; j++) if (list[j]) {
+      tgl_peer_id_t end_id;
+      if (tgl_get_peer_type (list[j]->to_id) == TGL_PEER_USER && tgl_get_peer_id (list[j]->to_id) == tgl_state.our_id) {
+        end_id = list[j]->from_id;
+      } else {
+        end_id = list[j]->to_id;
+      }
+      if (!tgl_cmp_peer_id (to_id, end_id)) {
+        if (list[j]->out) {
+          c1 ++;
+        } else {
+          c2 ++;
+        }
+        list[j] = 0;
+      }
+    }
+
+    assert (c1 + c2 > 0);
+    push_color (COLOR_YELLOW);
+    switch (tgl_get_peer_type (to_id)) {
+    case TGL_PEER_USER:
+      printf ("User ");
+      print_user_name (to_id, tgl_peer_get (to_id));    
+      break;
+    case TGL_PEER_CHAT:
+      printf ("Chat ");
+      print_chat_name (to_id, tgl_peer_get (to_id));    
+      break;
+    case TGL_PEER_ENCR_CHAT:
+      printf ("Secret chat ");
+      print_chat_name (to_id, tgl_peer_get (to_id));    
+      break;
+    default:
+      assert (0);
+    }
+    printf (" marked read %d outbox and %d inbox messages\n", c1, c2);
+    pop_color ();
+  }
+  print_end ();
+}
+
+void unread_message_alarm (evutil_socket_t fd, short what, void *arg) {
+  print_read_list (unread_message_count, unread_message_list);
+  unread_message_count = 0;
+  event_free (unread_message_event);
+  unread_message_event = 0;
+}
+
 void mark_read_upd (int num, struct tgl_message *list[]) {
   if (!binlog_read) { return; }
   if (log_level < 1) { return; }
 
-  tgl_peer_id_t to_id = list[0]->from_id;
+  if (unread_message_count + num <= MAX_UNREAD_MESSAGE_COUNT) {
+    memcpy (unread_message_list + unread_message_count, list, num * sizeof (void *));
+    unread_message_count += num;
+
+    if (!unread_message_event) {
+      unread_message_event = evtimer_new (tgl_state.ev_base, unread_message_alarm, 0);
+      static struct timeval ptimeout = { 1, 0};
+      event_add (unread_message_event, &ptimeout);
+    }
+  } else {
+    print_read_list (unread_message_count, unread_message_list);
+    print_read_list (num, list);
+    unread_message_count = 0;
+    if (unread_message_event) {
+      event_free (unread_message_event);
+      unread_message_event = 0;
+    }
+  }
+  /*
+  tgl_peer_id_t to_id = list[0]->to_id;
   int ok = 1;
   int i;
   for (i = 1; i < num; i++) {
@@ -724,7 +811,7 @@ void mark_read_upd (int num, struct tgl_message *list[]) {
     printf ("\n");
   }
   pop_color ();
-  print_end ();
+  print_end ();*/
 }
 
 void type_notification_upd (struct tgl_user *U) {

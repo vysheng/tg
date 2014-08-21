@@ -702,6 +702,7 @@ static int fetch_comb_binlog_create_message_text (void *extra) {
 
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
+  M->unread = fetch_int ();
       
   int l = prefetch_strlen ();
   M->message = talloc (l + 1);
@@ -715,7 +716,7 @@ static int fetch_comb_binlog_create_message_text (void *extra) {
     M->media.type = tgl_message_media_none;
   }
   
-  M->unread = 1;
+  //M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
@@ -815,6 +816,8 @@ static int fetch_comb_binlog_create_message_text_fwd (void *extra) {
   
   M->fwd_from_id = TGL_MK_USER (fetch_int ());
   M->fwd_date = fetch_int ();
+
+  M->unread = fetch_int ();
       
   int l = prefetch_strlen ();
   M->message = talloc (l + 1);
@@ -828,7 +831,7 @@ static int fetch_comb_binlog_create_message_text_fwd (void *extra) {
     M->media.type = tgl_message_media_none;
   }
   
-  M->unread = 1;
+  //M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
@@ -849,6 +852,8 @@ static int fetch_comb_binlog_create_message_media (void *extra) {
   int t = fetch_int ();
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
+  
+  M->unread = fetch_int ();
       
   int l = prefetch_strlen ();
   M->message = talloc (l + 1);
@@ -857,7 +862,7 @@ static int fetch_comb_binlog_create_message_media (void *extra) {
   M->message_len = l;
 
   tglf_fetch_message_media (&M->media);
-  M->unread = 1;
+  //M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
@@ -909,6 +914,8 @@ static int fetch_comb_binlog_create_message_media_fwd (void *extra) {
   
   M->fwd_from_id = TGL_MK_USER (fetch_int ());
   M->fwd_date = fetch_int ();
+  
+  M->unread = fetch_int ();
       
   int l = prefetch_strlen ();
   M->message = talloc (l + 1);
@@ -917,7 +924,7 @@ static int fetch_comb_binlog_create_message_media_fwd (void *extra) {
   M->message_len = l;
 
   tglf_fetch_message_media (&M->media);
-  M->unread = 1;
+  //M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
 
   tglm_message_insert (M);
@@ -937,9 +944,11 @@ static int fetch_comb_binlog_create_message_service (void *extra) {
   int t = fetch_int ();
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
+  
+  M->unread = fetch_int ();
       
   tglf_fetch_message_action (&M->action);
-  M->unread = 1;
+  //M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
 
@@ -994,9 +1003,11 @@ static int fetch_comb_binlog_create_message_service_fwd (void *extra) {
   
   M->fwd_from_id = TGL_MK_USER (fetch_int ());
   M->fwd_date = fetch_int ();
+  
+  M->unread = fetch_int ();
       
   tglf_fetch_message_action (&M->action);
-  M->unread = 1;
+  //M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
 
@@ -1735,7 +1746,7 @@ void bl_do_chat_del_user (struct tgl_chat *C, int version, int user) {
   add_log_event (ev, 16);
 }
 
-void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s) {
+void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id, int date, int unread, int l, const char *s) {
   clear_packet ();
   out_int (CODE_binlog_create_message_text);
   out_int (msg_id);
@@ -1743,6 +1754,7 @@ void bl_do_create_message_text (int msg_id, int from_id, int to_type, int to_id,
   out_int (to_type);
   out_int (to_id);
   out_int (date);
+  out_int (unread);
   out_cstring (s, l);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
@@ -1771,7 +1783,7 @@ void bl_do_send_message_action_encr (long long msg_id, int from_id, int to_type,
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s) {
+void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int unread, int l, const char *s) {
   clear_packet ();
   out_int (CODE_binlog_create_message_text_fwd);
   out_int (msg_id);
@@ -1781,11 +1793,12 @@ void bl_do_create_message_text_fwd (int msg_id, int from_id, int to_type, int to
   out_int (date);
   out_int (fwd);
   out_int (fwd_date);
+  out_int (unread);
   out_cstring (s, l);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id, int date, int l, const char *s, const int *data, int len) {
+void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id, int date, int unread, int l, const char *s, const int *data, int len) {
   clear_packet ();
   out_int (CODE_binlog_create_message_media);
   out_int (msg_id);
@@ -1793,6 +1806,7 @@ void bl_do_create_message_media (int msg_id, int from_id, int to_type, int to_id
   out_int (to_type);
   out_int (to_id);
   out_int (date);
+  out_int (unread);
   out_cstring (s, l);
   out_ints (data, len);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
@@ -1812,7 +1826,7 @@ void bl_do_create_message_media_encr (long long msg_id, int from_id, int to_type
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int l, const char *s, const int *data, int len) {
+void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int unread, int l, const char *s, const int *data, int len) {
   clear_packet ();
   out_int (CODE_binlog_create_message_media_fwd);
   out_int (msg_id);
@@ -1822,12 +1836,13 @@ void bl_do_create_message_media_fwd (int msg_id, int from_id, int to_type, int t
   out_int (date);
   out_int (fwd);
   out_int (fwd_date);
+  out_int (unread);
   out_cstring (s, l);
   out_ints (data, len);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_id, int date, const int *data, int len) {
+void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_id, int date, int unread, const int *data, int len) {
   clear_packet ();
   out_int (CODE_binlog_create_message_service);
   out_int (msg_id);
@@ -1835,6 +1850,7 @@ void bl_do_create_message_service (int msg_id, int from_id, int to_type, int to_
   out_int (to_type);
   out_int (to_id);
   out_int (date);
+  out_int (unread);
   out_ints (data, len);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
@@ -1851,7 +1867,7 @@ void bl_do_create_message_service_encr (long long msg_id, int from_id, int to_ty
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
-void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, const int *data, int len) {
+void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int to_id, int date, int fwd, int fwd_date, int unread, const int *data, int len) {
   clear_packet ();
   out_int (CODE_binlog_create_message_service_fwd);
   out_int (msg_id);
@@ -1861,6 +1877,7 @@ void bl_do_create_message_service_fwd (int msg_id, int from_id, int to_type, int
   out_int (date);
   out_int (fwd);
   out_int (fwd_date);
+  out_int (unread);
   out_ints (data, len);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }

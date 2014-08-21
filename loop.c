@@ -101,6 +101,7 @@ void net_loop (int flags, int (*is_end)(void)) {
       exit (0);
     }
     write_state_file ();
+    update_prompt ();
     if (unknown_user_list_pos) {
       int i;
       for (i = 0; i < unknown_user_list_pos; i++) {
