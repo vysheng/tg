@@ -1,20 +1,21 @@
-/*
-    This file is part of telegram-client.
+/* 
+    This file is part of tgl-library
 
-    Telegram-client is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    Telegram-client is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-    Copyright Vitaly Valtman 2013
+    Copyright Vitaly Valtman 2013-2014
 */
 
 #ifdef HAVE_CONFIG_H
@@ -25,7 +26,7 @@
 #include <string.h>
 #include "structures.h"
 #include "mtproto-common.h"
-#include "telegram.h"
+//#include "telegram.h"
 #include "tree.h"
 #include "loop.h"
 #include <openssl/aes.h>
@@ -38,6 +39,9 @@
 
 #define sha1 SHA1
 
+#ifndef TGL_MAX_PEER_NUM
+#  define TGL_MAX_PEER_NUM 100000
+#endif
 
 static int id_cmp (struct tgl_message *M1, struct tgl_message *M2);
 #define peer_cmp(a,b) (tgl_cmp_peer_id (a->id, b->id))

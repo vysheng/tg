@@ -1,3 +1,23 @@
+/* 
+    This file is part of tgl-library
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Copyright Vitaly Valtman 2014
+*/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -36,7 +56,8 @@ void tgl_set_callback (struct tgl_update_callback *cb) {
 }
 
 void tgl_set_rsa_key (const char *key) {
-  tgl_state.rsa_key = tstrdup (key);
+  assert (tgl_state.rsa_key_num < TGL_MAX_RSA_KEYS_NUM);
+  tgl_state.rsa_key_list[tgl_state.rsa_key_num ++] = tstrdup (key);
 }
 
 void tgl_init (void) {
@@ -48,7 +69,7 @@ void tgl_init (void) {
   if (!tgl_state.callback.create_print_name) {
     tgl_state.callback.create_print_name = tgls_default_create_print_name;
   }
-  tglmp_on_start (tgl_state.rsa_key);
+  tglmp_on_start ();
 }
 
 int tgl_authorized_dc (struct tgl_dc *DC) {

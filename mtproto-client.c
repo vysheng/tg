@@ -1,21 +1,22 @@
-/*
-    This file is part of telegram-client.
+/* 
+    This file is part of tgl-library
 
-    Telegram-client is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    Telegram-client is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
     Copyright Nikolay Durov, Andrey Lopatin 2012-2013
-    Copyright Vitaly Valtman 2013
+              Vitaly Valtman 2013-2014
 */
 
 #ifdef HAVE_CONFIG_H
@@ -45,7 +46,7 @@
 #include <netinet/tcp.h>
 #include <poll.h>
 
-#include "telegram.h"
+//#include "telegram.h"
 #include "include.h"
 #include "queries.h"
 //#include "loop.h"
@@ -1086,21 +1087,26 @@ static int rpc_close (struct connection *c) {
 
 #define RANDSEED_PASSWORD_FILENAME     NULL
 #define RANDSEED_PASSWORD_LENGTH       0
-void tglmp_on_start (const char *key) {
+void tglmp_on_start (void) {
   tgl_prng_seed (RANDSEED_PASSWORD_FILENAME, RANDSEED_PASSWORD_LENGTH);
 
-  if (key) {
+  int i;
+  int ok = 0;
+  for (i = 0; i < tgl_state.rsa_key_num; i++) {
+    char *key = tgl_state.rsa_key_list[i];
     if (rsa_load_public_key (key) < 0) {
-      perror ("rsa_load_public_key");
-      exit (1);
-    }
-  } else {
-    if (rsa_load_public_key (TG_SERVER_PUBKEY_FILENAME) < 0
-      && rsa_load_public_key ("/etc/" PROG_NAME "/server.pub") < 0) {
-      perror ("rsa_load_public_key");
-      exit (1);
+      vlogprintf (E_WARNING, "Can not load key %s\n", key);
+    } else {
+      ok = 1;
+      break;
     }
   }
+
+  if (!ok) {
+    vlogprintf (E_ERROR, "No pubic keys found\n");
+    exit (1);
+  }
+  
   pk_fingerprint = tgl_do_compute_rsa_key_fingerprint (pubKey);
 }
 

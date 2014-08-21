@@ -1,3 +1,22 @@
+/* 
+    This file is part of tgl-library
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+    Copyright Vitaly Valtman 2014
+*/
 #ifndef __TGL_H__
 #define __TGL_H__
 
@@ -95,6 +114,7 @@ struct tgl_net_methods {
 
 #define TGL_LOCK_DIFF 1
 
+#define TGL_MAX_RSA_KEYS_NUM 10
 // Do not modify this structure, unless you know what you do
 struct tgl_state {
   int our_id; // ID of logged in user
@@ -130,7 +150,8 @@ struct tgl_state {
   struct tgl_net_methods *net_methods;
   struct event_base *ev_base;
 
-  char *rsa_key;
+  char *rsa_key_list[TGL_MAX_RSA_KEYS_NUM];
+  int rsa_key_num;
   struct bignum_ctx *BN_ctx;
 
   struct tgl_allocator allocator;
