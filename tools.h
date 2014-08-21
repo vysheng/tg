@@ -22,14 +22,25 @@
 #include <time.h>
 #include <openssl/err.h>
 #include <assert.h>
+#include "tgl.h"
 
+#define talloc tgl_allocator->alloc
+#define talloc0 tgl_alloc0
+#define tfree tgl_allocator->free 
+#define tfree_str tgl_free_str
+#define tfree_secure tgl_free_secure
+#define trealloc tgl_allocator->realloc
+#define tcheck tgl_allocator->check
+#define texists tgl_allocator->exists
+#define tstrdup tgl_strdup
+#define tstrndup tgl_strndup
+#define tasprintf tgl_asprintf
+#define tsnprintf tgl_snprintf
+
+
+struct tgl_allocator *tgl_allocator;
 double tglt_get_double_time (void);
 
-void *talloc (size_t size);
-void *trealloc (void *ptr, size_t old_size, size_t size);
-void *talloc0 (size_t size);
-char *tstrdup (const char *s);
-char *tstrndup (const char *s, size_t n);
 int tgl_inflate (void *input, int ilen, void *output, int olen);
 //void ensure (int r);
 //void ensure_ptr (void *p);
@@ -53,20 +64,56 @@ static inline void ensure_ptr (void *p) {
   }
 }
 
-void tfree (void *ptr, int size);
-void tfree_str (void *ptr);
-void tfree_secure (void *ptr, int size);
+void *tgl_alloc_debug (size_t size);
+void *tgl_alloc_release (size_t size);
+
+void *tgl_realloc_debug (void *ptr, size_t old_size, size_t size);
+void *tgl_realloc_release (void *ptr, size_t old_size, size_t size);
+
+void *tgl_alloc0 (size_t size);
+char *tgl_strdup (const char *s);
+char *tgl_strndup (const char *s, size_t n);
+
+void tgl_free_debug (void *ptr, int size);
+void tgl_free_release (void *ptr, int size);
+//void tgl_free_str (void *ptr);
+//void tgl_free_secure (void *ptr, int size);
+
+void tgl_check_debug (void);
+void tgl_exists_debug (void *ptr, int size);
+void tgl_check_release (void);
+void tgl_exists_release (void *ptr, int size);
 
 
-int tsnprintf (char *buf, int len, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
-int tasprintf (char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
+int tgl_snprintf (char *buf, int len, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
+int tgl_asprintf (char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
 
 void tglt_secure_random (void *s, int l);
 void tgl_my_clock_gettime (int clock_id, struct timespec *T);
 
-#ifdef DEBUG
-void tcheck (void);
-void texists (void *ptr, int size);
+static inline void tgl_free_str (void *ptr) {
+  if (!ptr) { return; }
+  tfree (ptr, strlen (ptr) + 1);
+}
 
-#endif
+static inline void tgl_free_secure (void *ptr, int size) {
+  memset (ptr, 0, size);
+  tfree (ptr, size);
+}
+
+static inline void hexdump (void *ptr, void *end_ptr) {
+  int total = 0;
+  while (ptr < end_ptr) {
+    fprintf (stderr, "%08x", (int)*(char *)ptr);
+    ptr ++;
+    total ++;
+    if (total == 16) { 
+      fprintf (stderr, "\n");
+      total = 0;
+    }
+  }
+  if (total) { fprintf (stderr, "\n"); }
+}
+
+
 #endif

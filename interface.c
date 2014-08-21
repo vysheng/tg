@@ -1514,13 +1514,13 @@ void print_end (void) {
   prompt_was = 0;
 }
 
-void hexdump (int *in_ptr, int *in_end) {
+/*void hexdump (int *in_ptr, int *in_end) {
   print_start ();
   int *ptr = in_ptr;
   while (ptr < in_end) { printf (" %08x", *(ptr ++)); }
   printf ("\n");
   print_end (); 
-}
+}*/
 
 void logprintf (const char *format, ...) {
   int x = 0;

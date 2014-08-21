@@ -942,12 +942,12 @@ void usage (void) {
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void logprintf (const char *format __attribute__ ((unused)), ...) {
 }
-
+/*
 void hexdump (int *in_ptr, int *in_end) {
   int *ptr = in_ptr;
   while (ptr < in_end) { printf (" %08x", *(ptr ++)); }
   printf ("\n");
-}
+}*/
 
 #ifdef HAVE_EXECINFO_H
 void print_backtrace (void) {

@@ -18,6 +18,7 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
 AC_CHECK_LIB([z], [inflate])
 AC_CHECK_LIB([crypto], [AES_set_encrypt_key])
+AC_CHECK_LIB([event], [event_base_new])
 EXTRA_LIBS=""
 
 AC_CHECK_LIB([readline], [rl_save_prompt], 

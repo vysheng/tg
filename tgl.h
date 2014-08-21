@@ -33,19 +33,14 @@ struct bingnum_ctx;
 #define TGL_UPDATE_ACCESS_HASH 16384
 
 struct tgl_allocator {
-  void *(*talloc)(size_t size);
-  void *(*trealloc)(void *ptr, size_t old_size, size_t size);
-  void *(*talloc0)(size_t size);
-  char *(*tstrdup)(const char *s);
-  char *(*tstrndup)(const char *s, size_t n);
-  void (*tfree)(void *ptr, int size);
-  void (*tfree_str)(void *ptr);
-  void (*tfree_secure)(void *ptr, int size);
-  int (*tasprintf)(char **res, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
-  int (*tsnprintf)(char *buf, int len, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
-  void (*tcheck)(void);
-  void (*texists)(void *ptr, int size);
+  void *(*alloc)(size_t size);
+  void *(*realloc)(void *ptr, size_t old_size, size_t size);
+  void (*free)(void *ptr, int size);
+  void (*check)(void);
+  void (*exists)(void *ptr, int size);
 };
+extern struct tgl_allocator tgl_allocator_release;
+extern struct tgl_allocator tgl_allocator_debug;
 
 struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);

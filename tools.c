@@ -36,7 +36,6 @@
 //#include "interface.h"
 #include "tools.h"
 
-#ifdef DEBUG
 #define RES_PRE 8
 #define RES_AFTER 8
 #define MAX_BLOCKS 1000000
@@ -44,8 +43,8 @@ static void *blocks[MAX_BLOCKS];
 static void *free_blocks[MAX_BLOCKS];
 static int used_blocks;
 static int free_blocks_cnt;
-#endif
 
+static long long total_allocated_bytes;
 
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2), weak));
 void logprintf (const char *format, ...) {
@@ -55,11 +54,11 @@ void logprintf (const char *format, ...) {
   va_end (ap);
 }
 
-extern int verbosity;
+//extern int verbosity;
 
-long long total_allocated_bytes;
+//static long long total_allocated_bytes;
 
-int tsnprintf (char *buf, int len, const char *format, ...) {
+int tgl_snprintf (char *buf, int len, const char *format, ...) {
   va_list ap;
   va_start (ap, format);
   int r = vsnprintf (buf, len, format, ap);
@@ -68,7 +67,7 @@ int tsnprintf (char *buf, int len, const char *format, ...) {
   return r;
 }
 
-int tasprintf (char **res, const char *format, ...) {
+int tgl_asprintf (char **res, const char *format, ...) {
   va_list ap;
   va_start (ap, format);
   int r = vasprintf (res, format, ap);
@@ -81,9 +80,7 @@ int tasprintf (char **res, const char *format, ...) {
   return r;
 }
 
-void print_backtrace (void);
-void tfree (void *ptr, int size __attribute__ ((unused))) {
-#ifdef DEBUG
+void tgl_free_debug (void *ptr, int size __attribute__ ((unused))) {
   total_allocated_bytes -= size;
   ptr -= RES_PRE;
   if (size != (int)((*(int *)ptr) ^ 0xbedabeda)) {
@@ -107,36 +104,28 @@ void tfree (void *ptr, int size __attribute__ ((unused))) {
   memset (ptr, 0, size + RES_PRE + RES_AFTER);
   *(int *)ptr = size + 12;
   free_blocks[free_blocks_cnt ++] = ptr;
-#else
+}
+
+void tgl_free_release (void *ptr, int size) {
   free (ptr);
-#endif
 }
 
-void tfree_str (void *ptr) {
-  if (!ptr) { return; }
-  tfree (ptr, strlen (ptr) + 1);
-}
 
-void tfree_secure (void *ptr, int size) {
-  memset (ptr, 0, size);
-  tfree (ptr, size);
-}
 
-void *trealloc (void *ptr, size_t old_size __attribute__ ((unused)), size_t size) {
-#ifdef DEBUG
+void *tgl_realloc_debug (void *ptr, size_t old_size __attribute__ ((unused)), size_t size) {
   void *p = talloc (size);
   memcpy (p, ptr, size >= old_size ? old_size : size); 
   tfree (ptr, old_size);
   return p;
-#else
+}
+
+void *tgl_realloc_release (void *ptr, size_t old_size __attribute__ ((unused)), size_t size) {
   void *p = realloc (ptr, size);
   ensure_ptr (p);
   return p;
-#endif
 }
 
-void *talloc (size_t size) {
-#ifdef DEBUG
+void *tgl_alloc_debug (size_t size) {
   total_allocated_bytes += size;
   void *p = malloc (size + RES_PRE + RES_AFTER);
   ensure_ptr (p);
@@ -151,49 +140,34 @@ void *talloc (size_t size) {
   }
   tcheck ();
   return p + 8;
-#else
+}
+
+void *tgl_alloc_release (size_t size) {
   void *p = malloc (size);
   ensure_ptr (p);
   return p;
-#endif
 }
 
-void *talloc0 (size_t size) {
+void *tgl_alloc0 (size_t size) {
   void *p = talloc (size);
   memset (p, 0, size);
   return p;
 }
 
-char *tstrdup (const char *s) {
-#ifdef DEBUG
+char *tgl_strdup (const char *s) {
   int l = strlen (s);
   char *p = talloc (l + 1);
   memcpy (p, s, l + 1);
   return p;
-#else
-  char *p = strdup (s);
-  if (p == NULL) {
-    out_of_memory ();
-  }
-  return p;
-#endif
 }
 
-char *tstrndup (const char *s, size_t n) {
-#ifdef DEBUG
+char *tgl_strndup (const char *s, size_t n) {
   size_t l = 0;
   for (l = 0; l < n && s[l]; l++) { }
   char *p = talloc (l + 1);
   memcpy (p, s, l);
   p[l] = 0;
   return p;
-#else
-  char *p = strndup (s, n);
-  if (p == NULL) {
-    out_of_memory ();
-  }
-  return p;
-#endif
 }
 
 
@@ -205,23 +179,19 @@ int tgl_inflate (void *input, int ilen, void *output, int olen) {
   strm.next_in = input;
   strm.avail_out = olen ;
   strm.next_out = output;
-  int err = inflate (&strm, Z_FINISH), total_out = 0;
-  if (err == Z_OK || err == Z_STREAM_END) {
-    total_out = (int) strm.total_out;
-    if (err == Z_STREAM_END && verbosity >= 2) {
-      logprintf ( "inflated %d bytes\n", (int) strm.total_out);
-    }
-  }
-  if (verbosity && err != Z_STREAM_END) {
+  int err = inflate (&strm, Z_FINISH); 
+  int total_out = strm.total_out;
+
+  if (err != Z_OK && err != Z_STREAM_END) {
     logprintf ( "inflate error = %d\n", err);
     logprintf ( "inflated %d bytes\n", (int) strm.total_out);
+    total_out = 0;
   }
   inflateEnd (&strm);
   return total_out;
 }
 
-#ifdef DEBUG
-void tcheck (void) {
+void tgl_check_debug (void) {
   int i;
   for (i = 0; i < used_blocks; i++) {
     void *ptr = blocks[i];
@@ -248,7 +218,7 @@ void tcheck (void) {
   //logprintf ("ok. Used_blocks = %d. Free blocks = %d\n", used_blocks, free_blocks_cnt);
 }
 
-void texists (void *ptr, int size) {
+void tgl_exists_debug (void *ptr, int size) {
   ptr -= RES_PRE;
   if (size != (int)((*(int *)ptr) ^ 0xbedabeda)) {
     logprintf ("size = %d, ptr = %d\n", size, (*(int *)ptr) ^ 0xbedabeda);
@@ -262,7 +232,9 @@ void texists (void *ptr, int size) {
   }
   assert (block_num < used_blocks);
 }
-#endif
+
+void tgl_exists_release (void *ptr, int size) {}
+void tgl_check_release (void) {}
 
 void tgl_my_clock_gettime (int clock_id, struct timespec *T) {
 #ifdef __MACH__
@@ -295,3 +267,20 @@ void tglt_secure_random (void *s, int l) {
   }
 }
 
+struct tgl_allocator tgl_allocator_debug = {
+  .alloc = tgl_alloc_debug,
+  .realloc = tgl_realloc_debug,
+  .free = tgl_free_debug,
+  .check = tgl_check_debug,
+  .exists = tgl_exists_debug
+};
+
+struct tgl_allocator tgl_allocator_release = {
+  .alloc = tgl_alloc_release,
+  .realloc = tgl_realloc_release,
+  .free = tgl_free_release,
+  .check = tgl_check_release,
+  .exists = tgl_exists_release
+};
+
+struct tgl_allocator *tgl_allocator = &tgl_allocator_release;

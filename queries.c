@@ -61,7 +61,7 @@
 #define PATH_MAX 4096
 #endif
 
-int want_dc_num;
+//int want_dc_num;
 char *get_downloads_directory (void);
 //extern int offline_mode;
 
@@ -80,7 +80,7 @@ static void out_peer_id (tgl_peer_id_t id);
 
 #define memcmp8(a,b) memcmp ((a), (b), 8)
 DEFINE_TREE (query, struct query *, memcmp8, 0) ;
-struct tree_query *queries_tree;
+static struct tree_query *queries_tree;
 
 struct query *tglq_query_get (long long id) {
   return tree_lookup_query (queries_tree, (void *)&id);
@@ -208,7 +208,7 @@ void tglq_query_error (long long id) {
 static int packed_buffer[MAX_PACKED_SIZE / 4];
 
 void tglq_query_result (long long id UU) {
-  vlogprintf (E_DEBUG, "result for query #%lld\n", id);
+  vlogprintf (E_DEBUG, "result for query #%lld. Size %ld bytes\n", id, 4 * (in_end - in_ptr));
   /*if (verbosity  >= 4) {
     logprintf ( "result: ");
     hexdump_in ();
@@ -221,6 +221,7 @@ void tglq_query_result (long long id UU) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     int total_out = tgl_inflate (s, l, packed_buffer, MAX_PACKED_SIZE);
+    vlogprintf (E_DEBUG, "inflated %d bytes\n", total_out);
     end = in_ptr;
     eend = in_end;
     //assert (total_out % 4 == 0);
@@ -246,6 +247,7 @@ void tglq_query_result (long long id UU) {
     if (q->methods && q->methods->on_answer) {
       if (q->methods->type) {
         int *save = in_ptr;
+        vlogprintf (E_DEBUG, "in_ptr = %p, end_ptr = %p\n", in_ptr, in_end);
         if (skip_type_any (q->methods->type) < 0) {
           vlogprintf (E_ERROR, "Skipped %ld int out of %ld (type %s)\n", in_ptr - save, in_end - save, q->methods->type->type->id);
           assert (0);
@@ -269,8 +271,8 @@ void tglq_query_result (long long id UU) {
 } 
 
 
-int max_chat_size;
-int max_bcast_size;
+//int max_chat_size;
+//int max_bcast_size;
 //int want_dc_num;
 //int new_dc_num;
 //extern struct dc *DC_list[];
@@ -337,11 +339,12 @@ static int help_get_config_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_dc_option ();
   }
-  max_chat_size = fetch_int ();
+  int max_chat_size = fetch_int ();
+  int max_bcast_size = 0;
   if (op == CODE_config) {
     max_bcast_size = fetch_int ();
   }
-  vlogprintf (E_DEBUG, "chat_size = %d\n", max_chat_size);
+  vlogprintf (E_DEBUG, "chat_size = %d, bcast_size = %d\n", max_chat_size, max_bcast_size);
 
   if (q->callback) {
     ((void (*)(void *, int))(q->callback))(q->callback_extra, 1);
@@ -447,7 +450,7 @@ static struct query_methods phone_call_methods  = {
 void tgl_do_phone_call (const char *user, const char *hash,void (*callback)(void *callback_extra, int success), void *callback_extra) {
   vlogprintf (E_DEBUG, "calling user\n");
   //suser = tstrdup (user);
-  want_dc_num = 0;
+  //want_dc_num = 0;
   clear_packet ();
   tgl_do_insert_header ();
   out_int (CODE_auth_send_call);

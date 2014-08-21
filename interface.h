@@ -50,7 +50,7 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
   } while (0);\
 
 
-void hexdump (int *in_ptr, int *in_end);
+//void hexdump (int *in_ptr, int *in_end);
 
 struct tgl_message;
 void print_message (struct tgl_message *M);

@@ -60,3 +60,4 @@ int tgl_signed_dc (struct dc *DC) {
   assert (DC);
   return DC->has_auth;
 }
+

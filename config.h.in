@@ -30,6 +30,9 @@
 /* Define to 1 if you have the `edit' library (-ledit). */
 #undef HAVE_LIBEDIT
 
+/* Define to 1 if you have the `event' library (-levent). */
+#undef HAVE_LIBEVENT
+
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
