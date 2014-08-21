@@ -22,6 +22,44 @@
 
 typedef struct { int type; int id; } tgl_peer_id_t;
 
+enum tgl_dc_state {
+  st_init,
+  st_reqpq_sent,
+  st_reqdh_sent,
+  st_client_dh_sent,
+  st_authorized,
+  st_error
+};
+
+#define MAX_DC_SESSIONS 3
+
+struct tgl_session {
+  struct tgl_dc *dc;
+  long long session_id;
+  int seq_no;
+  struct connection *c;
+  struct tree_long *ack_tree;
+  struct event *ev;
+  //struct event_timer ev;
+};
+
+struct tgl_dc {
+  int id;
+  int port;
+  int flags;
+  enum tgl_dc_state state;
+  char *ip;
+  char *user;
+  struct tgl_session *sessions[MAX_DC_SESSIONS];
+  char auth_key[256];
+  long long auth_key_id;
+  long long server_salt;
+
+  int server_time_delta;
+  double server_time_udelta;
+  int has_auth;
+};
+
 enum tgl_message_media_type {
   tgl_message_media_none,
   tgl_message_media_photo,

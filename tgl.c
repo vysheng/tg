@@ -51,12 +51,12 @@ void tgl_init (void) {
   tglmp_on_start (tgl_state.rsa_key);
 }
 
-int tgl_authorized_dc (struct dc *DC) {
+int tgl_authorized_dc (struct tgl_dc *DC) {
   assert (DC);
   return DC->auth_key_id;
 }
 
-int tgl_signed_dc (struct dc *DC) {
+int tgl_signed_dc (struct tgl_dc *DC) {
   assert (DC);
   return DC->has_auth;
 }

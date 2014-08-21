@@ -68,3 +68,5 @@ binlog.deleteMsg id:long = binlog.Update;
 
 binlog.msgSeqUpdate id:long = binlog.Update;
 binlog.msgUpdate id:long = binlog.Update;
+
+//binlog.addDc id:int ip:string port:int auth_key_id:long auth_key:64*[int] = binlog.Update;

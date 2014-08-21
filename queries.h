@@ -43,15 +43,15 @@ struct query {
   void *data;
   struct query_methods *methods;
   struct event *ev;
-  struct dc *DC;
-  struct session *session;
+  struct tgl_dc *DC;
+  struct tgl_session *session;
   void *extra;
   void *callback;
   void *callback_extra;
 };
 
 
-struct query *tglq_send_query (struct dc *DC, int len, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra);
+struct query *tglq_send_query (struct tgl_dc *DC, int len, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra);
 void tglq_query_ack (long long id);
 void tglq_query_error (long long id);
 void tglq_query_result (long long id);

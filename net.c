@@ -251,7 +251,7 @@ static void conn_try_write (evutil_socket_t fd, short what, void *arg) {
   }
 }
 
-struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct dc *dc, struct mtproto_methods *methods) {
+struct connection *tgln_create_connection (const char *host, int port, struct tgl_session *session, struct tgl_dc *dc, struct mtproto_methods *methods) {
   struct connection *c = talloc0 (sizeof (*c));
   int fd = socket (AF_INET, SOCK_STREAM, 0);
   if (fd == -1) {
@@ -588,11 +588,11 @@ static void incr_out_packet_num (struct connection *c) {
   c->out_packet_num ++;
 }
 
-static struct dc *get_dc (struct connection *c) {
+static struct tgl_dc *get_dc (struct connection *c) {
   return c->dc;
 }
 
-static struct session *get_session (struct connection *c) {
+static struct tgl_session *get_session (struct connection *c) {
   return c->session;
 }
 

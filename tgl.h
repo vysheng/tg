@@ -5,6 +5,8 @@
 #include <string.h>
 
 #define TGL_MAX_DC_NUM 100
+#define TG_SERVER "173.240.5.1"
+#define TG_SERVER_TEST "173.240.5.253"
 
 // JUST RANDOM STRING
 #define TGL_BUILD "1828"
@@ -12,8 +14,8 @@
 
 struct connection;
 struct mtproto_methods;
-struct session;
-struct dc;
+struct tgl_session;
+struct tgl_dc;
 struct bingnum_ctx;
 
 #define TGL_UPDATE_CREATED 1
@@ -79,10 +81,10 @@ struct tgl_net_methods {
   int (*read_in_lookup) (struct connection *c, void *data, int len);
   void (*flush_out) (struct connection *c);
   void (*incr_out_packet_num) (struct connection *c);
-  struct dc *(*get_dc) (struct connection *c);
-  struct session *(*get_session) (struct connection *c);
+  struct tgl_dc *(*get_dc) (struct connection *c);
+  struct tgl_session *(*get_session) (struct connection *c);
 
-  struct connection *(*create_connection) (const char *host, int port, struct session *session, struct dc *dc, struct mtproto_methods *methods);
+  struct connection *(*create_connection) (const char *host, int port, struct tgl_session *session, struct tgl_dc *dc, struct mtproto_methods *methods);
 };
 
 
@@ -109,8 +111,8 @@ struct tgl_state {
   int unread_messages;
 
   long long locks; 
-  struct dc *DC_list[TGL_MAX_DC_NUM];
-  struct dc *DC_working;
+  struct tgl_dc *DC_list[TGL_MAX_DC_NUM];
+  struct tgl_dc *DC_working;
   int max_dc_num;
   int dc_working_num;
 
@@ -246,8 +248,8 @@ void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);
 
 void tgl_do_send_ping (struct connection *c);
 
-int tgl_authorized_dc (struct dc *DC);
-int tgl_signed_dc (struct dc *DC);
+int tgl_authorized_dc (struct tgl_dc *DC);
+int tgl_signed_dc (struct tgl_dc *DC);
 
 //void tgl_do_get_suggested (void);
 
@@ -261,8 +263,12 @@ struct mtproto_methods {
 };
 
 void tgl_init (void);
-void tgl_dc_authorize (struct dc *DC);
+void tgl_dc_authorize (struct tgl_dc *DC);
 
+void tgl_dc_iterator (void (*iterator)(struct tgl_dc *DC));
+void tgl_dc_iterator_ex (void (*iterator)(struct tgl_dc *DC, void *extra), void *extra);
 
 double tglt_get_double_time (void);
+
+
 #endif

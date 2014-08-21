@@ -78,7 +78,6 @@ int readline_active;
 
 int log_level;
 
-
 char *line_ptr;
 
 int in_chat_mode;

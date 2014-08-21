@@ -26,7 +26,7 @@
 #define STATE_FILE_MAGIC 0x84217a0d
 #define SECRET_CHAT_FILE_MAGIC 0xa9840add
 
-struct dc_serialized {
+struct tgl_dc_serialized {
   int magic;
   int port;
   char ip[64];
@@ -70,8 +70,8 @@ struct connection {
   int last_connect_time;
   int in_fail_timer;
   struct mtproto_methods *methods;
-  struct session *session;
-  struct dc *dc;
+  struct tgl_session *session;
+  struct tgl_dc *dc;
   void *extra;
   struct event *ping_ev;
   struct event *fail_ev;
@@ -87,16 +87,16 @@ void tgln_flush_out (struct connection *c);
 int tgln_read_in (struct connection *c, void *data, int len);
 int tgln_read_in_lookup (struct connection *c, void *data, int len);
 
-void tgln_insert_msg_id (struct session *S, long long id);
+void tgln_insert_msg_id (struct tgl_session *S, long long id);
 
 extern struct tgl_net_methods tgl_conn_methods;
 
 //void create_all_outbound_connections (void);
 
-//struct connection *create_connection (const char *host, int port, struct session *session, struct connection_methods *methods);
-struct dc *tgln_alloc_dc (int id, char *ip, int port);
-void tgln_dc_create_session (struct dc *DC, struct mtproto_methods *methods);
-struct connection *tgln_create_connection (const char *host, int port, struct session *session, struct dc *dc, struct mtproto_methods *methods);
+//struct connection *create_connection (const char *host, int port, struct tgl_session *session, struct connection_methods *methods);
+struct tgl_dc *tgln_alloc_dc (int id, char *ip, int port);
+void tgln_dc_create_session (struct tgl_dc *DC, struct mtproto_methods *methods);
+struct connection *tgln_create_connection (const char *host, int port, struct tgl_session *session, struct tgl_dc *dc, struct mtproto_methods *methods);
 
 #define GET_DC(c) (c->session->dc)
 #endif

@@ -269,7 +269,7 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
       *s = tstrdup (r);
     }
   } else {
-    if (path) {
+    if (path && default_name) {
       tasprintf (s, "%s/%s", path, default_name);
     } else {
       *s  = default_name ? tstrdup (default_name) : 0;

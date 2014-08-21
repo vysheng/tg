@@ -50,6 +50,7 @@
 #include "loop.h"
 #include "lua-tg.h"
 #include "tgl.h"
+#include "binlog.h"
 
 int verbosity;
 
@@ -149,7 +150,7 @@ int main_loop (void) {
   return 0;
 }
 
-struct dc *cur_a_dc;
+struct tgl_dc *cur_a_dc;
 int is_authorized (void) {
   return tgl_authorized_dc (cur_a_dc);
 }
@@ -229,16 +230,127 @@ int wait_dialog_list;
 
 extern struct tgl_update_callback upd_cb;
 
+#define DC_SERIALIZED_MAGIC 0x868aa81d
+
+void write_dc (struct tgl_dc *DC, void *extra) {
+  int auth_file_fd = *(int *)extra;
+  if (!DC) { 
+    int x = 0;
+    assert (write (auth_file_fd, &x, 4) == 4);
+    return;
+  } else {
+    int x = 1;
+    assert (write (auth_file_fd, &x, 4) == 4);
+  }
+
+  assert (DC->has_auth);
+
+  assert (write (auth_file_fd, &DC->port, 4) == 4);
+  int l = strlen (DC->ip);
+  assert (write (auth_file_fd, &l, 4) == 4);
+  assert (write (auth_file_fd, DC->ip, l) == l);
+  assert (write (auth_file_fd, &DC->auth_key_id, 8) == 8);
+  assert (write (auth_file_fd, DC->auth_key, 256) == 256);
+}
+
+char *get_auth_key_filename (void);
+void write_auth_file (void) {
+  if (binlog_enabled) { return; }
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
+  assert (auth_file_fd >= 0);
+  int x = DC_SERIALIZED_MAGIC;
+  assert (write (auth_file_fd, &x, 4) == 4);
+  assert (write (auth_file_fd, &tgl_state.max_dc_num, 4) == 4);
+  assert (write (auth_file_fd, &tgl_state.dc_working_num, 4) == 4);
+
+  tgl_dc_iterator_ex (write_dc, &auth_file_fd);
+
+  assert (write (auth_file_fd, &tgl_state.our_id, 4) == 4);
+  close (auth_file_fd);
+}
+
+void read_dc (int auth_file_fd, int id, unsigned ver) {
+  int port = 0;
+  assert (read (auth_file_fd, &port, 4) == 4);
+  int l = 0;
+  assert (read (auth_file_fd, &l, 4) == 4);
+  assert (l >= 0 && l < 100);
+  char ip[100];
+  assert (read (auth_file_fd, ip, l) == l);
+  ip[l] = 0;
+
+  long long auth_key_id;
+  static unsigned char auth_key[256];
+  assert (read (auth_file_fd, &auth_key_id, 8) == 8);
+  assert (read (auth_file_fd, auth_key, 256) == 256);
+
+  //bl_do_add_dc (id, ip, l, port, auth_key_id, auth_key);
+  bl_do_dc_option (id, 2, "DC", l, ip, port);
+  bl_do_set_auth_key_id (id, auth_key);
+  bl_do_dc_signed (id);
+}
+
+void empty_auth_file (void) {
+  char *ip = tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER;
+  bl_do_dc_option (1, 3, "DC1", strlen (ip), ip, 443);
+  bl_do_set_working_dc (1);
+}
+
+int need_dc_list_update;
+void read_auth_file (void) {
+  if (binlog_enabled) { return; }
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
+  if (auth_file_fd < 0) {
+    empty_auth_file ();
+    return;
+  }
+  assert (auth_file_fd >= 0);
+  unsigned x;
+  unsigned m;
+  if (read (auth_file_fd, &m, 4) < 4 || (m != DC_SERIALIZED_MAGIC)) {
+    close (auth_file_fd);
+    empty_auth_file ();
+    return;
+  }
+  assert (read (auth_file_fd, &x, 4) == 4);
+  assert (x > 0);
+  int dc_working_num;
+  assert (read (auth_file_fd, &dc_working_num, 4) == 4);
+  
+  int i;
+  for (i = 0; i <= (int)x; i++) {
+    int y;
+    assert (read (auth_file_fd, &y, 4) == 4);
+    if (y) {
+      read_dc (auth_file_fd, i, m);
+    }
+  }
+  bl_do_set_working_dc (dc_working_num);
+  int our_id;
+  int l = read (auth_file_fd, &our_id, 4);
+  if (l < 4) {
+    assert (!l);
+  }
+  if (our_id) {
+    bl_do_set_our_id (our_id);
+  }
+  close (auth_file_fd);
+}
+
 int loop (void) {
   //on_start ();
   tgl_set_callback (&upd_cb);
   tgl_init ();
-
-  double t = tglt_get_double_time ();
-  logprintf ("replay log start\n");
-  tgl_replay_log ();
-  logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
-  tgl_reopen_binlog_for_writing ();
+ 
+  if (binlog_enabled) {
+    double t = tglt_get_double_time ();
+    logprintf ("replay log start\n");
+    tgl_replay_log ();
+    logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
+    tgl_reopen_binlog_for_writing ();
+  } else {
+    read_auth_file ();
+  }
   binlog_read = 1;
   //exit (0);
   #ifdef USE_LUA
@@ -357,10 +469,11 @@ int loop (void) {
 
   for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_signed_dc (tgl_state.DC_list[i])) {
     tgl_do_export_auth (i, export_auth_callback, (void*)(long)tgl_state.DC_list[i]);    
-    cur_a_dc = tgl_state.DC_working;
+    cur_a_dc = tgl_state.DC_list[i];
     net_loop (0, dc_signed_in);
+    assert (tgl_signed_dc (tgl_state.DC_list[i]));
   }
-  //write_auth_file ();
+  write_auth_file ();
 
   fflush (stdout);
   fflush (stderr);

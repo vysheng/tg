@@ -1212,6 +1212,7 @@ static void create_new_binlog (void) {
 
 
 void tgl_replay_log (void) {
+  if (!tgl_state.binlog_enabled) { return; }
   if (access (get_binlog_file_name (), F_OK) < 0) {
     printf ("No binlog found. Creating new one\n");
     create_new_binlog ();
@@ -1413,7 +1414,7 @@ void bl_do_user_set_friend (struct tgl_user *U, int friend) {
 }
 
 void bl_do_dc_option (int id, int l1, const char *name, int l2, const char *ip, int port) {
-  struct dc *DC = tgl_state.DC_list[id];
+  struct tgl_dc *DC = tgl_state.DC_list[id];
   if (DC) { return; }
   
   clear_packet ();
@@ -1921,3 +1922,14 @@ void bl_do_msg_update (long long id) {
   out_long (id);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
+
+/*void bl_do_add_dc (int id, const char *ip, int l, int port, long long auth_key_id, const char *auth_key) {
+  clear_packet ();
+  out_int (CODE_binlog_add_dc);
+  out_long (id);
+  out_cstring (ip, l);
+  out_int (port);
+  out_long (auth_key_id);
+  out_ints ((void *)auth_key, 64);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}*/

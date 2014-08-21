@@ -125,7 +125,7 @@ static void alarm_query_gateway (evutil_socket_t fd, short what, void *arg) {
 }
 
 
-struct query *tglq_send_query (struct dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
+struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
   assert (DC);
   assert (DC->auth_key_id);
   if (!DC->sessions[0]) {
@@ -275,8 +275,8 @@ void tglq_query_result (long long id UU) {
 //int max_bcast_size;
 //int want_dc_num;
 //int new_dc_num;
-//extern struct dc *DC_list[];
-//extern struct dc *tgl_state.DC_working;
+//extern struct tgl_dc *DC_list[];
+//extern struct tgl_dc *tgl_state.DC_working;
 
 static void out_random (int n) {
   assert (n <= 32);
@@ -2184,7 +2184,7 @@ static int import_auth_on_answer (struct query *q UU) {
   fetch_int (); // expires
   tglf_fetch_alloc_user ();
   
-  bl_do_dc_signed (((struct dc *)q->extra)->id);
+  bl_do_dc_signed (((struct tgl_dc *)q->extra)->id);
 
   if (q->callback) {
     ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
