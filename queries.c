@@ -799,6 +799,7 @@ static int msg_send_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (id);
   } else {
+    vlogprintf (E_NOTICE, "Hole in seq\n");
     tgl_do_get_difference (0, 0, 0);
   }
   if (x == CODE_messages_sent_message_link) {
@@ -1337,6 +1338,7 @@ static int send_file_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
+    vlogprintf (E_NOTICE, "Hole in seq\n");
     tgl_do_get_difference (0, 0, 0);
   }
 
@@ -1684,6 +1686,7 @@ static int fwd_msg_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
+    vlogprintf (E_NOTICE, "Hole in seq\n");
     tgl_do_get_difference (0, 0, 0);
   }
   //print_message (M);
@@ -1736,6 +1739,7 @@ static int rename_chat_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
+    vlogprintf (E_NOTICE, "Hole in seq\n");
     tgl_do_get_difference (0, 0, 0);
   }
   //print_message (M);
@@ -2707,6 +2711,8 @@ void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callba
 //int difference_got;
 //int seq, pts, qts, last_date;
 static int get_state_on_answer (struct query *q UU) {
+  assert (tgl_state.locks & TGL_LOCK_DIFF);
+  tgl_state.locks ^= TGL_LOCK_DIFF;
   assert (fetch_int () == (int)CODE_updates_state);
   bl_do_set_pts (fetch_int ());
   bl_do_set_qts (fetch_int ());

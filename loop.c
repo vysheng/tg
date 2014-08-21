@@ -372,6 +372,7 @@ int loop (void) {
 
   tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
+  assert (!(tgl_state.locks & TGL_LOCK_DIFF));
   #ifdef USE_LUA
     lua_diff_end ();
   #endif
