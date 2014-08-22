@@ -17,14 +17,15 @@ DEPEND="sys-libs/zlib
 	sys-libs/readline
 	dev-libs/libconfig
 	dev-libs/openssl
+	dev-libs/lebevent
 	lua? ( dev-lang/lua )"
 
 src_configure() {
-	econf $(use_enable lua liblua ) --with-progname=telegram-cli
+	econf $(use_enable lua liblua )
 }
 
 src_install() {
-	newbin telegram telegram-cli
+	newbin telegram-cli telegram-cli
 
 	insinto /etc/telegram-cli/
 	newins tg-server.pub server.pub
