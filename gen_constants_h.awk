@@ -22,7 +22,7 @@ BEGIN {
 }
 //  {
   if (split ($1, a, "#") == 2) {
-    gsub (/[[:upper:]]/, "_&", a[1]);
+    gsub (/[ABCDEFGHIJKLMNOPQRSTUVWXYZ]/, "_&", a[1]);
     gsub (/[.]/, "_", a[1]);
     if (a[2] in h) {
       print "ERROR: Duplicate magic " a[2] " for define " a[1] " and " h[a[2]] >"/dev/stderr/"

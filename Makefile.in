@@ -47,7 +47,7 @@ ${DIR_LIST}:
 
 -include ${DEPENDENCE_LIST}
 
-${TG_OBJECTS} ${TGL_OBJECTS}: auto/constants.h
+${TG_OBJECTS} ${TGL_OBJECTS}: ${AUTO}/constants.h
 
 ${TG_OBJECTS}: ${OBJ}/%.o: %.c | create_dirs_and_headers
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -c -MP -MD -MF ${DEP}/$*.d -MQ ${OBJ}/$*.o -o $@ $<
@@ -68,7 +68,6 @@ ${EXE}/generate: ${GENERATE_OBJECTS} ${COMMON_OBJECTS}
 	${CC} ${GENERATE_OBJECTS} ${COMMON_OBJECTS} ${LINK_FLAGS} -o $@
 
 ${AUTO}/scheme.tlo: ${AUTO}/scheme.tl ${EXE}/tlc
-
 	${EXE}/tlc -e $@ ${AUTO}/scheme.tl
 
 ${AUTO}/scheme.tl: ${srcdir}/scheme.tl ${srcdir}/binlog.tl ${srcdir}/append.tl
@@ -83,8 +82,8 @@ ${AUTO}/auto.c: ${AUTO}/scheme.tlo ${EXE}/generate
 ${AUTO}/auto-header.h: ${AUTO}/scheme.tlo ${EXE}/generate
 	${EXE}/generate -H ${AUTO}/scheme.tlo > $@
 
-${AUTO}/constants.h: ${AUTO}/scheme2.tl
-	awk -f ${srcdir}/gen_constants_h.awk < $^ > $@
+${AUTO}/constants.h: ${AUTO}/scheme2.tl ${srcdir}/gen_constants_h.awk
+	awk -f ${srcdir}/gen_constants_h.awk < $< > $@
 
 clean:
 	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
