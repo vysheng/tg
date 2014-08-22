@@ -321,7 +321,6 @@ void parse_config (void) {
 
   parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
-  parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
   
   if (!lua_file) {
     parse_config_val (&conf, &lua_file, "lua_script", 0, config_directory);
@@ -331,11 +330,14 @@ void parse_config (void) {
   config_lookup_bool (&conf, buf, &binlog_enabled);
 
   if (binlog_enabled) {
+    parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
     tgl_set_binlog_mode (1);
     tgl_set_binlog_path (binlog_file_name);
   } else {
     tgl_set_binlog_mode (0);
-    tgl_set_auth_file_path (auth_file_name);
+    parse_config_val (&conf, &state_file_name, "state_file", STATE_FILE, config_directory);
+    parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
+    //tgl_set_auth_file_path (auth_file_name);
   }
   tgl_set_download_directory (downloads_directory);
   
@@ -349,16 +351,18 @@ void parse_config (void) {
 #else
 void parse_config (void) {
   printf ("libconfig not enabled\n");
-  tasprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE);
   tasprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY);
-  tasprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE);
   
   if (binlog_enabled) {
+    tasprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE);
     tgl_set_binlog_mode (1);
     tgl_set_binlog_path (binlog_file_name);
   } else {
     tgl_set_binlog_mode (0);
-    tgl_set_auth_file_path (auth_file_name;
+    //tgl_set_auth_file_path (auth_file_name;
+    tasprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE);
+    tasprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE);
+    tasprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE);
   }
   tgl_set_download_directory (downloads_directory);
 }

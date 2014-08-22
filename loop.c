@@ -64,10 +64,10 @@ extern int unknown_user_list_pos;
 extern int unknown_user_list[];
 int register_mode;
 extern int safe_quit;
-int queries_num;
 extern int sync_from_start;
 
 void got_it (char *line, int len);
+void write_state_file (void);
 
 static void stdin_read_callback (evutil_socket_t fd, short what, void *arg) {
   if (((long)arg) & 1) {
@@ -95,11 +95,12 @@ void net_loop (int flags, int (*is_end)(void)) {
     #ifdef USE_LUA
       lua_do_all ();
     #endif
-    if (safe_quit && !queries_num) {
+    if (safe_quit && !tgl_state.active_queries) {
       printf ("All done. Exit\n");
       rl_callback_handler_remove ();
       exit (0);
     }
+    write_state_file ();
     if (unknown_user_list_pos) {
       int i;
       for (i = 0; i < unknown_user_list_pos; i++) {
@@ -231,6 +232,62 @@ int wait_dialog_list;
 extern struct tgl_update_callback upd_cb;
 
 #define DC_SERIALIZED_MAGIC 0x868aa81d
+#define STATE_FILE_MAGIC 0x28949a93
+#define SECRET_FILE_MAGIX 0x37a1988a
+char *get_auth_key_filename (void);
+char *get_state_filename (void);
+
+void read_state_file (void) {
+  if (binlog_enabled) { return; }
+  int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
+  if (state_file_fd < 0) {
+    return;
+  }
+  int version, magic;
+  if (read (state_file_fd, &magic, 4) < 4) { close (state_file_fd); return; }
+  if (magic != (int)STATE_FILE_MAGIC) { close (state_file_fd); return; }
+  if (read (state_file_fd, &version, 4) < 4) { close (state_file_fd); return; }
+  assert (version >= 0);
+  int x[4];
+  if (read (state_file_fd, x, 16) < 16) {
+    close (state_file_fd); 
+    return;
+  }
+  int pts = x[0];
+  int qts = x[1];
+  int seq = x[2];
+  int date = x[3];
+  close (state_file_fd); 
+  bl_do_set_seq (seq);
+  bl_do_set_pts (pts);
+  bl_do_set_qts (qts);
+  bl_do_set_date (date);
+}
+
+
+void write_state_file (void) {
+  if (binlog_enabled) { return; }
+  static int wseq;
+  static int wpts;
+  static int wqts;
+  static int wdate;
+  if (wseq >= tgl_state.seq && wpts >= tgl_state.pts && wqts >= tgl_state.qts && wdate >= tgl_state.date) { return; }
+  wseq = tgl_state.seq; wpts = tgl_state.pts; wqts = tgl_state.qts; wdate = tgl_state.date;
+  int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
+  if (state_file_fd < 0) {
+    logprintf ("Can not write state file '%s': %m\n", get_state_filename ());
+    exit (2);
+  }
+  int x[6];
+  x[0] = STATE_FILE_MAGIC;
+  x[1] = 0;
+  x[2] = wpts;
+  x[3] = wqts;
+  x[4] = wseq;
+  x[5] = wdate;
+  assert (write (state_file_fd, x, 24) == 24);
+  close (state_file_fd); 
+}
 
 void write_dc (struct tgl_dc *DC, void *extra) {
   int auth_file_fd = *(int *)extra;
@@ -253,7 +310,6 @@ void write_dc (struct tgl_dc *DC, void *extra) {
   assert (write (auth_file_fd, DC->auth_key, 256) == 256);
 }
 
-char *get_auth_key_filename (void);
 void write_auth_file (void) {
   if (binlog_enabled) { return; }
   int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
@@ -350,6 +406,7 @@ int loop (void) {
     tgl_reopen_binlog_for_writing ();
   } else {
     read_auth_file ();
+    read_state_file ();
   }
   binlog_read = 1;
   //exit (0);

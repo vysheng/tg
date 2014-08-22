@@ -73,7 +73,7 @@ char *get_downloads_directory (void);
 //extern int binlog_enabled;
 //extern int sync_from_start;
 
-static int queries_num;
+//static int queries_num;
 
 static void out_peer_id (tgl_peer_id_t id);
 #define QUERY_TIMEOUT 6.0
@@ -159,7 +159,7 @@ struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct q
   q->extra = extra;
   q->callback = callback;
   q->callback_extra = callback_extra;
-  queries_num ++;
+  tgl_state.active_queries ++;
   return q;
 }
 
@@ -201,7 +201,7 @@ void tglq_query_error (long long id) {
     event_free (q->ev);
     tfree (q, sizeof (*q));
   }
-  queries_num --;
+  tgl_state.active_queries --;
 }
 
 #define MAX_PACKED_SIZE (1 << 24)
@@ -267,7 +267,7 @@ void tglq_query_result (long long id UU) {
     in_ptr = end;
     in_end = eend;
   }
-  queries_num --;
+  tgl_state.active_queries --;
 } 
 
 
