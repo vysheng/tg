@@ -970,7 +970,7 @@ static int fetch_comb_binlog_create_message_service_encr (void *extra) {
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
   M->service = 1;
 
-  if (!M->out && M->action.type == CODE_decrypted_message_action_notify_layer) {
+  if (!M->out && M->action.type == tgl_message_action_notify_layer) {
     E->layer = M->action.layer;
   }
 
