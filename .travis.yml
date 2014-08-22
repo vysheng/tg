@@ -13,6 +13,7 @@ install:
 
 script:
   - ./configure
+  - mkdir auto
   - make auto/constants.h
   - cat auto/constants.h
   - make
