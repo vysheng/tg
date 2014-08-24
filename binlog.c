@@ -230,7 +230,6 @@ static int fetch_comb_binlog_user_set_phone (void *extra) {
   }
   U->user.phone = fetch_str_dup ();
   
-  
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_PHONE);
   }
@@ -241,9 +240,6 @@ static int fetch_comb_binlog_user_set_friend (void *extra) {
   tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
   tgl_peer_t *U = tgl_peer_get (id);
   assert (U);
-  if (U->user.phone) {
-    tfree_str (U->user.phone);
-  }
   int friend = fetch_int ();
   if (friend) { U->flags |= FLAG_USER_CONTACT; }
   else { U->flags &= ~FLAG_USER_CONTACT; }

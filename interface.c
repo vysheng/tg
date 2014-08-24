@@ -617,7 +617,7 @@ void print_user_info_gw (void *extra, int success, struct tgl_user *U) {
   push_color (COLOR_YELLOW);
   printf ("User ");
   print_user_name (U->id, C);
-  printf (":\n");
+  printf (" (#%d):\n", tgl_get_peer_id (U->id));
   printf ("\treal name: %s %s\n", U->real_first_name, U->real_last_name);
   printf ("\tphone: %s\n", U->phone);
   if (U->status.online > 0) {

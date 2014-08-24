@@ -69,7 +69,7 @@ void tglu_fetch_date (void) {
   }
 }
 
-void tglu_fetch_seq (void) {
+/*void tglu_fetch_seq (void) {
   int x = fetch_int ();
   if (x > tgl_state.seq + 1) {
     vlogprintf (E_NOTICE, "Hole in seq: seq = %d, x = %d\n", tgl_state.seq, x);
@@ -79,7 +79,7 @@ void tglu_fetch_seq (void) {
     tgl_state.seq = x;
     bl_do_set_seq (tgl_state.seq);
   }
-}
+}*/
 
 static void fetch_dc_option (void) {
   assert (fetch_int () == CODE_dc_option);
