@@ -2940,7 +2940,7 @@ void tgl_do_get_suggested (void) {
 
 static struct query_methods add_user_to_chat_methods = {
   .on_answer = fwd_msg_on_answer,
-  .type = TYPE_TO_PARAM(message_action)
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
 void tgl_do_add_user_to_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, int limit, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
