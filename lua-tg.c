@@ -448,9 +448,6 @@ void lua_do_all (void) {
       p += 2;
       break;
     case 2:
-      #ifdef DEBUG
-        texists (lua_ptr[p], sizeof (tgl_peer_t));
-      #endif
       tgl_do_mark_read (((tgl_peer_t *)lua_ptr[p])->id, 0, 0);
       p += 1;
       break;

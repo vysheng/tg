@@ -651,9 +651,9 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     assert (seq == tgl_state.seq + 1);
 
     bl_do_create_message_text (id, from_id, TGL_PEER_USER, to_id, date, 1, l, s);
-    bl_do_msg_seq_update (id);
+    //bl_do_msg_seq_update (id);
   } else {
-    int id = fetch_int (); // id
+    fetch_int (); // id
     fetch_int (); // from_id
     int l = prefetch_strlen (); 
     fetch_str (l); // text
@@ -663,7 +663,7 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     //tglu_fetch_seq ();
     int seq = fetch_int ();
     assert (seq == tgl_state.seq + 1);
-    bl_do_msg_seq_update (id);
+    //bl_do_msg_seq_update (id);
   }
 }
 
@@ -685,9 +685,9 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
     int seq = fetch_int ();
     assert (seq == tgl_state.seq + 1);
     bl_do_create_message_text (id, from_id, TGL_PEER_CHAT, to_id, date, 1, l, s);
-    bl_do_msg_seq_update (id);
+    //bl_do_msg_seq_update (id);
   } else {
-    int id = fetch_int (); // id
+    fetch_int (); // id
     fetch_int (); // from_id
     fetch_int (); // to_id
     int l = prefetch_strlen (); 
@@ -698,7 +698,7 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
     //tglu_fetch_seq ();
     int seq = fetch_int ();
     assert (seq == tgl_state.seq + 1);
-    bl_do_msg_seq_update (id);
+    //bl_do_msg_seq_update (id);
   }
 }
 
