@@ -428,8 +428,10 @@ static int do_skip_seq (int seq) {
       return -1;
     }
     if (tgl_state.locks & TGL_LOCK_DIFF) {
+      vlogprintf (E_DEBUG, "Update during get_difference. seq = %d\n", seq);
       return -1;
     }
+    vlogprintf (E_DEBUG, "Ok update. seq = %d\n", seq);
     return 0;
   } else {
     return -1;
