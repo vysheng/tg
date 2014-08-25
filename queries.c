@@ -1124,7 +1124,6 @@ static int get_history_on_answer (struct query *q UU) {
   if (q->callback) {
     ((void (*)(void *, int, int, struct tgl_message **))q->callback) (q->callback_extra, 1, sn, ML);
   }
-  tfree (ML, sizeof (void *) * n);
 
   /*for (i = n - 1; i >= 0; i--) {
     print_message (ML[i]);
@@ -1132,6 +1131,8 @@ static int get_history_on_answer (struct query *q UU) {
   if (sn > 0 && q->extra) {
     tgl_do_messages_mark_read (*(tgl_peer_id_t *)&(q->extra), ML[0]->id, 0, 0);
   }
+  
+  tfree (ML, sizeof (void *) * n);
   return 0;
 }
 
@@ -3025,7 +3026,6 @@ void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callba
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
-
 
 /* {{{ Delete msg */
 
