@@ -394,6 +394,10 @@ void read_auth_file (void) {
   close (auth_file_fd);
 }
 
+void dlist_cb (void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[])  {
+  d_got_ok = 1;
+}
+
 int loop (void) {
   //on_start ();
   tgl_set_callback (&upd_cb);
@@ -544,6 +548,11 @@ int loop (void) {
   tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
   assert (!(tgl_state.locks & TGL_LOCK_DIFF));
+  if (wait_dialog_list) {
+    d_got_ok = 0;
+    tgl_do_get_dialog_list (dlist_cb, 0);
+    net_loop (0, dgot);
+  }
   #ifdef USE_LUA
     lua_diff_end ();
   #endif

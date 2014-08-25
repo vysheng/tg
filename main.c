@@ -92,6 +92,7 @@ extern int log_level;
 int sync_from_start;
 int allow_weak_random;
 char *lua_file;
+int disable_colors;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -374,23 +375,25 @@ void inner_main (void) {
 
 void usage (void) {
   printf ("%s Usage\n", PROGNAME);
-
-  printf (" -h                 this help list\n");
-  printf (" -u username        specify username\n");
-  printf (" -k public-key      specify server public key\n");
-  printf (" -v                 verbose\n");
-  printf (" -l [1-3]           log level\n");
-  printf (" -L log-file        log net file\n");
-  printf (" -N                 message num mode\n");
-  printf (" -c config-file     specify config file\n");
-  printf (" -p prefix          specify prefix\n");
-  printf (" -f                 sync from start\n");
-  printf (" -B                 enable binlog\n");
-  printf (" -E                 disable auto accept\n");
-  printf (" -w                 allow weak random\n");
-  printf (" -s                 specify lua script\n");
-  printf (" -W                 wait dialog list\n");
-  printf ("\n");
+    
+  printf ("  -u                  specify username (would not be asked during authorization)\n");
+  printf ("  -k                  specify location of public key (possible multiple entries)\n");
+  printf ("  -v                  increase verbosity (0-ERROR 1-WARNIN 2-NOTICE 3+-DEBUG-levels)\n");
+  printf ("  -N                  message num mode\n");
+  #ifdef HAVE_LIBCONFIG
+  printf ("  -c                  config file name\n");
+  printf ("  -p                  use specified profile\n");
+  #else
+  printf ("  -B                  enable binlog\n");
+  #endif
+  printf ("  -l                  log level\n");
+  printf ("  -f                  during authorization fetch all messages since registration\n");
+  printf ("  -E                  diable auto accept of encrypted chats\n");
+  #ifdef USE_LUA
+  printf ("  -s                  lua script file\n");
+  #endif
+  printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
+  printf ("  -C                  disable color output\n");
 
   exit (1);
 }
@@ -408,7 +411,17 @@ int wait_dialog_list;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vn:Nc:p:l:fBEs:wW")) != -1) {
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWC"
+#ifdef HAVE_LIBCONFIG
+  "c:p:"
+#else
+  "B"
+#endif
+#ifdef USE_LUA
+  "c"
+#endif
+  
+  )) != -1) {
     switch (opt) {
     case 'u':
       set_default_username (optarg);
@@ -424,6 +437,7 @@ void args_parse (int argc, char **argv) {
     case 'N':
       msg_num_mode ++;
       break;
+#ifdef HAVE_LIBCONFIG
     case 'c':
       config_filename = tstrdup (optarg);
       break;
@@ -431,6 +445,11 @@ void args_parse (int argc, char **argv) {
       prefix = tstrdup (optarg);
       assert (strlen (prefix) <= 100);
       break;
+#else
+    case 'B':
+      binlog_enabled = 1;
+      break;
+#endif
     case 'l':
       log_level = atoi (optarg);
       break;
@@ -439,9 +458,6 @@ void args_parse (int argc, char **argv) {
     //  break;
     case 'f':
       sync_from_start = 1;
-      break;
-    case 'B':
-      binlog_enabled = 1;
       break;
     //case 'L':
     //  if (log_net_file) { 
@@ -457,11 +473,16 @@ void args_parse (int argc, char **argv) {
     case 'w':
       allow_weak_random = 1;
       break;
+#ifdef USE_LUA
     case 's':
       lua_file = tstrdup (optarg);
       break;
+#endif
     case 'W':
       wait_dialog_list = 1;
+      break;
+    case 'C':
+      disable_colors ++;
       break;
     case 'h':
     default:

@@ -69,6 +69,7 @@
 char *default_prompt = "> ";
 
 int msg_num_mode;
+int disable_colors;
 int alert_sound;
 extern int binlog_read;
 
@@ -1629,12 +1630,14 @@ int color_stack_pos;
 const char *color_stack[10];
 
 void push_color (const char *color) {
+  if (disable_colors) { return; }
   assert (color_stack_pos < 10);
   color_stack[color_stack_pos ++] = color;
   printf ("%s", color);
 }
 
 void pop_color (void) {
+  if (disable_colors) { return; }
   assert (color_stack_pos > 0);
   color_stack_pos --;
   if (color_stack_pos >= 1) {
