@@ -418,7 +418,7 @@ void args_parse (int argc, char **argv) {
   "B"
 #endif
 #ifdef USE_LUA
-  "c"
+  "s"
 #endif
   
   )) != -1) {
