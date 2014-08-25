@@ -67,6 +67,7 @@ void tglu_work_update (struct connection *c, long long msg_id) {
       struct tgl_message *M = tglf_fetch_alloc_message ();
       assert (M);
       tglu_fetch_pts ();
+      bl_do_msg_update (M->id);
       break;
     };
   case CODE_update_message_i_d:
@@ -465,7 +466,9 @@ void tglu_work_updates (struct connection *c, long long msg_id) {
   }
   bl_do_set_date (fetch_int ());
   //bl_do_set_seq (fetch_int ());
-  fetch_int ();
+  int seq = fetch_int ();
+  assert (seq == tgl_state.seq + 1);
+  bl_do_set_seq (seq);
   assert (save_end == in_ptr);
 }
 
