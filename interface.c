@@ -300,145 +300,122 @@ char *in_chat_commands[] = {
   0
 };
 
-char *commands[] = {
-  "help",
-  "msg",
-  "contact_list",
-  "stats",
-  "history",
-  "dialog_list",
-  "send_photo",
-  "send_video",
-  "send_text",
-  "chat_info",
-  "user_info",
-  "fwd",
-  "rename_chat",
-  "load_photo",
-  "view_photo",
-  "load_video_thumb",
-  "view_video_thumb",
-  "load_video",
-  "view_video",
-  "add_contact",
-  "rename_contact",
-  "show_license",
-  "search",
-  "mark_read",
-  "visualize_key",
-  "create_secret_chat",
-  "suggested_contacts",
-  "global_search",
-  "chat_add_user",
-  "chat_del_user",
-  "status_online",
-  "status_offline",
-  "contacts_search",
-  "quit",
-  "safe_quit",
-  "send_audio",
-  "load_audio",
-  "view_audio",
-  "send_document",
-  "load_document_thumb",
-  "view_document_thumb",
-  "load_document",
-  "view_document",
-  "set",
-  "chat_with_peer",
-  "delete_msg",
-  "restore_msg",
-  "create_group_chat",
-  0 };
+enum command_argument {
+  ca_none,
+  ca_user,
+  ca_chat,
+  ca_secret_chat,
+  ca_peer,
+  ca_file_name,
+  ca_file_name_end,
+  ca_period,
+  ca_number,
+  ca_string_end,
+  ca_string,
+  ca_modifier,
+  ca_command
+};
 
-int commands_flags[] = {
-  070,
-  072,
-  07,
-  07,
-  072,
-  07,
-  0732,
-  0732,
-  0732,
-  074,
-  071,
-  072,
-  074,
-  07,
-  07,
-  07,
-  07,
-  07,
-  07,
-  07,
-  071,
-  07,
-  072,
-  072,
-  075,
-  071,
-  07,
-  07,
-  0724,
-  0724,
-  07,
-  07,
-  07,
-  07,
-  07,
-  0732,
-  07,
-  07,
-  0732,
-  07,
-  07,
-  07,
-  07,
-  07,
-  072,
-  07,
-  072,
-  07
+struct command {
+  char *name;
+  enum command_argument args[10];
+};
+
+struct command commands[] = {
+  {"help", {ca_none}},
+  {"contact_list", {ca_none}},
+  {"stats", {ca_none}},
+  {"history", {ca_peer, ca_none, ca_number, ca_number}},
+  {"dialog_list", {ca_none}},
+  {"send_photo", {ca_peer, ca_file_name_end}},
+  {"send_video", {ca_peer, ca_file_name_end}},
+  {"send_audio", {ca_peer, ca_file_name_end}},
+  {"send_document", {ca_peer, ca_file_name_end}},
+  {"send_text", {ca_peer, ca_file_name_end}},
+  {"chat_info", {ca_chat, ca_none}},
+  {"user_info", {ca_user, ca_none}},
+  {"fwd", {ca_peer, ca_number, ca_none}},
+  {"msg", {ca_peer, ca_string_end}},
+  {"rename_chat", {ca_peer, ca_string_end}},
+  {"load_photo", {ca_number, ca_none}},
+  {"view_photo", {ca_number, ca_none}},
+  {"load_video_thumb", {ca_number, ca_none}},
+  {"view_video_thumb", {ca_number, ca_none}},
+  {"load_video", {ca_number, ca_none}},
+  {"view_video", {ca_number, ca_none}},
+  {"load_audio", {ca_number, ca_none}},
+  {"view_audio", {ca_number, ca_none}},
+  {"load_document", {ca_number, ca_none}},
+  {"view_document", {ca_number, ca_none}},
+  {"load_document_thumb", {ca_number, ca_none}},
+  {"view_document_thumb", {ca_number, ca_none}},
+  {"add_contact", {ca_string, ca_string, ca_string, ca_none}},
+  {"rename_contact", {ca_user, ca_string, ca_string, ca_none}},
+  {"show_license", {ca_none}},
+  {"search", {ca_peer, ca_string_end}},
+  {"mark_read", {ca_peer, ca_none}},
+  {"visualize_key", {ca_secret_chat, ca_none}},
+  {"create_secret_chat", {ca_user, ca_none}},
+  {"global_search", {ca_string_end}},
+  {"chat_add_peer", {ca_chat, ca_user, ca_none}},
+  {"chat_del_peer", {ca_chat, ca_user, ca_none}},
+  {"status_online", {ca_none}},
+  {"status_offline", {ca_none}},
+  {"quit", {ca_none}},
+  {"safe_quit", {ca_none}},
+  {"set", {ca_string, ca_string, ca_none}},
+  {"chat_with_peer", {ca_peer, ca_none}},
+  {"delete_msg", {ca_number, ca_none}},
+  {"restore_msg", {ca_number, ca_none}},
+  {"create_group_chat", {ca_string_end}},
+  {"chat_set_photo", {ca_chat, ca_file_name_end}},
+  {"set_profile_photo", {ca_file_name_end}},
+  {0, {ca_none}}
 };
 
 
-
-int get_complete_mode (void) {
+enum command_argument get_complete_mode (void) {
   line_ptr = rl_line_buffer;
   int l = 0;
   char *r = next_token (&l);
-  if (!r) { return 0; }
+  if (!r) { return ca_command; }
   while (r && r[0] == '[' && r[l - 1] == ']') {
     r = next_token (&l);
-    if (!r) { return 0; }
+    if (!r) { return ca_command; }
   }
   if (*r == '[' && !r[l]) {
-    return 6;
+    return ca_modifier;
   }
  
-  if (!*line_ptr) { return 0; }
-  char **command = commands;
+  if (!*line_ptr) { return ca_command; }
+  struct command *command = commands;
   int n = 0;
-  int flags = -1;
-  while (*command) {
-    if (is_same_word (r, l, *command)) {
-      flags = commands_flags[n];
+  struct tgl_command;
+  while (command->name) {
+    if (is_same_word (r, l, command->name)) {
       break;
     }
     n ++;
     command ++;
   }
-  if (flags == -1) {
-    return 7;
-  }
-  int s = 0;
+  enum command_argument *flags = command->args;
   while (1) {
     if (!next_token (&l) || !*line_ptr) {
-      return flags ? flags & 7 : 7;
+      return *flags;
     }
-    s ++;
-    if (s <= 4) { flags >>= 3; }
+    if (*flags == ca_none) {
+      return ca_none;
+    }
+    if (*flags == ca_string_end) {
+      return ca_string_end;
+    }
+    if (*flags == ca_file_name_end) {
+      return ca_file_name_end;
+    }
+    flags ++;
+    if (*flags == ca_period) {
+      flags --;
+    }
   }
 }
 
@@ -455,8 +432,24 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
     return -1;
   }
 }
+
+int complete_command_list (int index, const char *text, int len, char **R) {
+  index ++;
+  while (commands[index].name && strncmp (commands[index].name, text, len)) {
+    index ++;
+  }
+  if (commands[index].name) {
+    *R = strdup (commands[index].name);
+    return index;
+  } else {
+    *R = 0;
+    return -1;
+  }
+}
+
 char *command_generator (const char *text, int state) {  
-  static int len, index, mode;
+  static int len, index;
+  static enum command_argument mode;
 
   if (in_chat_mode) {
     char *R = 0;
@@ -475,39 +468,40 @@ char *command_generator (const char *text, int state) {
   } else {
     if (index == -1) { return 0; }
   }
-
-  if (mode == -1) { 
+  
+  if (mode == ca_none || mode == ca_string || mode == ca_string_end || mode == ca_number) { 
     if (c) { rl_line_buffer[rl_point] = c; }
     return 0; 
   }
 
   char *R = 0;
-  switch (mode & 7) {
-  case 0:
-    index = complete_string_list (commands, index, text, len, &R);
+  switch (mode) {
+  case ca_command:
+    index = complete_command_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
-  case 1:
+  case ca_user:
     index = tgl_complete_user_list (index, text, len, &R);    
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
-  case 2:
+  case ca_peer:
     index = tgl_complete_peer_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
-  case 3:
-    R = rl_filename_completion_function(text,state);
+  case ca_file_name:
+  case ca_file_name_end:
+    R = rl_filename_completion_function (text, state);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
-  case 4:
+  case ca_chat:
     index = tgl_complete_chat_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
-  case 5:
+  case ca_secret_chat:
     index = tgl_complete_encr_chat_list (index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
-  case 6:
+  case ca_modifier:
     index = complete_string_list (modifiers, index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
@@ -1093,6 +1087,23 @@ void interpreter (char *line UU) {
       RET;
     }
     tgl_do_send_photo (tgl_message_media_photo, id, strndup (s, t), 0, 0);
+  } else if (IS_WORD ("chat_set_photo")) {
+    GET_PEER_CHAT;
+    int t;
+    char *s = end_string_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
+    }
+    tgl_do_set_chat_photo (id, strndup (s, t), 0, 0);
+  } else if (IS_WORD ("set_profile_photo")) {
+    int t;
+    char *s = end_string_token (&t);
+    if (!s) {
+      printf ("Empty file name\n");
+      RET;
+    }
+    tgl_do_set_profile_photo (strndup (s, t), 0, 0);
   } else if (IS_WORD("send_video")) {
     GET_PEER;
     int t;
@@ -2037,6 +2048,6 @@ void play_sound (void) {
 void set_interface_callbacks (void) {
   readline_active = 1;
   rl_callback_handler_install (get_default_prompt (), interpreter);
-  rl_attempted_completion_function = (void *) complete_text;
-  rl_completion_entry_function = (void *)complete_none;
+  //rl_attempted_completion_function = (void *) complete_text;
+  rl_completion_entry_function = command_generator;
 }

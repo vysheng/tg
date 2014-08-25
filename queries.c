@@ -1285,6 +1285,7 @@ struct send_file {
   unsigned media_type;
   char *file_name;
   int encr;
+  int avatar;
   unsigned char *iv;
   unsigned char *init_iv;
   unsigned char *key;
@@ -1375,6 +1376,14 @@ static int send_encr_file_on_answer (struct query *q UU) {
   return 0;
 }
 
+static int set_photo_on_answer (struct query *q) {
+  assert (skip_type_any (TYPE_TO_PARAM(photos_photo)) >= 0);
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
+  }
+  return 0;
+}
+
 static struct query_methods send_file_part_methods = {
   .on_answer = send_file_part_on_answer,
   .type = TYPE_TO_PARAM(bool)
@@ -1383,6 +1392,11 @@ static struct query_methods send_file_part_methods = {
 static struct query_methods send_file_methods = {
   .on_answer = send_file_on_answer,
   .type = TYPE_TO_PARAM(messages_stated_message)
+};
+
+static struct query_methods set_photo_methods = {
+  .on_answer = set_photo_on_answer,
+  .type = TYPE_TO_PARAM(photos_photo)
 };
 
 static struct query_methods send_encr_file_methods = {
@@ -1440,7 +1454,48 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
     //update_prompt ();
     clear_packet ();
     assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_thumb_video || f->media_type == CODE_input_media_uploaded_audio || f->media_type == CODE_input_media_uploaded_document || f->media_type == CODE_input_media_uploaded_thumb_document);
-    if (!f->encr) {
+    if (f->avatar) {
+      assert (!f->encr);
+      if (f->avatar > 0) {
+        out_int (CODE_messages_edit_chat_photo);
+        out_int (f->avatar);
+        out_int (CODE_input_chat_uploaded_photo);
+        if (f->size < (16 << 20)) {
+          out_int (CODE_input_file);
+        } else {
+          out_int (CODE_input_file_big);
+        }
+        out_long (f->id);
+        out_int (f->part_num);
+        char *s = f->file_name + strlen (f->file_name);
+        while (s >= f->file_name && *s != '/') { s --;}
+        out_string (s + 1);
+        if (f->size < (16 << 20)) {
+          out_string ("");
+        }
+        out_int (CODE_input_photo_crop_auto);
+        tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
+      } else {
+        out_int (CODE_photos_upload_profile_photo);
+        if (f->size < (16 << 20)) {
+          out_int (CODE_input_file);
+        } else {
+          out_int (CODE_input_file_big);
+        }
+        out_long (f->id);
+        out_int (f->part_num);
+        char *s = f->file_name + strlen (f->file_name);
+        while (s >= f->file_name && *s != '/') { s --;}
+        out_string (s + 1);
+        if (f->size < (16 << 20)) {
+          out_string ("");
+        }
+        out_string ("profile photo");
+        out_int (CODE_input_geo_point_empty);
+        out_int (CODE_input_photo_crop_auto);
+        tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &set_photo_methods, 0, callback, callback_extra);
+      }
+    } else if (!f->encr) {
       out_int (CODE_messages_send_media);
       out_peer_id (f->to_id);
       out_int (f->media_type);
@@ -1588,7 +1643,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
 }*/
 
-void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, int avatar, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     vlogprintf (E_WARNING, "No such file '%s'\n", file_name);
@@ -1609,6 +1664,7 @@ void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, c
   f->size = size;
   f->offset = 0;
   f->part_num = 0;
+  f->avatar = avatar;
   int tmp = ((size + 2999) / 3000);
   f->part_size = (1 << 10);
   while (f->part_size < tmp) {
@@ -1665,6 +1721,19 @@ void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, c
     send_part (f);
   }*/
   send_part (f, callback, callback_extra);
+}
+
+void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  _tgl_do_send_photo (type, to_id, file_name, 0, callback, callback_extra);
+}
+
+void tgl_do_set_chat_photo (tgl_peer_id_t chat_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  assert (tgl_get_peer_type (chat_id) == TGL_PEER_CHAT);
+  _tgl_do_send_photo (tgl_message_media_photo, chat_id, file_name, tgl_get_peer_id (chat_id), callback, callback_extra);
+}
+
+void tgl_do_set_profile_photo (char *file_name, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  _tgl_do_send_photo (tgl_message_media_photo, TGL_MK_USER(tgl_state.our_id), file_name, -1, (void *)callback, callback_extra);
 }
 /* }}} */
 

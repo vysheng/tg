@@ -240,6 +240,8 @@ void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, 
 void tgl_do_get_history (tgl_peer_id_t id, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
 void tgl_do_get_dialog_list (void (*callback)(void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[]), void *callback_extra);
 void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
+void tgl_do_set_chat_photo (tgl_peer_id_t chat_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
+void tgl_do_set_profile_photo (char *file_name, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_rename_chat (tgl_peer_id_t id, char *name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(void *callback_extra, int success, struct tgl_chat *C), void *callback_extra);
