@@ -1021,9 +1021,17 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void 
 static int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
   //tglu_fetch_pts ();
-  fetch_int ();
+  int pts = fetch_int ();
   //tglu_fetch_seq ();
-  fetch_int (); // seq
+  int seq = fetch_int (); // seq
+
+  if (seq == tgl_state.seq + 1) {
+    bl_do_set_pts (pts);
+    bl_do_set_seq (seq);
+  } else {
+    tgl_do_get_difference (0, 0, 0);
+  }
+
   fetch_int (); // offset
   if (q->callback) {
     ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
