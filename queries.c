@@ -903,7 +903,7 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
 
   switch (M->action.type) {
   case tgl_message_action_notify_layer:
-    out_int (M->action.type);
+    out_int (CODE_decrypted_message_action_notify_layer);
     out_int (M->action.layer);
     break;
   default:
@@ -1011,7 +1011,7 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void 
   } else {
     buf[x] = 0;
     tgl_do_send_message (id, buf, x, callback, callback_extra);
-    tfree_str (file_name);
+    //tfree_str (file_name);
     close (fd);
   }
 }
@@ -1467,9 +1467,10 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
         }
         out_long (f->id);
         out_int (f->part_num);
-        char *s = f->file_name + strlen (f->file_name);
+        /*char *s = f->file_name + strlen (f->file_name);
         while (s >= f->file_name && *s != '/') { s --;}
-        out_string (s + 1);
+        out_string (s + 1);*/
+        out_string ("");
         if (f->size < (16 << 20)) {
           out_string ("");
         }
@@ -2196,7 +2197,7 @@ void tgl_do_load_video (struct tgl_video *V, void (*callback)(void *callback_ext
   load_next_part (D, callback, callback_extra);
 }
 
-void tgl_do_load_audio (struct tgl_video *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
+void tgl_do_load_audio (struct tgl_audio *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   assert (V);
   struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
@@ -3069,7 +3070,7 @@ void tgl_do_create_secret_chat (tgl_peer_id_t id, void (*callback)(void *callbac
 /* {{{ Create group chat */
 static struct query_methods create_group_chat_methods = {
   .on_answer = fwd_msg_on_answer,
-  .type = TYPE_TO_PARAM(message_action)
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
 void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {

@@ -68,6 +68,7 @@
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
+int disable_auto_accept;
 int msg_num_mode;
 int disable_colors;
 int alert_sound;
@@ -947,6 +948,10 @@ void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
   
   if (!binlog_read) { return; }
 
+  if ((flags & TGL_UPDATE_REQUESTED) && !disable_auto_accept)  {
+    tgl_do_accept_encr_chat_request (U, 0, 0);
+  }
+
   if (!(flags & TGL_UPDATE_CREATED)) {
     print_start ();
     push_color (COLOR_YELLOW);
@@ -1426,7 +1431,7 @@ void interpreter (char *line UU) {
     }
     struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == tgl_message_media_audio) {
-      tgl_do_load_audio (&M->media.video, print_filename_gw, 0);
+      tgl_do_load_audio (&M->media.audio, print_filename_gw, 0);
     } else if (M && !M->service && M->media.type == tgl_message_media_audio_encr) {
       tgl_do_load_encr_video (&M->media.encr_video, print_filename_gw, 0);
     } else {
@@ -1441,7 +1446,7 @@ void interpreter (char *line UU) {
     }
     struct tgl_message *M = tgl_message_get (num);
     if (M && !M->service && M->media.type == tgl_message_media_audio) {
-      tgl_do_load_audio (&M->media.video, open_filename_gw, 0);
+      tgl_do_load_audio (&M->media.audio, open_filename_gw, 0);
     } else if (M && !M->service && M->media.type == tgl_message_media_audio_encr) {
       tgl_do_load_encr_video (&M->media.encr_video, open_filename_gw, 0);
     } else {

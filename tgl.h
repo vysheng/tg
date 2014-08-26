@@ -248,7 +248,7 @@ void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(
 void tgl_do_get_user_info (tgl_peer_id_t id, int offline_mode, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra);
 void tgl_do_load_photo (struct tgl_photo *photo, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
 void tgl_do_load_video_thumb (struct tgl_video *video, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
-void tgl_do_load_audio (struct tgl_video *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
+void tgl_do_load_audio (struct tgl_audio *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
 void tgl_do_load_video (struct tgl_video *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
 void tgl_do_load_document (struct tgl_document *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
 void tgl_do_load_document_thumb (struct tgl_document *video, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);

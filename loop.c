@@ -414,7 +414,6 @@ int loop (void) {
     read_state_file ();
   }
   binlog_read = 1;
-  //exit (0);
   #ifdef USE_LUA
     lua_binlog_end ();
   #endif
