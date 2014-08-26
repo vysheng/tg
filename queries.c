@@ -798,7 +798,7 @@ static int msg_send_on_answer (struct query *q UU) {
   //tglu_fetch_seq ();
   //bl_do_
   int seq = fetch_int ();
-  if (seq == tgl_state.seq + 1) {
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
     bl_do_set_date (date);
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (id);
@@ -1025,7 +1025,7 @@ static int mark_read_on_receive (struct query *q UU) {
   //tglu_fetch_seq ();
   int seq = fetch_int (); // seq
 
-  if (seq == tgl_state.seq + 1) {
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
     bl_do_set_pts (pts);
     bl_do_set_seq (seq);
   } else {
@@ -1348,7 +1348,7 @@ static int send_file_on_answer (struct query *q UU) {
   //tglu_fetch_seq ();
   
   int seq = fetch_int ();
-  if (seq == tgl_state.seq + 1) {
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
@@ -1765,7 +1765,7 @@ static int fwd_msg_on_answer (struct query *q UU) {
   int pts = fetch_int ();
   
   int seq = fetch_int ();
-  if (seq == tgl_state.seq + 1) {
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
@@ -1818,7 +1818,7 @@ static int rename_chat_on_answer (struct query *q UU) {
   int pts = fetch_int ();
 
   int seq = fetch_int ();
-  if (seq == tgl_state.seq + 1) {
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
