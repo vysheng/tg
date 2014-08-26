@@ -526,8 +526,8 @@ int main (int argc, char **argv) {
   
   args_parse (argc, argv);
   printf (
-    "Telegram-client version " TGL_VERSION ", Copyright (C) 2013 Vitaly Valtman\n"
-    "Telegram-client comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
+    "Telegram-cli version " TGL_VERSION ", Copyright (C) 2013-2014 Vitaly Valtman\n"
+    "Telegram-cli comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under certain conditions; type `show_license' for details.\n"
   );
