@@ -954,9 +954,9 @@ static int process_rpc_message (struct connection *c UU, struct encrypted_messag
   double st = get_server_time (DC);
   if (this_server_time < st - 300 || this_server_time > st + 30) {
     vlogprintf (E_WARNING, "salt = %lld, session_id = %lld, msg_id = %lld, seq_no = %d, st = %lf, now = %lf\n", enc->server_salt, enc->session_id, enc->msg_id, enc->seq_no, st, get_utime (CLOCK_REALTIME));
-    in_ptr = enc->message;
-    in_end = in_ptr + (enc->msg_len / 4);
+    return 0;
   }
+
 
   assert (this_server_time >= st - 300 && this_server_time <= st + 30);
   //assert (enc->msg_id > server_last_msg_id && (enc->msg_id & 3) == 1);
