@@ -160,6 +160,9 @@ static int fetch_comb_binlog_set_date (void *extra) {
 
 static int fetch_comb_binlog_set_seq (void *extra) {
   int new_seq = fetch_int ();
+  if (new_seq < tgl_state.seq) {
+    vlogprintf (E_ERROR, "Error: old_seq = %d, new_seq = %d\n", tgl_state.seq, new_seq);
+  }
   assert (new_seq >= tgl_state.seq);
   tgl_state.seq = new_seq;
   return 0;
