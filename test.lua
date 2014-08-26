@@ -40,7 +40,17 @@ end
 
 print ("HI, this is lua script")
 
+function ok_cb(extra, success, result)
+  if success then
+    print ("SUCCESS!\n")
+  end
+end
 
+function my_set_chat_photo (extra, success, file)
+  if success then
+    chat_set_photo (extra, file, ok_cb, false)
+  end
+end
 
 function on_msg_receive (msg)
   if started == 0 then
@@ -48,6 +58,10 @@ function on_msg_receive (msg)
   end
   if msg.out then
     return
+  end
+
+  if msg.media == 'photo' and msg.to.type == 'chat' then
+    load_photo (msg.id, my_set_chat_photo, msg.to.print_name)
   end
   if (msg.text == 'ping') then
     if (msg.to.id == our_id) then
@@ -75,16 +89,16 @@ function on_our_id (id)
   our_id = id
 end
 
-function on_secret_chat_created (peer)
-  --vardump (peer)
-end
-
-function on_user_update (user)
+function on_user_update (user, what)
   --vardump (user)
 end
 
-function on_chat_update (user)
-  --vardump (user)
+function on_chat_update (chat, what)
+  --vardump (chat)
+end
+
+function on_secret_chat_update (schat, what)
+  --vardump (schat)
 end
 
 function on_get_difference_end ()

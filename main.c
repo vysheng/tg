@@ -418,7 +418,7 @@ void args_parse (int argc, char **argv) {
   "B"
 #endif
 #ifdef USE_LUA
-  "s"
+  "s:"
 #endif
   
   )) != -1) {
@@ -475,7 +475,7 @@ void args_parse (int argc, char **argv) {
       break;
 #ifdef USE_LUA
     case 's':
-      lua_file = tstrdup (optarg);
+      lua_file = strdup (optarg);
       break;
 #endif
     case 'W':
