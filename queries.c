@@ -2854,7 +2854,11 @@ static int get_difference_on_answer (struct query *q UU) {
     bl_do_set_pts (fetch_int ());
     bl_do_set_qts (fetch_int ());
     bl_do_set_date (fetch_int ());
-    bl_do_set_seq (fetch_int ());
+    if (x == CODE_updates_difference) {
+      bl_do_set_seq (fetch_int ());
+    } else {
+      fetch_int ();
+    }
     //unread_messages = fetch_int ();
     fetch_int ();
     //write_state_file ();
