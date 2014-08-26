@@ -1374,7 +1374,24 @@ void interpreter (char *line UU) {
       for (j = 0; j < 4; j ++) {    
         push_color (colors[x & 3]);
         push_color (COLOR_INVERSE);
-        printf ("  ");
+        if (!disable_colors) {
+          printf ("  ");
+        } else {
+          switch (x & 3) {
+          case 0:
+            printf ("  ");
+            break;
+          case 1:
+            printf ("--");
+            break;
+          case 2:
+            printf ("==");
+            break;
+          case 3:
+            printf ("||");
+            break;
+          }
+        }
         pop_color ();
         pop_color ();
         x = x >> 2;

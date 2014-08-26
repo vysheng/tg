@@ -457,6 +457,8 @@ void tglf_fetch_chat_full (struct tgl_chat *C) {
       users[i].date = fetch_int ();
     }
     version = fetch_int ();
+  } else {
+    fetch_int ();
   }
   int *start = in_ptr;
   assert (skip_type_any (TYPE_TO_PARAM (photo)) >= 0);
