@@ -53,6 +53,7 @@
 #include "binlog.h"
 
 int verbosity;
+extern int readline_disabled;
 
 int binlog_read;
 extern char *default_username;
@@ -69,35 +70,103 @@ extern int sync_from_start;
 void got_it (char *line, int len);
 void write_state_file (void);
 
-static void stdin_read_callback (evutil_socket_t fd, short what, void *arg) {
-  if (((long)arg) & 1) {
-    rl_callback_read_char ();
+static char *line_buffer;
+static int line_buffer_size;
+static int line_buffer_pos;
+static int delete_stdin_event;
+
+static void stdin_read_callback_all (int arg, short what, struct event *self) {
+  if (!readline_disabled) {
+    if (((long)arg) & 1) {
+      rl_callback_read_char ();
+    } else {
+      char *line = 0;        
+      size_t len = 0;
+      assert (getline (&line, &len, stdin) >= 0);
+      got_it (line, strlen (line));
+    }
   } else {
-    char *line = 0;        
-    size_t len = 0;
-    assert (getline (&line, &len, stdin) >= 0);
-    got_it (line, strlen (line));
+    while (1) {
+      if (line_buffer_pos == line_buffer_size) {
+        line_buffer = realloc (line_buffer, line_buffer_size * 2 + 100);
+        line_buffer_size = line_buffer_size * 2 + 100;
+        assert (line_buffer);
+      }
+      int r = read (0, line_buffer + line_buffer_pos, line_buffer_size - line_buffer_pos);
+      //logprintf ("r = %d, size = %d, pos = %d, what = 0x%x, fd = %d\n", r, line_buffer_size, line_buffer_pos, (int)what, fd);
+      if (r < 0) {
+        perror ("read");
+        break;
+      }
+      if (r == 0) {
+        //struct event *ev = event_base_get_running_event (tgl_state.ev_base);
+        //event_del (ev);
+        //event_del (self);
+        
+        delete_stdin_event = 1;
+        break;
+      }
+      line_buffer_pos += r;
+
+      while (1) {
+        int p = 0;
+        while (p < line_buffer_pos && line_buffer[p] != '\n') { p ++; }
+        if (p < line_buffer_pos) {
+          if (((long)arg) & 1) {
+            line_buffer[p] = 0;
+            interpreter (line_buffer);
+          } else {
+            got_it (line_buffer, p + 1);
+          }
+          memmove (line_buffer, line_buffer + p + 1, line_buffer_pos - p - 1);
+          line_buffer_pos -= (p + 1);
+        } else {
+          break;
+        }
+      }
+    }
   }
 }
+
+static void stdin_read_callback_char (evutil_socket_t fd, short what, void *arg) {
+  stdin_read_callback_all (1, what, arg);
+}
+
+static void stdin_read_callback_line (evutil_socket_t fd, short what, void *arg) {
+  stdin_read_callback_all (2, what, arg);
+}
+
 void net_loop (int flags, int (*is_end)(void)) {
+  delete_stdin_event = 0;
   if (verbosity) {
     logprintf ("Starting netloop\n");
   }
   struct event *ev = 0;
   if (flags & 3) {
-    ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback, (void *)(long)flags);
+    if (flags & 1) {
+      ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_char, 0);
+    } else {
+      ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_line, 0);
+    }
     event_add (ev, 0);
   }
   while (!is_end || !is_end ()) {
 
     event_base_loop (tgl_state.ev_base, EVLOOP_ONCE);
 
+    if (ev && delete_stdin_event) {
+      event_free (ev);
+      ev = 0;
+    }
+
     #ifdef USE_LUA
       lua_do_all ();
     #endif
     if (safe_quit && !tgl_state.active_queries) {
       printf ("All done. Exit\n");
-      rl_callback_handler_remove ();
+      if (!readline_disabled) {
+        rl_callback_handler_remove ();
+      }
       exit (0);
     }
     write_state_file ();

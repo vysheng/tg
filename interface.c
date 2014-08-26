@@ -85,7 +85,7 @@ char *line_ptr;
 
 int in_chat_mode;
 tgl_peer_id_t chat_mode_id;
-
+extern int readline_disabled;
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -276,10 +276,12 @@ char *complete_none (const char *text UU, int state UU) {
 
 
 void set_prompt (const char *s) {
+  if (readline_disabled) { return; }
   rl_set_prompt (s);
 }
 
 void update_prompt (void) {
+  if (readline_disabled) { return; }
   print_start ();
   set_prompt (get_default_prompt ());
   if (readline_active) {
@@ -1065,6 +1067,7 @@ void interpreter (char *line UU) {
     static char stat_buf[1 << 15];
     tgl_print_stat (stat_buf, (1 << 15) - 1);
     printf ("%s\n", stat_buf);
+    fflush (stdout);
   } else if (IS_WORD ("msg")) {
     GET_PEER;
     int t;
@@ -1578,6 +1581,7 @@ char *saved_line;
 int prompt_was;
 void print_start (void) {
   if (in_readline) { return; }
+  if (readline_disabled) { return; }
   assert (!prompt_was);
   if (readline_active) {
     saved_point = rl_point;
@@ -1602,6 +1606,10 @@ void print_start (void) {
 
 void print_end (void) {
   if (in_readline) { return; }
+  if (readline_disabled) { 
+    fflush (stdout);
+    return; 
+  }
   assert (prompt_was);
   if (readline_active) {
     set_prompt (get_default_prompt ());
@@ -1631,12 +1639,17 @@ void logprintf (const char *format, ...) {
     x = 1;
     print_start ();
   }
-  printf (COLOR_GREY " *** ");
+  if (!disable_colors) {
+    printf (COLOR_GREY);
+  }
+  printf (" *** ");
   va_list ap;
   va_start (ap, format);
   vfprintf (stdout, format, ap);
   va_end (ap);
-  printf (COLOR_NORMAL);
+  if (!disable_colors) {
+    printf (COLOR_NORMAL);
+  }
   if (x) {
     print_end ();
   }
@@ -2051,6 +2064,7 @@ void play_sound (void) {
 }
 
 void set_interface_callbacks (void) {
+  if (readline_disabled) { return; }
   readline_active = 1;
   rl_callback_handler_install (get_default_prompt (), interpreter);
   //rl_attempted_completion_function = (void *) complete_text;

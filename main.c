@@ -93,6 +93,7 @@ int sync_from_start;
 int allow_weak_random;
 char *lua_file;
 int disable_colors;
+int readline_disabled;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -394,6 +395,7 @@ void usage (void) {
   #endif
   printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
   printf ("  -C                  disable color output\n");
+  printf ("  -R                  disable readline\n");
 
   exit (1);
 }
@@ -411,7 +413,7 @@ int wait_dialog_list;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWC"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCR"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -453,20 +455,9 @@ void args_parse (int argc, char **argv) {
     case 'l':
       log_level = atoi (optarg);
       break;
-    //case 'R':
-    //  register_mode = 1;
-    //  break;
     case 'f':
       sync_from_start = 1;
       break;
-    //case 'L':
-    //  if (log_net_file) { 
-    //    usage ();
-    //  }
-    //  log_net_file = tstrdup (optarg);
-    //  log_net_f = fopen (log_net_file, "a");
-    //  assert (log_net_f);
-    //  break;
     case 'E':
       disable_auto_accept = 1;
       break;
@@ -483,6 +474,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'C':
       disable_colors ++;
+      break;
+    case 'R':
+      readline_disabled ++;
       break;
     case 'h':
     default:
