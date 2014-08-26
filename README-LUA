@@ -1,0 +1,74 @@
+To use lua with client you should write lua script. You can specify it from config ("lua_script" option) or from command_line [-s].
+
+It should have several functions:
+  on_binlog_replay_end() - it is called when replay of old events end. Any updates prior this call were already received by this client
+                           some time ago. 
+  
+  on_get_difference_end() - it is called after first get_difference call. So we received all updates after last client execute.
+
+  on_our_id(our_id) - Informs about id of currently logged in user.
+
+  on_msg_receive(msg) - it is called when we receive new msg (!! may be called before on_binlog_replay_end, than it is old msg).
+
+  on_user_update(user,what_changed) - updated info about user. what_changed is array of strings.
+  on_chat_update(user,what_changed) - updated info about user. what_changed is array of strings.
+  on_secret_chat_update(user,what_changed) - updated info about user. what_changed is array of strings.
+
+
+
+Also, you can call several functions. Each this function last two arguments, are cb_function and cb_extra.
+These functions may return false immidiately if something is bad with args, or return true and call cb_function in future.
+cb_function would have two or three arguments: first cb_extra, second success (1 or 0), third result (if applicable).
+
+If you want to pass msg to function, you should pass it's id.
+If you want to pass peer to function, you should pass it's print_name
+
+Function_list (arguments are listed aside from cb_function and cb_extra, :
+  get_contact_list ()
+  get_dialog_list ()
+  
+  rename_chat (chat, new_name)
+  chat_set_photo (chat, file)
+  
+  send_msg (peer, text)
+  fwd_msg (peer, msg)
+  
+  send_photo (peer, file)
+  send_video (peer, file)
+  send_audio (peer, file)
+  send_document (peer, file)
+  send_text (peer, file)
+
+  load_photo(msg)
+  load_video(msg)
+  load_video_thumb(msg)
+  load_audio(msg)
+  load_document(msg)
+  load_document_thumb(msg)
+
+  chat_info (chat)
+  user_info (user)
+
+  get_history (peer, limit)
+  
+  chat_add_user (chat, user)
+  chat_del_user (chat, user)
+  
+  add_contactt (phone, first_name, last_name)
+  rename_contactt (phone, first_name, last_name) 
+  
+  msg_search (peer, text)
+  msg_global_search (text)
+
+  mark_read (peer)
+
+  set_profile_photo (file)
+  
+  create_secret_chat (user)
+  create_group_chat (user, name)
+  
+  delete_msg (msg)
+  restore_msg (number)
+
+Also, you have function 
+  postpone (cb_function, cb_extra, timeout). It will call your cb_function in specified number of seconds (number of seconds may be double).
