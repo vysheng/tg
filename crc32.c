@@ -471,6 +471,7 @@ static void gf32_matrix_square (unsigned *square, unsigned *matrix) {
 }
 
 unsigned compute_crc32_combine (unsigned crc1, unsigned crc2, int len2) {
+  assert (len2 < (1 << 29));
   static int power_buf_initialized = 0;
   static unsigned power_buf[1024];
   int n;
