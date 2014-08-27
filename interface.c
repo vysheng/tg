@@ -373,6 +373,7 @@ struct command commands[] = {
   {"create_group_chat", {ca_string_end}},
   {"chat_set_photo", {ca_chat, ca_file_name_end}},
   {"set_profile_photo", {ca_file_name_end}},
+  {"accept_secret_chat", {ca_secret_chat, ca_none}},
   {0, {ca_none}}
 };
 
@@ -1573,6 +1574,11 @@ void interpreter (char *line UU) {
     tgl_do_restore_msg (num, 0, 0);
   } else if (IS_WORD ("quit")) {
     exit (0);
+  } else if (IS_WORD ("accept_secret_chat")) {
+    GET_PEER_ENCR_CHAT;
+    tgl_peer_t *E = tgl_peer_get (id);
+    assert (E);
+    tgl_do_accept_encr_chat_request (&E->encr_chat, 0, 0);
   } else if (IS_WORD ("safe_quit")) {
     safe_quit = 1;
   }

@@ -2757,6 +2757,12 @@ static struct query_methods get_dh_config_methods  = {
 };
 
 void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
+  if (E->state != sc_request) {
+    if (callback) {
+      callback (callback_extra, 0, E);
+      return;
+    }
+  }
   assert (E->state == sc_request);
   
   clear_packet ();
