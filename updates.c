@@ -296,6 +296,7 @@ void tglu_work_update (struct connection *c, long long msg_id) {
     {
       struct tgl_message *M = tglf_fetch_alloc_geo_message ();
       assert (M);
+      bl_do_msg_update (M->id);
     }
     break;
   case CODE_update_new_encrypted_message:
@@ -303,6 +304,7 @@ void tglu_work_update (struct connection *c, long long msg_id) {
       struct tgl_message *M = tglf_fetch_alloc_encrypted_message ();
       assert (M);
       tglu_fetch_qts ();
+      bl_do_msg_update (M->id);
     }
     break;
   case CODE_update_encryption:

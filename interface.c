@@ -738,7 +738,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
       break;
     case TGL_PEER_ENCR_CHAT:
       printf ("Secret chat ");
-      print_chat_name (to_id, tgl_peer_get (to_id));    
+      print_encr_chat_name (to_id, tgl_peer_get (to_id));    
       break;
     default:
       assert (0);

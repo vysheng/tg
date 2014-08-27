@@ -2760,8 +2760,8 @@ void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback
   if (E->state != sc_request) {
     if (callback) {
       callback (callback_extra, 0, E);
-      return;
     }
+    return;
   }
   assert (E->state == sc_request);
   
