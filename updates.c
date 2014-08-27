@@ -29,13 +29,13 @@
 void tglu_fetch_pts (void) {
   int p = fetch_int ();
   if (p <= tgl_state.pts) { return; }
-  bl_do_set_pts (tgl_state.pts);
+  bl_do_set_pts (p);
 }
 
 void tglu_fetch_qts (void) {
   int p = fetch_int ();
   if (p <= tgl_state.qts) { return; }
-  bl_do_set_qts (tgl_state.qts);
+  bl_do_set_qts (p);
 }
 
 void tglu_fetch_date (void) {

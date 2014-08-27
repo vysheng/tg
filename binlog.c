@@ -53,6 +53,7 @@ static int binlog_buffer[BINLOG_BUFFER_SIZE];
 static int *rptr;
 static int *wptr;
 static int binlog_fd;
+static int in_replay_log; // should be used ONLY for DEBUG
 
 
 #define MAX_LOG_EVENT_SIZE (1 << 17)
@@ -140,13 +141,15 @@ static int fetch_comb_binlog_set_dh_params (void *extra) {
 static int fetch_comb_binlog_set_pts (void *extra) {
   int new_pts = fetch_int ();
   assert (new_pts >= tgl_state.pts);
+  vlogprintf (E_DEBUG - 1 + 2 * in_replay_log, "pts %d=>%d\n", tgl_state.pts, new_pts);
   tgl_state.pts = new_pts;
   return 0;
 }
 
 static int fetch_comb_binlog_set_qts (void *extra) {
   int new_qts = fetch_int ();
-  //assert (new_qts >= qts);
+  assert (new_qts >= tgl_state.qts);
+  vlogprintf (E_DEBUG - 1 + 2 * in_replay_log, "qts %d=>%d\n", tgl_state.qts, new_qts);
   tgl_state.qts = new_qts;
   return 0;
 }
@@ -164,6 +167,7 @@ static int fetch_comb_binlog_set_seq (void *extra) {
     vlogprintf (E_ERROR, "Error: old_seq = %d, new_seq = %d\n", tgl_state.seq, new_seq);
   }
   assert (new_seq >= tgl_state.seq);
+  vlogprintf (E_DEBUG - 1 + 2 * in_replay_log, "seq %d=>%d\n", tgl_state.seq, new_seq);
   tgl_state.seq = new_seq;
   return 0;
 }
@@ -1087,6 +1091,7 @@ static int fetch_comb_binlog_msg_seq_update (void *extra) {
   struct tgl_message *M = tgl_message_get (fetch_long ());
   assert (M);
   tgl_state.seq ++;
+  vlogprintf (E_DEBUG - 1 + 2 * in_replay_log, "seq %d=>%d\n", tgl_state.seq - 1, tgl_state.seq);
 
   if (tgl_state.callback.msg_receive) {
     tgl_state.callback.msg_receive (M);
@@ -1234,6 +1239,7 @@ void tgl_replay_log (void) {
     exit (2);
   }
   int end = 0;
+  in_replay_log = 1;
   while (1) {
     if (!end && wptr - rptr < MAX_LOG_EVENT_SIZE / 4) {
       if (wptr == rptr) {
@@ -1259,6 +1265,7 @@ void tgl_replay_log (void) {
     if (wptr == rptr) { break; }
     replay_log_event ();
   }
+  in_replay_log = 0;
   close (fd);
 }
 
@@ -1573,6 +1580,7 @@ void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned
 
 void bl_do_set_pts (int pts) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
+  if (pts == tgl_state.pts) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_pts;
   ev[1] = pts;
@@ -1580,6 +1588,8 @@ void bl_do_set_pts (int pts) {
 }
 
 void bl_do_set_qts (int qts) {
+  if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
+  if (qts == tgl_state.qts) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_qts;
   ev[1] = qts;
@@ -1588,6 +1598,7 @@ void bl_do_set_qts (int qts) {
 
 void bl_do_set_date (int date) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
+  if (date == tgl_state.date) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_date;
   ev[1] = date;
@@ -1596,6 +1607,7 @@ void bl_do_set_date (int date) {
 
 void bl_do_set_seq (int seq) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
+  if (seq == tgl_state.seq) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_seq;
   ev[1] = seq;

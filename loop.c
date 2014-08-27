@@ -138,7 +138,7 @@ static void stdin_read_callback_line (evutil_socket_t fd, short what, void *arg)
 
 void net_loop (int flags, int (*is_end)(void)) {
   delete_stdin_event = 0;
-  if (verbosity) {
+  if (verbosity >= E_DEBUG) {
     logprintf ("Starting netloop\n");
   }
   struct event *ev = 0;
@@ -184,7 +184,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     event_free (ev);
   }
   
-  if (verbosity) {
+  if (verbosity >= E_DEBUG) {
     logprintf ("End of netloop\n");
   }
 }
@@ -474,9 +474,13 @@ int loop (void) {
  
   if (binlog_enabled) {
     double t = tglt_get_double_time ();
-    logprintf ("replay log start\n");
+    if (verbosity >= E_DEBUG) {
+      logprintf ("replay log start\n");
+    }
     tgl_replay_log ();
-    logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
+    if (verbosity >= E_DEBUG) {
+      logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
+    }
     tgl_reopen_binlog_for_writing ();
   } else {
     read_auth_file ();
@@ -497,7 +501,7 @@ int loop (void) {
   tgl_do_help_get_config (on_get_config, 0);
   net_loop (0, got_config);
 
-  if (verbosity) {
+  if (verbosity >= E_DEBUG) {
     logprintf ("DC_info: %d new DC got\n", new_dc_num);
   }
 
@@ -524,8 +528,10 @@ int loop (void) {
     }
     tgl_do_send_code (default_username, sign_in_callback, 0);
     net_loop (0, sent_code);
-    
-    logprintf ("%s\n", should_register ? "phone not registered" : "phone registered");
+   
+    if (verbosity >= E_DEBUG) {
+      logprintf ("%s\n", should_register ? "phone not registered" : "phone registered");
+    }
     if (!should_register) {
       char *code = 0;
       size_t size = 0;

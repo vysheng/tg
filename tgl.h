@@ -110,7 +110,7 @@ struct tgl_net_methods {
 #define E_ERROR 0
 #define E_WARNING 1
 #define E_NOTICE 2
-#define E_DEBUG 3
+#define E_DEBUG 6
 
 #define TGL_LOCK_DIFF 1
 
