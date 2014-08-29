@@ -1570,7 +1570,9 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
         out_string ("audio");
       }
 
-      out_long (-lrand48 () * (1ll << 32) - lrand48 ());
+      long long r;
+      tglt_secure_random (&r, 8);
+      out_long (r);
       tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
     } else {
       struct tgl_message *M = talloc0 (sizeof (*M));
@@ -1581,7 +1583,8 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       tgl_peer_t *P = tgl_peer_get (f->to_id);
       assert (P);
       out_long (P->encr_chat.access_hash);
-      long long r = -lrand48 () * (1ll << 32) - lrand48 (); 
+      long long r;
+      tglt_secure_random (&r, 8);
       out_long (r);
       encr_start ();
       out_int (CODE_decrypted_message);
@@ -1714,8 +1717,8 @@ void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, 
     callback (callback_extra, 0, 0);
     return;
   }
-
-  f->id = lrand48 () * (1ll << 32) + lrand48 ();
+  
+  tglt_secure_random (&f->id, 8);
   f->to_id = to_id;
   switch (type) {
   case tgl_message_media_photo:
@@ -1821,7 +1824,9 @@ void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *cal
   out_int (CODE_messages_forward_message);
   out_peer_id (id);
   out_int (n);
-  out_long (lrand48 () * (1ll << 32) + lrand48 ());
+  long long r;
+  tglt_secure_random (&r, 8);
+  out_long (r);
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
@@ -2414,7 +2419,9 @@ void tgl_do_add_contact (const char *phone, int phone_len, const char *first_nam
   out_int (CODE_vector);
   out_int (1);
   out_int (CODE_input_phone_contact);
-  out_long (lrand48 () * (1ll << 32) + lrand48 ());
+  long long r;
+  tglt_secure_random (&r, 8);
+  out_long (r);
   out_cstring (phone, phone_len);
   out_cstring (first_name, first_name_len);
   out_cstring (last_name, last_name_len);
