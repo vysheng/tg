@@ -427,6 +427,7 @@ static int do_skip_seq (int seq) {
     }
     if (seq > tgl_state.seq + 1) {
       vlogprintf (E_NOTICE, "Hole in seq (seq = %d, cur_seq = %d)\n", seq, tgl_state.seq);
+      //vlogprintf (E_NOTICE, "lock_diff = %s\n", (tgl_state.locks & TGL_LOCK_DIFF) ? "true" : "false");
       tgl_do_get_difference (0, 0, 0);
       return -1;
     }

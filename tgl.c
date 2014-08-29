@@ -69,12 +69,16 @@ void tgl_init (void) {
   if (!tgl_state.callback.create_print_name) {
     tgl_state.callback.create_print_name = tgls_default_create_print_name;
   }
+  if (!tgl_state.temp_key_expire_time) {
+    tgl_state.temp_key_expire_time = 60; //100000;
+  }
+
   tglmp_on_start ();
 }
 
 int tgl_authorized_dc (struct tgl_dc *DC) {
   assert (DC);
-  return DC->auth_key_id;
+  return (DC->flags & 4) != 0;//DC->auth_key_id;
 }
 
 int tgl_signed_dc (struct tgl_dc *DC) {

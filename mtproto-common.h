@@ -39,6 +39,7 @@
 #define CODE_resPQ			0x05162463
 #define CODE_req_DH_params		0xd712e4be
 #define CODE_p_q_inner_data		0x83c95aec
+#define CODE_p_q_inner_data_temp		0x3c6a84d4
 #define CODE_server_DH_inner_data	0xb5890dba
 #define CODE_server_DH_params_fail	0x79cb045d
 #define CODE_server_DH_params_ok	0xd0e8075c
@@ -47,6 +48,8 @@
 #define CODE_dh_gen_ok			0x3bcbf734
 #define CODE_dh_gen_retry		0x46dc1fb9
 #define CODE_dh_gen_fail		0xa69dae02 
+
+#define CODE_bind_auth_key_inner 0x75a3f765
 
 /* service messages */
 #define CODE_rpc_result			0xf35c6d01

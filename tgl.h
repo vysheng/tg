@@ -136,6 +136,8 @@ struct tgl_state {
   struct tgl_dc *DC_working;
   int max_dc_num;
   int dc_working_num;
+  int enable_pfs;
+  int temp_key_expire_time;
 
   long long cur_uploading_bytes;
   long long cur_uploaded_bytes;
@@ -219,6 +221,10 @@ static inline void tgl_set_verbosity (int val) {
   tgl_state.verbosity = val;
 }
 
+static inline void tgl_enable_pfs (void) {
+  tgl_state.enable_pfs = 1;
+}
+
 static inline void tgl_set_test_mode (void) {
   tgl_state.test_mode ++;
 }
@@ -267,6 +273,8 @@ void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callba
 void tgl_do_delete_msg (long long id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_restore_msg (long long id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_update_status (int online, void (*callback)(void *callback_extra, int success), void *callback_extra);
+void tgl_do_help_get_config_dc (struct tgl_dc *D, void (*callback)(void *, int), void *callback_extra);
+
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);
 

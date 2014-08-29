@@ -477,6 +477,7 @@ enum lua_query_type {
   lq_load_document_thumb,
   lq_delete_msg,
   lq_restore_msg,
+  lq_accept_secret_chat
 };
 
 struct lua_query_extra {
@@ -1000,6 +1001,10 @@ void lua_do_all (void) {
       tgl_do_delete_msg ((long)lua_ptr[p + 1], lua_empty_cb, lua_ptr[p]);
       p += 2;
       break;
+    case lq_accept_secret_chat:
+      tgl_do_accept_encr_chat_request (lua_ptr[p + 1], lua_secret_chat_cb, lua_ptr[p]);
+      p += 2;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1076,6 +1081,7 @@ struct lua_function functions[] = {
   {"create_group_chat", lq_create_group_chat, { lfp_user, lfp_string, lfp_none }},
   {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
   {"restore_msg", lq_restore_msg, { lfp_positive_number, lfp_none }},
+  {"accept_secret_chat", lq_accept_secret_chat, { lfp_secret_chat, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 

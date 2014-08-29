@@ -46,6 +46,10 @@ enum tgl_dc_state {
   st_reqpq_sent,
   st_reqdh_sent,
   st_client_dh_sent,
+  st_init_temp,
+  st_reqpq_sent_temp,
+  st_reqdh_sent_temp,
+  st_client_dh_sent_temp,
   st_authorized,
   st_error
 };
@@ -71,8 +75,15 @@ struct tgl_dc {
   char *user;
   struct tgl_session *sessions[MAX_DC_SESSIONS];
   char auth_key[256];
+  char temp_auth_key[256];
+  char nonce[256];
+  char new_nonce[256];
+  char server_nonce[256];
   long long auth_key_id;
+  long long temp_auth_key_id;
+
   long long server_salt;
+  struct event *ev;
 
   int server_time_delta;
   double server_time_udelta;

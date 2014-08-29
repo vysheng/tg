@@ -226,6 +226,16 @@ int is_authorized (void) {
   return tgl_authorized_dc (cur_a_dc);
 }
 
+int all_authorized (void) {
+  int i;
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i]) {
+    if (!tgl_authorized_dc (tgl_state.DC_list[i])) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 int config_got;
 
 int got_config (void) {
@@ -491,25 +501,12 @@ int loop (void) {
     lua_binlog_end ();
   #endif
   update_prompt ();
-
-  if (!tgl_authorized_dc (tgl_state.DC_working)) {
-    cur_a_dc = tgl_state.DC_working;
-    tgl_dc_authorize (tgl_state.DC_working);
-    net_loop (0, is_authorized);
-  }
-  
-  tgl_do_help_get_config (on_get_config, 0);
-  net_loop (0, got_config);
-
-  if (verbosity >= E_DEBUG) {
-    logprintf ("DC_info: %d new DC got\n", new_dc_num);
-  }
+    
+  net_loop (0, all_authorized);
 
   int i;
   for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_authorized_dc (tgl_state.DC_list[i])) {
-    cur_a_dc = tgl_state.DC_list[i];
-    tgl_dc_authorize (cur_a_dc);
-    net_loop (0, is_authorized);
+    assert (0);
   }
 
   if (!tgl_signed_dc (tgl_state.DC_working)) {
@@ -610,7 +607,7 @@ int loop (void) {
     assert (tgl_signed_dc (tgl_state.DC_list[i]));
   }
   write_auth_file ();
-
+  
   fflush (stdout);
   fflush (stderr);
 

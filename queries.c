@@ -101,15 +101,23 @@ static int alarm_query (struct query *q) {
     return 0;
   }*/
 
-  clear_packet ();
-  out_int (CODE_msg_container);
-  out_int (1);
-  out_long (q->msg_id);
-  out_int (q->seq_no);
-  out_int (4 * q->data_len);
-  out_ints (q->data, q->data_len);
+  if (q->session->session_id == q->session_id) {
+    clear_packet ();
+    out_int (CODE_msg_container);
+    out_int (1);
+    out_long (q->msg_id);
+    out_int (q->seq_no);
+    out_int (4 * q->data_len);
+    out_ints (q->data, q->data_len);
   
-  tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, 0);
+    tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, q->flags & QUERY_FORCE_SEND);
+  } else {
+    q->msg_id = tglmp_encrypt_send_message (q->session->c, q->data, q->data_len, (q->flags & QUERY_FORCE_SEND) | 1);
+    q->session_id = q->session->session_id;
+    if (!(q->session->dc->flags & 4) && !(q->flags & QUERY_FORCE_SEND)) {
+      q->session_id = 0;
+    }
+  }
   return 0;
 }
 
@@ -126,7 +134,7 @@ static void alarm_query_gateway (evutil_socket_t fd, short what, void *arg) {
 }
 
 
-struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
+struct query *tglq_send_query_ex (struct tgl_dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra, int flags) {
   assert (DC);
   assert (DC->auth_key_id);
   if (!DC->sessions[0]) {
@@ -137,12 +145,17 @@ struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct q
   q->data_len = ints;
   q->data = talloc (4 * ints);
   memcpy (q->data, data, 4 * ints);
-  q->msg_id = tglmp_encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
+  q->msg_id = tglmp_encrypt_send_message (DC->sessions[0]->c, data, ints, 1 | (flags & QUERY_FORCE_SEND));
   q->session = DC->sessions[0];
-  q->seq_no = DC->sessions[0]->seq_no - 1; 
+  q->seq_no = q->session->seq_no - 1; 
+  q->session_id = q->session->session_id;
+  if (!(DC->flags & 4) && !(flags & QUERY_FORCE_SEND)) {
+    q->session_id = 0;
+  }
   vlogprintf (E_DEBUG, "Msg_id is %lld %p\n", q->msg_id, q);
   q->methods = methods;
   q->DC = DC;
+  q->flags = flags & QUERY_FORCE_SEND;
   if (queries_tree) {
     vlogprintf (E_DEBUG + 2, "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
   }
@@ -162,6 +175,10 @@ struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct q
   q->callback_extra = callback_extra;
   tgl_state.active_queries ++;
   return q;
+}
+
+struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
+  return tglq_send_query_ex (DC, ints, data, methods, extra, callback, callback_extra, 0);
 }
 
 static int fail_on_error (struct query *q UU, int error_code UU, int l UU, char *error UU) {
@@ -363,6 +380,13 @@ void tgl_do_help_get_config (void (*callback)(void *, int), void *callback_extra
   tgl_do_insert_header ();
   out_int (CODE_help_get_config);
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0, callback, callback_extra);
+}
+
+void tgl_do_help_get_config_dc (struct tgl_dc *D, void (*callback)(void *, int), void *callback_extra) {
+  clear_packet ();  
+  tgl_do_insert_header ();
+  out_int (CODE_help_get_config);
+  tglq_send_query_ex (D, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0, callback, callback_extra, 2);
 }
 /* }}} */
 
@@ -2821,7 +2845,8 @@ static int get_difference_on_answer (struct query *q UU) {
     bl_do_set_date (fetch_int ());
     bl_do_set_seq (fetch_int ());
     //difference_got = 1;
-  
+    
+    vlogprintf (E_DEBUG, "Empty difference. Seq = %d\n", tgl_state.seq);
     if (q->callback) {
       ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
     }
@@ -2862,6 +2887,7 @@ static int get_difference_on_answer (struct query *q UU) {
     bl_do_set_date (fetch_int ());
     if (x == CODE_updates_difference) {
       bl_do_set_seq (fetch_int ());
+      vlogprintf (E_DEBUG, "Difference end. New seq = %d\n", tgl_state.seq);
     } else {
       fetch_int ();
     }
@@ -3171,6 +3197,41 @@ void tgl_do_restore_msg (long long id, void (*callback)(void *callback_extra, in
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &restore_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
+
+static void set_flag_4 (void *_D, int success) {
+  struct tgl_dc *D = _D;
+  assert (success);
+  D->flags |= 4;
+
+  static struct timeval ptimeout;
+  ptimeout.tv_sec = tgl_state.temp_key_expire_time * 0.9;
+  event_add (D->ev, &ptimeout);
+}
+
+static int send_bind_temp_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_bool_true);
+  struct tgl_dc *D = q->extra;
+  D->flags |= 2;
+  tgl_do_help_get_config_dc (D, set_flag_4, D);
+  vlogprintf (E_DEBUG, "Bind successful in dc %d\n", D->id);
+  return 0;
+}
+
+static struct query_methods send_bind_temp_methods = {
+  .on_answer = send_bind_temp_on_answer,
+  .type = TYPE_TO_PARAM (bool)
+};
+
+void tgl_do_send_bind_temp_key (struct tgl_dc *D, long long nonce, int expires_at, void *data, int len, long long msg_id) {
+  clear_packet ();
+  out_int (CODE_auth_bind_temp_auth_key);
+  out_long (D->auth_key_id);
+  out_long (nonce);
+  out_int (expires_at);
+  out_cstring (data, len);
+  struct query *q = tglq_send_query_ex (D, packet_ptr - packet_buffer, packet_buffer, &send_bind_temp_methods, D, 0, 0, 2);
+  assert (q->msg_id == msg_id);
+}
 
 static int update_status_on_answer (struct query *q UU) {
   fetch_bool ();

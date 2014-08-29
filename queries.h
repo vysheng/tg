@@ -27,6 +27,7 @@
 struct event;
 
 #define QUERY_ACK_RECEIVED 1
+#define QUERY_FORCE_SEND 2
 
 struct query;
 struct query_methods {
@@ -41,6 +42,7 @@ struct query {
   int data_len;
   int flags;
   int seq_no;
+  long long session_id;
   void *data;
   struct query_methods *methods;
   struct event *ev;
@@ -65,6 +67,7 @@ void work_timers (void);
 
 double get_double_time (void);
 
+void tgl_do_send_bind_temp_key (struct tgl_dc *D, long long nonce, int expires_at, void *data, int len, long long msg_id);
 
 // For binlog
 

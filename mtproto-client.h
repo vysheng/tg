@@ -45,11 +45,12 @@ struct tgl_dc;
 
 struct connection;
 
-long long tglmp_encrypt_send_message (struct connection *c, int *msg, int msg_ints, int useful);
+long long tglmp_encrypt_send_message (struct connection *c, int *msg, int msg_ints, int flags);
 void tglmp_dc_create_session (struct tgl_dc *DC);
 int tglmp_check_g (unsigned char p[256], BIGNUM *g);
 int tglmp_check_DH_params (BIGNUM *p, int g);
 struct tgl_dc *tglmp_alloc_dc (int id, char *ip, int port);
+void tglmp_regenerate_temp_auth_key (struct tgl_dc *D);
 
 void tgln_insert_msg_id (struct tgl_session *S, long long id);
 void tglmp_on_start (void);

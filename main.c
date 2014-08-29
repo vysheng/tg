@@ -330,6 +330,13 @@ void parse_config (void) {
   
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
+  
+  int pfs_enabled;
+  strcpy (buf + l, "pfs_enabled");
+  config_lookup_bool (&conf, buf, &pfs_enabled);
+  if (pfs_enabled) {
+    tgl_enable_pfs ();
+  }
 
   if (binlog_enabled) {
     parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
@@ -534,7 +541,7 @@ int main (int argc, char **argv) {
   running_for_first_time ();
   parse_config ();
 
-  tgl_set_rsa_key ("/etc/ " PROG_NAME "/server.pub");
+  tgl_set_rsa_key ("/etc/" PROG_NAME "/server.pub");
   tgl_set_rsa_key ("tg-server.pub");
 
 
