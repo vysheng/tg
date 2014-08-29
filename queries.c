@@ -112,6 +112,7 @@ static int alarm_query (struct query *q) {
   
     tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, q->flags & QUERY_FORCE_SEND);
   } else {
+    q->flags &= ~QUERY_ACK_RECEIVED;
     queries_tree = tree_delete_query (queries_tree, q);
     q->msg_id = tglmp_encrypt_send_message (q->session->c, q->data, q->data_len, (q->flags & QUERY_FORCE_SEND) | 1);
     queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
