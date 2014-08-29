@@ -70,7 +70,7 @@ void tgl_init (void) {
     tgl_state.callback.create_print_name = tgls_default_create_print_name;
   }
   if (!tgl_state.temp_key_expire_time) {
-    tgl_state.temp_key_expire_time = 60; //100000;
+    tgl_state.temp_key_expire_time = 100000;
   }
 
   tglmp_on_start ();
