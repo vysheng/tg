@@ -274,6 +274,8 @@ void tgl_do_delete_msg (long long id, void (*callback)(void *callback_extra, int
 void tgl_do_restore_msg (long long id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_update_status (int online, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_help_get_config_dc (struct tgl_dc *D, void (*callback)(void *, int), void *callback_extra);
+void tgl_do_export_card (void (*callback)(void *callback_extra, int success, int size, int *card), void *callback_extra);
+void tgl_do_import_card (int size, int *card, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra);
 
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);

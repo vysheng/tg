@@ -374,6 +374,8 @@ struct command commands[] = {
   {"chat_set_photo", {ca_chat, ca_file_name_end}},
   {"set_profile_photo", {ca_file_name_end}},
   {"accept_secret_chat", {ca_secret_chat, ca_none}},
+  {"export_card", {ca_none}},
+  {"import_card", {ca_string, ca_none}},
   {0, {ca_none}}
 };
 
@@ -556,6 +558,14 @@ void print_user_list_gw (void *extra, int success, int num, struct tgl_user *UL[
     print_user_name (UL[i]->id, (void *)UL[i]);
     printf ("\n");
   }
+  print_end ();
+}
+
+void print_user_gw (void *extra, int success, struct tgl_user *U) {
+  if (!success) { return; }
+  print_start ();
+  print_user_name (U->id, (void *)U);
+  printf ("\n");
   print_end ();
 }
 
@@ -970,6 +980,17 @@ void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
     pop_color ();
     print_end ();
   }
+}
+
+void print_card_gw (void *extra, int success, int size, int *card) {
+  assert (success);
+  print_start ();
+  printf ("Card: ");
+  int i;
+  for (i = 0; i < size; i++) {
+    printf ("%08x%c", card[i], i == size - 1 ? '\n' : ':');
+  }
+  print_end ();
 }
 
 struct tgl_update_callback upd_cb = {
@@ -1572,6 +1593,36 @@ void interpreter (char *line UU) {
     }
     tgl_do_delete_msg (num, 0, 0);
     tgl_do_restore_msg (num, 0, 0);
+  } else if (IS_WORD ("export_card")) {
+    tgl_do_export_card (print_card_gw, 0);
+  } else if (IS_WORD ("import_card")) {
+    int l;
+    char *s = next_token (&l);
+    if (l > 0) {
+      int i;
+      static int p[10];
+      int pp = 0;
+      int cur = 0;
+      int ok = 1;
+      for (i = 0; i < l; i ++) {
+        if (s[i] >= '0' && s[i] <= '9') {
+          cur = cur * 16 + s[i] - '0';
+        } else if (s[i] >= 'a' && s[i] <= 'f') {
+          cur = cur * 16 + s[i] - 'a' + 10;
+        } else if (s[i] == ':') {
+          if (pp >= 9) { 
+            ok = 0;
+            break;
+          }
+          p[pp ++] = cur;
+          cur = 0;
+        }
+      }
+      if (ok) {
+        p[pp ++] = cur;
+        tgl_do_import_card (pp, p, print_user_gw, 0);
+      }
+    }
   } else if (IS_WORD ("quit")) {
     exit (0);
   } else if (IS_WORD ("accept_secret_chat")) {

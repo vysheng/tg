@@ -3208,6 +3208,60 @@ void tgl_do_restore_msg (long long id, void (*callback)(void *callback_extra, in
 }
 /* }}} */
 
+/* {{{ Export card */
+
+static int export_card_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  //logprintf ("Restored %d messages\n", n);
+  int *r = talloc (4 * n);
+  fetch_ints (r, n);
+  
+  if (q->callback) {
+    ((void (*)(void *, int, int, int *))q->callback) (q->callback_extra, 1, n, r);
+  }
+  free (r);
+  return 0;
+}
+
+static struct query_methods export_card_methods = {
+  .on_answer = export_card_on_answer,
+  .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM (bare_int))
+};
+
+void tgl_do_export_card (void (*callback)(void *callback_extra, int success, int size, int *card), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_contacts_export_card);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &export_card_methods, 0, callback, callback_extra);
+}
+/* }}} */
+
+/* {{{ Import card */
+
+static int import_card_on_answer (struct query *q UU) {
+  struct tgl_user *U = tglf_fetch_alloc_user ();
+  
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_user *))q->callback) (q->callback_extra, 1, U);
+  }
+  return 0;
+}
+
+static struct query_methods import_card_methods = {
+  .on_answer = import_card_on_answer,
+  .type = TYPE_TO_PARAM (user)
+};
+
+void tgl_do_import_card (int size, int *card, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_contacts_import_card);
+  out_int (CODE_vector);
+  out_int (size);
+  out_ints (card, size);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &import_card_methods, 0, callback, callback_extra);
+}
+/* }}} */
+
 static void set_flag_4 (void *_D, int success) {
   struct tgl_dc *D = _D;
   assert (success);
