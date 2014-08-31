@@ -32,9 +32,12 @@ binlog.encrChatDelete id:int = binlog.Update;
 binlog.encrChatRequested id:int hash:long date:int admin:int user:int key:64*[int] nonce:64*[int] = binlog.Update;
 binlog.encrChatAccepted id:int key:64*[int] nonce:64*[int] fingerprint:long = binlog.Update;
 binlog.encrChatInit id:int user:int key:64*[int] g_key:64*[int] = binlog.Update;
+binlog.encrChatCreate id:int user_id:int admin_id:int name:string = binlog.Update;
 
 binlog.encrChatSetAccessHash id:int hash:long = binlog.Update;
 binlog.encrChatSetDate id:int date:int = binlog.Update;
+binlog.encrChatSetTtl id:int ttl:int = binlog.Update;
+binlog.encrChatSetLayer id:int layer:int = binlog.Update;
 binlog.encrChatSetState id:int state:int = binlog.Update;
 binlog.encrChatSetKey id:int key:64*[int] fingerprint:long = binlog.Update;
 

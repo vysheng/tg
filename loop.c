@@ -313,9 +313,11 @@ extern struct tgl_update_callback upd_cb;
 
 #define DC_SERIALIZED_MAGIC 0x868aa81d
 #define STATE_FILE_MAGIC 0x28949a93
-#define SECRET_FILE_MAGIX 0x37a1988a
+#define SECRET_CHAT_FILE_MAGIC 0x37a1988a
+
 char *get_auth_key_filename (void);
 char *get_state_filename (void);
+char *get_secret_chat_filename (void);
 
 void read_state_file (void) {
   if (binlog_enabled) { return; }
@@ -405,6 +407,52 @@ void write_auth_file (void) {
   close (auth_file_fd);
 }
 
+void write_secret_chat (tgl_peer_t *_P, void *extra) {
+  struct tgl_secret_chat *P = (void *)_P;
+  if (tgl_get_peer_type (P->id) != TGL_PEER_ENCR_CHAT) { return; }
+  if (P->state != sc_ok) { return; }
+  int *a = extra;
+  int fd = a[0];
+  a[1] ++;
+
+  int id = tgl_get_peer_id (P->id);
+  assert (write (fd, &id, 4) == 4);
+  //assert (write (fd, &P->flags, 4) == 4);
+  int l = strlen (P->print_name);
+  assert (write (fd, &l, 4) == 4);
+  assert (write (fd, P->print_name, l) == l);
+  assert (write (fd, &P->user_id, 4) == 4);
+  assert (write (fd, &P->admin_id, 4) == 4);
+  assert (write (fd, &P->date, 4) == 4);
+  assert (write (fd, &P->ttl, 4) == 4);
+  assert (write (fd, &P->layer, 4) == 4);
+  assert (write (fd, &P->access_hash, 8) == 8);
+  assert (write (fd, &P->state, 4) == 4);
+  assert (write (fd, &P->key_fingerprint, 8) == 8);
+  assert (write (fd, &P->key, 256) == 256);
+}
+
+void write_secret_chat_file (void) {
+  if (binlog_enabled) { return; }
+  int secret_chat_fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
+  assert (secret_chat_fd >= 0);
+  int x = SECRET_CHAT_FILE_MAGIC;
+  assert (write (secret_chat_fd, &x, 4) == 4);
+  x = 0; 
+  assert (write (secret_chat_fd, &x, 4) == 4); // version
+  assert (write (secret_chat_fd, &x, 4) == 4); // num
+
+  int y[2];
+  y[0] = secret_chat_fd;
+  y[1] = 0;
+
+  tgl_peer_iterator_ex (write_secret_chat, y);
+
+  lseek (secret_chat_fd, 8, SEEK_SET);
+  assert (write (secret_chat_fd, &y[1], 4) == 4);
+  close (secret_chat_fd);
+}
+
 void read_dc (int auth_file_fd, int id, unsigned ver) {
   int port = 0;
   assert (read (auth_file_fd, &port, 4) == 4);
@@ -473,6 +521,54 @@ void read_auth_file (void) {
   close (auth_file_fd);
 }
 
+void read_secret_chat (int fd) {
+  int id, l, user_id, admin_id, date, ttl, layer, state;
+  long long access_hash, key_fingerprint;
+  static char s[1000];
+  static unsigned char key[256];
+  assert (read (fd, &id, 4) == 4);
+  //assert (read (fd, &flags, 4) == 4);
+  assert (read (fd, &l, 4) == 4);
+  assert (l > 0 && l < 1000);
+  assert (read (fd, s, l) == l);
+  assert (read (fd, &user_id, 4) == 4);
+  assert (read (fd, &admin_id, 4) == 4);
+  assert (read (fd, &date, 4) == 4);
+  assert (read (fd, &ttl, 4) == 4);
+  assert (read (fd, &layer, 4) == 4);
+  assert (read (fd, &access_hash, 8) == 8);
+  assert (read (fd, &state, 4) == 4);
+  assert (read (fd, &key_fingerprint, 8) == 8);
+  assert (read (fd, &key, 256) == 256);
+
+  bl_do_encr_chat_create (id, user_id, admin_id, s, l);
+  struct tgl_secret_chat  *P = (void *)tgl_peer_get (TGL_MK_ENCR_CHAT (id));
+  assert (P && (P->flags & FLAG_CREATED));
+  bl_do_encr_chat_set_date (P, date);
+  bl_do_encr_chat_set_ttl (P, ttl);
+  bl_do_encr_chat_set_layer (P, layer);
+  bl_do_encr_chat_set_access_hash (P, access_hash);
+  bl_do_encr_chat_set_state (P, state);
+  bl_do_encr_chat_set_key (P, key, key_fingerprint);
+}
+
+void read_secret_chat_file (void) {
+  if (binlog_enabled) { return; }
+  int secret_chat_fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
+  assert (secret_chat_fd >= 0);
+  int x;
+  assert (read (secret_chat_fd, &x, 4) == 4);
+  assert (x == SECRET_CHAT_FILE_MAGIC);
+  assert (read (secret_chat_fd, &x, 4) == 4);
+  assert (!x); // version
+  assert (read (secret_chat_fd, &x, 4) == 4);
+  assert (x >= 0);
+  while (x --> 0) {
+    read_secret_chat (secret_chat_fd);
+  }
+  close (secret_chat_fd);
+}
+
 void dlist_cb (void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[])  {
   d_got_ok = 1;
 }
@@ -495,6 +591,7 @@ int loop (void) {
   } else {
     read_auth_file ();
     read_state_file ();
+    read_secret_chat_file ();
   }
   binlog_read = 1;
   #ifdef USE_LUA

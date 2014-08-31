@@ -54,6 +54,7 @@
 //#include "mtproto-common.h"
 
 #include "tgl.h"
+#include "loop.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -961,6 +962,9 @@ void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
   
   if (!binlog_read) { return; }
 
+  if ((flags & TGL_UPDATE_WORKING) || (flags & TGL_UPDATE_DELETED)) {
+    write_secret_chat_file ();
+  }
   if ((flags & TGL_UPDATE_REQUESTED) && !disable_auto_accept)  {
     tgl_do_accept_encr_chat_request (U, 0, 0);
   }

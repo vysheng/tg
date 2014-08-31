@@ -41,9 +41,12 @@ void bl_do_user_set_real_name (struct tgl_user *U, const char *f, int fl, const 
 
 void bl_do_encr_chat_delete (struct tgl_secret_chat *U);
 void bl_do_encr_chat_requested (struct tgl_secret_chat *U, long long access_hash, int date, int admin_id, int user_id, unsigned char g_key[], unsigned char nonce[]);
+void bl_do_encr_chat_create (int id, int user_id, int admin_id, char *name, int name_len);
 void bl_do_encr_chat_set_access_hash (struct tgl_secret_chat *U, long long access_hash);
 void bl_do_encr_chat_set_date (struct tgl_secret_chat *U, int date);
 void bl_do_encr_chat_set_state (struct tgl_secret_chat *U, enum tgl_secret_chat_state state);
+void bl_do_encr_chat_set_ttl (struct tgl_secret_chat *U, int ttl);
+void bl_do_encr_chat_set_layer (struct tgl_secret_chat *U, int layer);
 void bl_do_encr_chat_accepted (struct tgl_secret_chat *U, const unsigned char g_key[], const unsigned char nonce[], long long key_fingerprint);
 void bl_do_encr_chat_set_key (struct tgl_secret_chat *E, unsigned char key[], long long key_fingerprint);
 void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned char g_a[]);
