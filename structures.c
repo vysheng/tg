@@ -1178,7 +1178,7 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     } else {
       start = in_ptr;
       if (skip_type_any (TYPE_TO_PARAM (decrypted_message_action)) < 0) {
-        vlogprintf (E_ERROR, "Skipped %ld int out of %ld. Magic = 0x%08x\n", in_ptr - start, in_end - start, *start);
+        vlogprintf (E_ERROR, "Skipped %ld int out of %ld. Magic = 0x%08x\n", (long)(in_ptr - start), (long)(in_end - start), *start);
         assert (0);
       }
       end = in_ptr;

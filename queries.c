@@ -229,7 +229,7 @@ void tglq_query_error (long long id) {
 static int packed_buffer[MAX_PACKED_SIZE / 4];
 
 void tglq_query_result (long long id UU) {
-  vlogprintf (E_DEBUG, "result for query #%lld. Size %ld bytes\n", id, 4 * (in_end - in_ptr));
+  vlogprintf (E_DEBUG, "result for query #%lld. Size %ld bytes\n", id, (long)4 * (in_end - in_ptr));
   /*if (verbosity  >= 4) {
     logprintf ( "result: ");
     hexdump_in ();
@@ -270,7 +270,7 @@ void tglq_query_result (long long id UU) {
         int *save = in_ptr;
         vlogprintf (E_DEBUG, "in_ptr = %p, end_ptr = %p\n", in_ptr, in_end);
         if (skip_type_any (q->methods->type) < 0) {
-          vlogprintf (E_ERROR, "Skipped %ld int out of %ld (type %s)\n", in_ptr - save, in_end - save, q->methods->type->type->id);
+          vlogprintf (E_ERROR, "Skipped %ld int out of %ld (type %s)\n", (long)(in_ptr - save), (long)(in_end - save), q->methods->type->type->id);
           assert (0);
         }
         
