@@ -1,0 +1,3 @@
+1.0.1
+* Added pfs support. To use it you should add 'pfs_enabled=true' line to config.
+* Added export_card/import_card methods

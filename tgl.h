@@ -28,8 +28,8 @@
 #define TG_SERVER_TEST "173.240.5.253"
 
 // JUST RANDOM STRING
-#define TGL_BUILD "1828"
-#define TGL_VERSION "1.0-beta"
+#define TGL_BUILD "1934"
+#define TGL_VERSION "1.0.1"
 
 struct connection;
 struct mtproto_methods;
