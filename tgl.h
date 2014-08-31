@@ -31,6 +31,8 @@
 #define TGL_BUILD "1934"
 #define TGL_VERSION "1.0.1"
 
+#define TGL_ENCRYPTED_LAYER 16
+
 struct connection;
 struct mtproto_methods;
 struct tgl_session;

@@ -308,7 +308,7 @@ static void out_random (int n) {
 
 int allow_send_linux_version;
 void tgl_do_insert_header (void) {
-  out_int (CODE_invoke_with_layer15);  
+  out_int (CODE_invoke_with_layer16);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -789,7 +789,7 @@ void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
   tglt_secure_random (&t, 8);
   int action[2];
   action[0] = CODE_decrypted_message_action_notify_layer;
-  action[1] = 15;
+  action[1] = TGL_ENCRYPTED_LAYER;
   bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
 
   struct tgl_message *M = tgl_message_get (t);
