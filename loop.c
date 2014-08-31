@@ -554,12 +554,12 @@ void read_secret_chat (int fd) {
 
 void read_secret_chat_file (void) {
   if (binlog_enabled) { return; }
-  int secret_chat_fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
+  int secret_chat_fd = open (get_secret_chat_filename (), O_RDWR, 0600);
   if (secret_chat_fd < 0) { return; }
   //assert (secret_chat_fd >= 0);
   int x;
-  assert (read (secret_chat_fd, &x, 4) == 4);
-  assert (x == SECRET_CHAT_FILE_MAGIC);
+  if (read (secret_chat_fd, &x, 4) < 4) { close (secret_chat_fd); return; }
+  if (x != SECRET_CHAT_FILE_MAGIC) { close (secret_chat_fd); return; }
   assert (read (secret_chat_fd, &x, 4) == 4);
   assert (!x); // version
   assert (read (secret_chat_fd, &x, 4) == 4);
