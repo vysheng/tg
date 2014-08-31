@@ -8,6 +8,12 @@ Documentation for Telegram API is available here: http://core.telegram.org/api
 
 Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
 
+### Upgrading to version 1.0
+
+First of all, the binary is now in ./bin folder and is named telegram-cli. So be careful, not to use old binary.
+Second, config folder is now ${HOME}/.telegram-cli
+Third, database is not compatible with older versions, so you'll have to login again.
+
 ### Installation
 
 Clone GitHub Repository
