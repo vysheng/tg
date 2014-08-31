@@ -3283,6 +3283,7 @@ static int send_bind_temp_on_answer (struct query *q UU) {
 
 static struct query_methods send_bind_temp_methods = {
   .on_answer = send_bind_temp_on_answer,
+  .on_error = fail_on_error,
   .type = TYPE_TO_PARAM (bool)
 };
 
