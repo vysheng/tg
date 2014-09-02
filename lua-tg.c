@@ -1141,8 +1141,16 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
         ok = 0;
         break;
       }
-      P = get_peer (s);
-      if (!P || !(P->flags & FLAG_CREATED)) {
+      if (sscanf (s, "user#id%lld", &num) == 1 && num > 0) {
+        tgl_insert_empty_user (num);
+        P = tgl_peer_get (TGL_MK_USER (num));
+      } else if (sscanf (s, "chat#id%lld", &num) == 1 && num > 0) {
+        tgl_insert_empty_chat (num);
+        P = tgl_peer_get (TGL_MK_CHAT (num));
+      } else {
+        P = get_peer (s);
+      }
+      if (!P/* || !(P->flags & FLAG_CREATED)*/) {
         ok = 0;
         break;
       }

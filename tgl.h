@@ -307,5 +307,7 @@ void tgl_dc_iterator_ex (void (*iterator)(struct tgl_dc *DC, void *extra), void 
 
 double tglt_get_double_time (void);
 
+void tgl_insert_empty_user (int id);
+void tgl_insert_empty_chat (int id);
 
 #endif

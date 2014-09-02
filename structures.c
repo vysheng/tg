@@ -88,6 +88,7 @@ char *tgls_default_create_print_name (tgl_peer_id_t id, const char *a1, const ch
   char *s = buf;
   while (*s) {
     if (*s == ' ') { *s = '_'; }
+    if (*s == '#') { *s = '@'; }
     s++;
   }
   s = buf;
@@ -1419,6 +1420,22 @@ void tglp_insert_chat (tgl_peer_t *P) {
   tgl_peer_tree = tree_insert_peer (tgl_peer_tree, P, lrand48 ());
   assert (peer_num < TGL_MAX_PEER_NUM);
   Peers[peer_num ++] = P;
+}
+
+void tgl_insert_empty_user (int uid) {
+  tgl_peer_id_t id = TGL_MK_USER (uid);
+  if (tgl_peer_get (id)) { return; }
+  tgl_peer_t *P = talloc0 (sizeof (*P));
+  P->id = id;
+  tglp_insert_user (P);
+}
+
+void tgl_insert_empty_chat (int cid) {
+  tgl_peer_id_t id = TGL_MK_CHAT (cid);
+  if (tgl_peer_get (id)) { return; }
+  tgl_peer_t *P = talloc0 (sizeof (*P));
+  P->id = id;
+  tglp_insert_chat (P);
 }
 
 /* {{{ Free */
