@@ -371,7 +371,7 @@ struct command commands[] = {
   {"chat_with_peer", {ca_peer, ca_none}},
   {"delete_msg", {ca_number, ca_none}},
   {"restore_msg", {ca_number, ca_none}},
-  {"create_group_chat", {ca_string_end}},
+  {"create_group_chat", {ca_user, ca_string_end}},
   {"chat_set_photo", {ca_chat, ca_file_name_end}},
   {"set_profile_photo", {ca_file_name_end}},
   {"accept_secret_chat", {ca_secret_chat, ca_none}},
