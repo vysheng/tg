@@ -47,7 +47,7 @@ ${DIR_LIST}:
 
 -include ${DEPENDENCE_LIST}
 
-${TG_OBJECTS} ${TGL_OBJECTS}: ${AUTO}/constants.h
+${TG_OBJECTS} ${TGL_OBJECTS}: ${AUTO}/constants.h ${AUTO}/auto-header.h
 
 ${TG_OBJECTS}: ${OBJ}/%.o: %.c | create_dirs_and_headers
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -c -MP -MD -MF ${DEP}/$*.d -MQ ${OBJ}/$*.o -o $@ $<
