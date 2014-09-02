@@ -278,6 +278,7 @@ void tgl_do_update_status (int online, void (*callback)(void *callback_extra, in
 void tgl_do_help_get_config_dc (struct tgl_dc *D, void (*callback)(void *, int), void *callback_extra);
 void tgl_do_export_card (void (*callback)(void *callback_extra, int success, int size, int *card), void *callback_extra);
 void tgl_do_import_card (int size, int *card, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra);
+void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);

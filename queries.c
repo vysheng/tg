@@ -1829,6 +1829,29 @@ void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *cal
   out_long (r);
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
 }
+
+void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    if (callback) {
+      ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, 0);
+    }
+    return;
+  }
+  long long t;
+  tglt_secure_random (&t, 8);
+  vlogprintf (E_DEBUG, "t = %lld\n", t);
+
+  clear_packet ();
+  out_int (CODE_messages_send_media);
+  out_peer_id (id);
+  out_int (CODE_input_media_contact);
+  out_cstring (phone, phone_len);
+  out_cstring (first_name, first_name_len);
+  out_cstring (last_name, last_name_len);
+  out_long (t);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+}
 /* }}} */
 
 /* {{{ Rename chat */
@@ -2370,36 +2393,6 @@ static int add_contact_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     UL[i] = tglf_fetch_alloc_user ();
   }
-  /*for (i = 0; i < n ; i++) {
-    struct tgl_user *U = tglf_fetch_alloc_user ();
-    print_start ();
-    push_color (COLOR_YELLOW);
-    printf ("User #%d: ", tgl_get_peer_id (U->id));
-    print_user_name (U->id, (tgl_peer_t *)U);
-    push_color (COLOR_GREEN);
-    printf (" (");
-    printf ("%s", U->print_name);
-    if (U->phone) {
-      printf (" ");
-      printf ("%s", U->phone);
-    }
-    printf (") ");
-    pop_color ();
-    if (U->status.online > 0) {
-      printf ("online\n");
-    } else {
-      if (U->status.online < 0) {
-        printf ("offline. Was online ");
-        print_date_full (U->status.when);
-      } else {
-        printf ("offline permanent");
-      }
-      printf ("\n");
-    }
-    pop_color ();
-    print_end ();
-
-  }*/
 
   if (q->callback) {
     ((void (*)(void *, int, int, struct tgl_user **))q->callback) (q->callback_extra, 1, n, UL);

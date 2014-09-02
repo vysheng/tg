@@ -477,7 +477,8 @@ enum lua_query_type {
   lq_load_document_thumb,
   lq_delete_msg,
   lq_restore_msg,
-  lq_accept_secret_chat
+  lq_accept_secret_chat,
+  lq_send_contact
 };
 
 struct lua_query_extra {
@@ -1005,6 +1006,16 @@ void lua_do_all (void) {
       tgl_do_accept_encr_chat_request (lua_ptr[p + 1], lua_secret_chat_cb, lua_ptr[p]);
       p += 2;
       break;
+    case lq_send_contact:
+      s1 = lua_ptr[p + 2];
+      s2 = lua_ptr[p + 3];
+      s3 = lua_ptr[p + 4];
+      tgl_do_send_contact (((tgl_peer_t *)lua_ptr[p + 1])->id, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), lua_msg_cb, lua_ptr[p]);
+      free (s1);
+      free (s2);
+      free (s3);
+      p += 5;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1082,6 +1093,7 @@ struct lua_function functions[] = {
   {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
   {"restore_msg", lq_restore_msg, { lfp_positive_number, lfp_none }},
   {"accept_secret_chat", lq_accept_secret_chat, { lfp_secret_chat, lfp_none }},
+  {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 

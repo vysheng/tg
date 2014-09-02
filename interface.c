@@ -377,6 +377,7 @@ struct command commands[] = {
   {"accept_secret_chat", {ca_secret_chat, ca_none}},
   {"export_card", {ca_none}},
   {"import_card", {ca_string, ca_none}},
+  {"send_contact", {ca_peer, ca_string, ca_string, ca_string}},
   {0, {ca_none}}
 };
 
@@ -1289,6 +1290,26 @@ void interpreter (char *line UU) {
       RET;
     }
     tgl_do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0, print_user_list_gw, 0);
+  } else if (IS_WORD ("send_contact")) {
+    GET_PEER;
+    int phone_len, first_name_len, last_name_len;
+    char *phone, *first_name, *last_name;
+    phone = next_token (&phone_len);
+    if (!phone) {
+      printf ("No phone number found\n");
+      RET;
+    }
+    first_name = next_token (&first_name_len);
+    if (!first_name_len) {
+      printf ("No first name found\n");
+      RET;
+    }
+    last_name = next_token (&last_name_len);
+    if (!last_name_len) {
+      printf ("No last name found\n");
+      RET;
+    }
+    tgl_do_send_contact (id, phone, phone_len, first_name, first_name_len, last_name, last_name_len, print_msg_gw, 0);
   } else if (IS_WORD ("rename_contact")) {
     GET_PEER_USER;
     tgl_peer_t *U = tgl_peer_get (id);
