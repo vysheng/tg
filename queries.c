@@ -1045,6 +1045,7 @@ void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void 
 /* }}} */
 
 /* {{{ Mark read */
+void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, int offset, void (*callback)(void *callback_extra, int), void *callback_extra);
 static int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
   //tglu_fetch_pts ();
@@ -1059,10 +1060,16 @@ static int mark_read_on_receive (struct query *q UU) {
     tgl_do_get_difference (0, 0, 0);
   }
 
-  fetch_int (); // offset
-  if (q->callback) {
-    ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
+  int offset = fetch_int (); // offset
+  int *t = q->extra;
+  if (offset > 0) {
+    tgl_do_messages_mark_read (tgl_set_peer_id (t[0], t[1]), t[2], offset, q->callback, q->callback_extra);
+  } else {
+    if (q->callback) {
+      ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
+    }
   }
+  tfree (t, 12);
   return 0;
 }
 
@@ -1084,13 +1091,17 @@ static struct query_methods mark_read_encr_methods = {
   .type = TYPE_TO_PARAM(bool)
 };
 
-void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, void (*callback)(void *callback_extra, int), void *callback_extra) {
+void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, int offset, void (*callback)(void *callback_extra, int), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_read_history);
   out_peer_id (id);
   out_int (max_id);
-  out_int (0);
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0, callback, callback_extra);
+  out_int (offset);
+  int *t = talloc (12);
+  t[0] = tgl_get_peer_type (id);
+  t[1] = tgl_get_peer_id (id);
+  t[2] = max_id;
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, t, callback, callback_extra);
 }
 
 void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, int last_time, void (*callback)(void *callback_extra, int), void *callback_extra) {
@@ -1105,7 +1116,7 @@ void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, in
 
 void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   if (tgl_get_peer_type (id) == TGL_PEER_USER || tgl_get_peer_type (id) == TGL_PEER_CHAT) {
-    tgl_do_messages_mark_read (id, tgl_state.max_msg_id, callback, callback_extra);
+    tgl_do_messages_mark_read (id, tgl_state.max_msg_id, 0, callback, callback_extra);
     return;
   }
   tgl_peer_t *P = tgl_peer_get (id);
@@ -1159,7 +1170,7 @@ static int get_history_on_answer (struct query *q UU) {
     print_message (ML[i]);
   }*/
   if (sn > 0 && q->extra) {
-    tgl_do_messages_mark_read (*(tgl_peer_id_t *)&(q->extra), ML[0]->id, 0, 0);
+    tgl_do_messages_mark_read (*(tgl_peer_id_t *)&(q->extra), ML[0]->id, 0, 0, 0);
   }
   
   tfree (ML, sizeof (void *) * n);
