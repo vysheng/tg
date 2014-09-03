@@ -42,6 +42,11 @@
 #include <mach/mach.h>
 #endif
 
+#ifdef __MACH__
+#define CLOCK_REALTIME 0
+#define CLOCK_MONOTONIC 1
+#endif
+
 #define RES_PRE 8
 #define RES_AFTER 8
 #define MAX_BLOCKS 1000000
