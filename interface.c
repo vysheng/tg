@@ -618,7 +618,7 @@ void print_chat_info_gw (void *extra, int success, struct tgl_chat *C) {
   push_color (COLOR_YELLOW);
   printf ("Chat ");
   print_chat_name (U->id, U);
-  printf (" members:\n");
+  printf (" (id %d) members:\n", tgl_get_peer_id (U->id));
   int i;
   for (i = 0; i < C->user_list_size; i++) {
     printf ("\t\t");
