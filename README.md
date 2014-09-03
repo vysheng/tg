@@ -34,7 +34,7 @@ If you do not want to use them pass options --disable-libconfig and --disable-li
 
 On ubuntu use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent2-dev
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev
 
 On gentoo:
 
@@ -88,11 +88,11 @@ If you manage to launch it on other UNIX, please let me know.
 
 ### Usage
 
-    ./telegram-cli -k <public-server-key>
+    bin/telegram-cli -k <public-server-key>
     
-By default public key is stored in the same folder named tg-server.pub or in /etc/telegram/server.pub, if it's not, specify where to find it:
+By default public key is stored in the same folder named tg-server.pub or in /etc/telegram-cli/server.pub, if it's not, specify where to find it:
 
-    ./telegram-cli -k tg-server.pub
+    bin/telegram-cli -k tg-server.pub
 
 Client support TAB completion and command history.
 
