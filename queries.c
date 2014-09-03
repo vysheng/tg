@@ -1104,19 +1104,14 @@ void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, in
 }
 
 void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_USER || tgl_get_peer_type (id) == TGL_PEER_CHAT) {
+    tgl_do_messages_mark_read (id, tgl_state.max_msg_id, callback, callback_extra);
+    return;
+  }
   tgl_peer_t *P = tgl_peer_get (id);
   if (!P) {
     vlogprintf (E_WARNING, "Unknown peer\n");
     callback (callback_extra, 0);
-    return;
-  }
-  if (tgl_get_peer_type (id) == TGL_PEER_USER || tgl_get_peer_type (id) == TGL_PEER_CHAT) {
-    if (!P->last) {
-      vlogprintf (E_WARNING, "Unknown last peer message\n");
-      callback (callback_extra, 0);
-      return;
-    }
-    tgl_do_messages_mark_read (id, P->last->id, callback, callback_extra);
     return;
   }
   assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);

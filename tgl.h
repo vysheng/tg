@@ -132,6 +132,7 @@ struct tgl_state {
   int verbosity;
   int unread_messages;
   int active_queries;
+  int max_msg_id;
 
   long long locks; 
   struct tgl_dc *DC_list[TGL_MAX_DC_NUM];

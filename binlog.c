@@ -1128,6 +1128,12 @@ static int fetch_comb_binlog_msg_seq_update (void *extra) {
   tgl_state.seq ++;
   vlogprintf (E_DEBUG - 1 + 2 * in_replay_log, "seq %d=>%d\n", tgl_state.seq - 1, tgl_state.seq);
 
+  if (!(M->flags & FLAG_ENCRYPTED)) {
+    if (tgl_state.max_msg_id < M->id) {
+      tgl_state.max_msg_id = M->id;
+    }
+  }
+
   if (tgl_state.callback.msg_receive) {
     tgl_state.callback.msg_receive (M);
   }
@@ -1137,6 +1143,12 @@ static int fetch_comb_binlog_msg_seq_update (void *extra) {
 static int fetch_comb_binlog_msg_update (void *extra) {
   struct tgl_message *M = tgl_message_get (fetch_long ());
   assert (M);
+  
+  if (!(M->flags & FLAG_ENCRYPTED)) {
+    if (tgl_state.max_msg_id < M->id) {
+      tgl_state.max_msg_id = M->id;
+    }
+  }
 
   if (tgl_state.callback.msg_receive) {
     tgl_state.callback.msg_receive (M);
