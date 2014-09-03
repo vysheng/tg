@@ -156,7 +156,7 @@ static int fetch_comb_binlog_set_qts (void *extra) {
 
 static int fetch_comb_binlog_set_date (void *extra) {
   int new_date = fetch_int ();
-  if (new_date < tgl_state.date) { return; }
+  if (new_date < tgl_state.date) { return 0; }
   assert (new_date >= tgl_state.date);
   tgl_state.date = new_date;
   return 0;

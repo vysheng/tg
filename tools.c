@@ -37,6 +37,11 @@
 //#include "interface.h"
 #include "tools.h"
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 #define RES_PRE 8
 #define RES_AFTER 8
 #define MAX_BLOCKS 1000000
