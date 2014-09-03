@@ -88,11 +88,11 @@ If you manage to launch it on other UNIX, please let me know.
 
 ### Usage
 
-    ./telegram-cli -k <public-server-key>
+    bin/telegram-cli -k <public-server-key>
     
-By default public key is stored in the same folder named tg-server.pub or in /etc/telegram/server.pub, if it's not, specify where to find it:
+By default public key is stored in the same folder named tg-server.pub or in /etc/telegram-cli/server.pub, if it's not, specify where to find it:
 
-    ./telegram-cli -k tg-server.pub
+    bin/telegram-cli -k tg-server.pub
 
 Client support TAB completion and command history.
 
