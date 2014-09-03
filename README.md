@@ -34,7 +34,7 @@ If you do not want to use them pass options --disable-libconfig and --disable-li
 
 On ubuntu use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent2-dev
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev
 
 On gentoo:
 
