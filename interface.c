@@ -1465,7 +1465,7 @@ void interpreter (char *line UU) {
     GET_PEER;    
     tgl_do_create_secret_chat (id, print_secret_chat_gw, 0);
   } else if (IS_WORD ("create_group_chat")) {
-    GET_PEER;
+    GET_PEER_USER;
     int t;
     char *s = next_token (&t);
     if (!s) {
