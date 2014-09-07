@@ -58,7 +58,12 @@
 #include "tools.h"
 #include "tree.h"
 #include "updates.h"
+#ifdef EVENT_V2
 #include <event2/event.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
 
 #if defined(__FreeBSD__)
 #define __builtin_bswap32(x) bswap32(x)

@@ -19,6 +19,13 @@ AC_CHECK_LIB([m], [sqrt])
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
 AC_CHECK_LIB([event], [event_base_new], [], [AC_MSG_ERROR([no libevent found])])
+
+EVENT_VER=""
+
+AC_CHECK_HEADER(event2/event.h, [AC_DEFINE([EVENT_V2], [1], [Use libevent v2])], [
+  AC_CHECK_HEADER(event.h, [AC_DEFINE([EVENT_V1], [1], [Use libevent v1])], [AC_MSG_ERROR([no libevent found])])
+  ])
+
 EXTRA_LIBS=""
 
 #     OPENSSL_INCLUDES to the include directives required
@@ -28,18 +35,7 @@ EXTRA_LIBS=""
 AX_CHECK_OPENSSL(,[AC_MSG_ERROR([No openssl found])])
 AX_CHECK_ZLIB(, [AC_MSG_ERROR([No zlib found])])
 
-AC_CHECK_LIB([readline], [rl_save_prompt], 
-  [
-    AC_DEFINE([READLINE_GNU], [1], [Use gnu libreadline])
-    [ EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ; ]
-  ],
-  [
-    AC_SEARCH_LIBS([tgetnum], [ncursesw ncurses curses])
-    AC_CHECK_LIB([edit], [rl_set_prompt])
-    AC_DEFINE([READLINE_EDIT], [1], [Use libedit])
-    [ EXTRA_LIBS="${EXTRA_LIBS} -ledit" ; ]
-  ]
-)
+AC_CHECK_LIB([readline], [rl_save_prompt], [ EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ; ], [AC_MSG_ERROR([no libreadline found])])
 
 AC_MSG_CHECKING([for libconfig])
 AC_ARG_ENABLE(libconfig,[--enable-libconfig/--disable-libconfig],

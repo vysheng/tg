@@ -54,7 +54,12 @@
 #include "updates.h"
 #include "auto.h"
 #include "tgl.h"
+#ifdef EVENT_V2
 #include <event2/event.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
 
 #define sha1 SHA1
 

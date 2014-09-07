@@ -28,7 +28,12 @@
 #include "structures.h"
 #include "net.h"
 
+#ifdef EVENT_V2
 #include <event2/event.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
 
 #include <assert.h>
 

@@ -1,5 +1,11 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Use libevent v1 */
+#undef EVENT_V1
+
+/* Use libevent v2 */
+#undef EVENT_V2
+
 /* Define to 1 if you have the `alarm' function. */
 #undef HAVE_ALARM
 
@@ -23,9 +29,6 @@
 
 /* Define to 1 if you have the `config' library (-lconfig). */
 #undef HAVE_LIBCONFIG
-
-/* Define to 1 if you have the `edit' library (-ledit). */
-#undef HAVE_LIBEDIT
 
 /* Define to 1 if you have the `event' library (-levent). */
 #undef HAVE_LIBEVENT
@@ -142,12 +145,6 @@
 
 /* Use custom prog name */
 #undef PROG_NAME
-
-/* Use libedit */
-#undef READLINE_EDIT
-
-/* Use gnu libreadline */
-#undef READLINE_GNU
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

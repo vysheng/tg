@@ -42,7 +42,13 @@
 
 #include "interface.h"
 #include "telegram.h"
+
+#ifdef EVENT_V2
 #include <event2/event.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
 //#include "auto/constants.h"
 //#include "tools.h"
 //#include "structures.h"
