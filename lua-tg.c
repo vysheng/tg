@@ -455,6 +455,7 @@ enum lua_query_type {
   lq_send_video,
   lq_send_text,
   lq_fwd,
+  lq_fwd_media,
   lq_load_photo,
   lq_load_video_thumb,
   lq_load_video,
@@ -922,6 +923,10 @@ void lua_do_all (void) {
       tgl_do_forward_message (((tgl_peer_t *)lua_ptr[p + 1])->id, ((struct tgl_message *)lua_ptr[p + 2])->id, lua_msg_cb, lua_ptr[p]);
       p += 3;
       break;
+    case lq_fwd_media:
+      tgl_do_forward_media (((tgl_peer_t *)lua_ptr[p + 1])->id, ((struct tgl_message *)lua_ptr[p + 2])->id, lua_msg_cb, lua_ptr[p]);
+      p += 3;
+      break;
     case lq_chat_info:
       tgl_do_get_chat_info (((tgl_peer_t *)lua_ptr[p + 1])->id, 0, lua_chat_cb, lua_ptr[p]);
       p += 2;
@@ -1077,6 +1082,7 @@ struct lua_function functions[] = {
   {"load_document", lq_load_document, { lfp_msg, lfp_none }},
   {"load_document_thumb", lq_load_document_thumb, { lfp_msg, lfp_none }},
   {"fwd_msg", lq_fwd, { lfp_peer, lfp_msg, lfp_none }},
+  {"fwd_media", lq_fwd_media, { lfp_peer, lfp_msg, lfp_none }},
   {"chat_info", lq_chat_info, { lfp_chat, lfp_none }},
   {"user_info", lq_user_info, { lfp_user, lfp_none }},
   {"get_history", lq_history, { lfp_peer, lfp_nonnegative_number, lfp_none }},

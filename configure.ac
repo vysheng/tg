@@ -1,9 +1,11 @@
 AC_PREREQ([2.68])
-AC_INIT([telegram], [0.1])
+AC_INIT([telegram-cli], [1.0])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
 m4_include([ax_lua.m4])
+m4_include([m4_ax_check_openssl.m4])
+m4_include([m4_ax_check_zlib.m4])
 
 # Checks for programs.
 AC_PROG_CC
@@ -16,10 +18,15 @@ LDFLAGS="$LDFLAGS -L/usr/local/lib"
 AC_CHECK_LIB([m], [sqrt])
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
-AC_CHECK_LIB([z], [inflate])
-AC_CHECK_LIB([crypto], [AES_set_encrypt_key])
-AC_CHECK_LIB([event], [event_base_new])
+AC_CHECK_LIB([event], [event_base_new], [], [AC_MSG_ERROR([no libevent found])])
 EXTRA_LIBS=""
+
+#     OPENSSL_INCLUDES to the include directives required
+#     OPENSSL_LIBS to the -l directives required
+#     OPENSSL_LDFLAGS to the -L or -R flags required
+
+AX_CHECK_OPENSSL(,[AC_MSG_ERROR([No openssl found])])
+AX_CHECK_ZLIB(, [AC_MSG_ERROR([No zlib found])])
 
 AC_CHECK_LIB([readline], [rl_save_prompt], 
   [

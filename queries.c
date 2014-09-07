@@ -1858,6 +1858,66 @@ void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, co
 
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
 }
+
+void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    vlogprintf (E_WARNING, "Can not forward messages from secret chat\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  struct tgl_message *M = tgl_message_get (n);
+  if (!M) {
+    vlogprintf (E_WARNING, "No such message\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  if (M->flags & FLAG_ENCRYPTED) {
+    vlogprintf (E_WARNING, "Can not forward media from encrypted message\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  if (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_video && M->media.type != tgl_message_media_audio && M->media.type != tgl_message_media_document) {
+    vlogprintf (E_WARNING, "Can only forward photo/audio/video/document\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_messages_send_media);
+  out_peer_id (id);
+  switch (M->media.type) {
+  case tgl_message_media_photo:
+    out_int (CODE_input_media_photo);
+    out_int (CODE_input_photo);
+    out_long (M->media.photo.id);
+    out_long (M->media.photo.access_hash);
+    break;
+  case tgl_message_media_video:
+    out_int (CODE_input_media_video);
+    out_int (CODE_input_video);
+    out_long (M->media.video.id);
+    out_long (M->media.video.access_hash);
+    break;
+  case tgl_message_media_audio:
+    out_int (CODE_input_media_audio);
+    out_int (CODE_input_audio);
+    out_long (M->media.audio.id);
+    out_long (M->media.audio.access_hash);
+    break;
+  case tgl_message_media_document:
+    out_int (CODE_input_media_document);
+    out_int (CODE_input_document);
+    out_long (M->media.document.id);
+    out_long (M->media.document.access_hash);
+    break;
+  default:
+    assert (0);
+  }
+  long long r;
+  tglt_secure_random (&r, 8);
+  out_long (r);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+}
 /* }}} */
 
 /* {{{ Rename chat */

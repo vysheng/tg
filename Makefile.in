@@ -1,12 +1,12 @@
 srcdir=@srcdir@
 
 CFLAGS=@CFLAGS@
-LDFLAGS=@LDFLAGS@
-CPPFLAGS=@CPPFLAGS@
+LDFLAGS=@LDFLAGS@ @OPENSSL_LDFLAGS@
+CPPFLAGS=@CPPFLAGS@ @OPENSSL_INCLUDES@
 DEFS=@DEFS@
-COMPILE_FLAGS=${CFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC
+COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Werror -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC
 
-EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@
+EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@ @OPENSSL_LIBS@
 LOCAL_LDFLAGS=-rdynamic -ggdb -levent ${EXTRA_LIBS}
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 

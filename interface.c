@@ -354,6 +354,7 @@ struct command commands[] = {
   {"chat_info", {ca_chat, ca_none}},
   {"user_info", {ca_user, ca_none}},
   {"fwd", {ca_peer, ca_number, ca_none}},
+  {"fwd_media", {ca_peer, ca_number, ca_none}},
   {"msg", {ca_peer, ca_string_end}},
   {"rename_chat", {ca_peer, ca_string_end}},
   {"load_photo", {ca_number, ca_none}},
@@ -1180,6 +1181,14 @@ void interpreter (char *line UU) {
       RET;
     }
     tgl_do_forward_message (id, num, 0, 0);
+  } else if (IS_WORD ("fwd_media")) {
+    GET_PEER;
+    int num = next_token_int ();
+    if (num == NOT_FOUND || num <= 0) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    tgl_do_forward_media (id, num, 0, 0);
   } else if (IS_WORD ("load_photo")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {

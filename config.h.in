@@ -21,15 +21,8 @@
 /* Define to 1 if you have the <lauxlib.h> header file. */
 #undef HAVE_LAUXLIB_H
 
-/* Define to 1 if you have the `AES_set_encrypt_key' library
-   (-lAES_set_encrypt_key). */
-#undef HAVE_LIBAES_SET_ENCRYPT_KEY
-
 /* Define to 1 if you have the `config' library (-lconfig). */
 #undef HAVE_LIBCONFIG
-
-/* Define to 1 if you have the `crypto' library (-lcrypto). */
-#undef HAVE_LIBCRYPTO
 
 /* Define to 1 if you have the `edit' library (-ledit). */
 #undef HAVE_LIBEDIT
@@ -40,7 +33,7 @@
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
-/* Define to 1 if you have the `z' library (-lz). */
+/* Define to 1 if you have `z' library (-lz) */
 #undef HAVE_LIBZ
 
 /* Define to 1 if you have the <luaconf.h> header file. */
