@@ -646,7 +646,7 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     
-    tglu_fetch_pts ();
+    int pts = fetch_int ();
     
     int date = fetch_int ();
     //tglu_fetch_seq ();
@@ -654,6 +654,14 @@ void tglf_fetch_message_short (struct tgl_message *M) {
     assert (seq == tgl_state.seq + 1);
 
     bl_do_create_message_text (id, from_id, TGL_PEER_USER, to_id, date, 1, l, s);
+
+    tgl_peer_t *P = tgl_peer_get (TGL_MK_USER (from_id));
+    if (!P || !(P->flags & FLAG_CREATED)) {
+      tgl_do_get_difference (0, 0, 0);
+    } else {
+      bl_do_set_pts (pts);
+      bl_do_set_date (date);
+    }
     //bl_do_msg_seq_update (id);
   } else {
     fetch_int (); // id
@@ -680,14 +688,26 @@ void tglf_fetch_message_short_chat (struct tgl_message *M) {
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
     
-    tglu_fetch_pts ();
-    
+    int pts = fetch_int ();    
     int date = fetch_int ();
     //tglu_fetch_seq ();
 
     int seq = fetch_int ();
     assert (seq == tgl_state.seq + 1);
     bl_do_create_message_text (id, from_id, TGL_PEER_CHAT, to_id, date, 1, l, s);
+    
+    tgl_peer_t *P = tgl_peer_get (TGL_MK_CHAT (to_id));
+    if (!P || !(P->flags & FLAG_CREATED)) {
+      tgl_do_get_difference (0, 0, 0);
+    } else {
+      P = tgl_peer_get (TGL_MK_USER (from_id));
+      if (!P || !(P->flags & FLAG_CREATED)) {
+        tgl_do_get_difference (0, 0, 0);
+      } else {
+        bl_do_set_pts (pts);
+        bl_do_set_date (date);
+      }
+    }
     //bl_do_msg_seq_update (id);
   } else {
     fetch_int (); // id
