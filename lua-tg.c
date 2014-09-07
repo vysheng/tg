@@ -237,19 +237,23 @@ void push_media (struct tgl_message_media *M) {
   switch (M->type) {
   case tgl_message_media_photo:
   case tgl_message_media_photo_encr:
-    lua_pushstring (luaState, "photo");
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "photo");
     break;
   case tgl_message_media_video:
   case tgl_message_media_video_encr:
-    lua_pushstring (luaState, "video");
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "video");
     break;
   case tgl_message_media_audio:
   case tgl_message_media_audio_encr:
-    lua_pushstring (luaState, "audio");
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "audio");
     break;
   case tgl_message_media_document:
   case tgl_message_media_document_encr:
-    lua_pushstring (luaState, "document");
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "document");
     break;
   case tgl_message_media_unsupported:
     lua_pushstring (luaState, "unsupported");
