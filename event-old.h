@@ -1,7 +1,7 @@
 #ifndef __EVENT_OLD_H__
 #define __EVENT_OLD_H__
 
-typedef evutil_socket_t int
+typedef int evutil_socket_t;
   
 static inline struct event *event_new (struct event_base *base, int fd, int what, void(*callback)(int, short, void *), void *arg) {
   struct event *ev = malloc (sizeof (*ec));
