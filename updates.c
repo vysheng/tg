@@ -489,7 +489,9 @@ void tglu_work_update_short_message (struct connection *c, long long msg_id) {
   assert (M);
 
   assert (save_end == in_ptr);
-  bl_do_msg_seq_update (M->id);
+  if (!(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_msg_seq_update (M->id);
+  }
 }
 
 void tglu_work_update_short_chat_message (struct connection *c, long long msg_id) {
@@ -506,7 +508,9 @@ void tglu_work_update_short_chat_message (struct connection *c, long long msg_id
   assert (M);
   assert (save_end == in_ptr);
 
-  bl_do_msg_seq_update (M->id);
+  if (!(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_msg_seq_update (M->id);
+  }
 }
 
 void tglu_work_updates_to_long (struct connection *c, long long msg_id) {

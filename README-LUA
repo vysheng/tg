@@ -21,7 +21,8 @@ These functions may return false immidiately if something is bad with args, or r
 cb_function would have two or three arguments: first cb_extra, second success (1 or 0), third result (if applicable).
 
 If you want to pass msg to function, you should pass it's id.
-If you want to pass peer to function, you should pass it's print_name
+If you want to pass peer to function, you should pass it's print_name.
+Or, you can pass string user#id<id> chat#id<id> and secret_chat#id<id> as peer. It is in some cases better. For example if you want to postpone and you are afraid, that print_name would be changed in the meantime. 
 
 Function_list (arguments are listed aside from cb_function and cb_extra, :
   get_contact_list ()
