@@ -810,8 +810,10 @@ static int msg_send_encr_on_answer (struct query *q UU) {
   struct tgl_message *M = q->extra;
   //M->date = fetch_int ();
   fetch_int ();
-  bl_do_set_message_sent (M);
-  bl_do_msg_update (M->id);
+  if (M->flags & FLAG_PENDING) {
+    bl_do_set_message_sent (M);
+    bl_do_msg_update (M->id);
+  }
 
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
@@ -880,7 +882,9 @@ static int msg_send_on_answer (struct query *q UU) {
       print_end ();
     }
   }*/
-  bl_do_set_message_sent (M);
+  if (M->flags & FLAG_PENDING) {
+    bl_do_set_message_sent (M);
+  }
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
   }
