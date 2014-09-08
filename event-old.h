@@ -3,6 +3,7 @@
 
 typedef int evutil_socket_t;
   
+static inline struct event *event_new (struct event_base *base, int fd, int what, void(*callback)(int, short, void *), void *arg) __attribute__ ((unused));
 static inline struct event *event_new (struct event_base *base, int fd, int what, void(*callback)(int, short, void *), void *arg) {
   struct event *ev = malloc (sizeof (*ev));  
   event_set (ev, fd, what, callback, arg);
@@ -10,6 +11,7 @@ static inline struct event *event_new (struct event_base *base, int fd, int what
   return ev;
 }
   
+static inline struct event *evtimer_new (struct event_base *base, void(*callback)(int, short, void *), void *arg) __attribute__ ((unused));
 static inline struct event *evtimer_new (struct event_base *base, void(*callback)(int, short, void *), void *arg) {
   struct event *ev = malloc (sizeof (*ev));
   event_set (ev, -1, 0, callback, arg);
@@ -17,6 +19,7 @@ static inline struct event *evtimer_new (struct event_base *base, void(*callback
   return ev;
 }
 
+static void event_free (struct event *ev) __attribute__ ((unused));
 static void event_free (struct event *ev) {
   event_del (ev);
   free (ev);
