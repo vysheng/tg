@@ -266,7 +266,9 @@ void tglf_fetch_user_full (struct tgl_user *U) {
   char *s1 = fetch_str (l1);
   int l2 = prefetch_strlen ();
   char *s2 = fetch_str (l2);
-  bl_do_user_set_real_name (U, s1, l1, s2, l2);
+  if (U && (U->flags & FLAG_CREATED)) {
+    bl_do_user_set_real_name (U, s1, l1, s2, l2);
+  }
 }
 
 void tglf_fetch_encrypted_chat (struct tgl_secret_chat *U) {
