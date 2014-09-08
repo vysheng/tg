@@ -1152,20 +1152,49 @@ void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, 
 /* }}} */
 
 /* {{{ Get history */
+void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
 static int get_history_on_answer (struct query *q UU) {
+  int count = -1;
   int i;
   int x = fetch_int ();
   assert (x == (int)CODE_messages_messages_slice || x == (int)CODE_messages_messages);
   if (x == (int)CODE_messages_messages_slice) {
-    fetch_int ();
+    count = fetch_int ();
+    //fetch_int ();
   }
   assert (fetch_int () == CODE_vector);
+  void **T = q->extra;
+  struct tgl_message **ML = T[0];
+  int list_offset = (long)T[1];
+  int list_size = (long)T[2];
+  tgl_peer_id_t id = tgl_set_peer_id ((long)T[4], (long)T[3]);
+  int limit = (long)T[5];
+  int offset = (long)T[6];
+  tfree (T, sizeof (void *) * 7);
+  
   int n = fetch_int ();
-  struct tgl_message **ML = talloc (sizeof (void *) * n);
-  for (i = 0; i < n; i++) {
-    ML[i] = tglf_fetch_alloc_message ();
+
+  if (list_size - list_offset < n) {
+    int new_list_size = 2 * list_size;
+    if (new_list_size - list_offset < n) {
+      new_list_size = n + list_offset;
+    }
+    ML = trealloc (ML, list_size * sizeof (void *), new_list_size * sizeof (void *));
+    assert (ML);
+    list_size = new_list_size;
   }
-  int sn = n;
+  //struct tgl_message **ML = talloc (sizeof (void *) * n);
+  for (i = 0; i < n; i++) {
+    ML[i + list_offset] = tglf_fetch_alloc_message ();
+  }
+  list_offset += n;
+  offset += n;
+  limit -= n;
+  if (count >= 0 && limit + offset >= count) {
+    limit = count - offset;
+    if (limit < 0) { limit = 0; }
+  }
+  assert (limit >= 0);
   
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
@@ -1177,19 +1206,21 @@ static int get_history_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     tglf_fetch_alloc_user ();
   }
-  
-  if (q->callback) {
-    ((void (*)(void *, int, int, struct tgl_message **))q->callback) (q->callback_extra, 1, sn, ML);
-  }
 
-  /*for (i = n - 1; i >= 0; i--) {
-    print_message (ML[i]);
-  }*/
-  if (sn > 0 && q->extra) {
-    tgl_do_messages_mark_read (*(tgl_peer_id_t *)&(q->extra), ML[0]->id, 0, 0, 0);
-  }
+ 
+  if (limit <= 0 || x == (int)CODE_messages_messages) {
+    if (q->callback) {
+      ((void (*)(void *, int, int, struct tgl_message **))q->callback) (q->callback_extra, 1, list_offset, ML);
+    }
+    if (list_offset > 0) {
+      tgl_do_messages_mark_read (id, ML[0]->id, 0, 0, 0);
+    }
+
   
-  tfree (ML, sizeof (void *) * n);
+    tfree (ML, sizeof (void *) * list_size);
+  } else {
+   _tgl_do_get_history (id, limit, offset, list_offset, list_size, ML, q->callback, q->callback_extra);
+  }
   return 0;
 }
 
@@ -1224,19 +1255,76 @@ void tgl_do_get_local_history (tgl_peer_id_t id, int limit, void (*callback)(voi
   tfree (ML, sizeof (void *) * count);
 }
 
+void tgl_do_get_local_history_ext (tgl_peer_id_t id, int offset, int limit, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  tgl_peer_t *P = tgl_peer_get (id);
+  if (!P || !P->last) { 
+    callback (callback_extra, 0, 0, 0);
+    return; 
+  }
+  struct tgl_message *M = P->last;
+  int count = 1;
+  assert (!M->prev);
+  while (count < limit + offset && M->next) {
+    M = M->next;
+    count ++;
+  }
+  if (count <= offset) {
+    callback (callback_extra, 1, 0, 0);
+    return;
+  }
+  struct tgl_message **ML = talloc (sizeof (void *) * (count - offset));
+  M = P->last;
+  ML[0] = M;
+  count = 1;
+  while (count < limit && M->next) {
+    M = M->next;
+    if (count >= offset) {
+      ML[count - offset] = M;
+    }
+    count ++;
+  }
+
+  callback (callback_extra, 1, count - offset, ML);
+  tfree (ML, sizeof (void *) * (count) - offset);
+}
+
+
+
+void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  void **T = talloc (sizeof (void *) * 7);
+  T[0] = ML;
+  T[1] = (void *)(long)list_offset;
+  T[2] = (void *)(long)list_size;
+  T[3] = (void *)(long)tgl_get_peer_id (id);
+  T[4] = (void *)(long)tgl_get_peer_type (id);
+  T[5] = (void *)(long)limit;
+  T[6] = (void *)(long)offset;
+
+  clear_packet ();
+  out_int (CODE_messages_get_history);
+  out_peer_id (id);
+  out_int (offset);
+  out_int (0);
+  out_int (limit);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, T, callback, callback_extra);
+}
+
 void tgl_do_get_history (tgl_peer_id_t id, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
   if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT || offline_mode) {
     tgl_do_get_local_history (id, limit, callback, callback_extra);
     tgl_do_mark_read (id, 0, 0);
     return;
   }
-  clear_packet ();
-  out_int (CODE_messages_get_history);
-  out_peer_id (id);
-  out_int (0);
-  out_int (0);
-  out_int (limit);
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id, callback, callback_extra);
+  _tgl_do_get_history (id, limit, 0, 0, 0, 0, callback, callback_extra);
+}
+
+void tgl_do_get_history_ext (tgl_peer_id_t id, int offset, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT || offline_mode) {
+    tgl_do_get_local_history (id, limit, callback, callback_extra);
+    tgl_do_mark_read (id, 0, 0);
+    return;
+  }
+  _tgl_do_get_history (id, limit, offset, 0, 0, 0, callback, callback_extra);
 }
 /* }}} */
 
