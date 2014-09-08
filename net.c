@@ -73,11 +73,11 @@ static void ping_alarm (evutil_socket_t fd, short what, void *arg) {
   struct connection *c = arg;
   vlogprintf (E_DEBUG + 2,"ping alarm\n");
   assert (c->state == conn_ready || c->state == conn_connecting);
-  if (tglt_get_double_time () - c->last_receive_time > 20 * PING_TIMEOUT) {
+  if (tglt_get_double_time () - c->last_receive_time > 6 * PING_TIMEOUT) {
     vlogprintf (E_WARNING, "fail connection: reason: ping timeout\n");
     c->state = conn_failed;
     fail_connection (c);
-  } else if (tglt_get_double_time () - c->last_receive_time > 5 * PING_TIMEOUT && c->state == conn_ready) {
+  } else if (tglt_get_double_time () - c->last_receive_time > 3 * PING_TIMEOUT && c->state == conn_ready) {
     tgl_do_send_ping (c);
     start_ping_timer (c);
   } else {
@@ -365,6 +365,12 @@ static void restart_connection (struct connection *c) {
   start_ping_timer (c);
   Connections[fd] = c;
   
+  c->write_ev = event_new (tgl_state.ev_base, c->fd, EV_WRITE, conn_try_write, c);
+
+  struct timeval tv = {5, 0};
+  c->read_ev = event_new (tgl_state.ev_base, c->fd, EV_READ | EV_PERSIST, conn_try_read, c);
+  event_add (c->read_ev, &tv);
+  
   char byte = 0xef;
   assert (tgln_write_out (c, &byte, 1) == 1);
   tgln_flush_out (c);
@@ -374,7 +380,9 @@ static void fail_connection (struct connection *c) {
   if (c->state == conn_ready || c->state == conn_connecting) {
     stop_ping_timer (c);
   }
-  event_del (c->write_ev);
+  event_free (c->write_ev);
+  event_free (c->read_ev);
+  
   rotate_port (c);
   struct connection_buffer *b = c->out_head;
   while (b) {
@@ -403,15 +411,6 @@ static void try_write (struct connection *c) {
   int x = 0;
   while (c->out_head) {
     int r = write (c->fd, c->out_head->rptr, c->out_head->wptr - c->out_head->rptr);
-    /*if (r > 0 && log_net_f) {
-      fprintf (log_net_f, "%.02lf %d OUT %s:%d", get_utime (CLOCK_REALTIME), r, c->ip, c->port);
-      int i;
-      for (i = 0; i < r; i++) {
-        fprintf (log_net_f, " %02x", *(unsigned char *)(c->out_head->rptr + i));
-      }
-      fprintf (log_net_f, "\n");
-      fflush (log_net_f);
-    }*/
     if (r >= 0) {
       x += r;
       c->out_head->rptr += r;
@@ -437,30 +436,6 @@ static void try_write (struct connection *c) {
   vlogprintf (E_DEBUG, "Sent %d bytes to %d\n", x, c->fd);
   c->out_bytes -= x;
 }
-
-/*static void hexdump_buf (struct connection_buffer *b) {
-  int pos = 0;
-  int rem = 8;
-  while (b) { 
-    unsigned char *c = b->rptr;
-    while (c != b->wptr) {
-      if (rem == 8) {
-        if (pos) { printf ("\n"); }
-        printf ("%04d", pos);
-      }
-      printf (" %02x", (int)*c);
-      rem --;
-      pos ++;
-      if (!rem) {
-        rem = 8;
-      }
-      c ++;
-    }
-    b = b->next;
-  }
-  printf ("\n");
-    
-}*/
 
 static void try_rpc_read (struct connection *c) {
   assert (c->in_head);
@@ -502,18 +477,13 @@ static void try_read (struct connection *c) {
   if (!c->in_tail) {
     c->in_head = c->in_tail = new_connection_buffer (1 << 20);
   }
+  #ifdef EVENT_V1
+    struct timeval tv = {5, 0};
+    event_add (c->read_ev, &tv);
+  #endif
   int x = 0;
   while (1) {
     int r = read (c->fd, c->in_tail->wptr, c->in_tail->end - c->in_tail->wptr);
-    /*if (r > 0 && log_net_f) {
-      fprintf (log_net_f, "%.02lf %d IN %s:%d", get_utime (CLOCK_REALTIME), r, c->ip, c->port);
-      int i;
-      for (i = 0; i < r; i++) {
-        fprintf (log_net_f, " %02x", *(unsigned char *)(c->in_tail->wptr + i));
-      }
-      fprintf (log_net_f, "\n");
-      fflush (log_net_f);
-    }*/
     if (r > 0) {
       c->last_receive_time = tglt_get_double_time ();
       stop_ping_timer (c);

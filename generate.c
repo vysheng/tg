@@ -20,6 +20,7 @@
     Copyright 2012-2013 Vkontakte Ltd
               2012-2013 Vitaliy Valtman
 */
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <signal.h>

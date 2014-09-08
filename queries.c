@@ -826,7 +826,9 @@ static int msg_send_on_answer (struct query *q UU) {
   assert (x == CODE_messages_sent_message || x == CODE_messages_sent_message_link);
   int id = fetch_int (); // id
   struct tgl_message *M = q->extra;
-  bl_do_set_msg_id (M, id);
+  if (M->id != id) {
+    bl_do_set_msg_id (M, id);
+  }
   int date = fetch_int ();
   int pts = fetch_int ();
   //tglu_fetch_seq ();
@@ -837,8 +839,10 @@ static int msg_send_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (id);
   } else {
-    vlogprintf (E_NOTICE, "Hole in seq\n");
-    tgl_do_get_difference (0, 0, 0);
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
   }
   if (x == CODE_messages_sent_message_link) {
     assert (skip_type_any (TYPE_TO_PARAM_1 (vector, TYPE_TO_PARAM (contacts_link))) >= 0);
@@ -1066,7 +1070,10 @@ static int mark_read_on_receive (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_set_seq (seq);
   } else {
-    tgl_do_get_difference (0, 0, 0);
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
   }
 
   int offset = fetch_int (); // offset
@@ -1394,8 +1401,10 @@ static int send_file_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
-    vlogprintf (E_NOTICE, "Hole in seq\n");
-    tgl_do_get_difference (0, 0, 0);
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
   }
 
   if (q->callback) {
@@ -1814,8 +1823,10 @@ static int fwd_msg_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
-    vlogprintf (E_NOTICE, "Hole in seq\n");
-    tgl_do_get_difference (0, 0, 0);
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
   }
   //print_message (M);
   if (q->callback) {
@@ -1952,8 +1963,10 @@ static int rename_chat_on_answer (struct query *q UU) {
     bl_do_set_pts (pts);
     bl_do_msg_seq_update (M->id);
   } else {
-    vlogprintf (E_NOTICE, "Hole in seq\n");
-    tgl_do_get_difference (0, 0, 0);
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
   }
   //print_message (M);
   if (q->callback) {
