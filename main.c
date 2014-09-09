@@ -280,7 +280,7 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
 }
 
 void parse_config (void) {
-  config_filename = make_full_path (config_filename);
+  //config_filename = make_full_path (config_filename);
   
   config_t conf;
   config_init (&conf);
