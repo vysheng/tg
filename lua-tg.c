@@ -488,7 +488,9 @@ enum lua_query_type {
   lq_delete_msg,
   lq_restore_msg,
   lq_accept_secret_chat,
-  lq_send_contact
+  lq_send_contact,
+  lq_status_online,
+  lq_status_offline
 };
 
 struct lua_query_extra {
@@ -1030,6 +1032,14 @@ void lua_do_all (void) {
       free (s3);
       p += 5;
       break;
+    case lq_status_online:
+      tgl_do_update_status (1, lua_empty_cb, lua_ptr[p]);
+      p ++;
+      break;
+    case lq_status_offline:
+      tgl_do_update_status (0, lua_empty_cb, lua_ptr[p]);
+      p ++;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1109,6 +1119,8 @@ struct lua_function functions[] = {
   {"restore_msg", lq_restore_msg, { lfp_positive_number, lfp_none }},
   {"accept_secret_chat", lq_accept_secret_chat, { lfp_secret_chat, lfp_none }},
   {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
+  {"status_online", lq_status_online, { lfp_none }},
+  {"status_offline", lq_status_offline, { lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
