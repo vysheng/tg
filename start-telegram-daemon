@@ -1,0 +1,206 @@
+#!/usr/bin/perl -w
+
+# start-engine
+# derived from start-memcached
+# 2003/2004 - Jay Bonci <jaybonci@debian.org>
+# This script handles the parsing of the /etc/memcached.conf file
+# and was originally created for the Debian distribution.
+# Anyone may use this little script under the same terms as
+# memcached itself.
+
+# a bit changed it for telegram-daemon to generate config before start (Vitaly Valtman)
+
+use POSIX qw(strftime);
+use strict;
+
+my $id = defined($ARGV[0]) ? $ARGV[0] : '';
+my $idx = $id eq '' ? '' : " '$id'";
+my $idl = ($id =~ /^\.(.*)$/ ? "-$1" : $id);
+
+my $root = "";
+
+my $params; my $etchandle; my $etcfile = "$root/etc/telegram-daemon/telegram-daemon$id.conf";
+
+# This script assumes that engine is located at /usr/bin/engine, and
+# that the pidfile is writable at /var/run/engine.pid
+
+my $engine_pfx = "$root/usr/share/telegram-daemon/bin/";
+my $pidfile = "$root/var/run/telegram-daemon$id.pid";
+
+# If we don't get a valid logfile parameter in the /etc/engine.conf file,
+# we'll just throw away all of our in-daemon output. We need to re-tie it so
+# that non-bash shells will not hang on logout. Thanks to Michael Renner for 
+# the tip
+my $fd_reopened = "/dev/null";
+$fd_reopened = "$root/var/log/telegram-daemon/telegram-daemon$idl.log" if -d "$root/var/log/telegram-daemon/";
+
+sub handle_logfile
+{
+    my ($logfile) = @_;
+    $logfile = "$root/var/log/telegram-daemon/$logfile" unless $logfile =~ /\//;
+    $fd_reopened = $logfile;
+}
+
+sub reopen_logfile
+{
+    my ($logfile) = @_;
+    
+    open *STDERR, ">>$logfile";
+    open *STDOUT, ">>$logfile";
+    open *STDIN, ">>/dev/null";
+    chown 239, 239, $logfile;
+    $fd_reopened = $logfile;
+}
+
+sub adjust_arg
+{
+    my ($arg) = @_;
+    if ($arg =~ /^newest:(.*)$/) {
+        my @L = split /:/, $1;
+        my $x = $arg;
+        my $xt = 0;
+        for my $y (@L) {
+            my @S = stat($y);
+            if (scalar @S && $S[9] > $xt) {
+                $x = $y;
+                $xt = $S[9];
+            }
+        }
+        return $x;
+    }
+    return $arg;
+}
+
+# This is set up in place here to support other non -[a-z] directives
+
+my $conf_directives = {
+        "logfile" => \&handle_logfile,
+};
+
+my %Vars = ( 
+             "execute" => "msg-search-engine",
+             "work_dir"   => "$root/var/lib/telegram-daemon"
+             );
+
+my $have_c = 0;
+my $have_l = 0;
+my $have_u = 0;
+my $have_aes = 0;
+
+if(open $etchandle, $etcfile)
+{
+        foreach my $line (<$etchandle>)
+        {
+                $line ||= "";
+                $line =~ s/\#.*//g;
+                $line =~ s/\s+$//g;
+                $line =~ s/^\s+//g;
+                next unless $line;
+                next if $line =~ /^\-[dh]/;
+
+                if($line =~ /^[^\-]/)
+                {
+                        my ($directive, $int, $arg) = $line =~ /^(.*?)(\s+|\s*=\s*)(.*)/; 
+                        next unless $directive;
+                        if (exists $conf_directives->{$directive}) {
+                            $conf_directives->{$directive}->($arg);
+                        } else {
+                            $Vars{$directive} = $arg;
+                        }
+                        next;
+                }
+
+                $have_l = 1 if $line =~ /^-L\s/;
+                $have_c = 1 if $line =~ /^-c\s/;
+                $have_u = 1 if $line =~ /^-u\s/;
+                push @$params, $line;                
+        }
+
+}else{
+        $params = [];
+}
+
+push @$params, "-u telegramd" unless($have_u);
+push @$params, "-L $fd_reopened" unless($have_l);
+push @$params, "-c config$idl" unless($have_c);
+$params = join " ", @$params;
+
+if(-e $pidfile)
+{
+        open PIDHANDLE, "$pidfile";
+        my $localpid = <PIDHANDLE>;
+        close PIDHANDLE;
+
+        if ($localpid && $localpid =~ /(\d+)/) { $localpid = $1; } else { $localpid = -1; }
+        if (-d "/proc/$localpid")
+        {
+                print STDERR "telegram-daemon$idl is already running.\n"; 
+                exit;                
+        } else {
+                print STDERR "removing stale $pidfile.\n"; 
+                `rm -f $pidfile`;
+        }
+
+}
+
+if (exists $Vars{'quit'}) {
+    print STDERR "telegram-daemon$idl disabled\n";
+    exit(0);
+}
+
+my $engine = $engine_pfx.$Vars{'execute'};
+my $wdir = $Vars{'work_dir'};
+chdir $wdir if -d $wdir;
+
+unless (-x $engine) {
+    print STDERR "executable $engine not found\n";
+    exit(1);
+}
+
+unless (-d $wdir) {
+    print STDERR "work directory $wdir not found\n";
+    exit(1);
+}
+
+for my $x ('s', 0 .. 9) {
+    if (defined($Vars{"arg$x"})) {
+        $params .= " ".adjust_arg($Vars{"arg$x"});
+    }
+}
+
+my $pid = fork();
+
+
+
+if (!$pid) {
+    reopen_logfile ($fd_reopened);
+    chdir $wdir;
+    open(my $fh, '>', "config$idl");
+
+    my $text = <<"END_MSG"
+config_directory="$wdir";
+test=false;
+msg_num=true;
+binlog_enabled=true;
+binlog="binlog$idl.bin";
+pfs_enabled=true;
+log_level = 0;
+lua_script="script$idl.lua";
+END_MSG
+;
+    print $fh $text;
+    close $fh;
+    my $t;
+    $t = strftime ("%Y-%m-%d %H:%M:%S %Z", localtime);
+    print STDERR "[$t] invoking telegram-daemon$idl: $engine $params\n";
+    exec "$engine $params";
+    exit (0);
+} else {
+    if (open PIDHANDLE,">$pidfile") {
+        print PIDHANDLE $pid;
+        close PIDHANDLE;
+    } else {
+        print STDERR "Can't write pidfile to $pidfile.\n";
+    }
+}
+
