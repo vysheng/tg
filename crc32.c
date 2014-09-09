@@ -23,8 +23,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
+#include "config.h"
 
+#ifdef HAVE_CONFIG_H
 #include "crc32.h"
+#endif
 
 #ifndef HAVE___BUILTIN_BSWAP32
 static inline unsigned __builtin_bswap32(unsigned x) {
