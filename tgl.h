@@ -29,7 +29,7 @@
 
 // JUST RANDOM STRING
 #define TGL_BUILD "2012"
-#define TGL_VERSION "1.0.2"
+#define TGL_VERSION "1.0.3"
 
 #define TGL_ENCRYPTED_LAYER 16
 
