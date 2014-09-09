@@ -1152,7 +1152,7 @@ void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, 
 /* }}} */
 
 /* {{{ Get history */
-void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
+void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int max_id, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
 static int get_history_on_answer (struct query *q UU) {
   int count = -1;
   int i;
@@ -1219,7 +1219,7 @@ static int get_history_on_answer (struct query *q UU) {
   
     tfree (ML, sizeof (void *) * list_size);
   } else {
-   _tgl_do_get_history (id, limit, offset, list_offset, list_size, ML, q->callback, q->callback_extra);
+   _tgl_do_get_history (id, limit, 0, ML[list_offset - 1]->id, list_offset, list_size, ML, q->callback, q->callback_extra);
   }
   return 0;
 }
@@ -1290,7 +1290,7 @@ void tgl_do_get_local_history_ext (tgl_peer_id_t id, int offset, int limit, void
 
 
 
-void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int max_id, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
   void **T = talloc (sizeof (void *) * 7);
   T[0] = ML;
   T[1] = (void *)(long)list_offset;
@@ -1304,7 +1304,7 @@ void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int list_offs
   out_int (CODE_messages_get_history);
   out_peer_id (id);
   out_int (offset);
-  out_int (0);
+  out_int (max_id);
   out_int (limit);
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, T, callback, callback_extra);
 }
@@ -1315,7 +1315,7 @@ void tgl_do_get_history (tgl_peer_id_t id, int limit, int offline_mode, void (*c
     tgl_do_mark_read (id, 0, 0);
     return;
   }
-  _tgl_do_get_history (id, limit, 0, 0, 0, 0, callback, callback_extra);
+  _tgl_do_get_history (id, limit, 0, 0, 0, 0, 0, callback, callback_extra);
 }
 
 void tgl_do_get_history_ext (tgl_peer_id_t id, int offset, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
@@ -1324,7 +1324,7 @@ void tgl_do_get_history_ext (tgl_peer_id_t id, int offset, int limit, int offlin
     tgl_do_mark_read (id, 0, 0);
     return;
   }
-  _tgl_do_get_history (id, limit, offset, 0, 0, 0, callback, callback_extra);
+  _tgl_do_get_history (id, limit, offset, 0, 0, 0, 0, callback, callback_extra);
 }
 /* }}} */
 
