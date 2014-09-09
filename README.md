@@ -61,7 +61,9 @@ Then,
 
 #### Mac OS X
 
-The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually, e.g. using [Homebrew](http://brew.sh/).
+The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually.
+
+If using [Homebrew](http://brew.sh/):
 
      brew install libconfig
      brew install readline
@@ -72,6 +74,14 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
+If using [MacPorts](https://www.macports.org):
+     
+     sudo port install libconfig-hr
+     sudo port install readline
+     sudo port install lua51
+     export CFLAGS="-I/usr/local/include -I/opt/local/include"
+     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib/"
+     ./configure && make
 
 Install these ports:
 
