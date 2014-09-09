@@ -13,4 +13,5 @@ install:
 
 script:
   - ./configure
+  - cat config.h
   - make
