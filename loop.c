@@ -72,6 +72,8 @@ int register_mode;
 extern int safe_quit;
 extern int sync_from_start;
 
+extern int disable_output;
+
 void got_it (char *line, int len);
 void write_state_file (void);
 
@@ -613,6 +615,10 @@ int loop (void) {
   }
 
   if (!tgl_signed_dc (tgl_state.DC_working)) {
+    if (disable_output) {
+      fprintf (stderr, "Can not login without output\n");
+      exit (2);
+    }
     if (!default_username) {
       size_t size = 0;
       char *user = 0;
