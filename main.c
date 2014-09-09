@@ -403,12 +403,17 @@ void usage (void) {
   printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
   printf ("  -C                  disable color output\n");
   printf ("  -R                  disable readline\n");
+  printf ("  -d                  daemon mode\n");
+  printf ("  -L <log-name>       log file name\n");
 
   exit (1);
 }
 
 //extern char *rsa_public_key_name;
 //extern int default_dc_num;
+
+
+
 
 char *log_net_file;
 FILE *log_net_f;
@@ -417,10 +422,47 @@ int register_mode;
 int disable_auto_accept;
 int wait_dialog_list;
 
+char *logname;
+int daemonize;
+
+
+void reopen_logs (void) {
+  int fd;
+  fflush (stdout);
+  fflush (stderr);
+  if ((fd = open ("/dev/null", O_RDWR, 0)) != -1) {
+    dup2 (fd, 0);
+    dup2 (fd, 1);
+    dup2 (fd, 2);
+    if (fd > 2) {
+      close (fd);
+    }
+  }
+  if (logname && (fd = open (logname, O_WRONLY|O_APPEND|O_CREAT, 0640)) != -1) {
+    dup2 (fd, 1);
+    dup2 (fd, 2);
+    if (fd > 2) {
+      close (fd);
+    }
+  }
+}
+
+
+static void sigusr1_handler (const int sig) {
+  fprintf(stderr, "got SIGUSR1, rotate logs.\n");
+  reopen_logs ();
+  signal (SIGUSR1, sigusr1_handler);
+}
+
+static void sighup_handler (const int sig) {
+  fprintf(stderr, "got SIGHUP.\n");
+  signal (SIGHUP, sighup_handler);
+}
+
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCR"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -485,6 +527,12 @@ void args_parse (int argc, char **argv) {
     case 'R':
       readline_disabled ++;
       break;
+    case 'd':
+      daemonize ++;
+      break;
+    case 'L':
+      logname = optarg;
+      break;
     case 'h':
     default:
       usage ();
@@ -532,6 +580,12 @@ int main (int argc, char **argv) {
   log_level = 10;
   
   args_parse (argc, argv);
+
+  if (daemonize) {
+    signal (SIGHUP, sighup_handler);
+    signal (SIGUSR1, sigusr1_handler);
+    reopen_logs ();
+  }
   printf (
     "Telegram-cli version " TGL_VERSION ", Copyright (C) 2013-2014 Vitaly Valtman\n"
     "Telegram-cli comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
