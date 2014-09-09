@@ -125,6 +125,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if the system has the `__builtin_bswap32' built-in function */
+#undef HAVE___BUILTIN_BSWAP32
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 

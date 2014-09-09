@@ -80,6 +80,15 @@
 #define MAX_NET_RES        (1L << 16)
 //extern int log_level;
 
+#ifndef HAVE___BUILTIN_BSWAP32
+static inline unsigned __builtin_bswap32(unsigned x) {
+  return ((x << 24) & 0xff000000 ) |
+  ((x << 8) & 0x00ff0000 ) |
+  ((x >> 8) & 0x0000ff00 ) |
+  ((x >> 24) & 0x000000ff );
+}
+#endif
+
 //int verbosity;
 static int auth_success;
 //static enum tgl_dc_state c_state;

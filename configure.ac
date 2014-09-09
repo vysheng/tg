@@ -6,6 +6,7 @@ AC_CONFIG_HEADERS([config.h])
 m4_include([ax_lua.m4])
 m4_include([m4_ax_check_openssl.m4])
 m4_include([m4_ax_check_zlib.m4])
+m4_include([m4-ax_gcc_builtin.m4])
 
 # Checks for programs.
 AC_PROG_CC
@@ -112,6 +113,8 @@ AC_C_INLINE
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([alarm endpwent memset memmove mkdir select socket strdup strndup uname])
+
+AX_GCC_BUILTIN(__builtin_bswap32)
 
 AC_SUBST(EXTRA_LIBS)
 AC_CONFIG_FILES([Makefile])

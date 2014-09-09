@@ -26,6 +26,15 @@
 
 #include "crc32.h"
 
+#ifndef HAVE___BUILTIN_BSWAP32
+static inline unsigned __builtin_bswap32(unsigned x) {
+  return ((x << 24) & 0xff000000 ) |
+  ((x << 8) & 0x00ff0000 ) |
+  ((x >> 8) & 0x0000ff00 ) |
+  ((x >> 24) & 0x000000ff );
+}
+#endif
+
 unsigned int crc32_table[256] =
 {
   0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
