@@ -41,15 +41,6 @@ end
 print ("HI, this is lua script")
 
 function ok_cb(extra, success, result)
-  if success then
-    print ("SUCCESS!\n")
-  end
-end
-
-function my_set_chat_photo (extra, success, file)
-  if success then
-    chat_set_photo (extra, file, ok_cb, false)
-  end
 end
 
 function on_msg_receive (msg)
@@ -60,16 +51,11 @@ function on_msg_receive (msg)
     return
   end
 
-  if msg.media == 'photo' and msg.to.type == 'chat' then
-    load_photo (msg.id, my_set_chat_photo, msg.to.print_name)
-  end
   if (msg.text == 'ping') then
     if (msg.to.id == our_id) then
-      print ('sending pong to ' .. tostring (msg.from.print_name))
-      send_msg (msg.from.print_name, 'pong')
+      send_msg (msg.from.print_name, 'pong', ok_cb, false)
     else
-      print ('sending pong to ' .. tostring (msg.to.print_name))
-      send_msg (msg.to.print_name, 'pong')
+      send_msg (msg.to.print_name, 'pong', ok_cb, false)
     end
     return
   end
@@ -81,8 +67,6 @@ function on_msg_receive (msg)
     end
     return
   end
-  --vardump (msg)
-  --print ( "Message # " .. msg.id .. " (flags " .. msg.flags .. ")")
 end
 
 function on_our_id (id)
