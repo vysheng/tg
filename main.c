@@ -94,6 +94,7 @@ int allow_weak_random;
 char *lua_file;
 int disable_colors;
 int readline_disabled;
+int disable_output;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -218,7 +219,9 @@ void running_for_first_time (void) {
   //char *downloads_directory = get_downloads_directory ();
 
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
-    printf ("[%s] created\n", config_directory);
+    if (!disable_output) {
+      printf ("[%s] created\n", config_directory);
+    }
   }
 
   tfree_str (config_directory);
@@ -351,15 +354,21 @@ void parse_config (void) {
   tgl_set_download_directory (downloads_directory);
   
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
-    printf ("[%s] created\n", config_directory);
+    if (!disable_output) {
+      printf ("[%s] created\n", config_directory);
+    }
   }
   if (!mkdir (downloads_directory, CONFIG_DIRECTORY_MODE)) {
-    printf ("[%s] created\n", downloads_directory);
+    if (!disable_output) {
+      printf ("[%s] created\n", downloads_directory);
+    }
   }
 }
 #else
 void parse_config (void) {
-  printf ("libconfig not enabled\n");
+  if (!disable_output) {
+    printf ("libconfig not enabled\n");
+  }
   tasprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY);
   
   if (binlog_enabled) {
@@ -405,6 +414,7 @@ void usage (void) {
   printf ("  -R                  disable readline\n");
   printf ("  -d                  daemon mode\n");
   printf ("  -L <log-name>       log file name\n");
+  printf ("  -D                  disable output\n");
 
   exit (1);
 }
@@ -462,7 +472,7 @@ static void sighup_handler (const int sig) {
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:D"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -533,6 +543,9 @@ void args_parse (int argc, char **argv) {
     case 'L':
       logname = optarg;
       break;
+    case 'D':
+      disable_output ++;
+      break;
     case 'h':
     default:
       usage ();
@@ -586,12 +599,14 @@ int main (int argc, char **argv) {
     signal (SIGUSR1, sigusr1_handler);
     reopen_logs ();
   }
-  printf (
-    "Telegram-cli version " TGL_VERSION ", Copyright (C) 2013-2014 Vitaly Valtman\n"
-    "Telegram-cli comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
-    "This is free software, and you are welcome to redistribute it\n"
-    "under certain conditions; type `show_license' for details.\n"
-  );
+  if (!disable_output) {
+    printf (
+      "Telegram-cli version " TGL_VERSION ", Copyright (C) 2013-2014 Vitaly Valtman\n"
+      "Telegram-cli comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
+      "This is free software, and you are welcome to redistribute it\n"
+      "under certain conditions; type `show_license' for details.\n"
+    );
+  }
   running_for_first_time ();
   parse_config ();
 

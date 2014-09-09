@@ -94,6 +94,8 @@ int in_chat_mode;
 tgl_peer_id_t chat_mode_id;
 extern int readline_disabled;
 
+extern int disable_output;
+
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
 }
@@ -848,7 +850,7 @@ void mark_read_upd (int num, struct tgl_message *list[]) {
 }
 
 void type_notification_upd (struct tgl_user *U) {
-  if (log_level < 2) { return; }
+  if (log_level < 2 || disable_output) { return; }
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("User ");
@@ -859,7 +861,7 @@ void type_notification_upd (struct tgl_user *U) {
 }
 
 void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C) {
-  if (log_level < 2) { return; }
+  if (log_level < 2 || disable_output) { return; }
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("User ");
@@ -876,6 +878,7 @@ void print_message_gw (struct tgl_message *M) {
   #ifdef USE_LUA
     lua_new_msg (M);
   #endif
+  if (disable_output) { return; }
   if (!binlog_read) { return; }
   print_start ();
   print_message (M);
@@ -935,6 +938,7 @@ void user_update_gw (struct tgl_user *U, unsigned flags) {
     lua_user_update (U, flags);
   #endif
   
+  if (disable_output) { return; }
   if (!binlog_read) { return; }
 
   if (!(flags & TGL_UPDATE_CREATED)) {
@@ -959,6 +963,7 @@ void chat_update_gw (struct tgl_chat *U, unsigned flags) {
     lua_chat_update (U, flags);
   #endif
   
+  if (disable_output) { return; }
   if (!binlog_read) { return; }
 
   if (!(flags & TGL_UPDATE_CREATED)) {
@@ -983,6 +988,7 @@ void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
     lua_secret_chat_update (U, flags);
   #endif
   
+  if (disable_output) { return; }
   if (!binlog_read) { return; }
 
   if ((flags & TGL_UPDATE_WORKING) || (flags & TGL_UPDATE_DELETED)) {
