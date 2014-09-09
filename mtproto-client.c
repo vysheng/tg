@@ -617,7 +617,12 @@ static int process_dh_answer (struct connection *c, char *packet, int len, int t
   l = BN_num_bytes (&auth_key_num);
   assert (l >= 250 && l <= 256);
   assert (BN_bn2bin (&auth_key_num, (unsigned char *)(temp_key ? D->temp_auth_key : D->auth_key)));
-  memset (temp_key ? D->temp_auth_key + l : D->auth_key + l, 0, 256 - l);
+  if (l < 256) {
+    char *key = temp_key ? D->temp_auth_key : D->auth_key;
+    memmove (key + 256 - l, key, l);
+    memset (key, 0, 256 - l);
+  }
+
   BN_free (dh_power);
   BN_free (&auth_key_num);
   BN_free (&dh_g);
