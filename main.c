@@ -650,9 +650,10 @@ int main (int argc, char **argv) {
 
   if (daemonize) {
     signal (SIGHUP, sighup_handler);
-    signal (SIGUSR1, sigusr1_handler);
     reopen_logs ();
   }
+  signal (SIGUSR1, sigusr1_handler);
+
   if (!disable_output) {
     printf (
       "Telegram-cli version " TGL_VERSION ", Copyright (C) 2013-2014 Vitaly Valtman\n"
