@@ -47,6 +47,8 @@
 #include <libconfig.h>
 #endif
 
+#include <grp.h>
+
 #include "telegram.h"
 #include "loop.h"
 #include "interface.h"
@@ -405,6 +407,8 @@ void usage (void) {
   printf ("  -R                  disable readline\n");
   printf ("  -d                  daemon mode\n");
   printf ("  -L <log-name>       log file name\n");
+  printf ("  -U <user-name>      change uid after start\n");
+  printf ("  -G <group-name>     change gid after start\n");
 
   exit (1);
 }
@@ -459,10 +463,53 @@ static void sighup_handler (const int sig) {
   signal (SIGHUP, sighup_handler);
 }
 
+char *set_user_name;
+char *set_group_name;
+
+int change_user_group () {
+  char *username = set_user_name;
+  char *groupname = set_group_name;
+  struct passwd *pw;
+  /* lose root privileges if we have them */
+  if (getuid() == 0 || geteuid() == 0) {
+    if (username == 0 || *username == '\0') {
+      username = "telegramd";
+    }
+    if ((pw = getpwnam (username)) == 0) {
+      fprintf (stderr, "change_user_group: can't find the user %s to switch to\n", username);
+      return -1;
+    }
+    gid_t gid = pw->pw_gid;
+    if (setgroups (1, &gid) < 0) {
+      fprintf (stderr, "change_user_group: failed to clear supplementary groups list: %m\n");
+      return -1;
+    }
+
+    if (groupname) {
+      struct group *g = getgrnam (groupname);
+      if (g == NULL) {
+        fprintf (stderr, "change_user_group: can't find the group %s to switch to\n", groupname);
+        return -1;
+      }
+      gid = g->gr_gid;
+    }
+
+    if (setgid (gid) < 0) {
+      fprintf (stderr, "change_user_group: setgid (%d) failed. %m\n", (int) gid);
+      return -1;
+    }
+
+    if (setuid (pw->pw_uid) < 0) {
+      fprintf (stderr, "change_user_group: failed to assume identity of user %s\n", username);
+      return -1;
+    }
+  }
+  return 0;
+}
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:U:G:"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -533,6 +580,12 @@ void args_parse (int argc, char **argv) {
     case 'L':
       logname = optarg;
       break;
+    case 'U':
+      set_user_name = optarg;
+      break;
+    case 'G':
+      set_group_name = optarg;
+      break;
     case 'h':
     default:
       usage ();
@@ -574,6 +627,7 @@ void sig_abrt_handler (int signum __attribute__ ((unused))) {
 }
 
 int main (int argc, char **argv) {
+  change_user_group ();
   signal (SIGSEGV, sig_segv_handler);
   signal (SIGABRT, sig_abrt_handler);
 
