@@ -25,7 +25,7 @@ static int cur_token_len;
 static char *cur_token;
 static int cur_token_real_len;
 static int cur_token_quoted;
-static int multiline_output;
+static int multiline_output = 1;
 static int multiline_offset;
 static int multiline_offset_size = 2;
 
@@ -71,7 +71,7 @@ static int is_int (void) {
   cur_token[cur_token_len] = 0;
   char *p = 0;
 
-  strtoll (cur_token, &p, 10);
+  if (strtoll (cur_token, &p, 10)) {}
   cur_token[cur_token_len] = c;
 
   return p == cur_token + cur_token_len;
@@ -95,7 +95,7 @@ static int is_double (void) {
   cur_token[cur_token_len] = 0;
   char *p = 0;
 
-  strtod (cur_token, &p);
+  if (strtod (cur_token, &p)) {}
   cur_token[cur_token_len] = c;
 
   return p == cur_token + cur_token_len;
