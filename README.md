@@ -59,6 +59,12 @@ Then,
      ./configure
      make
 
+#### Other methods to install on linux
+
+On Gentoo: use ebuild provided.
+
+On Arch: https://aur.archlinux.org/packages/telegram-git/ 
+
 #### Mac OS X
 
 The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually.
