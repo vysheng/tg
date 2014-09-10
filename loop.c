@@ -725,6 +725,7 @@ int loop (void) {
 
   set_interface_callbacks ();
 
+  tglm_send_all_unsent ();
   tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
   assert (!(tgl_state.locks & TGL_LOCK_DIFF));
@@ -736,7 +737,6 @@ int loop (void) {
   #ifdef USE_LUA
     lua_diff_end ();
   #endif
-  tglm_send_all_unsent ();
 
 
   /*tgl_do_get_dialog_list (get_dialogs_callback, 0);
