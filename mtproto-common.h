@@ -146,6 +146,12 @@ static inline void out_long (long long x) {
   packet_ptr += 2;
 }
 
+static inline void out_double (double x) {
+  assert (packet_ptr + 2 <= packet_buffer + PACKET_BUFFER_SIZE);
+  *(double *)packet_ptr = x;
+  packet_ptr += 2;
+}
+
 static inline void clear_packet (void) {
   packet_ptr = packet_buffer;
 }
@@ -345,6 +351,10 @@ static inline void fetch256 (void *buf) {
   } else {
     memcpy (buf, s + (l - 256), 256);
   }
+}
+
+static inline int in_remaining (void) {
+  return 4 * (in_end - in_ptr);
 }
 
 //int get_random_bytes (unsigned char *buf, int n);

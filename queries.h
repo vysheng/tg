@@ -48,6 +48,7 @@ struct query {
   struct event *ev;
   struct tgl_dc *DC;
   struct tgl_session *session;
+  struct paramed_type *type;
   void *extra;
   void *callback;
   void *callback_extra;

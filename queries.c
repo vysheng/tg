@@ -162,6 +162,7 @@ struct query *tglq_send_query_ex (struct tgl_dc *DC, int ints, void *data, struc
   }
   vlogprintf (E_DEBUG, "Msg_id is %lld %p\n", q->msg_id, q);
   q->methods = methods;
+  q->type = methods->type;
   q->DC = DC;
   q->flags = flags & QUERY_FORCE_SEND;
   if (queries_tree) {
@@ -271,11 +272,11 @@ void tglq_query_result (long long id UU) {
     }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_answer) {
-      if (q->methods->type) {
+      if (q->type) {
         int *save = in_ptr;
         vlogprintf (E_DEBUG, "in_ptr = %p, end_ptr = %p\n", in_ptr, in_end);
-        if (skip_type_any (q->methods->type) < 0) {
-          vlogprintf (E_ERROR, "Skipped %ld int out of %ld (type %s)\n", (long)(in_ptr - save), (long)(in_end - save), q->methods->type->type->id);
+        if (skip_type_any (q->type) < 0) {
+          vlogprintf (E_ERROR, "Skipped %ld int out of %ld (type %s)\n", (long)(in_ptr - save), (long)(in_end - save), q->type->type->id);
           assert (0);
         }
         
@@ -3430,6 +3431,28 @@ void tgl_do_import_card (int size, int *card, void (*callback)(void *callback_ex
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &import_card_methods, 0, callback, callback_extra);
 }
 /* }}} */
+
+static int ext_query_on_answer (struct query *q UU) {
+  if (q->callback) {
+    char *buf = tglf_extf_fetch (q->type);
+    ((void (*)(void *, int, char *))q->callback) (q->callback_extra, 1, buf);
+  }
+  return 0;
+}
+
+static struct query_methods ext_query_methods = {
+  .on_answer = ext_query_on_answer,
+};
+
+void tgl_do_send_extf (char *data, int data_len, void (*callback)(void *callback_extra, int success, char *buf), void *callback_extra) {
+  clear_packet ();
+
+  ext_query_methods.type = tglf_extf_store (data, data_len);
+
+  if (ext_query_methods.type) { 
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &ext_query_methods, 0, callback, callback_extra);
+  }
+}
 
 static void set_flag_4 (void *_D, int success) {
   struct tgl_dc *D = _D;

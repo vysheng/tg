@@ -20,13 +20,15 @@
 #ifndef __AUTO_H__
 #define __AUTO_H__
 
-struct tl_type {
+struct tl_type_descr {
   unsigned name;
   char *id;
+  int params_num;
+  long long params_types;
 };
 
 struct paramed_type {
-  struct tl_type *type;
+  struct tl_type_descr *type;
   struct paramed_type **params;
 };
 

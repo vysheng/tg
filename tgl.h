@@ -312,4 +312,9 @@ double tglt_get_double_time (void);
 void tgl_insert_empty_user (int id);
 void tgl_insert_empty_chat (int id);
 
+int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R, char *data, int data_len);
+struct paramed_type *tglf_extf_store (const char *data, int data_len);
+void tgl_do_send_extf (char *data, int data_len, void (*callback)(void *callback_extra, int success, char *data), void *callback_extra);
+char *tglf_extf_fetch (struct paramed_type *T);
+
 #endif

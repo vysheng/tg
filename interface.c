@@ -340,7 +340,8 @@ enum command_argument {
   ca_string_end,
   ca_string,
   ca_modifier,
-  ca_command
+  ca_command,
+  ca_extf
 };
 
 struct command {
@@ -411,6 +412,7 @@ enum command_argument get_complete_mode (void) {
   int l = 0;
   char *r = next_token (&l);
   if (!r) { return ca_command; }
+  if (*r == '(') { return ca_extf; }
   while (r && r[0] == '[' && r[l - 1] == ']') {
     r = next_token (&l);
     if (!r) { return ca_command; }
@@ -536,6 +538,9 @@ char *command_generator (const char *text, int state) {
   case ca_modifier:
     index = complete_string_list (modifiers, index, text, len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
+    return R;
+  case ca_extf:
+    index = tglf_extf_autocomplete (text, len, index, &R, rl_line_buffer, rl_point);
     return R;
   default:
     if (c) { rl_line_buffer[rl_point] = c; }
@@ -1026,6 +1031,12 @@ void print_card_gw (void *extra, int success, int size, int *card) {
   print_end ();
 }
 
+void callback_extf (void *extra, int success, char *buf) {
+  print_start ();
+  printf ("%s\n", buf);
+  print_end ();
+}
+
 struct tgl_update_callback upd_cb = {
   .new_msg = print_message_gw,
   .marked_read = mark_read_upd,
@@ -1114,7 +1125,9 @@ void interpreter (char *line UU) {
     RET; \
   } 
 
-  if (IS_WORD ("contact_list")) {
+  if (command && *command == '(') {
+    tgl_do_send_extf (line, strlen (line), callback_extf, 0);
+  } else if (IS_WORD ("contact_list")) {
     tgl_do_update_contact_list (print_user_list_gw, 0);
   } else if (IS_WORD ("dialog_list")) {
     tgl_do_get_dialog_list (print_dialog_list_gw, 0);
