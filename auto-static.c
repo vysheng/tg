@@ -154,6 +154,67 @@ static int is_letter (char c) {
 }
 
 
+static char exp_buffer[1 << 25];;
+static int exp_buffer_pos;
+
+static inline int is_hex (char c) {
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+}
+
+static inline int hex2dec (char c) {
+  if (c >= '0' && c <= '9') { return c - '0'; }
+  else { return c - 'a' + 10; }
+}
+
+static void expand_backslashed (char *s, int len) {
+  int backslashed = 0;
+  exp_buffer_pos = 0;
+  int i = 0;
+  while (i < len) {
+    assert (i + 3 <= (1 << 25));
+    if (backslashed) {
+      backslashed = 0;
+      switch (s[i ++]) {
+      case 'n':
+        exp_buffer[exp_buffer_pos ++] = '\n';
+        break;
+      case 'r':
+        exp_buffer[exp_buffer_pos ++] = '\r';
+        break;
+      case 't':
+        exp_buffer[exp_buffer_pos ++] = '\t';
+        break;
+      case 'b':
+        exp_buffer[exp_buffer_pos ++] = '\b';
+        break;
+      case 'a':
+        exp_buffer[exp_buffer_pos ++] = '\a';
+        break;
+      case '\\':
+        exp_buffer[exp_buffer_pos ++] = '\\';
+        break;
+      case 'x':
+        if (i + 2 > len || !is_hex (s[i]) || !is_hex (s[i + 1])) {
+          exp_buffer_pos = -1;
+          return;
+        }
+        exp_buffer[exp_buffer_pos ++] = hex2dec (s[i]) * 16 + hex2dec (s[i + 1]);
+        i += 2;
+        break;
+      default:
+        break;
+      }
+    } else {
+      if (s[i] == '\\') { 
+        backslashed = 1; 
+        i ++;
+      } else {
+        exp_buffer[exp_buffer_pos ++] = s[i ++];
+      }
+    }
+  }
+}
+
 static void local_next_token (void) {
   skip_wspc ();
   cur_token_quoted = 0;
@@ -178,13 +239,24 @@ static void local_next_token (void) {
   } else if (c == '"') {
     cur_token_quoted = 1;
     cur_token = buffer_pos ++;
-    while (buffer_pos < buffer_end && *buffer_pos != '"') {
+    int backslashed = 0;
+    while (buffer_pos < buffer_end && (*buffer_pos != '"' || backslashed)) {
+      if (*buffer_pos == '\\') {
+        backslashed ^= 1;
+      } else {
+        backslashed = 0;
+      }
       buffer_pos ++;
     }
     if (*buffer_pos == '"') {
       buffer_pos ++;
-      cur_token_len = buffer_pos - cur_token - 2;
-      cur_token ++;
+      expand_backslashed (cur_token + 1, buffer_pos - cur_token - 2);
+      if (exp_buffer_pos < 0) {
+        cur_token_len = -2;
+      } else {
+        cur_token_len = exp_buffer_pos;
+        cur_token = exp_buffer;
+      }
     } else {
       cur_token_len = -2;
     }
@@ -240,6 +312,83 @@ static int out_buf_pos;
     out_buf_pos += snprintf (out_buf + out_buf_pos, OUT_BUF_SIZE - out_buf_pos, __VA_ARGS__);\
     assert (out_buf_pos < OUT_BUF_SIZE);\
   } while (0)\
+
+static int valid_utf8_char (const char *str) {
+  unsigned char c = (unsigned char) *str;
+  int n = 0;
+ 
+  if ((c & 0x80) == 0x00) {
+    n = 0;
+  } else if ((c & 0xe0) == 0xc0) {
+    n = 1;
+  } else if ((c & 0xf0) == 0xe0) {
+    n = 2;
+  } else if ((c & 0xf8) == 0xf0) {
+    n = 3;
+  } else if ((c & 0xfc) == 0xf8) {
+    n = 4;
+  } else if ((c & 0xfe) == 0xfc) {
+    n = 5;
+  } else {
+    return -1;
+  }
+
+  int i;
+  for (i = 0; i < n; i ++) {
+    if ((((unsigned char)(str[i])) & 0xc0) != 0x80) {
+      return -1;
+    }
+  }
+  return n + 1;
+}
+
+static void print_escaped_string (const char *str) {
+  eprintf ("\"");
+  while (*str) {
+    int n = valid_utf8_char (str);
+    if (n < 0) {
+      eprintf ("\\x%02x", (int)(unsigned char)*str);
+      str ++;
+    } else if (n >= 2) {
+      int i;
+      for (i = 0; i < n; i++) {
+        eprintf ("%c", *(str ++));
+      }
+    } else if (((unsigned char)*str) >= ' ' && *str != '"' && *str != '\\') {
+      eprintf ("%c", *str);      
+      str ++;
+    } else {
+      switch (*str) {
+      case '\n':
+        eprintf("\\n");
+        break;
+      case '\r':
+        eprintf("\\r");
+        break;
+      case '\t':
+        eprintf("\\t");
+        break;
+      case '\b':
+        eprintf("\\b");
+        break;
+      case '\a':
+        eprintf("\\a");
+        break;
+      case '\\':
+        eprintf ("\\\\");
+        break;
+      case '"':
+        eprintf ("\"");
+        break;
+      default:
+        eprintf ("\\x%02x", (int)(unsigned char)*str);
+        break;
+      }
+      str ++;
+    }
+  }
+  eprintf ("\"");
+}
 
 char *tglf_extf_fetch (struct paramed_type *T) {
   out_buf_pos = 0;

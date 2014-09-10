@@ -230,7 +230,7 @@ struct tl_tree *read_num_const (int *var_num) {
 }
 
 
-int gen_uni_skip (struct tl_tree *t, char *cur_name, int *vars, int first) {
+int gen_uni_skip (struct tl_tree *t, char *cur_name, int *vars, int first, int fun) {
   assert (t);
   int x = TL_TREE_METHODS (t)->type (t);
   int l = 0;
@@ -240,57 +240,58 @@ int gen_uni_skip (struct tl_tree *t, char *cur_name, int *vars, int first) {
   struct tl_tree_array *t2;
   int y;
   int L = strlen (cur_name);
+  char *fail = fun ? "return 0;" : "return -1;";
   switch (x) {
   case NODE_TYPE_TYPE:
     t1 = (void *)t;
     if (!first) {
-      printf ("  if (ODDP(%s) || %s->type->name != 0x%08x) { return -1; }\n", cur_name, cur_name, t1->type->name);
+      printf ("  if (ODDP(%s) || %s->type->name != 0x%08x) { %s }\n", cur_name, cur_name, t1->type->name, fail);
     } else {
-      printf ("  if (ODDP(%s) || (%s->type->name != 0x%08x && %s->type->name != 0x%08x)) { return -1; }\n", cur_name, cur_name, t1->type->name, cur_name, ~t1->type->name);
+      printf ("  if (ODDP(%s) || (%s->type->name != 0x%08x && %s->type->name != 0x%08x)) { %s }\n", cur_name, cur_name, t1->type->name, cur_name, ~t1->type->name, fail);
     }
     for (i = 0; i < t1->children_num; i++) {
       sprintf (cur_name + L, "->params[%d]", i);
-      gen_uni_skip (t1->children[i], cur_name, vars, 0);
+      gen_uni_skip (t1->children[i], cur_name, vars, 0, fun);
       cur_name[L] = 0;
     }
     return 0;
   case NODE_TYPE_NAT_CONST:
-    printf ("  if (EVENP(%s) || ((long)%s) != %lld) { return -1; }\n", cur_name, cur_name, var_nat_const_to_int (t) * 2 + 1);
+    printf ("  if (EVENP(%s) || ((long)%s) != %lld) { %s }\n", cur_name, cur_name, var_nat_const_to_int (t) * 2 + 1, fail);
     return 0;
   case NODE_TYPE_ARRAY:
-    printf ("  if (ODDP(%s) || %s->type->name != TL_TYPE_ARRAY) { return -1; }\n", cur_name, cur_name);
+    printf ("  if (ODDP(%s) || %s->type->name != TL_TYPE_ARRAY) { %s }\n", cur_name, cur_name, fail);
     t2 = (void *)t;
     
     sprintf (cur_name + L, "->params[0]");
-    y = gen_uni_skip (t2->multiplicity, cur_name, vars, 0);    
+    y = gen_uni_skip (t2->multiplicity, cur_name, vars, 0, fun);    
     cur_name[L] = 0;
 
     sprintf (cur_name + L, "->params[1]");
-    y += gen_uni_skip (t2->args[0]->type, cur_name, vars, 0);
+    y += gen_uni_skip (t2->args[0]->type, cur_name, vars, 0, fun);
     cur_name[L] = 0;
     return 0;
   case NODE_TYPE_VAR_TYPE:
-    printf ("  if (ODDP(%s)) { return -1; }\n", cur_name);
+    printf ("  if (ODDP(%s)) { %s }\n", cur_name, fail);
     i = ((struct tl_tree_var_type *)t)->var_num;
     if (!vars[i]) {
       printf ("  struct paramed_type *var%d = %s; assert (var%d);\n", i, cur_name, i);      
       vars[i] = 1;
     } else if (vars[i] == 1) {
-      printf (" if (compare_types (var%d, %s) < 0) { return -1; }\n", i, cur_name);
+      printf (" if (compare_types (var%d, %s) < 0) { %s }\n", i, cur_name, fail);
     } else {
       assert (0);
       return -1;
     }
     return l;
   case NODE_TYPE_VAR_NUM:
-    printf ("  if (EVENP(%s)) { return -1; }\n", cur_name);
+    printf ("  if (EVENP(%s)) { %s }\n", cur_name, fail);
     i = ((struct tl_tree_var_num *)t)->var_num;
     j = ((struct tl_tree_var_num *)t)->dif;
     if (!vars[i]) {
       printf ("  struct paramed_type *var%d = ((void *)%s) + %d; assert (var%d);\n", i, cur_name, 2 * j, i);
       vars[i] = 2;
     } else if (vars[i] == 2) {
-      printf ("  if (var%d != ((void *)%s) + %d) { return -1; }\n", i, cur_name, 2 * j);
+      printf ("  if (var%d != ((void *)%s) + %d) { %s }\n", i, cur_name, 2 * j, fail);
     } else {
       assert (0);
       return -1;
@@ -683,6 +684,68 @@ int gen_field_autocomplete (struct arg *arg, int *vars, int num, int from_func) 
   return 0;
 }
 
+int gen_field_autocomplete_excl (struct arg *arg, int *vars, int num, int from_func) {
+  assert (arg);
+  assert (arg->var_num < 0);
+  char *offset = "  ";
+  if (arg->exist_var_num >= 0) {
+    printf ("  if (PTR2INT (var%d) & (1 << %d)) {\n", arg->exist_var_num, arg->exist_var_bit);
+    offset = "    ";
+  }
+  char *fail = from_func ? "0" : "-1";
+  char *expect = from_func ? "expect_token_ptr_autocomplete" : "expect_token_autocomplete";
+  if (arg->id && strlen (arg->id) > 0) {
+    printf ("%sif (cur_token_len == -3 && cur_token_real_len <= %d && !cur_token_quoted && !memcmp (cur_token, \"%s\", cur_token_real_len)) {\n", offset, (int)(strlen (arg->id)), arg->id);
+    printf ("%s  set_autocomplete_string (\"%s\");\n", offset, arg->id);
+    printf ("%s  return %s;\n", offset, fail);
+    printf ("%s}\n", offset);
+
+    printf ("%sif (cur_token_len >= 0 && cur_token_len == %d && !memcmp (cur_token, \"%s\", cur_token_len)) {\n", offset, (int)(strlen (arg->id)), arg->id);
+    printf ("%s  local_next_token ();\n", offset);
+    printf ("%s  %s (\":\", 1);\n", offset, expect);
+    printf ("%s}\n", offset);
+  }
+  int t = TL_TREE_METHODS (arg->type)->type (arg->type);
+  assert (t == NODE_TYPE_TYPE || t == NODE_TYPE_VAR_TYPE);
+  printf ("%sstruct paramed_type *field%d = autocomplete_function_any ();\n", offset, num);
+  printf ("%sif (!field%d) { return 0; }\n", offset, num);
+  static char s[20];
+  sprintf (s, "field%d", num);
+  gen_uni_skip (arg->type, s, vars, 1, 1);
+  if (arg->exist_var_num >= 0) {
+    printf ("  }\n");
+  }
+  return 0;
+}
+
+int gen_field_store_excl (struct arg *arg, int *vars, int num, int from_func) {
+  assert (arg);
+  assert (arg->var_num < 0);
+  char *offset = "  ";
+  if (arg->exist_var_num >= 0) {
+    printf ("  if (PTR2INT (var%d) & (1 << %d)) {\n", arg->exist_var_num, arg->exist_var_bit);
+    offset = "    ";
+  }
+  char *expect = from_func ? "expect_token_ptr" : "expect_token";
+  if (arg->id && strlen (arg->id) > 0) {
+    printf ("%sif (cur_token_len >= 0 && cur_token_len == %d && !cur_token_quoted && !memcmp (cur_token, \"%s\", cur_token_len)) {\n", offset, (int)(strlen (arg->id)), arg->id);
+    printf ("%s  local_next_token ();\n", offset);
+    printf ("%s  %s (\":\", 1);\n", offset, expect);
+    printf ("%s}\n", offset);
+  }
+  int t = TL_TREE_METHODS (arg->type)->type (arg->type);
+  assert (t == NODE_TYPE_TYPE || t == NODE_TYPE_VAR_TYPE);
+  printf ("%sstruct paramed_type *field%d = store_function_any ();\n", offset, num);
+  printf ("%sif (!field%d) { return 0; }\n", offset, num);
+  static char s[20];
+  sprintf (s, "field%d", num);
+  gen_uni_skip (arg->type, s, vars, 1, 1);
+  if (arg->exist_var_num >= 0) {
+    printf ("  }\n");
+  }
+  return 0;
+}
+
 void gen_constructor_skip (struct tl_combinator *c) {
   printf ("int skip_constructor_%s (struct paramed_type *T) {\n", c->print_id);
   int i;
@@ -695,7 +758,7 @@ void gen_constructor_skip (struct tl_combinator *c) {
   sprintf (s, "T");
   
   int *vars = malloc0 (c->var_num * 4);;
-  gen_uni_skip (c->result, s, vars, 1);
+  gen_uni_skip (c->result, s, vars, 1, 0);
   
   if (c->name == NAME_INT) {
     printf ("  if (in_remaining () < 4) { return -1;}\n");
@@ -744,7 +807,7 @@ void gen_constructor_fetch (struct tl_combinator *c) {
   sprintf (s, "T");
   
   int *vars = malloc0 (c->var_num * 4);;
-  gen_uni_skip (c->result, s, vars, 1);
+  gen_uni_skip (c->result, s, vars, 1, 0);
 
   if (c->name == NAME_INT) {
     printf ("  if (in_remaining () < 4) { return -1;}\n");
@@ -764,7 +827,7 @@ void gen_constructor_fetch (struct tl_combinator *c) {
     printf ("  if (l < 0 || (l >= (1 << 22) - 2)) { return -1; }\n");
     printf ("  memcpy (buf, fetch_str (l), l);\n");
     printf ("  buf[l] = 0;\n");
-    printf ("  eprintf (\" \\\"%%s\\\"\", buf);\n");
+    printf ("  print_escaped_string (buf);\n");
     printf ("  return 0;\n");
     printf ("}\n");
     return;
@@ -804,7 +867,7 @@ void gen_constructor_store (struct tl_combinator *c) {
   sprintf (s, "T");
   
   int *vars = malloc0 (c->var_num * 4);;
-  gen_uni_skip (c->result, s, vars, 1);
+  gen_uni_skip (c->result, s, vars, 1, 0);
 
   if (c->name == NAME_INT) {
     printf ("  if (is_int ()) {\n");
@@ -869,7 +932,7 @@ void gen_constructor_autocomplete (struct tl_combinator *c) {
   sprintf (s, "T");
   
   int *vars = malloc0 (c->var_num * 4);;
-  gen_uni_skip (c->result, s, vars, 1);
+  gen_uni_skip (c->result, s, vars, 1, 0);
 
   if (c->name == NAME_INT) {
     printf ("  if (is_int ()) {\n");
@@ -1075,16 +1138,15 @@ void gen_type_autocomplete (struct tl_type *t) {
 void gen_function_store (struct tl_combinator *f) {
   printf ("struct paramed_type *store_function_%s (void) {\n", f->print_id);
   int i;
-  for (i = 0; i < f->args_num; i++) if (f->args[i]->flags & FLAG_EXCL) {
-    printf ("  return 0;\n");
-    printf ("}\n");
-    return;
-  }
   
   int *vars = malloc0 (f->var_num * 4);;
 
   for (i = 0; i < f->args_num; i++) if (!(f->args[i]->flags & FLAG_OPT_VAR)) {
-    assert (gen_field_store (f->args[i], vars, i + 1, 1) >= 0);
+    if (f->args[i]->flags & FLAG_EXCL) {
+      assert (gen_field_store_excl (f->args[i], vars, i + 1, 1) >= 0);
+    } else {
+      assert (gen_field_store (f->args[i], vars, i + 1, 1) >= 0);
+    }
   }
 
 
@@ -1100,20 +1162,23 @@ void gen_function_store (struct tl_combinator *f) {
 void gen_function_autocomplete (struct tl_combinator *f) {
   printf ("struct paramed_type *autocomplete_function_%s (void) {\n", f->print_id);
   int i;
-  for (i = 0; i < f->args_num; i++) if (f->args[i]->flags & FLAG_EXCL) {
-    printf ("  return 0;\n");
-    printf ("}\n");
-    return;
-  }
   
   int *vars = malloc0 (f->var_num * 4);;
 
   for (i = 0; i < f->args_num; i++) if (!(f->args[i]->flags & FLAG_OPT_VAR)) {
-    assert (gen_field_autocomplete (f->args[i], vars, i + 1, 1) >= 0);
+    if (f->args[i]->flags & FLAG_EXCL) {
+      assert (gen_field_autocomplete_excl (f->args[i], vars, i + 1, 1) >= 0);
+    } else {
+      assert (gen_field_autocomplete (f->args[i], vars, i + 1, 1) >= 0);
+    }
   }
 
+  printf ("  struct paramed_type *R = \n");
+  assert (gen_create (f->result, vars, 2) >= 0);
+  printf (";\n");
+
   free (vars);
-  printf ("  return (void *)1;\n");
+  printf ("  return paramed_type_dup (R);\n");
   printf ("}\n"); 
 }
 
