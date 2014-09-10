@@ -474,6 +474,7 @@ enum lua_query_type {
   lq_chat_add_user,
   lq_chat_del_user,
   lq_add_contact,
+  lq_del_contact,
   lq_rename_contact,
   lq_search,
   lq_global_search,
@@ -968,6 +969,9 @@ void lua_do_all (void) {
       free (s3);
       p += 4;
       break;
+    case lq_del_contact:
+      tgl_do_del_contact (((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      break;
     case lq_rename_contact:
       s1 = lua_ptr[p + 1];
       s2 = lua_ptr[p + 2];
@@ -1108,6 +1112,7 @@ struct lua_function functions[] = {
   {"chat_add_user", lq_chat_add_user, { lfp_chat, lfp_user, lfp_none }},
   {"chat_del_user", lq_chat_del_user, { lfp_chat, lfp_user, lfp_none }},
   {"add_contact", lq_add_contact, { lfp_string, lfp_string, lfp_string, lfp_none }},
+  {"del_contact", lq_del_contact, { lfp_user, lfp_none }},
   {"rename_contact", lq_rename_contact, { lfp_string, lfp_string, lfp_string, lfp_none }},
   {"msg_search", lq_search, { lfp_peer, lfp_string, lfp_none }},
   {"msg_global_search", lq_global_search, { lfp_string, lfp_none }},

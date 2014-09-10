@@ -379,6 +379,7 @@ struct command commands[] = {
   {"load_document_thumb", {ca_number, ca_none}},
   {"view_document_thumb", {ca_number, ca_none}},
   {"add_contact", {ca_string, ca_string, ca_string, ca_none}},
+  {"del_contact", {ca_user, ca_none}},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}},
   {"show_license", {ca_none}},
   {"search", {ca_peer, ca_string_end}},
@@ -1339,6 +1340,9 @@ void interpreter (char *line UU) {
       RET;
     }
     tgl_do_add_contact (phone, phone_len, first_name, first_name_len, last_name, last_name_len, 0, print_user_list_gw, 0);
+  } else if (IS_WORD ("del_contact")) {
+    GET_PEER_USER;
+    tgl_do_del_contact (id, 0, 0);
   } else if (IS_WORD ("send_contact")) {
     GET_PEER;
     int phone_len, first_name_len, last_name_len;

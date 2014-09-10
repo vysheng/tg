@@ -2600,6 +2600,44 @@ void tgl_do_add_contact (const char *phone, int phone_len, const char *first_nam
 }
 /* }}} */
 
+/* {{{ Add contact */
+static int del_contact_on_answer (struct query *q UU) {
+  assert (skip_type_contacts_link (TYPE_TO_PARAM(contacts_link)) >= 0);
+
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+  }
+  return 0;
+}
+
+static struct query_methods del_contact_methods = {
+  .on_answer = del_contact_on_answer,
+  .type = TYPE_TO_PARAM(contacts_link)
+};
+
+void tgl_do_del_contact (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  if (tgl_get_peer_type (id) != TGL_PEER_USER) {
+    if (callback) {
+      callback (callback_extra, 0);
+    }
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_contacts_delete_contact);
+  
+  tgl_peer_t *U = tgl_peer_get (id);
+  if (U && U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (tgl_get_peer_id (id));
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (tgl_get_peer_id (id));
+  }
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &del_contact_methods, 0, callback, callback_extra);
+}
+ /* }}} */
+
 /* {{{ Msg search */
 static int msg_search_on_answer (struct query *q UU) {
   return get_history_on_answer (q);
