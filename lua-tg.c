@@ -491,7 +491,8 @@ enum lua_query_type {
   lq_accept_secret_chat,
   lq_send_contact,
   lq_status_online,
-  lq_status_offline
+  lq_status_offline,
+  lq_extf
 };
 
 struct lua_query_extra {
@@ -806,6 +807,37 @@ void lua_user_cb (void *cb_extra, int success, struct tgl_user *C) {
   free (cb);
 }
 
+void lua_str_cb (void *cb_extra, int success, char *data) {
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success) {
+    lua_pushstring (luaState, data);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
 void lua_do_all (void) {
   int p = 0;
   while (p < pos) {
@@ -971,6 +1003,7 @@ void lua_do_all (void) {
       break;
     case lq_del_contact:
       tgl_do_del_contact (((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      p += 2;
       break;
     case lq_rename_contact:
       s1 = lua_ptr[p + 1];
@@ -1043,6 +1076,12 @@ void lua_do_all (void) {
     case lq_status_offline:
       tgl_do_update_status (0, lua_empty_cb, lua_ptr[p]);
       p ++;
+      break;
+    case lq_extf:
+      s = lua_ptr[p + 1];
+      tgl_do_send_extf (s, strlen (s), lua_str_cb, lua_ptr[p]);
+      free (s);
+      p += 2;
       break;
   /*
   lq_delete_msg,
@@ -1126,6 +1165,7 @@ struct lua_function functions[] = {
   {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
   {"status_online", lq_status_online, { lfp_none }},
   {"status_offline", lq_status_offline, { lfp_none }},
+  {"ext_function", lq_extf, { lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
