@@ -335,7 +335,7 @@ static int valid_utf8_char (const char *str) {
 
   int i;
   for (i = 0; i < n; i ++) {
-    if ((((unsigned char)(str[i])) & 0xc0) != 0x80) {
+    if ((((unsigned char)(str[i + 1])) & 0xc0) != 0x80) {
       return -1;
     }
   }
