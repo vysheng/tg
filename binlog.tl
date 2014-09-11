@@ -59,6 +59,8 @@ binlog.sendMessageActionEncr id:long from_id:int to_type:int to_id:int date:int 
 binlog.createMessageTextFwd id:int from_id:int to_type:int to_id:int date:int fwd_from_id:int fwd_date:int unread:int text:string = binlog.Update;
 binlog.createMessageMedia id:int from_id:int to_type:int to_id:int date:int unread:int text:string media:MessageMedia = binlog.Update;
 binlog.createMessageMediaEncr id:long from_id:int to_type:int to_id:int date:int text:string media:DecryptedMessageMedia file:EncryptedFile = binlog.Update;
+binlog.createMessageMediaEncrPending id:long from_id:int to_type:int to_id:int date:int text:string media:DecryptedMessageMedia = binlog.Update;
+binlog.createMessageMediaEncrSent id:long file:EncryptedFile = binlog.Update;
 binlog.createMessageMediaFwd id:int from_id:int to_type:int to_id:int date:int fwd_from_id:int fwd_date:int unread:int text:string media:MessageMedia = binlog.Update;
 binlog.createMessageService id:int from_id:int to_type:int to_id:int date:int unread:int action:MessageAction = binlog.Update;
 binlog.createMessageServiceEncr id:long from_id:int to_type:int to_id:int date:int action:DecryptedMessageAction = binlog.Update;

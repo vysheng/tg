@@ -1533,17 +1533,18 @@ static int send_file_on_answer (struct query *q UU) {
 static int send_encr_file_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_sent_encrypted_file);
   struct tgl_message *M = q->extra;
-  M->date = fetch_int ();
-  assert (fetch_int () == CODE_encrypted_file);
-  M->media.encr_photo.id = fetch_long ();
-  M->media.encr_photo.access_hash = fetch_long ();
-  //M->media.encr_photo.size = fetch_int ();
+  //M->date = fetch_int ();
   fetch_int ();
-  M->media.encr_photo.dc_id = fetch_int ();
-  assert (fetch_int () == M->media.encr_photo.key_fingerprint);
+  int *save = in_ptr;
+
+  assert (skip_type_any (TYPE_TO_PARAM (encrypted_file)) >= 0);
+  
   //print_message (M);
-  tglm_message_insert (M);
-  bl_do_msg_update (M->id);
+  if (M->flags & FLAG_PENDING) {
+    bl_do_create_message_media_encr_sent (M->id, save, in_ptr - save);
+    //bl_do_set_message_sent (M);
+    bl_do_msg_update (M->id);
+  }
   
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback)(q->callback_extra, 1, M);
@@ -1715,7 +1716,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_long (r);
       tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
     } else {
-      struct tgl_message *M = talloc0 (sizeof (*M));
+      //struct tgl_message *M = talloc0 (sizeof (*M));
 
       out_int (CODE_messages_send_encrypted_file);
       out_int (CODE_input_encrypted_chat);
@@ -1731,18 +1732,19 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_long (r);
       out_random (15 + 4 * (lrand48 () % 3));
       out_string ("");
+      int *save_ptr = packet_ptr;
       if (f->media_type == CODE_input_media_uploaded_photo) {
         out_int (CODE_decrypted_message_media_photo);
-        M->media.type = CODE_decrypted_message_media_photo;
+        //M->media.type = CODE_decrypted_message_media_photo;
       } else if (f->media_type == CODE_input_media_uploaded_video) {
         out_int (CODE_decrypted_message_media_video);
-        M->media.type = CODE_decrypted_message_media_video;
+        //M->media.type = CODE_decrypted_message_media_video;
       } else if (f->media_type == CODE_input_media_uploaded_audio) {
         out_int (CODE_decrypted_message_media_audio);
-        M->media.type = CODE_decrypted_message_media_audio;
+        //M->media.type = CODE_decrypted_message_media_audio;
       } else if (f->media_type == CODE_input_media_uploaded_document) {
         out_int (CODE_decrypted_message_media_document);
-        M->media.type = CODE_decrypted_message_media_document;;
+        //M->media.type = CODE_decrypted_message_media_document;;
       } else {
         assert (0);
       }
@@ -1770,6 +1772,11 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_int (f->size);
       out_cstring ((void *)f->key, 32);
       out_cstring ((void *)f->init_iv, 32);
+
+      long long msg_id;
+      tglt_secure_random (&msg_id, 8);
+      bl_do_create_message_media_encr_pending (msg_id, tgl_state.our_id, tgl_get_peer_type (f->to_id), tgl_get_peer_id (f->to_id), time (0), 0, 0, save_ptr, packet_ptr - save_ptr);
+
       encr_finish (&P->encr_chat);
       if (f->size < (16 << 20)) {
         out_int (CODE_input_encrypted_file_uploaded);
@@ -1790,20 +1797,22 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_int ((*(int *)md5) ^ (*(int *)(md5 + 4)));
 
       tfree_secure (f->iv, 32);
+      struct tgl_message *M = tgl_message_get (msg_id);
+      assert (M);
       
-      M->media.encr_photo.key = f->key;
-      M->media.encr_photo.iv = f->init_iv;
-      M->media.encr_photo.key_fingerprint = (*(int *)md5) ^ (*(int *)(md5 + 4)); 
-      M->media.encr_photo.size = f->size;
+      //M->media.encr_photo.key = f->key;
+      //M->media.encr_photo.iv = f->init_iv;
+      //M->media.encr_photo.key_fingerprint = (*(int *)md5) ^ (*(int *)(md5 + 4)); 
+      //M->media.encr_photo.size = f->size;
   
-      M->flags = FLAG_ENCRYPTED;
-      M->from_id = TGL_MK_USER (tgl_state.our_id);
-      M->to_id = f->to_id;
-      M->unread = 1;
-      M->message = tstrdup ("");
-      M->out = 1;
-      M->id = r;
-      M->date = time (0);
+      //M->flags = FLAG_ENCRYPTED;
+      //M->from_id = TGL_MK_USER (tgl_state.our_id);
+      //M->to_id = f->to_id;
+      //M->unread = 1;
+      //M->message = tstrdup ("");
+      //M->out = 1;
+      //M->id = r;
+      //M->date = time (0);
       
       tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M, callback, callback_extra);
     }
@@ -3004,6 +3013,8 @@ static int get_dh_config_on_answer (struct query *q UU) {
     ensure_ptr (p);
     assert (tglmp_check_DH_params (p, a) >= 0);
     BN_free (p);      
+  } else {
+    assert (tgl_state.encr_param_version);
   }
   int l = prefetch_strlen ();
   assert (l == 256);

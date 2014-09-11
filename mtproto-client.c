@@ -457,6 +457,7 @@ static int check_prime (BIGNUM *p) {
 
 int tglmp_check_DH_params (BIGNUM *p, int g) {
   if (g < 2 || g > 7) { return -1; }
+  if (BN_num_bits (p) != 2048) { return -1; }
   BIGNUM t;
   BN_init (&t);
 

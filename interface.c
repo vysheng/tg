@@ -1894,11 +1894,6 @@ void print_media (struct tgl_message_media *M) {
       return;
     case tgl_message_media_photo_encr:
       printf ("[photo]");
-      if (M->photo.caption && strlen (M->photo.caption)) {
-        printf ("[photo %s]", M->photo.caption);
-      } else {
-        printf ("[photo]");
-      }
       return;
     case tgl_message_media_video_encr:
       if (M->encr_video.mime_type) {
