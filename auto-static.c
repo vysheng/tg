@@ -381,9 +381,10 @@ static int valid_utf8_char (const char *str) {
   return n + 1;
 }
 
-static void print_escaped_string (const char *str) {
+static void print_escaped_string (const char *str, int len) {
   eprintf ("\"");
-  while (*str) {
+  const char *end = str + len;
+  while (str < end) {
     int n = valid_utf8_char (str);
     if (n < 0) {
       eprintf ("\\x%02x", (int)(unsigned char)*str);

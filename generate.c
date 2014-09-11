@@ -832,7 +832,7 @@ void gen_constructor_fetch (struct tl_combinator *c) {
     printf ("  if (l < 0 || (l >= (1 << 22) - 2)) { return -1; }\n");
     printf ("  memcpy (buf, fetch_str (l), l);\n");
     printf ("  buf[l] = 0;\n");
-    printf ("  print_escaped_string (buf);\n");
+    printf ("  print_escaped_string (buf, l);\n");
     printf ("  return 0;\n");
     printf ("}\n");
     return;
