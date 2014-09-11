@@ -135,14 +135,19 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **add_contact** \<phone-number\> \<first-name\> \<last-name\> - tries to add contact to contact-list by phone
 * **rename_contact** \<user\> \<first-name\> \<last-name\> - tries to rename contact. If you have another device it will be a fight
 * **mark_read** \<peer\> - mark read all received messages with peer
+* **delete_msg** \<msg-seqno\> - deletes message (not completly, though)
+* **restore_msg** \<msg-seqno\> - restores delete message. Impossible for secret chats. Only possible short time (one hour, I think) after deletion
 
 #### Multimedia
 
 * **send_photo** \<peer\> \<photo-file-name\> - sends photo to peer
 * **send_video** \<peer\> \<video-file-name\> - sends video to peer
 * **send_text** \<peer\> \<text-file-name> - sends text file as plain messages
-* **load_photo**/load_video/load_video_thumb \<msg-seqno\> - loads photo/video to download dir
-* **view_photo**/view_video/view_video_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
+* **load_photo**/load_video/load_video_thumb/load_audio/load_document/load_document_thumb \<msg-seqno\> - loads photo/video/audio/document to download dir
+* **view_photo**/view_video/view_video_thumb/view_audio/view_document/view_document_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
+* **fwd_media** \<msg-seqno\> send media in your message. Use this to prevent sharing info about author of media (though, it is possible to determine user_id from media itself, it is not possible get access_hash of this user)
+* **set_profile_photo** \<photo-file-name\> - sets userpic. Photo should be square, or server will cut biggest central square part
+
 
 #### Group chat options
 
@@ -151,6 +156,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **chat_del_user** \<chat\> \<user\> - remove user from chat
 * **rename_chat** \<chat\> \<new-name\>
 * **create_group_chat** \<user\> \<chat topic\> - creates a groupchat with user, use chat_add_user to add more users
+* **chat_set_photo** \<chat\> \<photo-file-name\> - sets group chat photo. Same limits as for profile photos.
 
 #### Search
 
@@ -161,6 +167,8 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 
 * **create_secret_chat** \<user\> - creates secret chat with this user
 * **visualize_key** \<secret_chat\> - prints visualization of encryption key. You should compare it to your partner's one
+* **set_ttl** \<secret_chat\> \<ttl\> - sets ttl to secret chat. Though client does ignore it, client on other end can make use of it
+* **accept_secret_chat** \<secret_chat\> - manually accept secret chat (only useful when starting with -E key)
 
 #### Stats and various info
 
@@ -172,3 +180,11 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **stats** - just for debugging
 * **show_license** - prints contents of GPLv2
 * **help** - prints this help
+
+#### Card
+* **export_card** - print your 'card' that anyone can later use to import your contact
+* **import_card** \<card\> - gets user by card. You can write messages to him after that.
+
+#### Other
+* **quit** - quit
+* **safe_quit** - wait for all queries to end then quit
