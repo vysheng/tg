@@ -841,8 +841,10 @@ static int msg_send_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_sent_message || x == CODE_messages_sent_message_link);
   int id = fetch_int (); // id
-  struct tgl_message *M = q->extra;
-  if (M->id != id) {
+  long long y = *(long long *)q->extra;
+  tfree (q->extra, 8);
+  struct tgl_message *M = tgl_message_get (y);
+  if (M && M->id != id) {
     bl_do_set_msg_id (M, id);
   }
   int date = fetch_int ();
@@ -913,11 +915,15 @@ static int msg_send_on_answer (struct query *q UU) {
 
 static int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
   vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
-  struct tgl_message *M = q->extra;
+  long long x = *(long long *)q->extra;
+  tfree (q->extra, 8);
+  struct tgl_message *M = tgl_message_get (x);
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 0, M);
   }
-  bl_do_delete_msg (M);
+  if (M) {
+    bl_do_delete_msg (M);
+  }
   return 0;
 }
 
@@ -1017,7 +1023,9 @@ void tgl_do_send_msg (struct tgl_message *M, void (*callback)(void *callback_ext
   out_peer_id (M->to_id);
   out_cstring (M->message, M->message_len);
   out_long (M->id);
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M, callback, callback_extra);
+  long long *x = talloc (8);
+  *x = M->id;
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, x, callback, callback_extra);
 }
 
 void tgl_do_send_message (tgl_peer_id_t id, const char *msg, int len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
