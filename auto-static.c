@@ -295,12 +295,12 @@ static void local_next_token (void) {
 static struct paramed_type *fvars[MAX_FVARS];
 static int fvars_pos;
 
-void add_var_to_be_freed (struct paramed_type *P) {
+static void add_var_to_be_freed (struct paramed_type *P) {
   assert (fvars_pos < MAX_FVARS);
   fvars[fvars_pos ++] = P;
 }
 
-void free_vars_to_be_freed (void) {
+static void free_vars_to_be_freed (void) {
   int i;
   for (i = 0; i < fvars_pos; i++) {
     tgl_paramed_type_free (fvars[i]);
@@ -314,8 +314,9 @@ int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R,
     buffer_end = data + data_len;
     autocomplete_mode = 0;
     local_next_token ();
-    autocomplete_function_any ();
+    struct paramed_type *P = autocomplete_function_any ();
     free_vars_to_be_freed ();
+    if (P) { tgl_paramed_type_free (P); }
   }
   if (autocomplete_mode == 0) { return -1; }
   int len = strlen (text);

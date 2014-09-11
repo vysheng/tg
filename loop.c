@@ -485,8 +485,10 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 
 void empty_auth_file (void) {
   char *ip = tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER;
-  bl_do_dc_option (1, 3, "DC1", strlen (ip), ip, 443);
-  bl_do_set_working_dc (1);
+  static char s[20];
+  sprintf (s, "DC%d", tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
+  bl_do_dc_option (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC, strlen (s), s, strlen (ip), ip, 443);
+  bl_do_set_working_dc (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
 }
 
 int need_dc_list_update;

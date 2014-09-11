@@ -1260,12 +1260,12 @@ static void create_new_binlog (void) {
   packet_ptr = s;
   out_int (CODE_binlog_start);
   out_int (CODE_binlog_dc_option);
-  out_int (1);
+  out_int (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
   out_string ("");
   out_string (tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER);
   out_int (443);
   out_int (CODE_binlog_default_dc);
-  out_int (1);
+  out_int (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
   
   int fd = open (get_binlog_file_name (), O_WRONLY | O_EXCL | O_CREAT, 0600);
   if (fd < 0) {
