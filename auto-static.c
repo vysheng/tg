@@ -135,6 +135,20 @@ static struct paramed_type *paramed_type_dup (struct paramed_type *P) {
   return R;
 }
 
+void tgl_paramed_type_free (struct paramed_type *P) {
+  if (ODDP (P)) { return; }
+  if (P->type->params_num) {
+    int i;
+    for (i = 0; i < P->type->params_num; i++) {
+      tgl_paramed_type_free (P->params[i]);
+    }
+    free (P->params);
+  }
+  free (P->type->id);
+  free (P->type);
+  free (P);
+}
+
 static void print_offset (void) {
   int i;
   for (i = 0; i < multiline_offset; i++) {
@@ -277,6 +291,23 @@ static void local_next_token (void) {
   }
 }
 
+#define MAX_FVARS 100
+static struct paramed_type *fvars[MAX_FVARS];
+static int fvars_pos;
+
+void add_var_to_be_freed (struct paramed_type *P) {
+  assert (fvars_pos < MAX_FVARS);
+  fvars[fvars_pos ++] = P;
+}
+
+void free_vars_to_be_freed (void) {
+  int i;
+  for (i = 0; i < fvars_pos; i++) {
+    tgl_paramed_type_free (fvars[i]);
+  }
+  fvars_pos = 0;
+}
+
 int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R, char *data, int data_len) {
   if (index == -1) {
     buffer_pos = data;
@@ -284,6 +315,7 @@ int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R,
     autocomplete_mode = 0;
     local_next_token ();
     autocomplete_function_any ();
+    free_vars_to_be_freed ();
   }
   if (autocomplete_mode == 0) { return -1; }
   int len = strlen (text);
@@ -302,7 +334,7 @@ int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R,
   }
 }
 
-struct paramed_type *tglf_extf_store (const char *data, int data_len) {
+struct paramed_type *tglf_extf_store (const char *data, int data_len) { 
   buffer_pos = (char *)data;
   buffer_end = (char *)(data + data_len);
   local_next_token ();

@@ -713,6 +713,7 @@ int gen_field_autocomplete_excl (struct arg *arg, int *vars, int num, int from_f
   assert (t == NODE_TYPE_TYPE || t == NODE_TYPE_VAR_TYPE);
   printf ("%sstruct paramed_type *field%d = autocomplete_function_any ();\n", offset, num);
   printf ("%sif (!field%d) { return 0; }\n", offset, num);
+  printf ("%sadd_var_to_be_freed (field%d);\n", offset, num);
   static char s[20];
   sprintf (s, "field%d", num);
   gen_uni_skip (arg->type, s, vars, 1, 1);

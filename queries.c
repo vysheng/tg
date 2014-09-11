@@ -3475,6 +3475,7 @@ static int ext_query_on_answer (struct query *q UU) {
     char *buf = tglf_extf_fetch (q->type);
     ((void (*)(void *, int, char *))q->callback) (q->callback_extra, 1, buf);
   }
+  tgl_paramed_type_free (q->type);
   return 0;
 }
 
