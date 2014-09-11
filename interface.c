@@ -401,6 +401,7 @@ struct command commands[] = {
   {"chat_set_photo", {ca_chat, ca_file_name_end}},
   {"set_profile_photo", {ca_file_name_end}},
   {"accept_secret_chat", {ca_secret_chat, ca_none}},
+  {"set_ttl", {ca_secret_chat, ca_number,  ca_none}},
   {"export_card", {ca_none}},
   {"import_card", {ca_string, ca_none}},
   {"send_contact", {ca_peer, ca_string, ca_string, ca_string}},
@@ -1724,6 +1725,18 @@ void interpreter (char *line UU) {
     tgl_peer_t *E = tgl_peer_get (id);
     assert (E);
     tgl_do_accept_encr_chat_request (&E->encr_chat, 0, 0);
+  } else if (IS_WORD ("set_ttl")) {
+    GET_PEER_ENCR_CHAT;
+    tgl_peer_t *E = tgl_peer_get (id);
+    assert (E);
+    long long num = next_token_int ();
+    if (num == NOT_FOUND) {
+      printf ("Bad msg id\n");
+      RET;
+    }
+    if (E->encr_chat.state == sc_ok) {
+      tgl_do_set_encr_chat_ttl (&E->encr_chat, num, 0, 0);
+    }
   } else if (IS_WORD ("safe_quit")) {
     safe_quit = 1;
   }

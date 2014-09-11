@@ -805,6 +805,21 @@ void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
   //print_message (M);
 }
 
+void tgl_do_set_encr_chat_ttl (struct tgl_secret_chat *E, int ttl, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  long long t;
+  tglt_secure_random (&t, 8);
+  int action[2];
+  action[0] = CODE_decrypted_message_action_set_message_t_t_l;
+  action[1] = ttl;
+  bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
+
+  struct tgl_message *M = tgl_message_get (t);
+  assert (M);
+  assert (M->action.type == tgl_message_action_set_message_ttl);
+  tgl_do_send_msg (M, callback, callback_extra);
+  //print_message (M);
+}
+
 /* {{{ Seng msg (plain text) */
 static int msg_send_encr_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_messages_sent_encrypted_message);
@@ -946,6 +961,10 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   case tgl_message_action_notify_layer:
     out_int (CODE_decrypted_message_action_notify_layer);
     out_int (M->action.layer);
+    break;
+  case tgl_message_action_set_message_ttl:
+    out_int (CODE_decrypted_message_action_set_message_t_t_l);
+    out_int (M->action.ttl);
     break;
   default:
     assert (0);
