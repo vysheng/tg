@@ -461,6 +461,7 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
   }
   if (list[index]) {
     *R = strdup (list[index]);
+    assert (*R);
     return index;
   } else {
     *R = 0;
@@ -475,6 +476,7 @@ int complete_command_list (int index, const char *text, int len, char **R) {
   }
   if (commands[index].name) {
     *R = strdup (commands[index].name);
+    assert (*R);
     return index;
   } else {
     *R = 0;
@@ -1163,7 +1165,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_photo, id, strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_send_photo (tgl_message_media_photo, id, d, 0, 0);
   } else if (IS_WORD ("chat_set_photo")) {
     GET_PEER_CHAT;
     int t;
@@ -1172,7 +1176,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_set_chat_photo (id, strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_set_chat_photo (id, d, 0, 0);
   } else if (IS_WORD ("set_profile_photo")) {
     int t;
     char *s = end_string_token (&t);
@@ -1180,7 +1186,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_set_profile_photo (strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_set_profile_photo (d, 0, 0);
   } else if (IS_WORD("send_video")) {
     GET_PEER;
     int t;
@@ -1189,7 +1197,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_video, id, strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_send_photo (tgl_message_media_video, id, d, 0, 0);
   } else if (IS_WORD ("send_text")) {
     GET_PEER;
     int t;
@@ -1198,7 +1208,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_text (id, strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_send_text (id, d, 0, 0);
   } else if (IS_WORD ("fwd")) {
     GET_PEER;
     int num = next_token_int ();
@@ -1533,7 +1545,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_audio, id, strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_send_photo (tgl_message_media_audio, id, d, 0, 0);
   } else if (IS_WORD("send_document")) {
     GET_PEER;
     int t;
@@ -1542,7 +1556,9 @@ void interpreter (char *line UU) {
       printf ("Empty file name\n");
       RET;
     }
-    tgl_do_send_photo (tgl_message_media_document, id, strndup (s, t), 0, 0);
+    char *d = strndup (s, t);
+    assert (d);
+    tgl_do_send_photo (tgl_message_media_document, id, d, 0, 0);
   } else if (IS_WORD ("load_audio")) {
     long long num = next_token_int ();
     if (num == NOT_FOUND) {
@@ -1739,6 +1755,7 @@ void print_start (void) {
     saved_point = rl_point;
 #ifdef READLINE_GNU
     saved_line = malloc (rl_end + 1);
+    assert (saved_line);
     saved_line[rl_end] = 0;
     memcpy (saved_line, rl_line_buffer, rl_end);
 
@@ -1747,6 +1764,7 @@ void print_start (void) {
 #else
     assert (rl_end >= 0);
     saved_line = malloc (rl_end + 1);
+    assert (saved_line);
     memcpy (saved_line, rl_line_buffer, rl_end + 1);
     rl_line_buffer[0] = 0;
     set_prompt ("");

@@ -57,6 +57,7 @@ static int (*autocomplete_fun)(const char *, int, int, char **);
 static void set_autocomplete_string (const char *s) {
   if (autocomplete_string) { free (autocomplete_string); }
   autocomplete_string = strdup (s);
+  assert (autocomplete_string);
   autocomplete_mode = 1;
 }
 
@@ -116,12 +117,16 @@ static double get_double (void) {
 static struct paramed_type *paramed_type_dup (struct paramed_type *P) {
   if (ODDP (P)) { return P; }
   struct paramed_type *R = malloc (sizeof (*R));
+  assert (R);
   R->type = malloc (sizeof (*R->type));
+  assert (R->type);
   memcpy (R->type, P->type, sizeof (*P->type)); 
   R->type->id = strdup (P->type->id);
+  assert (R->type->id);
 
   if (P->type->params_num) {
     R->params = malloc (sizeof (void *) * P->type->params_num);
+    assert (R->params);
     int i;
     for (i = 0; i < P->type->params_num; i++) {
       R->params[i] = paramed_type_dup (P->params[i]);
@@ -287,6 +292,7 @@ int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R,
     index = 0;
     if (!strncmp (text, autocomplete_string, len)) {
       *R = strdup (autocomplete_string);
+      assert (*R);
       return index;
     } else {
       return -1;

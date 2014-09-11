@@ -99,6 +99,7 @@ long long get_long (void) {
 
 static void *malloc0 (int size) {
   void *r = malloc (size);
+  assert (r);
   memset (r, 0, size);
   return r;
 }
@@ -126,7 +127,9 @@ char *get_string (void) {
   buf_ptr += tlen / 4;
   assert (buf_ptr <= buf_end);
   
-  return strndup (res, len);
+  char *r = strndup (res, len);
+  assert (r);
+  return r;
 }
 
 
@@ -144,6 +147,7 @@ int read_args_list (struct arg **args, int args_num, int *var_num);
 void *int_to_var_nat_const_init (long long x) {
   if (use_var_nat_full_form (x)) {
     struct tl_tree_nat_const *T = malloc (sizeof (*T));
+    assert (T);
     T->self.flags = 0;
     T->self.methods = &tl_pnat_const_full_methods;
     T->value = x;
@@ -1460,6 +1464,7 @@ struct tl_combinator *read_combinators (int v) {
   c->name = get_int ();
   c->id = get_string ();
   c->print_id = strdup (gen_print_id (c->id));
+  assert (c->print_id);
   //char *s = c->id;
   //while (*s) { if (*s == '.') { *s = '_'; } ; s ++;}
   int x = get_int ();
@@ -1485,6 +1490,7 @@ struct tl_type *read_types (void) {
   t->name = get_int ();
   t->id = get_string ();
   t->print_id = strdup (gen_print_id (t->id));
+  assert (t->print_id);
   
   t->constructors_num = get_int ();
   assert (t->constructors_num >= 0 && t->constructors_num <= 1000);

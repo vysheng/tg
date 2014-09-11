@@ -96,6 +96,7 @@ static void stdin_read_callback_all (int arg, short what, struct event *self) {
     while (1) {
       if (line_buffer_pos == line_buffer_size) {
         line_buffer = realloc (line_buffer, line_buffer_size * 2 + 100);
+        assert (line_buffer);
         line_buffer_size = line_buffer_size * 2 + 100;
         assert (line_buffer);
       }
@@ -267,6 +268,7 @@ void sign_in_callback (void *extra, int success, int registered, const char *mha
   }
   should_register = !registered;
   hash = strdup (mhash);
+  assert (hash);
 }
 
 

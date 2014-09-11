@@ -1181,6 +1181,7 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
   int a2 = luaL_ref (L, LUA_REGISTRYINDEX);
   
   struct lua_query_extra *e = malloc (sizeof (*e));
+  assert (e);
   e->func = a2;
   e->param = a1;
 
@@ -1357,6 +1358,7 @@ static int postpone_from_lua (lua_State *L) {
 
 
   int *t = malloc (16);
+  assert (t);
   struct event *ev = evtimer_new (tgl_state.ev_base, lua_postpone_alarm, t);
   t[0] = a1;
   t[1] = a2;

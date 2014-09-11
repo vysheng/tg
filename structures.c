@@ -1754,6 +1754,7 @@ int tgl_complete_user_list (int index, const char *text, int len, char **R) {
   }
   if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
+    assert (*R);
     return index;
   } else {
     return -1;
@@ -1767,6 +1768,7 @@ int tgl_complete_chat_list (int index, const char *text, int len, char **R) {
   }
   if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
+    assert (*R);
     return index;
   } else {
     return -1;
@@ -1780,6 +1782,7 @@ int tgl_complete_encr_chat_list (int index, const char *text, int len, char **R)
   }
   if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
+    assert (*R);
     return index;
   } else {
     return -1;
@@ -1793,6 +1796,7 @@ int tgl_complete_peer_list (int index, const char *text, int len, char **R) {
   }
   if (index < peer_num) {
     *R = strdup (Peers[index]->print_name);
+    assert (*R);
     return index;
   } else {
     return -1;
