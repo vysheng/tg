@@ -1,5 +1,8 @@
 ## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)
 
+!!!! May be outdated. Please refer to english README as more actual. 
+
+
 Interfaz de línea de comandos para: [Telegram](http://telegram.org). Usa interfaz readline.
 
 ### Documentación del API y el protocolo
