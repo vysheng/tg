@@ -39,7 +39,6 @@ struct connection;
 struct mtproto_methods;
 struct tgl_session;
 struct tgl_dc;
-struct bingnum_ctx;
 
 #define TGL_UPDATE_CREATED 1
 #define TGL_UPDATE_DELETED 2
