@@ -586,6 +586,7 @@ void dlist_cb (void *callback_extra, int success, int size, tgl_peer_id_t peers[
 int loop (void) {
   //on_start ();
   tgl_set_callback (&upd_cb);
+  //tgl_state.temp_key_expire_time = 60;
   tgl_init ();
  
   if (binlog_enabled) {
@@ -731,6 +732,7 @@ int loop (void) {
   tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
   assert (!(tgl_state.locks & TGL_LOCK_DIFF));
+  tgl_state.started = 1;
   if (wait_dialog_list) {
     d_got_ok = 0;
     tgl_do_get_dialog_list (dlist_cb, 0);

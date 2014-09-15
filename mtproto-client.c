@@ -906,7 +906,9 @@ static void work_new_session_created (struct connection *c, long long msg_id UU)
   //DC->session_id = fetch_long ();
   fetch_long (); // unique_id
   tgl_state.net_methods->get_dc (c)->server_salt = fetch_long ();
-  
+  if (tgl_state.started && !(tgl_state.locks & TGL_LOCK_DIFF)) {
+    tgl_do_get_difference (0, 0, 0);
+  }
 }
 
 static void work_msgs_ack (struct connection *c UU, long long msg_id UU) {
