@@ -1,3 +1,6 @@
+1.0.4
+* changed create_group_chat format
+* rewritten interface code. Support for escaped characters in quotes
 1.0.3
 * options to help to run telegram-cli as daemon
 1.0.2

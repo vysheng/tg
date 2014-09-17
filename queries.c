@@ -1160,7 +1160,7 @@ void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, in
 
 void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   if (tgl_get_peer_type (id) == TGL_PEER_USER || tgl_get_peer_type (id) == TGL_PEER_CHAT) {
-    tgl_do_messages_mark_read (id, tgl_state.max_msg_id, 0, callback, callback_extra);
+    tgl_do_messages_mark_read (id, 0, 0, callback, callback_extra);
     return;
   }
   tgl_peer_t *P = tgl_peer_get (id);
@@ -1260,7 +1260,9 @@ static struct query_methods get_history_methods = {
 void tgl_do_get_local_history (tgl_peer_id_t id, int limit, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
   tgl_peer_t *P = tgl_peer_get (id);
   if (!P || !P->last) { 
-    callback (callback_extra, 0, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0, 0);
+    }
     return; 
   }
   struct tgl_message *M = P->last;
@@ -1279,14 +1281,18 @@ void tgl_do_get_local_history (tgl_peer_id_t id, int limit, void (*callback)(voi
     ML[count ++] = M;
   }
 
-  callback (callback_extra, 1, count, ML);
+  if (callback) {
+    callback (callback_extra, 1, count, ML);
+  }
   tfree (ML, sizeof (void *) * count);
 }
 
 void tgl_do_get_local_history_ext (tgl_peer_id_t id, int offset, int limit, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
   tgl_peer_t *P = tgl_peer_get (id);
   if (!P || !P->last) { 
-    callback (callback_extra, 0, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0, 0);
+    }
     return; 
   }
   struct tgl_message *M = P->last;
@@ -1297,7 +1303,9 @@ void tgl_do_get_local_history_ext (tgl_peer_id_t id, int offset, int limit, void
     count ++;
   }
   if (count <= offset) {
-    callback (callback_extra, 1, 0, 0);
+    if (callback) {
+      callback (callback_extra, 1, 0, 0);
+    }
     return;
   }
   struct tgl_message **ML = talloc (sizeof (void *) * (count - offset));
@@ -1312,7 +1320,9 @@ void tgl_do_get_local_history_ext (tgl_peer_id_t id, int offset, int limit, void
     count ++;
   }
 
-  callback (callback_extra, 1, count - offset, ML);
+  if (callback) {
+    callback (callback_extra, 1, count - offset, ML);
+  }
   tfree (ML, sizeof (void *) * (count) - offset);
 }
 
@@ -1835,7 +1845,9 @@ void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, 
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
     vlogprintf (E_WARNING, "No such file '%s'\n", file_name);
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   struct stat buf;
@@ -1844,7 +1856,9 @@ void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, 
   if (size <= 0) {
     vlogprintf (E_WARNING, "File has zero length\n");
     close (fd);
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   struct send_file *f = talloc0 (sizeof (*f));
@@ -1863,7 +1877,9 @@ void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, 
     close (fd);
     vlogprintf (E_WARNING, "Too big file. Maximal supported size is %d.\n", (512 << 10) * 1000);
     tfree (f, sizeof (*f));
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   
@@ -1886,7 +1902,9 @@ void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, 
     close (fd);
     vlogprintf (E_WARNING, "Unknown type %d.\n", type);
     tfree (f, sizeof (*f));
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   f->file_name = tstrdup (file_name);
@@ -1968,7 +1986,9 @@ static struct query_methods fwd_msg_methods = {
 void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
     vlogprintf (E_WARNING, "Can not forward messages from secret chat\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   clear_packet ();
@@ -2007,23 +2027,31 @@ void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, co
 void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
     vlogprintf (E_WARNING, "Can not forward messages from secret chat\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   struct tgl_message *M = tgl_message_get (n);
   if (!M) {
     vlogprintf (E_WARNING, "No such message\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   if (M->flags & FLAG_ENCRYPTED) {
     vlogprintf (E_WARNING, "Can not forward media from encrypted message\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   if (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_video && M->media.type != tgl_message_media_audio && M->media.type != tgl_message_media_document) {
     vlogprintf (E_WARNING, "Can only forward photo/audio/video/document\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   clear_packet ();
@@ -2159,10 +2187,14 @@ void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(
     tgl_peer_t *C = tgl_peer_get (id);
     if (!C) {
       vlogprintf (E_WARNING, "No such chat\n");
-      callback (callback_extra, 0, 0);
+      if (callback) {
+        callback (callback_extra, 0, 0);
+      }
     } else {
       //print_chat_info (&C->chat);
-      callback (callback_extra, 1, &C->chat);
+      if (callback) {
+        callback (callback_extra, 1, &C->chat);
+      }
     }
     return;
   }
@@ -2214,9 +2246,13 @@ void tgl_do_get_user_info (tgl_peer_id_t id, int offline_mode, void (*callback)(
     tgl_peer_t *C = tgl_peer_get (id);
     if (!C) {
       vlogprintf (E_WARNING, "No such user\n");
-      callback (callback_extra, 0, 0);
+      if (callback) {
+        callback (callback_extra, 0, 0);
+      }
     } else {
-      callback (callback_extra, 1, &C->user);
+      if (callback) {
+        callback (callback_extra, 1, &C->user);
+      }
     }
     return;
   }
@@ -2415,7 +2451,9 @@ static void load_next_part (struct download *D, void *callback, void *callback_e
 void tgl_do_load_photo_size (struct tgl_photo_size *P, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   if (!P->loc.dc) {
     vlogprintf (E_WARNING, "Bad video thumb\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   
@@ -2436,7 +2474,9 @@ void tgl_do_load_photo_size (struct tgl_photo_size *P, void (*callback)(void *ca
 void tgl_do_load_photo (struct tgl_photo *photo, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   if (!photo->sizes_num) { 
     vlogprintf (E_WARNING, "No sizes\n");
-    callback (callback_extra, 0, 0);
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return; 
   }
   int max = -1;
@@ -2841,7 +2881,9 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
     }
   }
   if (ok) { 
-    callback (callback_extra, 1, E);
+    if (callback) {
+      callback (callback_extra, 1, E);
+    }
     return; 
   } // Already generated key for this chat
   unsigned char random_here[256];
@@ -3378,6 +3420,9 @@ void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callba
   tgl_peer_t *U = tgl_peer_get (id);
   if (!U) { 
     vlogprintf (E_WARNING, "Can not create chat with unknown user\n");
+    if (callback) {
+      callback (callback_extra, 0, 0);
+    }
     return;
   }
   clear_packet ();
@@ -3391,6 +3436,35 @@ void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callba
   } else {
     out_int (CODE_input_user_contact);
     out_int (tgl_get_peer_id (id));
+  }
+  out_string (chat_topic);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0, callback, callback_extra);
+}
+
+void tgl_do_create_group_chat_ex (int users_num, tgl_peer_id_t ids[], char *chat_topic, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_messages_create_chat);
+  out_int (CODE_vector);
+  out_int (users_num); // Number of users, currently we support only 1 user.
+  int i;
+  for (i = 0; i < users_num; i++) {
+    tgl_peer_id_t id = ids[i];
+    tgl_peer_t *U = tgl_peer_get (id);
+    if (!U || tgl_get_peer_type (id) != TGL_PEER_USER) { 
+      vlogprintf (E_WARNING, "Can not create chat with unknown user\n");
+      if (callback) {
+        callback (callback_extra, 0, 0);
+      }
+      return;
+    }
+    if (U && U->user.access_hash) {
+      out_int (CODE_input_user_foreign);
+      out_int (tgl_get_peer_id (id));
+      out_long (U->user.access_hash);
+    } else {
+      out_int (CODE_input_user_contact);
+      out_int (tgl_get_peer_id (id));
+    }
   }
   out_string (chat_topic);
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0, callback, callback_extra);
