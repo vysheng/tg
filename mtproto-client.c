@@ -1280,7 +1280,7 @@ void tglmp_on_start (void) {
   }
 
   if (!ok) {
-    vlogprintf (E_ERROR, "No pubic keys found\n");
+    vlogprintf (E_ERROR, "No public keys found\n");
     exit (1);
   }
   
