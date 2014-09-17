@@ -5,6 +5,7 @@
 EAPI=5
 
 EGIT_REPO_URI="https://github.com/vysheng/tg.git"
+EGIT_BRANCH="test"
 inherit git-2
 IUSE="lua"
 DESCRIPTION="Command line interface client for Telegram"
@@ -17,14 +18,15 @@ DEPEND="sys-libs/zlib
 	sys-libs/readline
 	dev-libs/libconfig
 	dev-libs/openssl
+	dev-libs/libevent
 	lua? ( dev-lang/lua )"
 
 src_configure() {
-	econf $(use_enable lua liblua ) --with-progname=telegram-cli
+	econf $(use_enable lua liblua )
 }
 
 src_install() {
-	newbin telegram telegram-cli
+	newbin bin/telegram-cli telegram-cli
 
 	insinto /etc/telegram-cli/
 	newins tg-server.pub server.pub

@@ -1,21 +1,22 @@
-/*
-    This file is part of telegram-client.
+/* 
+    This file is part of tgl-library
 
-    Telegram-client is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    Telegram-client is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
     Copyright Nikolay Durov, Andrey Lopatin 2012-2013
-    Copyright Vitaly Valtman 2013
+              Vitaly Valtman 2013-2014
 */
 #ifndef __MTPROTO_COMMON_H__
 #define __MTPROTO_COMMON_H__
@@ -25,15 +26,20 @@
 #include <openssl/bn.h>
 #include <openssl/aes.h>
 #include <stdio.h>
+#include <assert.h>
 
-#include "interface.h"
+//#include "interface.h"
 #include "tools.h"
-#include "constants.h"
+#include "auto/constants.h"
+
+#include "tgl.h"
+#include "tgl-inner.h"
 /* DH key exchange protocol data structures */
 #define	CODE_req_pq			0x60469778
 #define CODE_resPQ			0x05162463
 #define CODE_req_DH_params		0xd712e4be
 #define CODE_p_q_inner_data		0x83c95aec
+#define CODE_p_q_inner_data_temp		0x3c6a84d4
 #define CODE_server_DH_inner_data	0xb5890dba
 #define CODE_server_DH_params_fail	0x79cb045d
 #define CODE_server_DH_params_ok	0xd0e8075c
@@ -42,6 +48,8 @@
 #define CODE_dh_gen_ok			0x3bcbf734
 #define CODE_dh_gen_retry		0x46dc1fb9
 #define CODE_dh_gen_fail		0xa69dae02 
+
+#define CODE_bind_auth_key_inner 0x75a3f765
 
 /* service messages */
 #define CODE_rpc_result			0xf35c6d01
@@ -107,14 +115,17 @@ struct encrypted_message {
 
 #pragma pack(pop)
 
-BN_CTX *BN_ctx;
+//BN_CTX *BN_ctx;
 
-void prng_seed (const char *password_filename, int password_length);
-int serialize_bignum (BIGNUM *b, char *buffer, int maxlen);
-long long compute_rsa_key_fingerprint (RSA *key);
+void tgl_prng_seed (const char *password_filename, int password_length);
+int tgl_serialize_bignum (BIGNUM *b, char *buffer, int maxlen);
+long long tgl_do_compute_rsa_key_fingerprint (RSA *key);
 
-extern int *packet_buffer;
-extern int *packet_ptr;
+#define packet_buffer tgl_packet_buffer
+#define packet_ptr tgl_packet_ptr
+
+extern int *tgl_packet_buffer;
+extern int *tgl_packet_ptr;
 
 static inline void out_ints (const int *what, int len) {
   assert (packet_ptr + len <= packet_buffer + PACKET_BUFFER_SIZE);
@@ -135,30 +146,43 @@ static inline void out_long (long long x) {
   packet_ptr += 2;
 }
 
+static inline void out_double (double x) {
+  assert (packet_ptr + 2 <= packet_buffer + PACKET_BUFFER_SIZE);
+  *(double *)packet_ptr = x;
+  packet_ptr += 2;
+}
+
 static inline void clear_packet (void) {
   packet_ptr = packet_buffer;
 }
 
-void out_cstring (const char *str, long len);
-void out_cstring_careful (const char *str, long len);
-void out_data (const void *data, long len);
+void tgl_out_cstring (const char *str, long len);
+void tgl_out_cstring_careful (const char *str, long len);
+void tgl_out_data (const void *data, long len);
+
+#define out_cstring tgl_out_cstring
+#define out_cstring_careful tgl_out_cstring_careful
+#define out_data tgl_out_data
 
 static inline void out_string (const char *str) {
   out_cstring (str, strlen (str));
 }
 
 static inline void out_bignum (BIGNUM *n) {
-  int l = serialize_bignum (n, (char *)packet_ptr, (PACKET_BUFFER_SIZE - (packet_ptr - packet_buffer)) * 4);
+  int l = tgl_serialize_bignum (n, (char *)packet_ptr, (PACKET_BUFFER_SIZE - (packet_ptr - packet_buffer)) * 4);
   assert (l > 0);
   packet_ptr += l >> 2;
 }
 
-extern int *in_ptr, *in_end;
+#define in_ptr tgl_in_ptr
+#define in_end tgl_in_end
+extern int *tgl_in_ptr, *tgl_in_end;
 
-void fetch_pts (void);
-void fetch_qts (void);
-void fetch_date (void);
-void fetch_seq (void);
+
+//void fetch_pts (void);
+//void fetch_qts (void);
+//void fetch_date (void);
+//void fetch_seq (void);
 static inline int prefetch_strlen (void) {
   if (in_ptr >= in_end) { 
     return -1; 
@@ -175,12 +199,9 @@ static inline int prefetch_strlen (void) {
   }
 }
 
-extern int verbosity;
 static inline char *fetch_str (int len) {
   assert (len >= 0);
-  if (verbosity > 6) {
-    logprintf ("fetch_string: len = %d\n", len);
-  }
+  vlogprintf (E_DEBUG + 3, "fetch_string: len = %d\n", len);    
   if (len < 254) {
     char *str = (char *) in_ptr + 1;
     in_ptr += 1 + (len >> 2);
@@ -268,20 +289,17 @@ static inline long have_prefetch_ints (void) {
   return in_end - in_ptr;
 }
 
-int fetch_bignum (BIGNUM *x);
+int tgl_fetch_bignum (BIGNUM *x);
+#define fetch_bignum tgl_fetch_bignum
 
 static inline int fetch_int (void) {
   assert (in_ptr + 1 <= in_end);
-  if (verbosity > 6) {
-    logprintf ("fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
-  }
+  vlogprintf (E_DEBUG + 3, "fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   return *(in_ptr ++);
 }
 
 static inline int fetch_bool (void) {
-  if (verbosity > 6) {
-    logprintf ("fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
-  }
+  vlogprintf (E_DEBUG + 3, "fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   assert (in_ptr + 1 <= in_end);
   assert (*(in_ptr) == (int)CODE_bool_true || *(in_ptr) == (int)CODE_bool_false);
   return *(in_ptr ++) == (int)CODE_bool_true;
@@ -323,33 +341,47 @@ static inline void fetch_ints (void *data, int count) {
   memcpy (data, in_ptr, 4 * count);
   in_ptr += count;
 }
+    
+static inline void fetch256 (void *buf) {
+  int l = prefetch_strlen ();
+  assert (l >= 0);
+  char *s = fetch_str (l);
+  if (l < 256) {
+    memcpy (buf + 256 - l, s, l);
+  } else {
+    memcpy (buf, s + (l - 256), 256);
+  }
+}
 
-int get_random_bytes (unsigned char *buf, int n);
+static inline int in_remaining (void) {
+  return 4 * (in_end - in_ptr);
+}
 
-int pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
-int pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
+//int get_random_bytes (unsigned char *buf, int n);
 
-extern long long rsa_encrypted_chunks, rsa_decrypted_chunks;
+int tgl_pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
+int tgl_pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
 
-extern unsigned char aes_key_raw[32], aes_iv[32];
-extern AES_KEY aes_key;
+//extern long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
-void init_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32], int encrypt);
-void init_aes_auth (char auth_key[192], char msg_key[16], int encrypt);
-int pad_aes_encrypt (char *from, int from_len, char *to, int size);
-int pad_aes_decrypt (char *from, int from_len, char *to, int size);
+//extern unsigned char aes_key_raw[32], aes_iv[32];
+//extern AES_KEY aes_key;
 
+void tgl_init_aes_unauth (const char server_nonce[16], const char hidden_client_nonce[32], int encrypt);
+void tgl_init_aes_auth (char auth_key[192], char msg_key[16], int encrypt);
+int tgl_pad_aes_encrypt (char *from, int from_len, char *to, int size);
+int tgl_pad_aes_decrypt (char *from, int from_len, char *to, int size);
+/*
 static inline void hexdump_in (void) {
   hexdump (in_ptr, in_end);
 }
 
 static inline void hexdump_out (void) {
   hexdump (packet_buffer, packet_ptr);
-}
+}*/
 
 #ifdef __MACH__
 #define CLOCK_REALTIME 0
 #define CLOCK_MONOTONIC 1
 #endif
-void my_clock_gettime (int clock_id, struct timespec *T);
 #endif

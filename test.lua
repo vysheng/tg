@@ -40,7 +40,8 @@ end
 
 print ("HI, this is lua script")
 
-
+function ok_cb(extra, success, result)
+end
 
 function on_msg_receive (msg)
   if started == 0 then
@@ -49,13 +50,12 @@ function on_msg_receive (msg)
   if msg.out then
     return
   end
+
   if (msg.text == 'ping') then
     if (msg.to.id == our_id) then
-      print ('sending pong to ' .. tostring (msg.from.print_name))
-      send_msg (msg.from.print_name, 'pong')
+      send_msg (msg.from.print_name, 'pong', ok_cb, false)
     else
-      print ('sending pong to ' .. tostring (msg.to.print_name))
-      send_msg (msg.to.print_name, 'pong')
+      send_msg (msg.to.print_name, 'pong', ok_cb, false)
     end
     return
   end
@@ -67,24 +67,22 @@ function on_msg_receive (msg)
     end
     return
   end
-  --vardump (msg)
-  --print ( "Message # " .. msg.id .. " (flags " .. msg.flags .. ")")
 end
 
 function on_our_id (id)
   our_id = id
 end
 
-function on_secret_chat_created (peer)
-  --vardump (peer)
-end
-
-function on_user_update (user)
+function on_user_update (user, what)
   --vardump (user)
 end
 
-function on_chat_update (user)
-  --vardump (user)
+function on_chat_update (chat, what)
+  --vardump (chat)
+end
+
+function on_secret_chat_update (schat, what)
+  --vardump (schat)
 end
 
 function on_get_difference_end ()

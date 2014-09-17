@@ -1,20 +1,20 @@
 /*
-    This file is part of telegram-client.
+    This file is part of telegram-cli.
 
-    Telegram-client is free software: you can redistribute it and/or modify
+    Telegram-cli is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
 
-    Telegram-client is distributed in the hope that it will be useful,
+    Telegram-cli is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+    along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright Vitaly Valtman 2013
+    Copyright Vitaly Valtman 2013-2014
 */
 
 #ifdef HAVE_CONFIG_H
@@ -43,74 +43,157 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef EVENT_V2
+#include <event2/event.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
+
 #include "interface.h"
-#include "net.h"
-#include "mtproto-client.h"
-#include "mtproto-common.h"
-#include "queries.h"
 #include "telegram.h"
 #include "loop.h"
-#include "binlog.h"
 #include "lua-tg.h"
+#include "tgl.h"
+#include "binlog.h"
 
+int verbosity;
+extern int readline_disabled;
+
+int binlog_read;
 extern char *default_username;
 extern char *auth_token;
-extern int test_dc;
 void set_default_username (const char *s);
-int default_dc_num;
 extern int binlog_enabled;
 
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
 int register_mode;
 extern int safe_quit;
-extern int queries_num;
+extern int sync_from_start;
 
-int unread_messages;
+extern int disable_output;
+
 void got_it (char *line, int len);
-void net_loop (int flags, int (*is_end)(void)) {
-  while (!is_end ()) {
-    struct pollfd fds[101];
-    int cc = 0;
-    if (flags & 3) {
-      fds[0].fd = 0;
-      fds[0].events = POLLIN;
-      cc ++;
-    }
+void write_state_file (void);
 
-    write_state_file ();
-    int x = connections_make_poll_array (fds + cc, 101 - cc) + cc;
-    double timer = next_timer_in ();
-    if (timer > 1000) { timer = 1000; }
-    if (poll (fds, x, timer) < 0) {
-      work_timers ();
-      continue;
+static char *line_buffer;
+static int line_buffer_size;
+static int line_buffer_pos;
+static int delete_stdin_event;
+
+static void stdin_read_callback_all (int arg, short what, struct event *self) {
+  if (!readline_disabled) {
+    if (((long)arg) & 1) {
+      rl_callback_read_char ();
+    } else {
+      char *line = 0;        
+      size_t len = 0;
+      assert (getline (&line, &len, stdin) >= 0);
+      got_it (line, strlen (line));
     }
-    work_timers ();
-    if ((flags & 3) && (fds[0].revents & POLLIN)) {
-      unread_messages = 0;
-      if (flags & 1) {
-        rl_callback_read_char ();
-      } else {
-        char *line = 0;        
-        size_t len = 0;
-        assert (getline (&line, &len, stdin) >= 0);
-        got_it (line, strlen (line));
+  } else {
+    while (1) {
+      if (line_buffer_pos == line_buffer_size) {
+        line_buffer = realloc (line_buffer, line_buffer_size * 2 + 100);
+        assert (line_buffer);
+        line_buffer_size = line_buffer_size * 2 + 100;
+        assert (line_buffer);
+      }
+      int r = read (0, line_buffer + line_buffer_pos, line_buffer_size - line_buffer_pos);
+      //logprintf ("r = %d, size = %d, pos = %d, what = 0x%x, fd = %d\n", r, line_buffer_size, line_buffer_pos, (int)what, fd);
+      if (r < 0) {
+        perror ("read");
+        break;
+      }
+      if (r == 0) {
+        //struct event *ev = event_base_get_running_event (tgl_state.ev_base);
+        //event_del (ev);
+        //event_del (self);
+        
+        delete_stdin_event = 1;
+        break;
+      }
+      line_buffer_pos += r;
+
+      while (1) {
+        int p = 0;
+        while (p < line_buffer_pos && line_buffer[p] != '\n') { p ++; }
+        if (p < line_buffer_pos) {
+          if (((long)arg) & 1) {
+            line_buffer[p] = 0;
+            interpreter (line_buffer);
+          } else {
+            got_it (line_buffer, p + 1);
+          }
+          memmove (line_buffer, line_buffer + p + 1, line_buffer_pos - p - 1);
+          line_buffer_pos -= (p + 1);
+        } else {
+          break;
+        }
       }
     }
-    connections_poll_result (fds + cc, x - cc);
+  }
+}
+
+static void stdin_read_callback_char (evutil_socket_t fd, short what, void *arg) {
+  stdin_read_callback_all (1, what, arg);
+}
+
+static void stdin_read_callback_line (evutil_socket_t fd, short what, void *arg) {
+  stdin_read_callback_all (2, what, arg);
+}
+
+void net_loop (int flags, int (*is_end)(void)) {
+  delete_stdin_event = 0;
+  if (verbosity >= E_DEBUG) {
+    logprintf ("Starting netloop\n");
+  }
+  struct event *ev = 0;
+  if (flags & 3) {
+    if (flags & 1) {
+      ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_char, 0);
+    } else {
+      ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_line, 0);
+    }
+    event_add (ev, 0);
+  }
+  while (!is_end || !is_end ()) {
+
+    event_base_loop (tgl_state.ev_base, EVLOOP_ONCE);
+
+    if (ev && delete_stdin_event) {
+      event_free (ev);
+      ev = 0;
+    }
+
     #ifdef USE_LUA
       lua_do_all ();
     #endif
-    if (safe_quit && !queries_num) {
+    if (safe_quit && !tgl_state.active_queries) {
       printf ("All done. Exit\n");
-      rl_callback_handler_remove ();
+      if (!readline_disabled) {
+        rl_callback_handler_remove ();
+      }
       exit (0);
     }
+    write_state_file ();
+    update_prompt ();
     if (unknown_user_list_pos) {
-      do_get_user_list_info_silent (unknown_user_list_pos, unknown_user_list);
+      int i;
+      for (i = 0; i < unknown_user_list_pos; i++) {
+        tgl_do_get_user_info (TGL_MK_USER (unknown_user_list[i]), 0, 0, 0);
+      }
       unknown_user_list_pos = 0;
     }   
+  }
+
+  if (ev) {
+    event_free (ev);
+  }
+  
+  if (verbosity >= E_DEBUG) {
+    logprintf ("End of netloop\n");
   }
 }
 
@@ -141,138 +224,109 @@ int net_getline (char **s, size_t *l) {
   return 0;
 }
 
-int ret1 (void) { return 0; }
-
 int main_loop (void) {
-  net_loop (1, ret1);
+  net_loop (1, 0);
   return 0;
 }
 
+struct tgl_dc *cur_a_dc;
+int is_authorized (void) {
+  return tgl_authorized_dc (cur_a_dc);
+}
 
-struct dc *DC_list[MAX_DC_ID + 1];
-struct dc *DC_working;
-int dc_working_num;
-int auth_state;
-char *get_auth_key_filename (void);
-char *get_state_filename (void);
-char *get_secret_chat_filename (void);
+int all_authorized (void) {
+  int i;
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i]) {
+    if (!tgl_authorized_dc (tgl_state.DC_list[i])) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+int config_got;
+
+int got_config (void) {
+  return config_got;
+}
+
+void on_get_config (void *extra, int success) {
+  if (!success) {
+    logprintf ("Can not get config.\n");
+    exit (1);
+  }
+  config_got = 1;
+
+}
+
+int should_register;
+char *hash;
+void sign_in_callback (void *extra, int success, int registered, const char *mhash) {
+  if (!success) {
+    logprintf ("Can not send code\n");
+    exit (1);
+  }
+  should_register = !registered;
+  hash = strdup (mhash);
+  assert (hash);
+}
+
+
+int signed_in_ok;
+
+void sign_in_result (void *extra, int success, struct tgl_user *U) {
+  if (!success) {
+    logprintf ("Can not login\n");
+    exit (1);
+  }
+  signed_in_ok = 1;
+}
+
+int signed_in (void) {
+  return signed_in_ok;
+}
+
+int sent_code (void) {
+  return hash != 0;
+}
+
+int dc_signed_in (void) {
+  return tgl_signed_dc (cur_a_dc);
+}
+
+void export_auth_callback (void *DC, int success) {
+  if (!success) {
+    logprintf ("Can not export auth\n");
+    exit (1);
+  }
+}
+
+int d_got_ok;
+void get_difference_callback (void *extra, int success) {
+  assert (success);
+  d_got_ok = 1;
+}
+
+int dgot (void) {
+  return d_got_ok;
+}
+
 int zero[512];
 
 
-void write_dc (int auth_file_fd, struct dc *DC) {
-  assert (write (auth_file_fd, &DC->port, 4) == 4);
-  int l = strlen (DC->ip);
-  assert (write (auth_file_fd, &l, 4) == 4);
-  assert (write (auth_file_fd, DC->ip, l) == l);
-  if (DC->flags & 1) {
-    assert (write (auth_file_fd, &DC->auth_key_id, 8) == 8);
-    assert (write (auth_file_fd, DC->auth_key, 256) == 256);
-  } else {
-    assert (write (auth_file_fd, zero, 256 + 8) == 256 + 8);
-  }
- 
-  assert (write (auth_file_fd, &DC->server_salt, 8) == 8);
-  assert (write (auth_file_fd, &DC->has_auth, 4) == 4);
-}
+int readline_active;
+int new_dc_num;
+int wait_dialog_list;
 
-int our_id;
-void write_auth_file (void) {
-  if (binlog_enabled) { return; }
-  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
-  assert (auth_file_fd >= 0);
-  int x = DC_SERIALIZED_MAGIC_V2;
-  assert (write (auth_file_fd, &x, 4) == 4);
-  x = MAX_DC_ID;
-  assert (write (auth_file_fd, &x, 4) == 4);
-  assert (write (auth_file_fd, &dc_working_num, 4) == 4);
-  assert (write (auth_file_fd, &auth_state, 4) == 4);
-  int i;
-  for (i = 0; i <= MAX_DC_ID; i++) {
-    if (DC_list[i]) {
-      x = 1;
-      assert (write (auth_file_fd, &x, 4) == 4);
-      write_dc (auth_file_fd, DC_list[i]);
-    } else {
-      x = 0;
-      assert (write (auth_file_fd, &x, 4) == 4);
-    }
-  }
-  assert (write (auth_file_fd, &our_id, 4) == 4);
-  close (auth_file_fd);
-}
+extern struct tgl_update_callback upd_cb;
 
-void read_dc (int auth_file_fd, int id, unsigned ver) {
-  int port = 0;
-  assert (read (auth_file_fd, &port, 4) == 4);
-  int l = 0;
-  assert (read (auth_file_fd, &l, 4) == 4);
-  assert (l >= 0);
-  char *ip = talloc (l + 1);
-  assert (read (auth_file_fd, ip, l) == l);
-  ip[l] = 0;
-  struct dc *DC = alloc_dc (id, ip, port);
-  assert (read (auth_file_fd, &DC->auth_key_id, 8) == 8);
-  assert (read (auth_file_fd, &DC->auth_key, 256) == 256);
-  assert (read (auth_file_fd, &DC->server_salt, 8) == 8);
-  if (DC->auth_key_id) {
-    DC->flags |= 1;
-  }
-  if (ver != DC_SERIALIZED_MAGIC) {
-    assert (read (auth_file_fd, &DC->has_auth, 4) == 4);
-  } else {
-    DC->has_auth = 0;
-  }
-}
+#define DC_SERIALIZED_MAGIC 0x868aa81d
+#define STATE_FILE_MAGIC 0x28949a93
+#define SECRET_CHAT_FILE_MAGIC 0x37a1988a
 
-void empty_auth_file (void) {
-  alloc_dc (1, tstrdup (test_dc ? TG_SERVER_TEST : TG_SERVER), 443);
-  dc_working_num = 1;
-  auth_state = 0;
-  write_auth_file ();
-}
-
-int need_dc_list_update;
-void read_auth_file (void) {
-  if (binlog_enabled) { return; }
-  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
-  if (auth_file_fd < 0) {
-    empty_auth_file ();
-  }
-  assert (auth_file_fd >= 0);
-  unsigned x;
-  unsigned m;
-  if (read (auth_file_fd, &m, 4) < 4 || (m != DC_SERIALIZED_MAGIC && m != DC_SERIALIZED_MAGIC_V2)) {
-    close (auth_file_fd);
-    empty_auth_file ();
-    return;
-  }
-  assert (read (auth_file_fd, &x, 4) == 4);
-  assert (x <= MAX_DC_ID);
-  assert (read (auth_file_fd, &dc_working_num, 4) == 4);
-  assert (read (auth_file_fd, &auth_state, 4) == 4);
-  if (m == DC_SERIALIZED_MAGIC) {
-    auth_state = 700;
-  }
-  int i;
-  for (i = 0; i <= (int)x; i++) {
-    int y;
-    assert (read (auth_file_fd, &y, 4) == 4);
-    if (y) {
-      read_dc (auth_file_fd, i, m);
-    }
-  }
-  int l = read (auth_file_fd, &our_id, 4);
-  if (l < 4) {
-    assert (!l);
-  }
-  close (auth_file_fd);
-  DC_working = DC_list[dc_working_num];
-  if (m == DC_SERIALIZED_MAGIC) {
-    DC_working->has_auth = 1;
-  }
-}
-
-int pts, qts, seq, last_date;
+char *get_auth_key_filename (void);
+char *get_state_filename (void);
+char *get_secret_chat_filename (void);
 
 void read_state_file (void) {
   if (binlog_enabled) { return; }
@@ -290,12 +344,17 @@ void read_state_file (void) {
     close (state_file_fd); 
     return;
   }
-  pts = x[0];
-  qts = x[1];
-  seq = x[2];
-  last_date = x[3];
+  int pts = x[0];
+  int qts = x[1];
+  int seq = x[2];
+  int date = x[3];
   close (state_file_fd); 
+  bl_do_set_seq (seq);
+  bl_do_set_pts (pts);
+  bl_do_set_qts (qts);
+  bl_do_set_date (date);
 }
+
 
 void write_state_file (void) {
   if (binlog_enabled) { return; }
@@ -303,200 +362,266 @@ void write_state_file (void) {
   static int wpts;
   static int wqts;
   static int wdate;
-  if (wseq >= seq && wpts >= pts && wqts >= qts && wdate >= last_date) { return; }
+  if (wseq >= tgl_state.seq && wpts >= tgl_state.pts && wqts >= tgl_state.qts && wdate >= tgl_state.date) { return; }
+  wseq = tgl_state.seq; wpts = tgl_state.pts; wqts = tgl_state.qts; wdate = tgl_state.date;
   int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
   if (state_file_fd < 0) {
-    return;
+    logprintf ("Can not write state file '%s': %m\n", get_state_filename ());
+    exit (2);
   }
   int x[6];
   x[0] = STATE_FILE_MAGIC;
   x[1] = 0;
-  x[2] = pts;
-  x[3] = qts;
-  x[4] = seq;
-  x[5] = last_date;
+  x[2] = wpts;
+  x[3] = wqts;
+  x[4] = wseq;
+  x[5] = wdate;
   assert (write (state_file_fd, x, 24) == 24);
   close (state_file_fd); 
-  wseq = seq; wpts = pts; wqts = qts; wdate = last_date;
 }
 
-extern peer_t *Peers[];
-extern int peer_num;
-
-extern int encr_root;
-extern unsigned char *encr_prime;
-extern int encr_param_version;
-extern int dialog_list_got;
-
-void read_secret_chat_file (void) {
-  if (binlog_enabled) { return; }
-  int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
-  if (fd < 0) {
+void write_dc (struct tgl_dc *DC, void *extra) {
+  int auth_file_fd = *(int *)extra;
+  if (!DC) { 
+    int x = 0;
+    assert (write (auth_file_fd, &x, 4) == 4);
     return;
+  } else {
+    int x = 1;
+    assert (write (auth_file_fd, &x, 4) == 4);
   }
-  int x[2];
-  if (read (fd, x, 8) < 8) {
-    close (fd); return;
-  }
-  if (x[0] != (int)SECRET_CHAT_FILE_MAGIC) { close (fd); return; }
-  int version = x[1];
-  assert (version >= 0);
-  int cc;
-  assert (read (fd, &cc, 4) == 4);
-  int i;
-  for (i = 0; i < cc; i++) {
-    peer_t *P = talloc0 (sizeof (*P));
-    struct secret_chat *E = &P->encr_chat;
-    int t;
-    assert (read (fd, &t, 4) == 4);
-    P->id = MK_ENCR_CHAT (t);
-    assert (read (fd, &P->flags, 4) == 4);
-    assert (read (fd, &t, 4) == 4);
-    assert (t > 0);
-    P->print_name = talloc (t + 1);
-    assert (read (fd, P->print_name, t) == t);
-    P->print_name[t] = 0;
-    peer_insert_name (P);
 
-    assert (read (fd, &E->state, 4) == 4);
-    assert (read (fd, &E->user_id, 4) == 4);
-    assert (read (fd, &E->admin_id, 4) == 4);
-    assert (read (fd, &E->ttl, 4) == 4);
-    assert (read (fd, &E->access_hash, 8) == 8);
+  assert (DC->has_auth);
 
-    if (E->state != sc_waiting) {
-      E->g_key = talloc (256);
-      assert (read (fd, E->g_key, 256) == 256);
-      E->nonce = talloc (256);
-      assert (read (fd, E->nonce, 256) == 256);
-    }
-    assert (read (fd, E->key, 256) == 256);
-    assert (read (fd, &E->key_fingerprint, 8) == 8);
-    insert_encrypted_chat (P);
-  }
-  if (version >= 1) {
-    assert (read (fd, &encr_root, 4) == 4);
-    if (encr_root) {
-      assert (read (fd, &encr_param_version, 4) == 4);
-      encr_prime = talloc (256);
-      assert (read (fd, encr_prime, 256) == 256);
-    }
-  }
-  close (fd);
+  assert (write (auth_file_fd, &DC->port, 4) == 4);
+  int l = strlen (DC->ip);
+  assert (write (auth_file_fd, &l, 4) == 4);
+  assert (write (auth_file_fd, DC->ip, l) == l);
+  assert (write (auth_file_fd, &DC->auth_key_id, 8) == 8);
+  assert (write (auth_file_fd, DC->auth_key, 256) == 256);
+}
+
+void write_auth_file (void) {
+  if (binlog_enabled) { return; }
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
+  assert (auth_file_fd >= 0);
+  int x = DC_SERIALIZED_MAGIC;
+  assert (write (auth_file_fd, &x, 4) == 4);
+  assert (write (auth_file_fd, &tgl_state.max_dc_num, 4) == 4);
+  assert (write (auth_file_fd, &tgl_state.dc_working_num, 4) == 4);
+
+  tgl_dc_iterator_ex (write_dc, &auth_file_fd);
+
+  assert (write (auth_file_fd, &tgl_state.our_id, 4) == 4);
+  close (auth_file_fd);
+}
+
+void write_secret_chat (tgl_peer_t *_P, void *extra) {
+  struct tgl_secret_chat *P = (void *)_P;
+  if (tgl_get_peer_type (P->id) != TGL_PEER_ENCR_CHAT) { return; }
+  if (P->state != sc_ok) { return; }
+  int *a = extra;
+  int fd = a[0];
+  a[1] ++;
+
+  int id = tgl_get_peer_id (P->id);
+  assert (write (fd, &id, 4) == 4);
+  //assert (write (fd, &P->flags, 4) == 4);
+  int l = strlen (P->print_name);
+  assert (write (fd, &l, 4) == 4);
+  assert (write (fd, P->print_name, l) == l);
+  assert (write (fd, &P->user_id, 4) == 4);
+  assert (write (fd, &P->admin_id, 4) == 4);
+  assert (write (fd, &P->date, 4) == 4);
+  assert (write (fd, &P->ttl, 4) == 4);
+  assert (write (fd, &P->layer, 4) == 4);
+  assert (write (fd, &P->access_hash, 8) == 8);
+  assert (write (fd, &P->state, 4) == 4);
+  assert (write (fd, &P->key_fingerprint, 8) == 8);
+  assert (write (fd, &P->key, 256) == 256);
 }
 
 void write_secret_chat_file (void) {
   if (binlog_enabled) { return; }
-  int fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
-  if (fd < 0) {
+  int secret_chat_fd = open (get_secret_chat_filename (), O_CREAT | O_RDWR, 0600);
+  assert (secret_chat_fd >= 0);
+  int x = SECRET_CHAT_FILE_MAGIC;
+  assert (write (secret_chat_fd, &x, 4) == 4);
+  x = 0; 
+  assert (write (secret_chat_fd, &x, 4) == 4); // version
+  assert (write (secret_chat_fd, &x, 4) == 4); // num
+
+  int y[2];
+  y[0] = secret_chat_fd;
+  y[1] = 0;
+
+  tgl_peer_iterator_ex (write_secret_chat, y);
+
+  lseek (secret_chat_fd, 8, SEEK_SET);
+  assert (write (secret_chat_fd, &y[1], 4) == 4);
+  close (secret_chat_fd);
+}
+
+void read_dc (int auth_file_fd, int id, unsigned ver) {
+  int port = 0;
+  assert (read (auth_file_fd, &port, 4) == 4);
+  int l = 0;
+  assert (read (auth_file_fd, &l, 4) == 4);
+  assert (l >= 0 && l < 100);
+  char ip[100];
+  assert (read (auth_file_fd, ip, l) == l);
+  ip[l] = 0;
+
+  long long auth_key_id;
+  static unsigned char auth_key[256];
+  assert (read (auth_file_fd, &auth_key_id, 8) == 8);
+  assert (read (auth_file_fd, auth_key, 256) == 256);
+
+  //bl_do_add_dc (id, ip, l, port, auth_key_id, auth_key);
+  bl_do_dc_option (id, 2, "DC", l, ip, port);
+  bl_do_set_auth_key_id (id, auth_key);
+  bl_do_dc_signed (id);
+}
+
+void empty_auth_file (void) {
+  char *ip = tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER;
+  bl_do_dc_option (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC, 0, "", strlen (ip), ip, 443);
+  bl_do_set_working_dc (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
+}
+
+int need_dc_list_update;
+void read_auth_file (void) {
+  if (binlog_enabled) { return; }
+  int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
+  if (auth_file_fd < 0) {
+    empty_auth_file ();
     return;
   }
-  int x[2];
-  x[0] = SECRET_CHAT_FILE_MAGIC;
-  x[1] = 1;
-  assert (write (fd, x, 8) == 8);
+  assert (auth_file_fd >= 0);
+  unsigned x;
+  unsigned m;
+  if (read (auth_file_fd, &m, 4) < 4 || (m != DC_SERIALIZED_MAGIC)) {
+    close (auth_file_fd);
+    empty_auth_file ();
+    return;
+  }
+  assert (read (auth_file_fd, &x, 4) == 4);
+  assert (x > 0);
+  int dc_working_num;
+  assert (read (auth_file_fd, &dc_working_num, 4) == 4);
+  
   int i;
-  int cc = 0;
-  for (i = 0; i < peer_num; i++) if (get_peer_type (Peers[i]->id) == PEER_ENCR_CHAT) {
-    if (Peers[i]->encr_chat.state != sc_none && Peers[i]->encr_chat.state != sc_deleted) {
-      cc ++;
+  for (i = 0; i <= (int)x; i++) {
+    int y;
+    assert (read (auth_file_fd, &y, 4) == 4);
+    if (y) {
+      read_dc (auth_file_fd, i, m);
     }
   }
-  assert (write (fd, &cc, 4) == 4);
-  for (i = 0; i < peer_num; i++) if (get_peer_type (Peers[i]->id) == PEER_ENCR_CHAT) {
-    if (Peers[i]->encr_chat.state != sc_none && Peers[i]->encr_chat.state != sc_deleted) {
-      int t = get_peer_id (Peers[i]->id);
-      assert (write (fd, &t, 4) == 4);
-      t = Peers[i]->flags;
-      assert (write (fd, &t, 4) == 4);
-      t = strlen (Peers[i]->print_name);
-      assert (write (fd, &t, 4) == 4);
-      assert (write (fd, Peers[i]->print_name, t) == t);
-      
-      assert (write (fd, &Peers[i]->encr_chat.state, 4) == 4);
-
-      assert (write (fd, &Peers[i]->encr_chat.user_id, 4) == 4);
-      assert (write (fd, &Peers[i]->encr_chat.admin_id, 4) == 4);
-      assert (write (fd, &Peers[i]->encr_chat.ttl, 4) == 4);
-      assert (write (fd, &Peers[i]->encr_chat.access_hash, 8) == 8);
-      if (Peers[i]->encr_chat.state != sc_waiting) {
-        assert (write (fd, Peers[i]->encr_chat.g_key, 256) == 256);
-      }
-      if (Peers[i]->encr_chat.state != sc_waiting) {
-        assert (write (fd, Peers[i]->encr_chat.nonce, 256) == 256);
-      }
-      assert (write (fd, Peers[i]->encr_chat.key, 256) == 256);
-      assert (write (fd, &Peers[i]->encr_chat.key_fingerprint, 8) == 8);      
-    }
+  bl_do_set_working_dc (dc_working_num);
+  int our_id;
+  int l = read (auth_file_fd, &our_id, 4);
+  if (l < 4) {
+    assert (!l);
   }
-  assert (write (fd, &encr_root, 4) == 4);
-  if (encr_root) {
-    assert (write (fd, &encr_param_version, 4) == 4);
-    assert (write (fd, encr_prime, 256) == 256);
+  if (our_id) {
+    bl_do_set_our_id (our_id);
   }
-  close (fd);
+  close (auth_file_fd);
 }
 
-extern int max_chat_size;
-int mcs (void) {
-  return max_chat_size;
+void read_secret_chat (int fd) {
+  int id, l, user_id, admin_id, date, ttl, layer, state;
+  long long access_hash, key_fingerprint;
+  static char s[1000];
+  static unsigned char key[256];
+  assert (read (fd, &id, 4) == 4);
+  //assert (read (fd, &flags, 4) == 4);
+  assert (read (fd, &l, 4) == 4);
+  assert (l > 0 && l < 1000);
+  assert (read (fd, s, l) == l);
+  assert (read (fd, &user_id, 4) == 4);
+  assert (read (fd, &admin_id, 4) == 4);
+  assert (read (fd, &date, 4) == 4);
+  assert (read (fd, &ttl, 4) == 4);
+  assert (read (fd, &layer, 4) == 4);
+  assert (read (fd, &access_hash, 8) == 8);
+  assert (read (fd, &state, 4) == 4);
+  assert (read (fd, &key_fingerprint, 8) == 8);
+  assert (read (fd, &key, 256) == 256);
+
+  bl_do_encr_chat_create (id, user_id, admin_id, s, l);
+  struct tgl_secret_chat  *P = (void *)tgl_peer_get (TGL_MK_ENCR_CHAT (id));
+  assert (P && (P->flags & FLAG_CREATED));
+  bl_do_encr_chat_set_date (P, date);
+  bl_do_encr_chat_set_ttl (P, ttl);
+  bl_do_encr_chat_set_layer (P, layer);
+  bl_do_encr_chat_set_access_hash (P, access_hash);
+  bl_do_encr_chat_set_state (P, state);
+  bl_do_encr_chat_set_key (P, key, key_fingerprint);
 }
 
-extern int difference_got;
-int dgot (void) {
-  return difference_got;
-}
-int dlgot (void) {
-  return dialog_list_got;
+void read_secret_chat_file (void) {
+  if (binlog_enabled) { return; }
+  int secret_chat_fd = open (get_secret_chat_filename (), O_RDWR, 0600);
+  if (secret_chat_fd < 0) { return; }
+  //assert (secret_chat_fd >= 0);
+  int x;
+  if (read (secret_chat_fd, &x, 4) < 4) { close (secret_chat_fd); return; }
+  if (x != SECRET_CHAT_FILE_MAGIC) { close (secret_chat_fd); return; }
+  assert (read (secret_chat_fd, &x, 4) == 4);
+  assert (!x); // version
+  assert (read (secret_chat_fd, &x, 4) == 4);
+  assert (x >= 0);
+  while (x --> 0) {
+    read_secret_chat (secret_chat_fd);
+  }
+  close (secret_chat_fd);
 }
 
-int readline_active;
-int new_dc_num;
-int wait_dialog_list;
+void dlist_cb (void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[])  {
+  d_got_ok = 1;
+}
 
 int loop (void) {
-  on_start ();
+  //on_start ();
+  tgl_set_callback (&upd_cb);
+  //tgl_state.temp_key_expire_time = 60;
+  tgl_init ();
+ 
   if (binlog_enabled) {
-    double t = get_double_time ();
-    logprintf ("replay log start\n");
-    replay_log ();
-    logprintf ("replay log end in %lf seconds\n", get_double_time () - t);
-    write_binlog ();
-    #ifdef USE_LUA
-      lua_binlog_end ();
-    #endif
+    double t = tglt_get_double_time ();
+    if (verbosity >= E_DEBUG) {
+      logprintf ("replay log start\n");
+    }
+    tgl_replay_log ();
+    if (verbosity >= E_DEBUG) {
+      logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
+    }
+    tgl_reopen_binlog_for_writing ();
   } else {
     read_auth_file ();
+    read_state_file ();
+    read_secret_chat_file ();
   }
+  binlog_read = 1;
+  #ifdef USE_LUA
+    lua_binlog_end ();
+  #endif
   update_prompt ();
+    
+  net_loop (0, all_authorized);
 
-  assert (DC_list[dc_working_num]);
-  if (!DC_working || !DC_working->auth_key_id) {
-//  if (auth_state == 0) {
-    DC_working = DC_list[dc_working_num];
-    assert (!DC_working->auth_key_id);
-    dc_authorize (DC_working);
-    assert (DC_working->auth_key_id);
-    auth_state = 100;
-    write_auth_file ();
-  }
-  
-  if (verbosity) {
-    logprintf ("Requesting info about DC...\n");
-  }
-  do_help_get_config ();
-  net_loop (0, mcs);
-  if (verbosity) {
-    logprintf ("DC_info: %d new DC got\n", new_dc_num);
-  }
   int i;
-  for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->auth_key_id) {
-    dc_authorize (DC_list[i]);
-    assert (DC_list[i]->auth_key_id);
-    write_auth_file ();
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_authorized_dc (tgl_state.DC_list[i])) {
+    assert (0);
   }
 
-  if (auth_state == 100 || !(DC_working->has_auth)) {
+  if (!tgl_signed_dc (tgl_state.DC_working)) {
+    if (disable_output) {
+      fprintf (stderr, "Can not login without output\n");
+      exit (2);
+    }
     if (!default_username) {
       size_t size = 0;
       char *user = 0;
@@ -510,11 +635,13 @@ int loop (void) {
         set_default_username (user);
       }
     }
-    int res = do_auth_check_phone (default_username);
-    assert (res >= 0);
-    logprintf ("%s\n", res > 0 ? "phone registered" : "phone not registered");
-    if (res > 0 && !register_mode) {
-      do_send_code (default_username);
+    tgl_do_send_code (default_username, sign_in_callback, 0);
+    net_loop (0, sent_code);
+   
+    if (verbosity >= E_DEBUG) {
+      logprintf ("%s\n", should_register ? "phone not registered" : "phone registered");
+    }
+    if (!should_register) {
       char *code = 0;
       size_t size = 0;
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
@@ -525,17 +652,16 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          do_phone_call (default_username);
+          tgl_do_phone_call (default_username, hash, 0, 0);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (do_send_code_result (code) >= 0) {
+        if (tgl_do_send_code_result (default_username, hash, code, sign_in_result, 0) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
-        tfree_str (code);
+        free (code);
       }
-      auth_state = 300;
     } else {
       printf ("User is not registered. Do you want to register? [Y/n] ");
       char *code;
@@ -562,13 +688,6 @@ int loop (void) {
         perror ("getline()");
         exit (EXIT_FAILURE);
       }
-
-      int dc_num = do_get_nearest_dc ();
-      assert (dc_num >= 0 && dc_num <= MAX_DC_NUM && DC_list[dc_num]);
-      dc_working_num = dc_num;
-      DC_working = DC_list[dc_working_num];
-      
-      do_send_code (default_username);
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
         if (net_getline (&code, &size) == -1) {
@@ -577,49 +696,58 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          do_phone_call (default_username);
+          tgl_do_phone_call (default_username, hash, 0, 0);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (do_send_code_result_auth (code, first_name, last_name) >= 0) {
+        if (tgl_do_send_code_result_auth (default_username, hash, code, first_name, last_name, sign_in_result, 0) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
-        tfree_str (code);
+        free (code);
       }
-      auth_state = 300;
     }
+
+    net_loop (0, signed_in);    
+    //bl_do_dc_signed (tgl_state.DC_working);
   }
 
-  for (i = 0; i <= MAX_DC_NUM; i++) if (DC_list[i] && !DC_list[i]->has_auth) {
-    do_export_auth (i);
-    do_import_auth (i);
-    bl_do_dc_signed (i);
-    write_auth_file ();
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_signed_dc (tgl_state.DC_list[i])) {
+    tgl_do_export_auth (i, export_auth_callback, (void*)(long)tgl_state.DC_list[i]);    
+    cur_a_dc = tgl_state.DC_list[i];
+    net_loop (0, dc_signed_in);
+    assert (tgl_signed_dc (tgl_state.DC_list[i]));
   }
   write_auth_file ();
-
+  
   fflush (stdout);
   fflush (stderr);
 
-  read_state_file ();
-  read_secret_chat_file ();
+  //read_state_file ();
+  //read_secret_chat_file ();
 
   set_interface_callbacks ();
 
-  do_get_difference ();
+  tglm_send_all_unsent ();
+  tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
+  assert (!(tgl_state.locks & TGL_LOCK_DIFF));
+  tgl_state.started = 1;
+  if (wait_dialog_list) {
+    d_got_ok = 0;
+    tgl_do_get_dialog_list (dlist_cb, 0);
+    net_loop (0, dgot);
+  }
   #ifdef USE_LUA
     lua_diff_end ();
   #endif
-  send_all_unsent ();
 
 
-  do_get_dialog_list ();
+  /*tgl_do_get_dialog_list (get_dialogs_callback, 0);
   if (wait_dialog_list) {
     dialog_list_got = 0;
     net_loop (0, dlgot);
-  }
+  }*/
 
   return main_loop ();
 }

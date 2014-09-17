@@ -1,20 +1,21 @@
-/*
-    This file is part of telegram-client.
+/* 
+    This file is part of tgl-library
 
-    Telegram-client is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    Telegram-client is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-    Copyright Vitaly Valtman 2013
+    Copyright Vitaly Valtman 2013-2014
 */
 
 #ifdef HAVE_CONFIG_H
@@ -31,20 +32,17 @@
 #include <fcntl.h>
 #include <sys/utsname.h>
 
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
 
 #include "include.h"
 #include "mtproto-client.h"
 #include "queries.h"
 #include "tree.h"
 #include "mtproto-common.h"
-#include "telegram.h"
+//#include "telegram.h"
 #include "loop.h"
 #include "structures.h"
-#include "interface.h"
-#include "net.h"
+//#include "interface.h"
+//#include "net.h"
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/aes.h>
@@ -53,165 +51,195 @@
 
 #include "no-preview.h"
 #include "binlog.h"
+#include "updates.h"
+#include "auto.h"
+#include "tgl.h"
+#ifdef EVENT_V2
+#include <event2/event.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
 
 #define sha1 SHA1
 
-#ifdef __APPLE__
-#define OPEN_BIN "open %s"
-#else
-#define OPEN_BIN "xdg-open %s"
+#ifndef PATH_MAX
+#define PATH_MAX 4096
 #endif
 
+//int want_dc_num;
 char *get_downloads_directory (void);
-int verbosity;
-extern int offline_mode;
+//extern int offline_mode;
 
-long long cur_uploading_bytes;
-long long cur_uploaded_bytes;
-long long cur_downloading_bytes;
-long long cur_downloaded_bytes;
+//long long cur_uploading_bytes;
+//long long cur_uploaded_bytes;
+//long long cur_downloading_bytes;
+//long long cur_downloaded_bytes;
 
-extern int binlog_enabled;
-extern int sync_from_start;
+//extern int binlog_enabled;
+//extern int sync_from_start;
 
-int queries_num;
+//static int queries_num;
 
-void out_peer_id (peer_id_t id);
+static void out_peer_id (tgl_peer_id_t id);
 #define QUERY_TIMEOUT 6.0
 
 #define memcmp8(a,b) memcmp ((a), (b), 8)
 DEFINE_TREE (query, struct query *, memcmp8, 0) ;
-struct tree_query *queries_tree;
+static struct tree_query *queries_tree;
 
-double get_double_time (void) {
-  struct timespec tv;
-  my_clock_gettime (CLOCK_REALTIME, &tv);
-  return tv.tv_sec + 1e-9 * tv.tv_nsec;
-}
-
-struct query *query_get (long long id) {
+struct query *tglq_query_get (long long id) {
   return tree_lookup_query (queries_tree, (void *)&id);
 }
 
-int alarm_query (struct query *q) {
+static int alarm_query (struct query *q) {
   assert (q);
-  if (verbosity >= 1) {
-    logprintf ("Alarm query %lld\n", q->msg_id);
-  }
-  q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
-  insert_event_timer (&q->ev);
-
-  if (q->session->c->out_bytes >= 100000) {
-    return 0;
-  }
-
-  clear_packet ();
-  out_int (CODE_msg_container);
-  out_int (1);
-  out_long (q->msg_id);
-  out_int (q->seq_no);
-  out_int (4 * q->data_len);
-  out_ints (q->data, q->data_len);
+  vlogprintf (E_DEBUG, "Alarm query %lld\n", q->msg_id);
+  //q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
+  //insert_event_timer (&q->ev);
   
-  encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, 0);
+  
+  static struct timeval ptimeout = { QUERY_TIMEOUT, 0};
+  event_add (q->ev, &ptimeout);
+
+  /*if (q->session->c->out_bytes >= 100000) {
+    return 0;
+  }*/
+
+  if (q->session->session_id == q->session_id) {
+    clear_packet ();
+    out_int (CODE_msg_container);
+    out_int (1);
+    out_long (q->msg_id);
+    out_int (q->seq_no);
+    out_int (4 * q->data_len);
+    out_ints (q->data, q->data_len);
+  
+    tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, q->flags & QUERY_FORCE_SEND);
+  } else {
+    q->flags &= ~QUERY_ACK_RECEIVED;
+    queries_tree = tree_delete_query (queries_tree, q);
+    q->msg_id = tglmp_encrypt_send_message (q->session->c, q->data, q->data_len, (q->flags & QUERY_FORCE_SEND) | 1);
+    queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
+    q->session_id = q->session->session_id;
+    if (!(q->session->dc->flags & 4) && !(q->flags & QUERY_FORCE_SEND)) {
+      q->session_id = 0;
+    }
+  }
   return 0;
 }
 
-void query_restart (long long id) {
-  struct query *q = query_get (id);
+void tglq_query_restart (long long id) {
+  struct query *q = tglq_query_get (id);
   if (q) {
-    remove_event_timer (&q->ev);
+    event_del (q->ev);
     alarm_query (q);
   }
 }
 
-struct query *send_query (struct dc *DC, int ints, void *data, struct query_methods *methods, void *extra) {
+static void alarm_query_gateway (evutil_socket_t fd, short what, void *arg) {
+  alarm_query (arg);
+}
+
+
+struct query *tglq_send_query_ex (struct tgl_dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra, int flags) {
   assert (DC);
   assert (DC->auth_key_id);
   if (!DC->sessions[0]) {
-    dc_create_session (DC);
+    tglmp_dc_create_session (DC);
   }
-  if (verbosity) {
-    logprintf ( "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
-  }
+  vlogprintf (E_DEBUG, "Sending query of size %d to DC (%s:%d)\n", 4 * ints, DC->ip, DC->port);
   struct query *q = talloc0 (sizeof (*q));
   q->data_len = ints;
   q->data = talloc (4 * ints);
   memcpy (q->data, data, 4 * ints);
-  q->msg_id = encrypt_send_message (DC->sessions[0]->c, data, ints, 1);
+  q->msg_id = tglmp_encrypt_send_message (DC->sessions[0]->c, data, ints, 1 | (flags & QUERY_FORCE_SEND));
   q->session = DC->sessions[0];
-  q->seq_no = DC->sessions[0]->seq_no - 1; 
-  if (verbosity) {
-    logprintf ( "Msg_id is %lld %p\n", q->msg_id, q);
+  q->seq_no = q->session->seq_no - 1; 
+  q->session_id = q->session->session_id;
+  if (!(DC->flags & 4) && !(flags & QUERY_FORCE_SEND)) {
+    q->session_id = 0;
   }
+  vlogprintf (E_DEBUG, "Msg_id is %lld %p\n", q->msg_id, q);
   q->methods = methods;
+  q->type = methods->type;
   q->DC = DC;
+  q->flags = flags & QUERY_FORCE_SEND;
   if (queries_tree) {
-    if (verbosity >= 2) {
-      logprintf ( "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
-    }
+    vlogprintf (E_DEBUG + 2, "%lld %lld\n", q->msg_id, queries_tree->x->msg_id);
   }
   queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
 
-  q->ev.alarm = (void *)alarm_query;
-  q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
-  q->ev.self = (void *)q;
-  insert_event_timer (&q->ev);
+  //q->ev.alarm = (void *)alarm_query;
+  //q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
+  //q->ev.self = (void *)q;
+  //insert_event_timer (&q->ev);
+
+  q->ev = evtimer_new (tgl_state.ev_base, alarm_query_gateway, q);
+  static struct timeval ptimeout = { QUERY_TIMEOUT, 0};
+  event_add (q->ev, &ptimeout);
 
   q->extra = extra;
-  queries_num ++;
+  q->callback = callback;
+  q->callback_extra = callback_extra;
+  tgl_state.active_queries ++;
   return q;
 }
 
-void query_ack (long long id) {
-  struct query *q = query_get (id);
+struct query *tglq_send_query (struct tgl_dc *DC, int ints, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra) {
+  return tglq_send_query_ex (DC, ints, data, methods, extra, callback, callback_extra, 0);
+}
+
+static int fail_on_error (struct query *q UU, int error_code UU, int l UU, char *error UU) {
+  fprintf (stderr, "error #%d: %.*s\n", error_code, l, error);
+  assert (0);
+  return 0;
+}
+
+void tglq_query_ack (long long id) {
+  struct query *q = tglq_query_get (id);
   if (q && !(q->flags & QUERY_ACK_RECEIVED)) { 
     assert (q->msg_id == id);
     q->flags |= QUERY_ACK_RECEIVED; 
-    remove_event_timer (&q->ev);
+    event_del (q->ev);
   }
 }
 
-void query_error (long long id) {
+void tglq_query_error (long long id) {
   assert (fetch_int () == CODE_rpc_error);
   int error_code = fetch_int ();
   int error_len = prefetch_strlen ();
   char *error = fetch_str (error_len);
-  if (verbosity) {
-    logprintf ( "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
-  }
-  struct query *q = query_get (id);
+  vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
+  struct query *q = tglq_query_get (id);
   if (!q) {
-    if (verbosity) {
-      logprintf ( "No such query\n");
-    }
+    vlogprintf (E_WARNING, "No such query\n");
   } else {
     if (!(q->flags & QUERY_ACK_RECEIVED)) {
-      remove_event_timer (&q->ev);
+      event_del (q->ev);
     }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_error) {
       q->methods->on_error (q, error_code, error_len, error);
     } else {
-      logprintf ( "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
+      vlogprintf ( E_WARNING, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
     }
     tfree (q->data, q->data_len * 4);
+    event_free (q->ev);
     tfree (q, sizeof (*q));
   }
-  queries_num --;
+  tgl_state.active_queries --;
 }
 
 #define MAX_PACKED_SIZE (1 << 24)
 static int packed_buffer[MAX_PACKED_SIZE / 4];
 
-void query_result (long long id UU) {
-  if (verbosity) {
-    logprintf ( "result for query #%lld\n", id);
-  }
-  if (verbosity  >= 4) {
+void tglq_query_result (long long id UU) {
+  vlogprintf (E_DEBUG, "result for query #%lld. Size %ld bytes\n", id, (long)4 * (in_end - in_ptr));
+  /*if (verbosity  >= 4) {
     logprintf ( "result: ");
     hexdump_in ();
-  }
+  }*/
   int op = prefetch_int ();
   int *end = 0;
   int *eend = 0;
@@ -219,97 +247,74 @@ void query_result (long long id UU) {
     fetch_int ();
     int l = prefetch_strlen ();
     char *s = fetch_str (l);
-    int total_out = tinflate (s, l, packed_buffer, MAX_PACKED_SIZE);
+    int total_out = tgl_inflate (s, l, packed_buffer, MAX_PACKED_SIZE);
+    vlogprintf (E_DEBUG, "inflated %d bytes\n", total_out);
     end = in_ptr;
     eend = in_end;
     //assert (total_out % 4 == 0);
     in_ptr = packed_buffer;
     in_end = in_ptr + total_out / 4;
-    if (verbosity >= 4) {
+    /*if (verbosity >= 4) {
       logprintf ( "Unzipped data: ");
       hexdump_in ();
-    }
+    }*/
   }
-  struct query *q = query_get (id);
+  struct query *q = tglq_query_get (id);
   if (!q) {
-    if (verbosity) {
-      logprintf ( "No such query\n");
-    }
+    //if (verbosity) {
+    //  logprintf ( "No such query\n");
+    //}
+    vlogprintf (E_WARNING, "No such query\n");
     in_ptr = in_end;
   } else {
     if (!(q->flags & QUERY_ACK_RECEIVED)) {
-      remove_event_timer (&q->ev);
+      event_del (q->ev);
     }
     queries_tree = tree_delete_query (queries_tree, q);
     if (q->methods && q->methods->on_answer) {
+      if (q->type) {
+        int *save = in_ptr;
+        vlogprintf (E_DEBUG, "in_ptr = %p, end_ptr = %p\n", in_ptr, in_end);
+        if (skip_type_any (q->type) < 0) {
+          vlogprintf (E_ERROR, "Skipped %ld int out of %ld (type %s)\n", (long)(in_ptr - save), (long)(in_end - save), q->type->type->id);
+          assert (0);
+        }
+        
+        assert (in_ptr == in_end);
+        in_ptr = save;
+      }
       q->methods->on_answer (q);
       assert (in_ptr == in_end);
     }
     tfree (q->data, 4 * q->data_len);
+    event_free (q->ev);
     tfree (q, sizeof (*q));
   }
   if (end) {
     in_ptr = end;
     in_end = eend;
   }
-  queries_num --;
+  tgl_state.active_queries --;
 } 
 
-#define event_timer_cmp(a,b) ((a)->timeout > (b)->timeout ? 1 : ((a)->timeout < (b)->timeout ? -1 : (memcmp (a, b, sizeof (struct event_timer)))))
-DEFINE_TREE (timer, struct event_timer *, event_timer_cmp, 0)
-struct tree_timer *timer_tree;
 
-void insert_event_timer (struct event_timer *ev) {
-  if (verbosity > 2) {
-    logprintf ( "INSERT: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
-  }
-  timer_tree = tree_insert_timer (timer_tree, ev, lrand48 ());
-}
+//int max_chat_size;
+//int max_bcast_size;
+//int want_dc_num;
+//int new_dc_num;
+//extern struct tgl_dc *DC_list[];
+//extern struct tgl_dc *tgl_state.DC_working;
 
-void remove_event_timer (struct event_timer *ev) {
-  if (verbosity > 2) {
-    logprintf ( "REMOVE: %lf %p %p\n", ev->timeout, ev->self, ev->alarm);
-  }
-  timer_tree = tree_delete_timer (timer_tree, ev);
-}
-
-double next_timer_in (void) {
-  if (!timer_tree) { return 1e100; }
-  return tree_get_min_timer (timer_tree)->timeout;
-}
-
-void work_timers (void) {
-  double t = get_double_time ();
-  while (timer_tree) {
-    struct event_timer *ev = tree_get_min_timer (timer_tree);
-    assert (ev);
-    if (ev->timeout > t) { break; }
-    remove_event_timer (ev);
-    assert (ev->alarm);
-    if (verbosity) {
-      logprintf ("Alarm\n");
-    }
-    ev->alarm (ev->self);
-  }
-}
-
-int max_chat_size;
-int max_bcast_size;
-int want_dc_num;
-int new_dc_num;
-extern struct dc *DC_list[];
-extern struct dc *DC_working;
-
-void out_random (int n) {
+static void out_random (int n) {
   assert (n <= 32);
   static char buf[32];
-  secure_random (buf, n);
+  tglt_secure_random (buf, n);
   out_cstring (buf, n);
 }
 
 int allow_send_linux_version;
-void do_insert_header (void) {
-  out_int (CODE_invoke_with_layer12);  
+void tgl_do_insert_header (void) {
+  out_int (CODE_invoke_with_layer16);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -319,19 +324,19 @@ void do_insert_header (void) {
     static char buf[4096];
     tsnprintf (buf, sizeof (buf), "%.999s %.999s %.999s\n", st.sysname, st.release, st.version);
     out_string (buf);
-    out_string (TG_VERSION " (build " TG_BUILD ")");
+    out_string (TGL_VERSION " (build " TGL_BUILD ")");
     out_string ("En");
   } else { 
     out_string ("x86");
     out_string ("Linux");
-    out_string (TG_VERSION);
+    out_string (TGL_VERSION);
     out_string ("en");
   }
 }
 
 /* {{{ Get config */
 
-void fetch_dc_option (void) {
+static void fetch_dc_option (void) {
   assert (fetch_int () == CODE_dc_option);
   int id = fetch_int ();
   int l1 = prefetch_strlen ();
@@ -339,14 +344,12 @@ void fetch_dc_option (void) {
   int l2 = prefetch_strlen ();
   char *ip = fetch_str (l2);
   int port = fetch_int ();
-  if (verbosity) {
-    logprintf ( "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
-  }
+  vlogprintf (E_DEBUG, "id = %d, name = %.*s ip = %.*s port = %d\n", id, l1, name, l2, ip, port);
 
   bl_do_dc_option (id, l1, name, l2, ip, port);
 }
 
-int help_get_config_on_answer (struct query *q UU) {
+static int help_get_config_on_answer (struct query *q UU) {
   unsigned op = fetch_int ();
   assert (op == CODE_config || op == CODE_config_old);
   fetch_int ();
@@ -355,9 +358,7 @@ int help_get_config_on_answer (struct query *q UU) {
   assert (test_mode == CODE_bool_true || test_mode == CODE_bool_false);
   assert (test_mode == CODE_bool_false || test_mode == CODE_bool_true);
   int this_dc = fetch_int ();
-  if (verbosity) {
-    logprintf ( "this_dc = %d\n", this_dc);
-  }
+  vlogprintf (E_DEBUG, "this_dc = %d\n", this_dc);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   assert (n <= 10);
@@ -365,32 +366,44 @@ int help_get_config_on_answer (struct query *q UU) {
   for (i = 0; i < n; i++) {
     fetch_dc_option ();
   }
-  max_chat_size = fetch_int ();
+  int max_chat_size = fetch_int ();
+  int max_bcast_size = 0;
   if (op == CODE_config) {
     max_bcast_size = fetch_int ();
   }
-  if (verbosity >= 2) {
-    logprintf ( "chat_size = %d\n", max_chat_size);
+  vlogprintf (E_DEBUG, "chat_size = %d, bcast_size = %d\n", max_chat_size, max_bcast_size);
+
+  if (q->callback) {
+    ((void (*)(void *, int))(q->callback))(q->callback_extra, 1);
   }
   return 0;
 }
 
-struct query_methods help_get_config_methods  = {
-  .on_answer = help_get_config_on_answer
+static struct query_methods help_get_config_methods  = {
+  .on_answer = help_get_config_on_answer,
+  .type = TYPE_TO_PARAM(config)
 };
 
-void do_help_get_config (void) {
+void tgl_do_help_get_config (void (*callback)(void *, int), void *callback_extra) {
   clear_packet ();  
+  tgl_do_insert_header ();
   out_int (CODE_help_get_config);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0, callback, callback_extra);
+}
+
+void tgl_do_help_get_config_dc (struct tgl_dc *D, void (*callback)(void *, int), void *callback_extra) {
+  clear_packet ();  
+  tgl_do_insert_header ();
+  out_int (CODE_help_get_config);
+  tglq_send_query_ex (D, packet_ptr - packet_buffer, packet_buffer, &help_get_config_methods, 0, callback, callback_extra, 2);
 }
 /* }}} */
 
 /* {{{ Send code */
-char *phone_code_hash;
-int send_code_on_answer (struct query *q UU) {
+static int send_code_on_answer (struct query *q UU) {
+  static char *phone_code_hash;  
   assert (fetch_int () == (int)CODE_auth_sent_code);
-  fetch_bool ();
+  int registered = fetch_bool ();
   int l = prefetch_strlen ();
   char *s = fetch_str (l);
   if (phone_code_hash) {
@@ -399,13 +412,18 @@ int send_code_on_answer (struct query *q UU) {
   phone_code_hash = tstrndup (s, l);
   fetch_int (); 
   fetch_bool ();
-  want_dc_num = -1;
+  tfree_str (q->extra);
+  
+  if (q->callback) {
+    ((void (*)(void *, int, int, const char *))(q->callback)) (q->callback_extra, 1, registered, phone_code_hash);
+  }
   return 0;
 }
 
-int send_code_on_error (struct query *q UU, int error_code, int l, char *error) {
+static int send_code_on_error (struct query *q UU, int error_code, int l, char *error) {
   int s = strlen ("PHONE_MIGRATE_");
   int s2 = strlen ("NETWORK_MIGRATE_");
+  int want_dc_num = 0;
   if (l >= s && !memcmp (error, "PHONE_MIGRATE_", s)) {
     int i = error[s] - '0';
     want_dc_num = i;
@@ -413,33 +431,32 @@ int send_code_on_error (struct query *q UU, int error_code, int l, char *error) 
     int i = error[s2] - '0';
     want_dc_num = i;
   } else {
-    logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
+    vlogprintf (E_ERROR, "error_code = %d, error = %.*s\n", error_code, l, error);
     assert (0);
   }
+  bl_do_set_working_dc (want_dc_num);
+  //if (q->callback) {
+  //  ((void (*)(void *, int, int, const char *))(q->callback)) (q->callback_extra, 0, 0, 0);
+  //}
+  assert (tgl_state.DC_working->id == want_dc_num);
+  tgl_do_send_code (q->extra, q->callback, q->callback_extra);
+  tfree_str (q->extra);
   return 0;
 }
 
-struct query_methods send_code_methods  = {
+static struct query_methods send_code_methods  = {
   .on_answer = send_code_on_answer,
-  .on_error = send_code_on_error
+  .on_error = send_code_on_error,
+  .type = TYPE_TO_PARAM(auth_sent_code)
 };
 
-int code_is_sent (void) {
-  return want_dc_num;
-}
-
-int config_got (void) {
-  return DC_list[want_dc_num] != 0;
-}
-
-char *suser;
-extern int dc_working_num;
-void do_send_code (const char *user) {
-  logprintf ("sending code\n");
-  suser = tstrdup (user);
-  want_dc_num = 0;
+//char *suser;
+//extern int dc_working_num;
+void tgl_do_send_code (const char *user, void (*callback)(void *callback_extra, int success, int registered, const char *hash), void *callback_extra) {
+  vlogprintf (E_DEBUG, "sending code to dc %d\n", tgl_state.dc_working_num);
+  //suser = tstrdup (user);
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_auth_send_code);
   out_string (user);
   out_int (0);
@@ -447,69 +464,39 @@ void do_send_code (const char *user) {
   out_string (TG_APP_HASH);
   out_string ("en");
 
-  logprintf ("send_code: dc_num = %d\n", dc_working_num);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
-  net_loop (0, code_is_sent);
-  if (want_dc_num == -1) { return; }
-
-  DC_working = DC_list[want_dc_num];
-  if (!DC_working->sessions[0]) {
-    dc_create_session (DC_working);
-  }
-  dc_working_num = want_dc_num;
-
-  bl_do_set_working_dc (dc_working_num);
-
-  logprintf ("send_code: dc_num = %d\n", dc_working_num);
-  want_dc_num = 0;
-  clear_packet ();
-  do_insert_header ();
-  out_int (CODE_auth_send_code);
-  out_string (user);
-  out_int (0);
-  out_int (TG_APP_ID);
-  out_string (TG_APP_HASH);
-  out_string ("en");
-
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, 0);
-  net_loop (0, code_is_sent);
-  assert (want_dc_num == -1);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_code_methods, tstrdup (user), callback, callback_extra);
 }
 
 
-int phone_call_on_answer (struct query *q UU) {
+static int phone_call_on_answer (struct query *q UU) {
   fetch_bool ();
+  if (q->callback) {
+    ((void (*)(void *, int))(q->callback))(q->callback_extra, 1);
+  }
   return 0;
 }
 
-int phone_call_on_error (struct query *q UU, int error_code, int l, char *error) {
-  logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
-  assert (0);
-  return 0;
-}
-
-struct query_methods phone_call_methods  = {
+static struct query_methods phone_call_methods  = {
   .on_answer = phone_call_on_answer,
-  .on_error = phone_call_on_error
+  .type = TYPE_TO_PARAM(bool)
 };
 
-void do_phone_call (const char *user) {
-  logprintf ("calling user\n");
-  suser = tstrdup (user);
-  want_dc_num = 0;
+void tgl_do_phone_call (const char *user, const char *hash,void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  vlogprintf (E_DEBUG, "calling user\n");
+  //suser = tstrdup (user);
+  //want_dc_num = 0;
   clear_packet ();
-  do_insert_header ();
+  tgl_do_insert_header ();
   out_int (CODE_auth_send_call);
   out_string (user);
-  out_string (phone_code_hash);
+  out_string (hash);
 
-  logprintf ("do_phone_call: dc_num = %d\n", dc_working_num);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &phone_call_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Check phone */
-int check_phone_result;
+/*int check_phone_result;
 int cr_f (void) {
   return check_phone_result >= 0;
 }
@@ -529,7 +516,7 @@ int check_phone_on_error (struct query *q UU, int error_code, int l, char *error
     assert (DC_list[i]);
 
     dc_working_num = i;
-    DC_working = DC_list[i];
+    tgl_state.DC_working = DC_list[i];
     write_auth_file ();
 
     bl_do_set_working_dc (i);
@@ -542,7 +529,7 @@ int check_phone_on_error (struct query *q UU, int error_code, int l, char *error
 
     bl_do_set_working_dc (i);
 
-    DC_working = DC_list[i];
+    tgl_state.DC_working = DC_list[i];
     write_auth_file ();
     check_phone_result = 1;
   } else {
@@ -554,26 +541,27 @@ int check_phone_on_error (struct query *q UU, int error_code, int l, char *error
 
 struct query_methods check_phone_methods = {
   .on_answer = check_phone_on_answer,
-  .on_error = check_phone_on_error
+  .on_error = check_phone_on_error,
+  .type = TYPE_TO_PARAM(auth_checked_phone)
 };
 
-int do_auth_check_phone (const char *user) {
+int tgl_do_auth_check_phone (const char *user) {
   suser = tstrdup (user);
   clear_packet ();
   out_int (CODE_auth_check_phone);
   out_string (user);
   check_phone_result = -1;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
   net_loop (0, cr_f);
   check_phone_result = -1;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
   net_loop (0, cr_f);
   return check_phone_result;
-}
+}*/
 /* }}} */
 
 /* {{{ Nearest DC */
-int nearest_dc_num;
+/*int nearest_dc_num;
 int nr_f (void) {
   return nearest_dc_num >= 0;
 }
@@ -590,100 +578,73 @@ int nearest_dc_on_answer (struct query *q UU) {
   return 0;
 }
 
-int fail_on_error (struct query *q UU, int error_code UU, int l UU, char *error UU) {
-  fprintf (stderr, "error #%d: %.*s\n", error_code, l, error);
-  assert (0);
-  return 0;
-}
-
 struct query_methods nearest_dc_methods = {
   .on_answer = nearest_dc_on_answer,
-  .on_error = fail_on_error
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM(nearest_dc)
 };
 
-int do_get_nearest_dc (void) {
+int tgl_do_get_nearest_dc (void) {
   clear_packet ();
   out_int (CODE_help_get_nearest_dc);
   nearest_dc_num = -1;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &nearest_dc_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &nearest_dc_methods, 0);
   net_loop (0, nr_f);
   return nearest_dc_num;
-}
+}*/
 /* }}} */
 
 /* {{{ Sign in / Sign up */
-int sign_in_ok;
-int our_id;
-int sign_in_is_ok (void) {
-  return sign_in_ok;
-}
-
-struct user User;
-
-int sign_in_on_answer (struct query *q UU) {
+static int sign_in_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
   int expires = fetch_int ();
-  fetch_user (&User);
-  if (!our_id) {
-    our_id = get_peer_id (User.id);
-      
-    bl_do_set_our_id (our_id);
-  }
-  sign_in_ok = 1;
-  if (verbosity) {
-    logprintf ( "authorized successfully: name = '%s %s', phone = '%s', expires = %d\n", User.first_name, User.last_name, User.phone, (int)(expires - get_double_time ()));
-  }
-  DC_working->has_auth = 1;
+  vlogprintf (E_DEBUG, "Expires in %d\n", expires);
 
-  bl_do_dc_signed (DC_working->id);
+  struct tgl_user *U = tglf_fetch_alloc_user ();
+  
+  tgl_state.DC_working->has_auth = 1;
+
+  bl_do_dc_signed (tgl_state.DC_working->id);
+
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_user *))q->callback) (q->callback_extra, 1, U);
+  }
 
   return 0;
 }
 
-int sign_in_on_error (struct query *q UU, int error_code, int l, char *error) {
-  logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
-  sign_in_ok = -1;
-  assert (0);
-  return 0;
-}
-
-struct query_methods sign_in_methods  = {
+static struct query_methods sign_in_methods  = {
   .on_answer = sign_in_on_answer,
-  .on_error = sign_in_on_error
+  .type = TYPE_TO_PARAM(auth_authorization)
 };
 
-int do_send_code_result (const char *code) {
+int tgl_do_send_code_result (const char *user, const char *hash, const char *code, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) {
   clear_packet ();
   out_int (CODE_auth_sign_in);
-  out_string (suser);
-  out_string (phone_code_hash);
+  out_string (user);
+  out_string (hash);
   out_string (code);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0);
-  sign_in_ok = 0;
-  net_loop (0, sign_in_is_ok);
-  return sign_in_ok;
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
+  return 0;
 }
 
-int do_send_code_result_auth (const char *code, const char *first_name, const char *last_name) {
+int tgl_do_send_code_result_auth (const char *user, const char *hash, const char *code, const char *first_name, const char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *Self), void *callback_extra) {
   clear_packet ();
   out_int (CODE_auth_sign_up);
-  out_string (suser);
-  out_string (phone_code_hash);
+  out_string (user);
+  out_string (hash);
   out_string (code);
   out_string (first_name);
   out_string (last_name);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0);
-  sign_in_ok = 0;
-  net_loop (0, sign_in_is_ok);
-  return sign_in_ok;
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &sign_in_methods, 0, callback, callback_extra);
+  return 0;
 }
 /* }}} */
 
 /* {{{ Get contacts */
-extern char *user_list[];
-
-int get_contacts_on_answer (struct query *q UU) {
+static int get_contacts_on_answer (struct query *q UU) {
   int i;
+
   assert (fetch_int () == (int)CODE_contacts_contacts);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -694,12 +655,20 @@ int get_contacts_on_answer (struct query *q UU) {
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
+  struct tgl_user **list = talloc (sizeof (void *) * n);
   for (i = 0; i < n; i++) {
-    struct user *U = fetch_alloc_user ();
+    list[i] = tglf_fetch_alloc_user ();
+  }
+  if (q->callback) {
+    ((void (*)(void *, int, int, struct tgl_user **))q->callback) (q->callback_extra, 1, n, list);  
+  }
+  tfree (list, sizeof (void *) * n); 
+/*  for (i = 0; i < n; i++) {
+    struct tgl_user *U = tglf_fetch_alloc_user ();
     print_start ();
     push_color (COLOR_YELLOW);
-    printf ("User #%d: ", get_peer_id (U->id));
-    print_user_name (U->id, (peer_t *)U);
+    printf ("User #%d: ", tgl_get_peer_id (U->id));
+    print_user_name (U->id, (tgl_peer_t *)U);
     push_color (COLOR_GREEN);
     printf (" (");
     printf ("%s", U->print_name);
@@ -722,29 +691,30 @@ int get_contacts_on_answer (struct query *q UU) {
     }
     pop_color ();
     print_end ();
-  }
+  }*/
   return 0;
 }
 
-struct query_methods get_contacts_methods = {
+static struct query_methods get_contacts_methods = {
   .on_answer = get_contacts_on_answer,
+  .type = TYPE_TO_PARAM(contacts_contacts)
 };
 
 
-void do_update_contact_list (void) {
+void tgl_do_update_contact_list (void (*callback) (void *callback_extra, int success, int size, struct tgl_user *contacts[]), void *callback_extra) {
   clear_packet ();
   out_int (CODE_contacts_get_contacts);
   out_string ("");
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_contacts_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Encrypt decrypted */
-int *encr_extra;
-int *encr_ptr;
-int *encr_end;
+static int *encr_extra;
+static int *encr_ptr;
+static int *encr_end;
 
-char *encrypt_decrypted_message (struct secret_chat *E) {
+static char *encrypt_decrypted_message (struct tgl_secret_chat *E) {
   static int msg_key[4];
   static unsigned char sha1a_buffer[20];
   static unsigned char sha1b_buffer[20];
@@ -792,7 +762,7 @@ char *encrypt_decrypted_message (struct secret_chat *E) {
   return (void *)msg_key;
 }
 
-void encr_start (void) {
+static void encr_start (void) {
   encr_extra = packet_ptr;
   packet_ptr += 1; // str len
   packet_ptr += 2; // fingerprint
@@ -801,11 +771,11 @@ void encr_start (void) {
 }
 
 
-void encr_finish (struct secret_chat *E) {
+static void encr_finish (struct tgl_secret_chat *E) {
   int l = packet_ptr - (encr_extra +  8);
   while (((packet_ptr - encr_extra) - 3) & 3) {  
     int t;
-    secure_random (&t, 4);
+    tglt_secure_random (&t, 4);
     out_int (t);
   }
 
@@ -820,27 +790,82 @@ void encr_finish (struct secret_chat *E) {
 }
 /* }}} */
 
+void tgl_do_send_encr_chat_layer (struct tgl_secret_chat *E) {
+  long long t;
+  tglt_secure_random (&t, 8);
+  int action[2];
+  action[0] = CODE_decrypted_message_action_notify_layer;
+  action[1] = TGL_ENCRYPTED_LAYER;
+  bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
+
+  struct tgl_message *M = tgl_message_get (t);
+  assert (M);
+  assert (M->action.type == tgl_message_action_notify_layer);
+  tgl_do_send_msg (M, 0, 0);
+  //print_message (M);
+}
+
+void tgl_do_set_encr_chat_ttl (struct tgl_secret_chat *E, int ttl, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  long long t;
+  tglt_secure_random (&t, 8);
+  int action[2];
+  action[0] = CODE_decrypted_message_action_set_message_t_t_l;
+  action[1] = ttl;
+  bl_do_send_message_action_encr (t, tgl_state.our_id, tgl_get_peer_type (E->id), tgl_get_peer_id (E->id), time (0), 2, action);
+
+  struct tgl_message *M = tgl_message_get (t);
+  assert (M);
+  assert (M->action.type == tgl_message_action_set_message_ttl);
+  tgl_do_send_msg (M, callback, callback_extra);
+  //print_message (M);
+}
+
 /* {{{ Seng msg (plain text) */
-int msg_send_encr_on_answer (struct query *q UU) {
+static int msg_send_encr_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_messages_sent_encrypted_message);
-  rprintf ("Sent\n");
-  struct message *M = q->extra;
+  struct tgl_message *M = q->extra;
   //M->date = fetch_int ();
   fetch_int ();
-  bl_do_set_message_sent (M);
+  if (M->flags & FLAG_PENDING) {
+    bl_do_set_message_sent (M);
+    bl_do_msg_update (M->id);
+  }
+
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
+  }
   return 0;
 }
 
-int msg_send_on_answer (struct query *q UU) {
+static int msg_send_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
   assert (x == CODE_messages_sent_message || x == CODE_messages_sent_message_link);
   int id = fetch_int (); // id
-  struct message *M = q->extra;
-  bl_do_set_msg_id (M, id);
-  fetch_date ();
-  fetch_pts ();
-  fetch_seq ();
+  long long y = *(long long *)q->extra;
+  tfree (q->extra, 8);
+  struct tgl_message *M = tgl_message_get (y);
+  if (M && M->id != id) {
+    bl_do_set_msg_id (M, id);
+  }
+  int date = fetch_int ();
+  int pts = fetch_int ();
+  //tglu_fetch_seq ();
+  //bl_do_
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_set_date (date);
+    bl_do_set_pts (pts);
+    bl_do_msg_seq_update (id);
+  } else {
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
+  }
   if (x == CODE_messages_sent_message_link) {
+    assert (skip_type_any (TYPE_TO_PARAM_1 (vector, TYPE_TO_PARAM (contacts_link))) >= 0);
+  }
+  /*if (x == CODE_messages_sent_message_link) {
     assert (fetch_int () == CODE_vector);
     int n = fetch_int ();
     int i;
@@ -857,7 +882,7 @@ int msg_send_on_answer (struct query *q UU) {
       if (b == CODE_contacts_foreign_link_requested) {
         fetch_bool ();
       }
-      struct user *U = fetch_alloc_user ();
+      struct tgl_user *U = tglf_fetch_alloc_user ();
   
       U->flags &= ~(FLAG_USER_IN_CONTACT | FLAG_USER_OUT_CONTACT);
       if (a == CODE_contacts_my_link_contact) {
@@ -878,57 +903,119 @@ int msg_send_on_answer (struct query *q UU) {
       pop_color ();
       print_end ();
     }
+  }*/
+  if (M->flags & FLAG_PENDING) {
+    bl_do_set_message_sent (M);
   }
-  rprintf ("Sent: id = %d\n", id);
-  bl_do_set_message_sent (M);
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
+  }
   return 0;
 }
 
-int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
-  logprintf ( "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
-  struct message *M = q->extra;
-  bl_do_delete_msg (M);
+static int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
+  vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
+  long long x = *(long long *)q->extra;
+  tfree (q->extra, 8);
+  struct tgl_message *M = tgl_message_get (x);
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 0, M);
+  }
+  if (M) {
+    bl_do_delete_msg (M);
+  }
   return 0;
 }
 
-struct query_methods msg_send_methods = {
+static struct query_methods msg_send_methods = {
   .on_answer = msg_send_on_answer,
-  .on_error = msg_send_on_error
+  .on_error = msg_send_on_error,
+  .type = TYPE_TO_PARAM(messages_sent_message)
 };
 
-struct query_methods msg_send_encr_methods = {
-  .on_answer = msg_send_encr_on_answer
+static struct query_methods msg_send_encr_methods = {
+  .on_answer = msg_send_encr_on_answer,
+  .type = TYPE_TO_PARAM(messages_sent_encrypted_message)
 };
 
-int out_message_num;
-int our_id;
+//int out_message_num;
 
-void do_send_encr_msg (struct message *M) {
-  peer_t *P = user_chat_get (M->to_id);
-  if (!P || P->encr_chat.state != sc_ok) { return; }
+void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
+  if (!P || P->encr_chat.state != sc_ok) { 
+    vlogprintf (E_WARNING, "Unknown encrypted chat\n");
+    if (callback) {
+      ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, M);
+    }
+    return;
+  }
+  
+  clear_packet ();
+  out_int (CODE_messages_send_encrypted_service);
+  out_int (CODE_input_encrypted_chat);
+  out_int (tgl_get_peer_id (M->to_id));
+  out_long (P->encr_chat.access_hash);
+  out_long (M->id);
+  encr_start ();
+  out_int (CODE_decrypted_message_service);
+  out_long (M->id);
+  static int buf[4];
+  tglt_secure_random (buf, 16);
+  out_cstring ((void *)buf, 16);
+
+  switch (M->action.type) {
+  case tgl_message_action_notify_layer:
+    out_int (CODE_decrypted_message_action_notify_layer);
+    out_int (M->action.layer);
+    break;
+  case tgl_message_action_set_message_ttl:
+    out_int (CODE_decrypted_message_action_set_message_t_t_l);
+    out_int (M->action.ttl);
+    break;
+  default:
+    assert (0);
+  }
+  encr_finish (&P->encr_chat);
+  
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
+}
+
+void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (M->service) {
+    tgl_do_send_encr_msg_action (M, callback, callback_extra);
+    return;
+  }
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
+  if (!P || P->encr_chat.state != sc_ok) { 
+    vlogprintf (E_WARNING, "Unknown encrypted chat\n");
+    if (callback) {
+      ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, M);
+    }
+    return;
+  }
   
   clear_packet ();
   out_int (CODE_messages_send_encrypted);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (M->to_id));
+  out_int (tgl_get_peer_id (M->to_id));
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
   out_int (CODE_decrypted_message);
   out_long (M->id);
   static int buf[4];
-  secure_random (buf, 16);
+  tglt_secure_random (buf, 16);
   out_cstring ((void *)buf, 16);
   out_cstring ((void *)M->message, M->message_len);
   out_int (CODE_decrypted_message_media_empty);
   encr_finish (&P->encr_chat);
   
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
 }
 
-void do_send_msg (struct message *M) {
-  if (get_peer_type (M->to_id) == PEER_ENCR_CHAT) {
-    do_send_encr_msg (M);
+void tgl_do_send_msg (struct tgl_message *M, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) {
+    tgl_do_send_encr_msg (M, callback, callback_extra);
     return;
   }
   clear_packet ();
@@ -936,200 +1023,341 @@ void do_send_msg (struct message *M) {
   out_peer_id (M->to_id);
   out_cstring (M->message, M->message_len);
   out_long (M->id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, M);
+  long long *x = talloc (8);
+  *x = M->id;
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_methods, x, callback, callback_extra);
 }
 
-void do_send_message (peer_id_t id, const char *msg, int len) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
-    peer_t *P = user_chat_get (id);
+void tgl_do_send_message (tgl_peer_id_t id, const char *msg, int len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    tgl_peer_t *P = tgl_peer_get (id);
     if (!P) {
-      logprintf ("Can not send to unknown encrypted chat\n");
+      vlogprintf (E_WARNING, "Unknown encrypted chat\n");
+      if (callback) {
+        ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, 0);
+      }
       return;
     }
     if (P->encr_chat.state != sc_ok) {
-      logprintf ("Chat is not yet initialized\n");
+      vlogprintf (E_WARNING, "Chat is not yet initialized\n");
+      if (callback) {
+        ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, 0);
+      }
       return;
     }
   }
   long long t;
-  secure_random (&t, 8);
-  logprintf ("t = %lld, len = %d\n", t, len);
-  bl_do_send_message_text (t, our_id, get_peer_type (id), get_peer_id (id), time (0), len, msg);
-  struct message *M = message_get (t);
+  tglt_secure_random (&t, 8);
+  vlogprintf (E_DEBUG, "t = %lld, len = %d\n", t, len);
+  bl_do_send_message_text (t, tgl_state.our_id, tgl_get_peer_type (id), tgl_get_peer_id (id), time (0), len, msg);
+  struct tgl_message *M = tgl_message_get (t);
   assert (M);
-  do_send_msg (M);
-  print_message (M);
+  tgl_do_send_msg (M, callback, callback_extra);
+  //print_message (M);
 }
 /* }}} */
 
 /* {{{ Send text file */
-void do_send_text (peer_id_t id, char *file_name) {
+void tgl_do_send_text (tgl_peer_id_t id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
-    rprintf ("No such file '%s'\n", file_name);
-    tfree_str (file_name);
+    vlogprintf (E_WARNING, "No such file '%s'\n", file_name);
+    if (callback) {
+      ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, 0);
+    }
     return;
   }
   static char buf[(1 << 20) + 1];
   int x = read (fd, buf, (1 << 20) + 1);
   assert (x >= 0);
   if (x == (1 << 20) + 1) {
-    rprintf ("Too big file '%s'\n", file_name);
-    tfree_str (file_name);
+    vlogprintf (E_WARNING, "Too big file '%s'\n", file_name);
     close (fd);
+    if (callback) {
+      ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, 0);
+    }
   } else {
     buf[x] = 0;
-    do_send_message (id, buf, x);
-    tfree_str (file_name);
+    tgl_do_send_message (id, buf, x, callback, callback_extra);
+    //tfree_str (file_name);
     close (fd);
   }
 }
 /* }}} */
 
 /* {{{ Mark read */
-int mark_read_on_receive (struct query *q UU) {
+void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, int offset, void (*callback)(void *callback_extra, int), void *callback_extra);
+static int mark_read_on_receive (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_affected_history);
-  fetch_pts ();
-  fetch_seq ();
-  fetch_int (); // offset
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
+  //tglu_fetch_seq ();
+  int seq = fetch_int (); // seq
+
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_set_pts (pts);
+    bl_do_set_seq (seq);
+  } else {
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
+  }
+
+  int offset = fetch_int (); // offset
+  int *t = q->extra;
+  if (offset > 0) {
+    tgl_do_messages_mark_read (tgl_set_peer_id (t[0], t[1]), t[2], offset, q->callback, q->callback_extra);
+  } else {
+    if (q->callback) {
+      ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
+    }
+  }
+  tfree (t, 12);
   return 0;
 }
 
-int mark_read_encr_on_receive (struct query *q UU) {
+static int mark_read_encr_on_receive (struct query *q UU) {
   fetch_bool ();
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
+  }
   return 0;
 }
 
-struct query_methods mark_read_methods = {
-  .on_answer = mark_read_on_receive
+static struct query_methods mark_read_methods = {
+  .on_answer = mark_read_on_receive,
+  .type = TYPE_TO_PARAM(messages_affected_history)
 };
 
-struct query_methods mark_read_encr_methods = {
-  .on_answer = mark_read_encr_on_receive
+static struct query_methods mark_read_encr_methods = {
+  .on_answer = mark_read_encr_on_receive,
+  .type = TYPE_TO_PARAM(bool)
 };
 
-void do_messages_mark_read (peer_id_t id, int max_id) {
+void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, int offset, void (*callback)(void *callback_extra, int), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_read_history);
   out_peer_id (id);
   out_int (max_id);
-  out_int (0);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, 0);
+  out_int (offset);
+  int *t = talloc (12);
+  t[0] = tgl_get_peer_type (id);
+  t[1] = tgl_get_peer_id (id);
+  t[2] = max_id;
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_methods, t, callback, callback_extra);
 }
 
-void do_messages_mark_read_encr (peer_id_t id, long long access_hash, int last_time) {
+void tgl_do_messages_mark_read_encr (tgl_peer_id_t id, long long access_hash, int last_time, void (*callback)(void *callback_extra, int), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_read_encrypted_history);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (id));
+  out_int (tgl_get_peer_id (id));
   out_long (access_hash);
   out_int (last_time);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_encr_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &mark_read_encr_methods, 0, callback, callback_extra);
 }
 
-void do_mark_read (peer_id_t id) {
-  peer_t *P = user_chat_get (id);
+void tgl_do_mark_read (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_USER || tgl_get_peer_type (id) == TGL_PEER_CHAT) {
+    tgl_do_messages_mark_read (id, tgl_state.max_msg_id, 0, callback, callback_extra);
+    return;
+  }
+  tgl_peer_t *P = tgl_peer_get (id);
   if (!P) {
-    rprintf ("Unknown peer\n");
+    vlogprintf (E_WARNING, "Unknown peer\n");
+    callback (callback_extra, 0);
     return;
   }
-  if (get_peer_type (id) == PEER_USER || get_peer_type (id) == PEER_CHAT) {
-    if (!P->last) {
-      rprintf ("Unknown last peer message\n");
-      return;
-    }
-    do_messages_mark_read (id, P->last->id);
-    return;
-  }
-  assert (get_peer_type (id) == PEER_ENCR_CHAT);
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   if (P->last) {
-    do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date);
+    tgl_do_messages_mark_read_encr (id, P->encr_chat.access_hash, P->last->date, callback, callback_extra);
   } else {
-    do_messages_mark_read_encr (id, P->encr_chat.access_hash, time (0) - 10);
+    tgl_do_messages_mark_read_encr (id, P->encr_chat.access_hash, time (0) - 10, callback, callback_extra);
     
   }
 }
 /* }}} */
 
 /* {{{ Get history */
-int get_history_on_answer (struct query *q UU) {
-  static struct message *ML[10000];
+void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int max_id, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
+static int get_history_on_answer (struct query *q UU) {
+  int count = -1;
   int i;
   int x = fetch_int ();
+  assert (x == (int)CODE_messages_messages_slice || x == (int)CODE_messages_messages);
   if (x == (int)CODE_messages_messages_slice) {
-    fetch_int ();
-    rprintf ("...\n");
-  } else {
-    assert (x == (int)CODE_messages_messages);
+    count = fetch_int ();
+    //fetch_int ();
   }
   assert (fetch_int () == CODE_vector);
+  void **T = q->extra;
+  struct tgl_message **ML = T[0];
+  int list_offset = (long)T[1];
+  int list_size = (long)T[2];
+  tgl_peer_id_t id = tgl_set_peer_id ((long)T[4], (long)T[3]);
+  int limit = (long)T[5];
+  int offset = (long)T[6];
+  tfree (T, sizeof (void *) * 7);
+  
   int n = fetch_int ();
-  for (i = 0; i < n; i++) {
-    struct message *M = fetch_alloc_message ();
-    if (i <= 9999) {
-      ML[i] = M;
+
+  if (list_size - list_offset < n) {
+    int new_list_size = 2 * list_size;
+    if (new_list_size - list_offset < n) {
+      new_list_size = n + list_offset;
     }
+    ML = trealloc (ML, list_size * sizeof (void *), new_list_size * sizeof (void *));
+    assert (ML);
+    list_size = new_list_size;
   }
-  if (n > 10000) { n = 10000; }
-  int sn = n;
-  for (i = n - 1; i >= 0; i--) {
-    print_message (ML[i]);
+  //struct tgl_message **ML = talloc (sizeof (void *) * n);
+  for (i = 0; i < n; i++) {
+    ML[i + list_offset] = tglf_fetch_alloc_message ();
+  }
+  list_offset += n;
+  offset += n;
+  limit -= n;
+  if (count >= 0 && limit + offset >= count) {
+    limit = count - offset;
+    if (limit < 0) { limit = 0; }
+  }
+  assert (limit >= 0);
+  
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_user ();
   }
-  assert (fetch_int () == CODE_vector);
-  n = fetch_int ();
-  for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
-  }
-  if (sn > 0 && q->extra) {
-    do_messages_mark_read (*(peer_id_t *)&(q->extra), ML[0]->id);
+
+ 
+  if (limit <= 0 || x == (int)CODE_messages_messages) {
+    if (q->callback) {
+      ((void (*)(void *, int, int, struct tgl_message **))q->callback) (q->callback_extra, 1, list_offset, ML);
+    }
+    if (list_offset > 0) {
+      tgl_do_messages_mark_read (id, ML[0]->id, 0, 0, 0);
+    }
+
+  
+    tfree (ML, sizeof (void *) * list_size);
+  } else {
+   _tgl_do_get_history (id, limit, 0, ML[list_offset - 1]->id, list_offset, list_size, ML, q->callback, q->callback_extra);
   }
   return 0;
 }
 
-struct query_methods get_history_methods = {
+static struct query_methods get_history_methods = {
   .on_answer = get_history_on_answer,
+  .type = TYPE_TO_PARAM(messages_messages)
 };
 
-void do_get_local_history (peer_id_t id, int limit) {
-  peer_t *P = user_chat_get (id);
-  if (!P || !P->last) { return; }
-  struct message *M = P->last;
+void tgl_do_get_local_history (tgl_peer_id_t id, int limit, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  tgl_peer_t *P = tgl_peer_get (id);
+  if (!P || !P->last) { 
+    callback (callback_extra, 0, 0, 0);
+    return; 
+  }
+  struct tgl_message *M = P->last;
   int count = 1;
   assert (!M->prev);
   while (count < limit && M->next) {
     M = M->next;
     count ++;
   }
-  while (M) {
-    print_message (M);
-    M = M->prev;
+  struct tgl_message **ML = talloc (sizeof (void *) * count);
+  M = P->last;
+  ML[0] = M;
+  count = 1;
+  while (count < limit && M->next) {
+    M = M->next;
+    ML[count ++] = M;
   }
+
+  callback (callback_extra, 1, count, ML);
+  tfree (ML, sizeof (void *) * count);
 }
 
-void do_get_history (peer_id_t id, int limit) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT || offline_mode) {
-    do_get_local_history (id, limit);
-    do_mark_read (id);
+void tgl_do_get_local_history_ext (tgl_peer_id_t id, int offset, int limit, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  tgl_peer_t *P = tgl_peer_get (id);
+  if (!P || !P->last) { 
+    callback (callback_extra, 0, 0, 0);
+    return; 
+  }
+  struct tgl_message *M = P->last;
+  int count = 1;
+  assert (!M->prev);
+  while (count < limit + offset && M->next) {
+    M = M->next;
+    count ++;
+  }
+  if (count <= offset) {
+    callback (callback_extra, 1, 0, 0);
     return;
   }
+  struct tgl_message **ML = talloc (sizeof (void *) * (count - offset));
+  M = P->last;
+  ML[0] = M;
+  count = 1;
+  while (count < limit && M->next) {
+    M = M->next;
+    if (count >= offset) {
+      ML[count - offset] = M;
+    }
+    count ++;
+  }
+
+  callback (callback_extra, 1, count - offset, ML);
+  tfree (ML, sizeof (void *) * (count) - offset);
+}
+
+
+
+void _tgl_do_get_history (tgl_peer_id_t id, int limit, int offset, int max_id, int list_offset, int list_size, struct tgl_message *ML[], void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  void **T = talloc (sizeof (void *) * 7);
+  T[0] = ML;
+  T[1] = (void *)(long)list_offset;
+  T[2] = (void *)(long)list_size;
+  T[3] = (void *)(long)tgl_get_peer_id (id);
+  T[4] = (void *)(long)tgl_get_peer_type (id);
+  T[5] = (void *)(long)limit;
+  T[6] = (void *)(long)offset;
+
   clear_packet ();
   out_int (CODE_messages_get_history);
   out_peer_id (id);
-  out_int (0);
-  out_int (0);
+  out_int (offset);
+  out_int (max_id);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, (void *)*(long *)&id);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_history_methods, T, callback, callback_extra);
+}
+
+void tgl_do_get_history (tgl_peer_id_t id, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT || offline_mode) {
+    tgl_do_get_local_history (id, limit, callback, callback_extra);
+    tgl_do_mark_read (id, 0, 0);
+    return;
+  }
+  _tgl_do_get_history (id, limit, 0, 0, 0, 0, 0, callback, callback_extra);
+}
+
+void tgl_do_get_history_ext (tgl_peer_id_t id, int offset, int limit, int offline_mode, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT || offline_mode) {
+    tgl_do_get_local_history (id, limit, callback, callback_extra);
+    tgl_do_mark_read (id, 0, 0);
+    return;
+  }
+  _tgl_do_get_history (id, limit, offset, 0, 0, 0, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Get dialogs */
-int dialog_list_got;
-int get_dialogs_on_answer (struct query *q UU) {
+static int get_dialogs_on_answer (struct query *q UU) {
   unsigned x = fetch_int (); 
   assert (x == CODE_messages_dialogs || x == CODE_messages_dialogs_slice);
   if (x == CODE_messages_dialogs_slice) {
@@ -1138,49 +1366,46 @@ int get_dialogs_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
-  static int dlist[2 * 100];
-  static peer_id_t plist[100];
   int dl_size = n;
+
+  tgl_peer_id_t *PL = talloc0 (sizeof (tgl_peer_id_t) * n);
+  int *UC = talloc0 (4 * n);
+  int *LM = talloc0 (4 * n);
   for (i = 0; i < n; i++) {
-    assert (fetch_int () == CODE_dialog);
-    if (i < 100) {
-      plist[i] = fetch_peer_id ();
-      dlist[2 * i + 0] = fetch_int ();
-      dlist[2 * i + 1] = fetch_int ();
-    } else {
-      fetch_peer_id ();
-      fetch_int ();
-      fetch_int ();
-    }
+    assert (fetch_int () == (int)CODE_dialog);
+    PL[i] = tglf_fetch_peer_id ();
+    LM[i] = fetch_int ();
+    UC[i] = fetch_int ();
+    assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_message ();
+    tglf_fetch_alloc_message ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
-  print_start ();
+  /*print_start ();
   push_color (COLOR_YELLOW);
   for (i = dl_size - 1; i >= 0; i--) {
-    peer_t *UC;
-    switch (get_peer_type (plist[i])) {
-    case PEER_USER:
-      UC = user_chat_get (plist[i]);
+    tgl_peer_t *UC;
+    switch (tgl_get_peer_type (plist[i])) {
+    case TGL_PEER_USER:
+      UC = tgl_peer_get (plist[i]);
       printf ("User ");
       print_user_name (plist[i], UC);
       printf (": %d unread\n", dlist[2 * i + 1]);
       break;
-    case PEER_CHAT:
-      UC = user_chat_get (plist[i]);
+    case TGL_PEER_CHAT:
+      UC = tgl_peer_get (plist[i]);
       printf ("Chat ");
       print_chat_name (plist[i], UC);
       printf (": %d unread\n", dlist[2 * i + 1]);
@@ -1190,22 +1415,31 @@ int get_dialogs_on_answer (struct query *q UU) {
   pop_color ();
   print_end ();
 
-  dialog_list_got = 1;
+  dialog_list_got = 1;*/
+
+  if (q->callback) {
+    ((void (*)(void *, int, int, tgl_peer_id_t *, int *, int *))q->callback) (q->callback_extra, 1, dl_size, PL, LM, UC);
+  }
+  tfree (PL, sizeof (tgl_peer_id_t) * dl_size);
+  tfree (UC, 4 * dl_size);
+  tfree (LM, 4 * dl_size);
+  
   return 0;
 }
 
-struct query_methods get_dialogs_methods = {
+static struct query_methods get_dialogs_methods = {
   .on_answer = get_dialogs_on_answer,
+  .type = TYPE_TO_PARAM(messages_dialogs)
 };
 
 
-void do_get_dialog_list (void) {
+void tgl_do_get_dialog_list (void (*callback)(void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[]), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_get_dialogs);
   out_int (0);
   out_int (0);
   out_int (1000);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dialogs_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
@@ -1220,31 +1454,32 @@ struct send_file {
   int part_size;
   long long id;
   long long thumb_id;
-  peer_id_t to_id;
+  tgl_peer_id_t to_id;
   unsigned media_type;
   char *file_name;
   int encr;
+  int avatar;
   unsigned char *iv;
   unsigned char *init_iv;
   unsigned char *key;
 };
 
-void out_peer_id (peer_id_t id) {
-  peer_t *U;
-  switch (get_peer_type (id)) {
-  case PEER_CHAT:
+static void out_peer_id (tgl_peer_id_t id) {
+  tgl_peer_t *U;
+  switch (tgl_get_peer_type (id)) {
+  case TGL_PEER_CHAT:
     out_int (CODE_input_peer_chat);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     break;
-  case PEER_USER:
-    U = user_chat_get (id);
+  case TGL_PEER_USER:
+    U = tgl_peer_get (id);
     if (U && U->user.access_hash) {
       out_int (CODE_input_peer_foreign);
-      out_int (get_peer_id (id));
+      out_int (tgl_get_peer_id (id));
       out_long (U->user.access_hash);
     } else {
       out_int (CODE_input_peer_contact);
-      out_int (get_peer_id (id));
+      out_int (tgl_get_peer_id (id));
     }
     break;
   default:
@@ -1252,68 +1487,103 @@ void out_peer_id (peer_id_t id) {
   }
 }
 
-void send_part (struct send_file *f);
-int send_file_part_on_answer (struct query *q) {
+static void send_part (struct send_file *f, void *callback, void *callback_extra);
+static int send_file_part_on_answer (struct query *q) {
   assert (fetch_int () == (int)CODE_bool_true);
-  send_part (q->extra);
+  send_part (q->extra, q->callback, q->callback_extra);
   return 0;
 }
 
-int send_file_on_answer (struct query *q UU) {
+static int send_file_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = fetch_alloc_message ();
+  struct tgl_message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
-  fetch_pts ();
-  fetch_seq ();
-  print_message (M);
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
+  //tglu_fetch_seq ();
+  
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_set_pts (pts);
+    bl_do_msg_seq_update (M->id);
+  } else {
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
+  }
+
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback)(q->callback_extra, 1, M);
+  }
+  //print_message (M);
   return 0;
 }
 
-int send_encr_file_on_answer (struct query *q UU) {
-  if (prefetch_int () != (int)CODE_messages_sent_encrypted_file) {
-    hexdump_in ();
-  }
+static int send_encr_file_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_sent_encrypted_file);
-  struct message *M = q->extra;
-  M->date = fetch_int ();
-  assert (fetch_int () == CODE_encrypted_file);
-  M->media.encr_photo.id = fetch_long ();
-  M->media.encr_photo.access_hash = fetch_long ();
-  //M->media.encr_photo.size = fetch_int ();
+  struct tgl_message *M = q->extra;
+  //M->date = fetch_int ();
   fetch_int ();
-  M->media.encr_photo.dc_id = fetch_int ();
-  assert (fetch_int () == M->media.encr_photo.key_fingerprint);
-  print_message (M);
-  message_insert (M);
+  int *save = in_ptr;
+
+  assert (skip_type_any (TYPE_TO_PARAM (encrypted_file)) >= 0);
+  
+  //print_message (M);
+  if (M->flags & FLAG_PENDING) {
+    bl_do_create_message_media_encr_sent (M->id, save, in_ptr - save);
+    //bl_do_set_message_sent (M);
+    bl_do_msg_update (M->id);
+  }
+  
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback)(q->callback_extra, 1, M);
+  }
   return 0;
 }
 
-struct query_methods send_file_part_methods = {
-  .on_answer = send_file_part_on_answer
+static int set_photo_on_answer (struct query *q) {
+  assert (skip_type_any (TYPE_TO_PARAM(photos_photo)) >= 0);
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback)(q->callback_extra, 1);
+  }
+  return 0;
+}
+
+static struct query_methods send_file_part_methods = {
+  .on_answer = send_file_part_on_answer,
+  .type = TYPE_TO_PARAM(bool)
 };
 
-struct query_methods send_file_methods = {
-  .on_answer = send_file_on_answer
+static struct query_methods send_file_methods = {
+  .on_answer = send_file_on_answer,
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-struct query_methods send_encr_file_methods = {
-  .on_answer = send_encr_file_on_answer
+static struct query_methods set_photo_methods = {
+  .on_answer = set_photo_on_answer,
+  .type = TYPE_TO_PARAM(photos_photo)
 };
 
-void send_part (struct send_file *f) {
+static struct query_methods send_encr_file_methods = {
+  .on_answer = send_encr_file_on_answer,
+  .type = TYPE_TO_PARAM(messages_sent_encrypted_message)
+};
+
+static void send_part (struct send_file *f, void *callback, void *callback_extra) {
   if (f->fd >= 0) {
     if (!f->part_num) {
-      cur_uploading_bytes += f->size;
+      tgl_state.cur_uploading_bytes += f->size;
     }
     clear_packet ();
     if (f->size < (16 << 20)) {
@@ -1330,12 +1600,12 @@ void send_part (struct send_file *f) {
     int x = read (f->fd, buf, f->part_size);
     assert (x > 0);
     f->offset += x;
-    cur_uploaded_bytes += x;
+    tgl_state.cur_uploaded_bytes += x;
     
     if (f->encr) {
       if (x & 15) {
         assert (f->offset == f->size);
-        secure_random (buf + x, (-x) & 15);
+        tglt_secure_random (buf + x, (-x) & 15);
         x = (x + 15) & ~15;
       }
       
@@ -1345,24 +1615,64 @@ void send_part (struct send_file *f) {
       memset (&aes_key, 0, sizeof (aes_key));
     }
     out_cstring (buf, x);
-    if (verbosity >= 2) {
-      logprintf ("offset=%lld size=%lld\n", f->offset, f->size);
-    }
+    vlogprintf (E_DEBUG, "offset=%lld size=%lld\n", f->offset, f->size);
     if (f->offset == f->size) {
       close (f->fd);
       f->fd = -1;
     } else {
       assert (f->part_size == x);
     }
-    update_prompt ();
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
+    //update_prompt ();
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
   } else {
-    cur_uploaded_bytes -= f->size;
-    cur_uploading_bytes -= f->size;
-    update_prompt ();
+    tgl_state.cur_uploaded_bytes -= f->size;
+    tgl_state.cur_uploading_bytes -= f->size;
+    //update_prompt ();
     clear_packet ();
     assert (f->media_type == CODE_input_media_uploaded_photo || f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_thumb_video || f->media_type == CODE_input_media_uploaded_audio || f->media_type == CODE_input_media_uploaded_document || f->media_type == CODE_input_media_uploaded_thumb_document);
-    if (!f->encr) {
+    if (f->avatar) {
+      assert (!f->encr);
+      if (f->avatar > 0) {
+        out_int (CODE_messages_edit_chat_photo);
+        out_int (f->avatar);
+        out_int (CODE_input_chat_uploaded_photo);
+        if (f->size < (16 << 20)) {
+          out_int (CODE_input_file);
+        } else {
+          out_int (CODE_input_file_big);
+        }
+        out_long (f->id);
+        out_int (f->part_num);
+        /*char *s = f->file_name + strlen (f->file_name);
+        while (s >= f->file_name && *s != '/') { s --;}
+        out_string (s + 1);*/
+        out_string ("");
+        if (f->size < (16 << 20)) {
+          out_string ("");
+        }
+        out_int (CODE_input_photo_crop_auto);
+        tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
+      } else {
+        out_int (CODE_photos_upload_profile_photo);
+        if (f->size < (16 << 20)) {
+          out_int (CODE_input_file);
+        } else {
+          out_int (CODE_input_file_big);
+        }
+        out_long (f->id);
+        out_int (f->part_num);
+        char *s = f->file_name + strlen (f->file_name);
+        while (s >= f->file_name && *s != '/') { s --;}
+        out_string (s + 1);
+        if (f->size < (16 << 20)) {
+          out_string ("");
+        }
+        out_string ("profile photo");
+        out_int (CODE_input_geo_point_empty);
+        out_int (CODE_input_photo_crop_auto);
+        tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &set_photo_methods, 0, callback, callback_extra);
+      }
+    } else if (!f->encr) {
       out_int (CODE_messages_send_media);
       out_peer_id (f->to_id);
       out_int (f->media_type);
@@ -1390,6 +1700,7 @@ void send_part (struct send_file *f) {
         out_int (100);
         out_int (100);
         out_int (100);
+        out_string ("video");
       }
       if (f->media_type == CODE_input_media_uploaded_document || f->media_type == CODE_input_media_uploaded_thumb_document) {
         out_string (s + 1);
@@ -1397,38 +1708,43 @@ void send_part (struct send_file *f) {
       }
       if (f->media_type == CODE_input_media_uploaded_audio) {
         out_int (60);
+        out_string ("audio");
       }
 
-      out_long (-lrand48 () * (1ll << 32) - lrand48 ());
-      send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0);
+      long long r;
+      tglt_secure_random (&r, 8);
+      out_long (r);
+      tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_methods, 0, callback, callback_extra);
     } else {
-      struct message *M = talloc0 (sizeof (*M));
+      //struct tgl_message *M = talloc0 (sizeof (*M));
 
       out_int (CODE_messages_send_encrypted_file);
       out_int (CODE_input_encrypted_chat);
-      out_int (get_peer_id (f->to_id));
-      peer_t *P = user_chat_get (f->to_id);
+      out_int (tgl_get_peer_id (f->to_id));
+      tgl_peer_t *P = tgl_peer_get (f->to_id);
       assert (P);
       out_long (P->encr_chat.access_hash);
-      long long r = -lrand48 () * (1ll << 32) - lrand48 (); 
+      long long r;
+      tglt_secure_random (&r, 8);
       out_long (r);
       encr_start ();
       out_int (CODE_decrypted_message);
       out_long (r);
       out_random (15 + 4 * (lrand48 () % 3));
       out_string ("");
+      int *save_ptr = packet_ptr;
       if (f->media_type == CODE_input_media_uploaded_photo) {
         out_int (CODE_decrypted_message_media_photo);
-        M->media.type = CODE_decrypted_message_media_photo;
+        //M->media.type = CODE_decrypted_message_media_photo;
       } else if (f->media_type == CODE_input_media_uploaded_video) {
         out_int (CODE_decrypted_message_media_video);
-        M->media.type = CODE_decrypted_message_media_video;
+        //M->media.type = CODE_decrypted_message_media_video;
       } else if (f->media_type == CODE_input_media_uploaded_audio) {
         out_int (CODE_decrypted_message_media_audio);
-        M->media.type = CODE_decrypted_message_media_audio;
+        //M->media.type = CODE_decrypted_message_media_audio;
       } else if (f->media_type == CODE_input_media_uploaded_document) {
         out_int (CODE_decrypted_message_media_document);
-        M->media.type = CODE_decrypted_message_media_document;;
+        //M->media.type = CODE_decrypted_message_media_document;;
       } else {
         assert (0);
       }
@@ -1439,6 +1755,7 @@ void send_part (struct send_file *f) {
       }
       if (f->media_type == CODE_input_media_uploaded_video) {
         out_int (0);
+        out_string ("video");
       }
       if (f->media_type == CODE_input_media_uploaded_document) {
         out_string (f->file_name);
@@ -1446,6 +1763,7 @@ void send_part (struct send_file *f) {
       }
       if (f->media_type == CODE_input_media_uploaded_audio) {
         out_int (60);
+        out_string ("audio");
       }
       if (f->media_type == CODE_input_media_uploaded_video || f->media_type == CODE_input_media_uploaded_photo) {
         out_int (100);
@@ -1454,6 +1772,11 @@ void send_part (struct send_file *f) {
       out_int (f->size);
       out_cstring ((void *)f->key, 32);
       out_cstring ((void *)f->init_iv, 32);
+
+      long long msg_id;
+      tglt_secure_random (&msg_id, 8);
+      bl_do_create_message_media_encr_pending (msg_id, tgl_state.our_id, tgl_get_peer_type (f->to_id), tgl_get_peer_id (f->to_id), time (0), 0, 0, save_ptr, packet_ptr - save_ptr);
+
       encr_finish (&P->encr_chat);
       if (f->size < (16 << 20)) {
         out_int (CODE_input_encrypted_file_uploaded);
@@ -1474,53 +1797,54 @@ void send_part (struct send_file *f) {
       out_int ((*(int *)md5) ^ (*(int *)(md5 + 4)));
 
       tfree_secure (f->iv, 32);
+      struct tgl_message *M = tgl_message_get (msg_id);
+      assert (M);
       
-      M->media.encr_photo.key = f->key;
-      M->media.encr_photo.iv = f->init_iv;
-      M->media.encr_photo.key_fingerprint = (*(int *)md5) ^ (*(int *)(md5 + 4)); 
-      M->media.encr_photo.size = f->size;
+      //M->media.encr_photo.key = f->key;
+      //M->media.encr_photo.iv = f->init_iv;
+      //M->media.encr_photo.key_fingerprint = (*(int *)md5) ^ (*(int *)(md5 + 4)); 
+      //M->media.encr_photo.size = f->size;
   
-      M->flags = FLAG_ENCRYPTED;
-      M->from_id = MK_USER (our_id);
-      M->to_id = f->to_id;
-      M->unread = 1;
-      M->message = tstrdup ("");
-      M->out = 1;
-      M->id = r;
-      M->date = time (0);
+      //M->flags = FLAG_ENCRYPTED;
+      //M->from_id = TGL_MK_USER (tgl_state.our_id);
+      //M->to_id = f->to_id;
+      //M->unread = 1;
+      //M->message = tstrdup ("");
+      //M->out = 1;
+      //M->id = r;
+      //M->date = time (0);
       
-      send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M);
-
+      tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_file_methods, M, callback, callback_extra);
     }
     tfree_str (f->file_name);
     tfree (f, sizeof (*f));
   }
 }
 
-void send_file_thumb (struct send_file *f) {
+/*void send_file_thumb (struct send_file *f, void *callback, void *callback_extra) {
   clear_packet ();
   f->thumb_id = lrand48 () * (1ll << 32) + lrand48 ();
   out_int (CODE_upload_save_file_part);
   out_long (f->thumb_id);
   out_int (0);
   out_cstring ((void *)thumb_file, thumb_file_size);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f);
-}
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_file_part_methods, f, callback, callback_extra);
+}*/
 
-void do_send_photo (int type, peer_id_t to_id, char *file_name) {
+void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, int avatar, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   int fd = open (file_name, O_RDONLY);
   if (fd < 0) {
-    rprintf ("No such file '%s'\n", file_name);
-    tfree_str (file_name);
+    vlogprintf (E_WARNING, "No such file '%s'\n", file_name);
+    callback (callback_extra, 0, 0);
     return;
   }
   struct stat buf;
   fstat (fd, &buf);
   long long size = buf.st_size;
   if (size <= 0) {
-    rprintf ("File has zero length\n");
-    tfree_str (file_name);
+    vlogprintf (E_WARNING, "File has zero length\n");
     close (fd);
+    callback (callback_extra, 0, 0);
     return;
   }
   struct send_file *f = talloc0 (sizeof (*f));
@@ -1528,6 +1852,7 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
   f->size = size;
   f->offset = 0;
   f->part_num = 0;
+  f->avatar = avatar;
   int tmp = ((size + 2999) / 3000);
   f->part_size = (1 << 10);
   while (f->part_size < tmp) {
@@ -1536,26 +1861,45 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
 
   if (f->part_size > (512 << 10)) {
     close (fd);
-    rprintf ("Too big file. Maximal supported size is %d.\n", (512 << 10) * 1000);
+    vlogprintf (E_WARNING, "Too big file. Maximal supported size is %d.\n", (512 << 10) * 1000);
     tfree (f, sizeof (*f));
-    tfree_str (file_name);
+    callback (callback_extra, 0, 0);
     return;
   }
-
-  f->id = lrand48 () * (1ll << 32) + lrand48 ();
+  
+  tglt_secure_random (&f->id, 8);
   f->to_id = to_id;
-  f->media_type = type;
-  f->file_name = file_name;
-  if (get_peer_type (f->to_id) == PEER_ENCR_CHAT) {
+  switch (type) {
+  case tgl_message_media_photo:
+    f->media_type = CODE_input_media_uploaded_photo;
+    break;
+  case tgl_message_media_video:
+    f->media_type = CODE_input_media_uploaded_video;
+    break;
+  case tgl_message_media_audio:
+    f->media_type = CODE_input_media_uploaded_audio;
+    break;
+  case tgl_message_media_document:
+    f->media_type = CODE_input_media_uploaded_document;
+    break;
+  default:
+    close (fd);
+    vlogprintf (E_WARNING, "Unknown type %d.\n", type);
+    tfree (f, sizeof (*f));
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  f->file_name = tstrdup (file_name);
+  if (tgl_get_peer_type (f->to_id) == TGL_PEER_ENCR_CHAT) {
     f->encr = 1;
     f->iv = talloc (32);
-    secure_random (f->iv, 32);
+    tglt_secure_random (f->iv, 32);
     f->init_iv = talloc (32);
     memcpy (f->init_iv, f->iv, 32);
     f->key = talloc (32);
-    secure_random (f->key, 32);
+    tglt_secure_random (f->key, 32);
   }
-  if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
+  /*if (f->media_type == CODE_input_media_uploaded_video && !f->encr) {
     f->media_type = CODE_input_media_uploaded_thumb_video;
     send_file_thumb (f);
   } else if (f->media_type == CODE_input_media_uploaded_document && !f->encr) {
@@ -1563,87 +1907,217 @@ void do_send_photo (int type, peer_id_t to_id, char *file_name) {
     send_file_thumb (f);
   } else {
     send_part (f);
-  }
+  }*/
+  send_part (f, callback, callback_extra);
+}
+
+void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  _tgl_do_send_photo (type, to_id, file_name, 0, callback, callback_extra);
+}
+
+void tgl_do_set_chat_photo (tgl_peer_id_t chat_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  assert (tgl_get_peer_type (chat_id) == TGL_PEER_CHAT);
+  _tgl_do_send_photo (tgl_message_media_photo, chat_id, file_name, tgl_get_peer_id (chat_id), callback, callback_extra);
+}
+
+void tgl_do_set_profile_photo (char *file_name, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  _tgl_do_send_photo (tgl_message_media_photo, TGL_MK_USER(tgl_state.our_id), file_name, -1, (void *)callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Forward */
-int fwd_msg_on_answer (struct query *q UU) {
+static int fwd_msg_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = fetch_alloc_message ();
+  struct tgl_message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
-  fetch_pts ();
-  fetch_seq ();
-  print_message (M);
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
+  
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_set_pts (pts);
+    bl_do_msg_seq_update (M->id);
+  } else {
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
+  }
+  //print_message (M);
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
+  }
   return 0;
 }
 
-struct query_methods fwd_msg_methods = {
-  .on_answer = fwd_msg_on_answer
+static struct query_methods fwd_msg_methods = {
+  .on_answer = fwd_msg_on_answer,
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-void do_forward_message (peer_id_t id, int n) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
-    rprintf ("Can not forward messages from secret chat\n");
+void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    vlogprintf (E_WARNING, "Can not forward messages from secret chat\n");
+    callback (callback_extra, 0, 0);
     return;
   }
   clear_packet ();
   out_int (CODE_messages_forward_message);
   out_peer_id (id);
   out_int (n);
-  out_long (lrand48 () * (1ll << 32) + lrand48 ());
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0);
+  long long r;
+  tglt_secure_random (&r, 8);
+  out_long (r);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+}
+
+void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    if (callback) {
+      ((void (*)(void *, int, struct tgl_message *))callback) (callback_extra, 0, 0);
+    }
+    return;
+  }
+  long long t;
+  tglt_secure_random (&t, 8);
+  vlogprintf (E_DEBUG, "t = %lld\n", t);
+
+  clear_packet ();
+  out_int (CODE_messages_send_media);
+  out_peer_id (id);
+  out_int (CODE_input_media_contact);
+  out_cstring (phone, phone_len);
+  out_cstring (first_name, first_name_len);
+  out_cstring (last_name, last_name_len);
+  out_long (t);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+}
+
+void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    vlogprintf (E_WARNING, "Can not forward messages from secret chat\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  struct tgl_message *M = tgl_message_get (n);
+  if (!M) {
+    vlogprintf (E_WARNING, "No such message\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  if (M->flags & FLAG_ENCRYPTED) {
+    vlogprintf (E_WARNING, "Can not forward media from encrypted message\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  if (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_video && M->media.type != tgl_message_media_audio && M->media.type != tgl_message_media_document) {
+    vlogprintf (E_WARNING, "Can only forward photo/audio/video/document\n");
+    callback (callback_extra, 0, 0);
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_messages_send_media);
+  out_peer_id (id);
+  switch (M->media.type) {
+  case tgl_message_media_photo:
+    out_int (CODE_input_media_photo);
+    out_int (CODE_input_photo);
+    out_long (M->media.photo.id);
+    out_long (M->media.photo.access_hash);
+    break;
+  case tgl_message_media_video:
+    out_int (CODE_input_media_video);
+    out_int (CODE_input_video);
+    out_long (M->media.video.id);
+    out_long (M->media.video.access_hash);
+    break;
+  case tgl_message_media_audio:
+    out_int (CODE_input_media_audio);
+    out_int (CODE_input_audio);
+    out_long (M->media.audio.id);
+    out_long (M->media.audio.access_hash);
+    break;
+  case tgl_message_media_document:
+    out_int (CODE_input_media_document);
+    out_int (CODE_input_document);
+    out_long (M->media.document.id);
+    out_long (M->media.document.access_hash);
+    break;
+  default:
+    assert (0);
+  }
+  long long r;
+  tglt_secure_random (&r, 8);
+  out_long (r);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Rename chat */
-int rename_chat_on_answer (struct query *q UU) {
+static int rename_chat_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_messages_stated_message);
-  struct message *M = fetch_alloc_message ();
+  struct tgl_message *M = tglf_fetch_alloc_message ();
   assert (fetch_int () == CODE_vector);
   int n, i;
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_chat ();
+    tglf_fetch_alloc_chat ();
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
-  fetch_pts ();
-  fetch_seq ();
-  print_message (M);
+  //tglu_fetch_pts ();
+  int pts = fetch_int ();
+
+  int seq = fetch_int ();
+  if (seq == tgl_state.seq + 1 && !(tgl_state.locks & TGL_LOCK_DIFF)) {
+    bl_do_set_pts (pts);
+    bl_do_msg_seq_update (M->id);
+  } else {
+    if (seq > tgl_state.seq + 1) {
+      vlogprintf (E_NOTICE, "Hole in seq\n");
+      tgl_do_get_difference (0, 0, 0);
+    }
+  }
+  //print_message (M);
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_message *))q->callback) (q->callback_extra, 1, M);
+  }
   return 0;
 }
 
-struct query_methods rename_chat_methods = {
-  .on_answer = rename_chat_on_answer
+static struct query_methods rename_chat_methods = {
+  .on_answer = rename_chat_on_answer,
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-void do_rename_chat (peer_id_t id, char *name UU) {
+void tgl_do_rename_chat (tgl_peer_id_t id, char *name UU, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_edit_chat_title);
-  assert (get_peer_type (id) == PEER_CHAT);
-  out_int (get_peer_id (id));
+  assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
+  out_int (tgl_get_peer_id (id));
   out_string (name);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &rename_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Chat info */
-void print_chat_info (struct chat *C) {
-  peer_t *U = (void *)C;
+/*void print_chat_info (struct tgl_chat *C) {
+  tgl_peer_t *U = (void *)C;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("Chat ");
@@ -1652,9 +2126,9 @@ void print_chat_info (struct chat *C) {
   int i;
   for (i = 0; i < C->user_list_size; i++) {
     printf ("\t\t");
-    print_user_name (MK_USER (C->user_list[i].user_id), user_chat_get (MK_USER (C->user_list[i].user_id)));
+    print_user_name (TGL_MK_USER (C->user_list[i].user_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].user_id)));
     printf (" invited by ");
-    print_user_name (MK_USER (C->user_list[i].inviter_id), user_chat_get (MK_USER (C->user_list[i].inviter_id)));
+    print_user_name (TGL_MK_USER (C->user_list[i].inviter_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].inviter_id)));
     printf (" at ");
     print_date_full (C->user_list[i].date);
     if (C->user_list[i].user_id == C->admin_id) {
@@ -1664,40 +2138,46 @@ void print_chat_info (struct chat *C) {
   }
   pop_color ();
   print_end ();
-}
+}*/
 
-int chat_info_on_answer (struct query *q UU) {
-  struct chat *C = fetch_alloc_chat_full ();
-  print_chat_info (C);
+static int chat_info_on_answer (struct query *q UU) {
+  struct tgl_chat *C = tglf_fetch_alloc_chat_full ();
+  //print_chat_info (C);
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_chat *))q->callback) (q->callback_extra, 1, C);
+  }
   return 0;
 }
 
-struct query_methods chat_info_methods = {
-  .on_answer = chat_info_on_answer
+static struct query_methods chat_info_methods = {
+  .on_answer = chat_info_on_answer,
+  .type = TYPE_TO_PARAM(messages_chat_full)
 };
 
-void do_get_chat_info (peer_id_t id) {
+void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(void *callback_extra, int success, struct tgl_chat *C), void *callback_extra) {
   if (offline_mode) {
-    peer_t *C = user_chat_get (id);
+    tgl_peer_t *C = tgl_peer_get (id);
     if (!C) {
-      rprintf ("No such chat\n");
+      vlogprintf (E_WARNING, "No such chat\n");
+      callback (callback_extra, 0, 0);
     } else {
-      print_chat_info (&C->chat);
+      //print_chat_info (&C->chat);
+      callback (callback_extra, 1, &C->chat);
     }
     return;
   }
   clear_packet ();
   out_int (CODE_messages_get_full_chat);
-  assert (get_peer_type (id) == PEER_CHAT);
-  out_int (get_peer_id (id));
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0);
+  assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
+  out_int (tgl_get_peer_id (id));
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &chat_info_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ User info */
 
-void print_user_info (struct user *U) {
-  peer_t *C = (void *)U;
+/*void print_user_info (struct tgl_user *U) {
+  tgl_peer_t *C = (void *)U;
   print_start ();
   push_color (COLOR_YELLOW);
   printf ("User ");
@@ -1714,60 +2194,65 @@ void print_user_info (struct user *U) {
   }
   pop_color ();
   print_end ();
-}
+}*/
 
-int user_info_on_answer (struct query *q UU) {
-  struct user *U = fetch_alloc_user_full ();
-  print_user_info (U);
+static int user_info_on_answer (struct query *q UU) {
+  struct tgl_user *U = tglf_fetch_alloc_user_full ();
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_user *))q->callback) (q->callback_extra, 1, U);
+  }
   return 0;
 }
 
-struct query_methods user_info_methods = {
-  .on_answer = user_info_on_answer
+static struct query_methods user_info_methods = {
+  .on_answer = user_info_on_answer,
+  .type = TYPE_TO_PARAM(user_full)
 };
 
-void do_get_user_info (peer_id_t id) {
+void tgl_do_get_user_info (tgl_peer_id_t id, int offline_mode, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra) {
   if (offline_mode) {
-    peer_t *C = user_chat_get (id);
+    tgl_peer_t *C = tgl_peer_get (id);
     if (!C) {
-      rprintf ("No such user\n");
+      vlogprintf (E_WARNING, "No such user\n");
+      callback (callback_extra, 0, 0);
     } else {
-      print_user_info (&C->user);
+      callback (callback_extra, 1, &C->user);
     }
     return;
   }
   clear_packet ();
   out_int (CODE_users_get_full_user);
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &user_info_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Get user info silently */
-int user_list_info_silent_on_answer (struct query *q UU) {
+/*int user_list_info_silent_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   int i;
   for (i = 0; i < n; i++) {
-    fetch_alloc_user ();
+    tglf_fetch_alloc_user ();
   }
   return 0;
 }
 
 struct query_methods user_list_info_silent_methods = {
-  .on_answer = user_list_info_silent_on_answer
+  .on_answer = user_list_info_silent_on_answer,
+  .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM(user))
 };
 
-void do_get_user_list_info_silent (int num, int *list) {
+void tgl_do_get_user_list_info_silent (int num, int *list) {
   clear_packet ();
   out_int (CODE_users_get_users);
   out_int (CODE_vector);
@@ -1778,8 +2263,8 @@ void do_get_user_list_info_silent (int num, int *list) {
     out_int (list[i]);
     //out_long (0);
   }
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
-}
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &user_list_info_silent_methods, 0);
+}*/
 /* }}} */
 
 /* {{{ Load photo/video */
@@ -1801,12 +2286,12 @@ struct download {
 };
 
 
-void end_load (struct download *D) {
-  cur_downloading_bytes -= D->size;
-  cur_downloaded_bytes -= D->size;
-  update_prompt ();
+static void end_load (struct download *D, void *callback, void *callback_extra) {
+  tgl_state.cur_downloading_bytes -= D->size;
+  tgl_state.cur_downloaded_bytes -= D->size;
+  //update_prompt ();
   close (D->fd);
-  if (D->next == 1) {
+  /*if (D->next == 1) {
     logprintf ("Done: %s\n", D->name);
   } else if (D->next == 2) {
     static char buf[PATH_MAX];
@@ -1819,7 +2304,12 @@ void end_load (struct download *D) {
         logprintf ("Image is at %s\n", D->name);
       }
     }
+  }*/
+
+  if (callback) {
+    ((void (*)(void *, int, char *))callback) (callback_extra, 1, D->name);
   }
+
   if (D->iv) {
     tfree_secure (D->iv, 32);
   }
@@ -1827,8 +2317,8 @@ void end_load (struct download *D) {
   tfree (D, sizeof (*D));
 }
 
-void load_next_part (struct download *D);
-int download_on_answer (struct query *q) {
+static void load_next_part (struct download *D, void *callback, void *callback_extra);
+static int download_on_answer (struct query *q) {
   assert (fetch_int () == (int)CODE_upload_file);
   unsigned x = fetch_int ();
   assert (x);
@@ -1839,8 +2329,8 @@ int download_on_answer (struct query *q) {
   fetch_int (); // mtime
   int len = prefetch_strlen ();
   assert (len >= 0);
-  cur_downloaded_bytes += len;
-  update_prompt ();
+  tgl_state.cur_downloaded_bytes += len;
+  //update_prompt ();
   if (D->iv) {
     unsigned char *ptr = (void *)fetch_str (len);
     assert (!(len & 15));
@@ -1857,19 +2347,20 @@ int download_on_answer (struct query *q) {
   }
   D->offset += len;
   if (D->offset < D->size) {
-    load_next_part (D);
+    load_next_part (D, q->callback, q->callback_extra);
     return 0;
   } else {
-    end_load (D);
+    end_load (D, q->callback, q->callback_extra);
     return 0;
   }
 }
 
-struct query_methods download_methods = {
-  .on_answer = download_on_answer
+static struct query_methods download_methods = {
+  .on_answer = download_on_answer,
+  .type = TYPE_TO_PARAM(upload_file)
 };
 
-void load_next_part (struct download *D) {
+static void load_next_part (struct download *D, void *callback, void *callback_extra) {
   if (!D->offset) {
     static char buf[PATH_MAX];
     int l;
@@ -1879,7 +2370,7 @@ void load_next_part (struct download *D) {
       l = tsnprintf (buf, sizeof (buf), "%s/download_%lld", get_downloads_directory (), D->id);
     }
     if (l >= (int) sizeof (buf)) {
-      logprintf ("Download filename is too long");
+      vlogprintf (E_ERROR, "Download filename is too long");
       exit (1);
     }
     D->name = tstrdup (buf);
@@ -1887,17 +2378,17 @@ void load_next_part (struct download *D) {
     if (stat (buf, &st) >= 0) {
       D->offset = st.st_size;      
       if (D->offset >= D->size) {
-        cur_downloading_bytes += D->size;
-        cur_downloaded_bytes += D->offset;
-        rprintf ("Already downloaded\n");
-        end_load (D);
+        tgl_state.cur_downloading_bytes += D->size;
+        tgl_state.cur_downloaded_bytes += D->offset;
+        vlogprintf (E_NOTICE, "Already downloaded\n");
+        end_load (D, callback, callback_extra);
         return;
       }
     }
     
-    cur_downloading_bytes += D->size;
-    cur_downloaded_bytes += D->offset;
-    update_prompt ();
+    tgl_state.cur_downloading_bytes += D->size;
+    tgl_state.cur_downloaded_bytes += D->offset;
+    //update_prompt ();
   }
   clear_packet ();
   out_int (CODE_upload_get_file);
@@ -1917,18 +2408,18 @@ void load_next_part (struct download *D) {
   }
   out_int (D->offset);
   out_int (1 << 14);
-  send_query (DC_list[D->dc], packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
-  //send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
+  tglq_send_query (tgl_state.DC_list[D->dc], packet_ptr - packet_buffer, packet_buffer, &download_methods, D, callback, callback_extra);
+  //tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &download_methods, D);
 }
 
-void do_load_photo_size (struct photo_size *P, int next) {
+void tgl_do_load_photo_size (struct tgl_photo_size *P, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   if (!P->loc.dc) {
-    rprintf ("Bad video thumb\n");
+    vlogprintf (E_WARNING, "Bad video thumb\n");
+    callback (callback_extra, 0, 0);
     return;
   }
   
   assert (P);
-  assert (next);
   struct download *D = talloc0 (sizeof (*D));
   D->id = 0;
   D->offset = 0;
@@ -1937,14 +2428,17 @@ void do_load_photo_size (struct photo_size *P, int next) {
   D->dc = P->loc.dc;
   D->local_id = P->loc.local_id;
   D->secret = P->loc.secret;
-  D->next = next;
   D->name = 0;
   D->fd = -1;
-  load_next_part (D);
+  load_next_part (D, callback, callback_extra);
 }
 
-void do_load_photo (struct photo *photo, int next) {
-  if (!photo->sizes_num) { return; }
+void tgl_do_load_photo (struct tgl_photo *photo, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
+  if (!photo->sizes_num) { 
+    vlogprintf (E_WARNING, "No sizes\n");
+    callback (callback_extra, 0, 0);
+    return; 
+  }
   int max = -1;
   int maxi = 0;
   int i;
@@ -1954,81 +2448,73 @@ void do_load_photo (struct photo *photo, int next) {
       maxi = i;
     }
   }
-  do_load_photo_size (&photo->sizes[maxi], next);
+  tgl_do_load_photo_size (&photo->sizes[maxi], callback, callback_extra);
 }
 
-void do_load_video_thumb (struct video *video, int next) {
-  do_load_photo_size (&video->thumb, next);
+void tgl_do_load_video_thumb (struct tgl_video *video, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
+  tgl_do_load_photo_size (&video->thumb, callback, callback_extra);
 }
 
-void do_load_document_thumb (struct document *video, int next) {
-  do_load_photo_size (&video->thumb, next);
+void tgl_do_load_document_thumb (struct tgl_document *video, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
+  tgl_do_load_photo_size (&video->thumb, callback, callback_extra);
 }
 
-void do_load_video (struct video *V, int next) {
+void tgl_do_load_video (struct tgl_video *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   assert (V);
-  assert (next);
   struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
   D->access_hash = V->access_hash;
   D->dc = V->dc_id;
-  D->next = next;
   D->name = 0;
   D->fd = -1;
   D->type = CODE_input_video_file_location;
-  load_next_part (D);
+  load_next_part (D, callback, callback_extra);
 }
 
-void do_load_audio (struct video *V, int next) {
+void tgl_do_load_audio (struct tgl_audio *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   assert (V);
-  assert (next);
   struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
   D->access_hash = V->access_hash;
   D->dc = V->dc_id;
-  D->next = next;
   D->name = 0;
   D->fd = -1;
   D->type = CODE_input_audio_file_location;
-  load_next_part (D);
+  load_next_part (D, callback, callback_extra);
 }
 
-void do_load_document (struct document *V, int next) {
+void tgl_do_load_document (struct tgl_document *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   assert (V);
-  assert (next);
   struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
   D->access_hash = V->access_hash;
   D->dc = V->dc_id;
-  D->next = next;
   D->name = 0;
   D->fd = -1;
   D->type = CODE_input_document_file_location;
-  load_next_part (D);
+  load_next_part (D, callback, callback_extra);
 }
 
-void do_load_encr_video (struct encr_video *V, int next) {
+void tgl_do_load_encr_video (struct tgl_encr_video *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra) {
   assert (V);
-  assert (next);
   struct download *D = talloc0 (sizeof (*D));
   D->offset = 0;
   D->size = V->size;
   D->id = V->id;
   D->access_hash = V->access_hash;
   D->dc = V->dc_id;
-  D->next = next;
   D->name = 0;
   D->fd = -1;
   D->key = V->key;
   D->iv = talloc (32);
   memcpy (D->iv, V->iv, 32);
-  load_next_part (D);
+  load_next_part (D, callback, callback_extra);
       
   unsigned char md5[16];
   unsigned char str[64];
@@ -2040,80 +2526,66 @@ void do_load_encr_video (struct encr_video *V, int next) {
 /* }}} */
 
 /* {{{ Export auth */
-char *export_auth_str;
-int export_auth_str_len;
-int is_export_auth_str (void) {
-  return export_auth_str != 0;
-}
-int isn_export_auth_str (void) {
-  return export_auth_str == 0;
-}
 
-int export_auth_on_answer (struct query *q UU) {
-  assert (fetch_int () == (int)CODE_auth_exported_authorization);
-  int l = fetch_int ();
-  if (!our_id) {
-    our_id = l;
-  } else {
-    assert (our_id == l);
+static int import_auth_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_auth_authorization);
+  fetch_int (); // expires
+  tglf_fetch_alloc_user ();
+  
+  bl_do_dc_signed (((struct tgl_dc *)q->extra)->id);
+
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
   }
-  l = prefetch_strlen ();
-  char *s = talloc (l);
-  memcpy (s, fetch_str (l), l);
-  export_auth_str_len = l;
-  export_auth_str = s;
   return 0;
 }
 
-struct query_methods export_auth_methods = {
-  .on_answer = export_auth_on_answer,
-  .on_error = fail_on_error
+static struct query_methods import_auth_methods = {
+  .on_answer = import_auth_on_answer,
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM(auth_authorization)
 };
 
-void do_export_auth (int num) {
-  export_auth_str = 0;
+static int export_auth_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_auth_exported_authorization);
+  bl_do_set_our_id (fetch_int ());
+  int l = prefetch_strlen ();
+  char *s = talloc (l);
+  memcpy (s, fetch_str (l), l);
+  
+  clear_packet ();
+  tgl_do_insert_header ();
+  out_int (CODE_auth_import_authorization);
+  out_int (tgl_state.our_id);
+  out_cstring (s, l);
+  tglq_send_query (q->extra, packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, q->extra, q->callback, q->callback_extra);
+  tfree (s, l);
+  return 0;
+}
+
+static struct query_methods export_auth_methods = {
+  .on_answer = export_auth_on_answer,
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM(auth_exported_authorization)
+};
+
+void tgl_do_export_auth (int num, void (*callback) (void *callback_extra, int success), void *callback_extra) {
   clear_packet ();
   out_int (CODE_auth_export_authorization);
   out_int (num);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &export_auth_methods, 0);
-  net_loop (0, is_export_auth_str);
-}
-/* }}} */
-
-/* {{{ Import auth */
-int import_auth_on_answer (struct query *q UU) {
-  assert (fetch_int () == (int)CODE_auth_authorization);
-  fetch_int (); // expires
-  fetch_alloc_user ();
-  tfree_str (export_auth_str);
-  export_auth_str = 0;
-  return 0;
-}
-
-struct query_methods import_auth_methods = {
-  .on_answer = import_auth_on_answer,
-  .on_error = fail_on_error
-};
-
-void do_import_auth (int num) {
-  clear_packet ();
-  out_int (CODE_auth_import_authorization);
-  out_int (our_id);
-  out_cstring (export_auth_str, export_auth_str_len);
-  send_query (DC_list[num], packet_ptr - packet_buffer, packet_buffer, &import_auth_methods, 0);
-  net_loop (0, isn_export_auth_str);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &export_auth_methods, tgl_state.DC_list[num], callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Add contact */
-int add_contact_on_answer (struct query *q UU) {
+static int add_contact_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_contacts_imported_contacts);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   if (n > 0) {
-    logprintf ("Added successfully");
+    vlogprintf (E_DEBUG, "Added successfully");
   } else {
-    logprintf ("Not added");
+    vlogprintf (E_DEBUG, "Not added");
   }
   int i;
   for (i = 0; i < n ; i++) {
@@ -2123,75 +2595,106 @@ int add_contact_on_answer (struct query *q UU) {
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
-  for (i = 0; i < n ; i++) {
-    struct user *U = fetch_alloc_user ();
-    print_start ();
-    push_color (COLOR_YELLOW);
-    printf ("User #%d: ", get_peer_id (U->id));
-    print_user_name (U->id, (peer_t *)U);
-    push_color (COLOR_GREEN);
-    printf (" (");
-    printf ("%s", U->print_name);
-    if (U->phone) {
-      printf (" ");
-      printf ("%s", U->phone);
-    }
-    printf (") ");
-    pop_color ();
-    if (U->status.online > 0) {
-      printf ("online\n");
-    } else {
-      if (U->status.online < 0) {
-        printf ("offline. Was online ");
-        print_date_full (U->status.when);
-      } else {
-        printf ("offline permanent");
-      }
-      printf ("\n");
-    }
-    pop_color ();
-    print_end ();
-
+  for (i = 0; i < n; i++) {
+    long long id = fetch_long ();
+    vlogprintf (E_NOTICE, "contact #%lld not added. Please retry\n", id);
   }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+
+  struct tgl_user **UL = talloc (n * sizeof (void *));
+  for (i = 0; i < n; i++) {
+    UL[i] = tglf_fetch_alloc_user ();
+  }
+
+  if (q->callback) {
+    ((void (*)(void *, int, int, struct tgl_user **))q->callback) (q->callback_extra, 1, n, UL);
+  }
+  tfree (UL, n * sizeof (void *));
   return 0;
 }
 
-struct query_methods add_contact_methods = {
+static struct query_methods add_contact_methods = {
   .on_answer = add_contact_on_answer,
+  .type = TYPE_TO_PARAM(contacts_imported_contacts)
 };
 
-void do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force) {
+void tgl_do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force, void (*callback)(void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra) {
   clear_packet ();
   out_int (CODE_contacts_import_contacts);
   out_int (CODE_vector);
   out_int (1);
   out_int (CODE_input_phone_contact);
-  out_long (lrand48 () * (1ll << 32) + lrand48 ());
+  long long r;
+  tglt_secure_random (&r, 8);
+  out_long (r);
   out_cstring (phone, phone_len);
   out_cstring (first_name, first_name_len);
   out_cstring (last_name, last_name_len);
   out_int (force ? CODE_bool_true : CODE_bool_false);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &add_contact_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
+/* {{{ Add contact */
+static int del_contact_on_answer (struct query *q UU) {
+  assert (skip_type_contacts_link (TYPE_TO_PARAM(contacts_link)) >= 0);
+
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+  }
+  return 0;
+}
+
+static struct query_methods del_contact_methods = {
+  .on_answer = del_contact_on_answer,
+  .type = TYPE_TO_PARAM(contacts_link)
+};
+
+void tgl_do_del_contact (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  if (tgl_get_peer_type (id) != TGL_PEER_USER) {
+    if (callback) {
+      callback (callback_extra, 0);
+    }
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_contacts_delete_contact);
+  
+  tgl_peer_t *U = tgl_peer_get (id);
+  if (U && U->user.access_hash) {
+    out_int (CODE_input_user_foreign);
+    out_int (tgl_get_peer_id (id));
+    out_long (U->user.access_hash);
+  } else {
+    out_int (CODE_input_user_contact);
+    out_int (tgl_get_peer_id (id));
+  }
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &del_contact_methods, 0, callback, callback_extra);
+}
+ /* }}} */
+
 /* {{{ Msg search */
-int msg_search_on_answer (struct query *q UU) {
+static int msg_search_on_answer (struct query *q UU) {
   return get_history_on_answer (q);
 }
 
-struct query_methods msg_search_methods = {
-  .on_answer = msg_search_on_answer
+static struct query_methods msg_search_methods = {
+  .on_answer = msg_search_on_answer,
+  .type = TYPE_TO_PARAM(messages_messages)
 };
 
-void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
-  if (get_peer_type (id) == PEER_ENCR_CHAT) {
-    rprintf ("Can not search in secure chat\n");
+void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, const char *s, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    vlogprintf (E_WARNING, "Can not search in secure chat\n");
+    if (callback) {
+      callback (callback_extra, 0, 0, 0);
+    }
     return;
   }
   clear_packet ();
   out_int (CODE_messages_search);
-  if (get_peer_type (id) == PEER_UNKNOWN) {
+  if (tgl_get_peer_type (id) == TGL_PEER_UNKNOWN) {
     out_int (CODE_input_peer_empty);
   } else {
     out_peer_id (id);
@@ -2203,12 +2706,12 @@ void do_msg_search (peer_id_t id, int from, int to, int limit, const char *s) {
   out_int (0); // offset
   out_int (0); // max_id
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Contacts search */
-int contacts_search_on_answer (struct query *q UU) {
+static int contacts_search_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_contacts_found);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -2219,10 +2722,15 @@ int contacts_search_on_answer (struct query *q UU) {
   }
   assert (fetch_int () == CODE_vector);
   n = fetch_int ();
-  print_start ();
+
+  struct tgl_user **UL = talloc (sizeof (void *) * n);
+  for (i = 0; i < n; i++) {
+    UL[i] = tglf_fetch_alloc_user ();
+  }
+  /*print_start ();
   push_color (COLOR_YELLOW);
   for (i = 0; i < n; i++) {
-    struct user *U = fetch_alloc_user ();
+    struct tgl_user *U = tglf_fetch_alloc_user ();
     printf ("User ");
     push_color  (COLOR_RED);
     printf ("%s %s", U->first_name, U->last_name); 
@@ -2230,28 +2738,33 @@ int contacts_search_on_answer (struct query *q UU) {
     printf (". Phone %s\n", U->phone);
   }
   pop_color ();
-  print_end ();
+  print_end ();*/
+  if (q->callback) {
+    ((void (*)(void *, int, int, struct tgl_user **))q->callback) (q->callback_extra, 1, n, UL);
+  }
+  tfree (UL, sizeof (void *) * n);
   return 0;
 }
 
-struct query_methods contacts_search_methods = {
-  .on_answer = contacts_search_on_answer
+static struct query_methods contacts_search_methods = {
+  .on_answer = contacts_search_on_answer,
+  .type = TYPE_TO_PARAM(contacts_found)
 };
 
-void do_contacts_search (int limit, const char *s) {
+void tgl_do_contacts_search (int limit, const char *s, void (*callback) (void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra) {
   clear_packet ();
   out_int (CODE_contacts_search);
   out_string (s);
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &contacts_search_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &contacts_search_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Encr accept */
-int send_encr_accept_on_answer (struct query *q UU) {
-  struct secret_chat *E = fetch_alloc_encrypted_chat ();
+static int send_encr_accept_on_answer (struct query *q UU) {
+  struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
 
-  if (E->state == sc_ok) {
+  /*if (E->state == sc_ok) {
     print_start ();
     push_color (COLOR_YELLOW);
     printf ("Encrypted connection with ");
@@ -2267,13 +2780,17 @@ int send_encr_accept_on_answer (struct query *q UU) {
     printf (" failed\n");
     pop_color ();
     print_end ();
+  }*/
+
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_secret_chat *))q->callback) (q->callback_extra, E->state == sc_ok, E);
   }
   return 0;
 }
 
-int send_encr_request_on_answer (struct query *q UU) {
-  struct secret_chat *E = fetch_alloc_encrypted_chat ();
-  if (E->state == sc_deleted) {
+static int send_encr_request_on_answer (struct query *q UU) {
+  struct tgl_secret_chat *E = tglf_fetch_alloc_encrypted_chat ();
+  /*if (E->state == sc_deleted) {
     print_start ();
     push_color (COLOR_YELLOW);
     printf ("Encrypted connection with ");
@@ -2291,24 +2808,30 @@ int send_encr_request_on_answer (struct query *q UU) {
     print_end ();
 
     assert (E->state == sc_waiting);
+  }*/
+  
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_secret_chat *))q->callback) (q->callback_extra, E->state != sc_deleted, E);
   }
   return 0;
 }
 
-struct query_methods send_encr_accept_methods  = {
-  .on_answer = send_encr_accept_on_answer
+static struct query_methods send_encr_accept_methods  = {
+  .on_answer = send_encr_accept_on_answer,
+  .type = TYPE_TO_PARAM(encrypted_chat)
 };
 
-struct query_methods send_encr_request_methods  = {
-  .on_answer = send_encr_request_on_answer
+static struct query_methods send_encr_request_methods  = {
+  .on_answer = send_encr_request_on_answer,
+  .type = TYPE_TO_PARAM(encrypted_chat)
 };
 
-int encr_root;
-unsigned char *encr_prime;
-int encr_param_version;
-BN_CTX *ctx;
+//int encr_root;
+//unsigned char *encr_prime;
+//int encr_param_version;
+//static BN_CTX *ctx;
 
-void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
+void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *random, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
   int i;
   int ok = 0;
   for (i = 0; i < 64; i++) {
@@ -2317,9 +2840,12 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
       break;
     }
   }
-  if (ok) { return; } // Already generated key for this chat
+  if (ok) { 
+    callback (callback_extra, 1, E);
+    return; 
+  } // Already generated key for this chat
   unsigned char random_here[256];
-  secure_random (random_here, 256);
+  tglt_secure_random (random_here, 256);
   for (i = 0; i < 256; i++) {
     random[i] ^= random_here[i];
   }
@@ -2327,16 +2853,16 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   ensure_ptr (b);
   BIGNUM *g_a = BN_bin2bn (E->g_key, 256, 0);
   ensure_ptr (g_a);
-  assert (check_g (encr_prime, g_a) >= 0);
-  if (!ctx) {
-    ctx = BN_CTX_new ();
-    ensure_ptr (ctx);
-  }
-  BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  assert (tglmp_check_g (tgl_state.encr_prime, g_a) >= 0);
+  //if (!ctx) {
+  //  ctx = BN_CTX_new ();
+  //  ensure_ptr (ctx);
+  //}
+  BIGNUM *p = BN_bin2bn (tgl_state.encr_prime, 256, 0); 
   ensure_ptr (p);
   BIGNUM *r = BN_new ();
   ensure_ptr (r);
-  ensure (BN_mod_exp (r, g_a, b, p, ctx));
+  ensure (BN_mod_exp (r, g_a, b, p, tgl_state.BN_ctx));
   static unsigned char kk[256];
   memset (kk, 0, sizeof (kk));
   BN_bn2bin (r, kk);
@@ -2346,16 +2872,16 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   static unsigned char sha_buffer[20];
   sha1 (kk, 256, sha_buffer);
 
-  bl_do_set_encr_chat_key (E, kk, *(long long *)(sha_buffer + 12));
+  bl_do_encr_chat_set_key (E, kk, *(long long *)(sha_buffer + 12));
 
   clear_packet ();
   out_int (CODE_messages_accept_encryption);
   out_int (CODE_input_encrypted_chat);
-  out_int (get_peer_id (E->id));
+  out_int (tgl_get_peer_id (E->id));
   out_long (E->access_hash);
   
-  ensure (BN_set_word (g_a, encr_root));
-  ensure (BN_mod_exp (r, g_a, b, p, ctx));
+  ensure (BN_set_word (g_a, tgl_state.encr_root));
+  ensure (BN_mod_exp (r, g_a, b, p, tgl_state.BN_ctx));
   static unsigned char buf[256];
   memset (buf, 0, sizeof (buf));
   BN_bn2bin (r, buf);
@@ -2367,25 +2893,21 @@ void do_send_accept_encr_chat (struct secret_chat *E, unsigned char *random) {
   BN_clear_free (p);
   BN_clear_free (r);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_accept_methods, E, callback, callback_extra);
 }
 
-void do_create_keys_end (struct secret_chat *U) {
-  assert (encr_prime);
+void tgl_do_create_keys_end (struct tgl_secret_chat *U) {
+  assert (tgl_state.encr_prime);
   BIGNUM *g_b = BN_bin2bn (U->g_key, 256, 0);
   ensure_ptr (g_b);
-  assert (check_g (encr_prime, g_b) >= 0);
-  if (!ctx) {
-    ctx = BN_CTX_new ();
-    ensure_ptr (ctx);
-  }
-  BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  assert (tglmp_check_g (tgl_state.encr_prime, g_b) >= 0);
+  BIGNUM *p = BN_bin2bn (tgl_state.encr_prime, 256, 0); 
   ensure_ptr (p);
   BIGNUM *r = BN_new ();
   ensure_ptr (r);
   BIGNUM *a = BN_bin2bn ((void *)U->key, 256, 0);
   ensure_ptr (a);
-  ensure (BN_mod_exp (r, g_b, a, p, ctx));
+  ensure (BN_mod_exp (r, g_b, a, p, tgl_state.BN_ctx));
 
   unsigned char *t = talloc (256);
   memcpy (t, U->key, 256);
@@ -2401,13 +2923,7 @@ void do_create_keys_end (struct secret_chat *U) {
   sha1 ((void *)U->key, 256, sha_buffer);
   long long k = *(long long *)(sha_buffer + 12);
   if (k != U->key_fingerprint) {
-    logprintf ("version = %d\n", encr_param_version);
-    hexdump ((void *)U->nonce, (void *)(U->nonce + 256));
-    hexdump ((void *)U->g_key, (void *)(U->g_key + 256));
-    hexdump ((void *)U->key, (void *)(U->key + 64));
-    hexdump ((void *)t, (void *)(t + 256));
-    hexdump ((void *)sha_buffer, (void *)(sha_buffer + 20));
-    logprintf ("!!Key fingerprint mismatch (my 0x%llx 0x%llx)\n", (unsigned long long)k, (unsigned long long)U->key_fingerprint);
+    vlogprintf (E_WARNING, "Key fingerprint mismatch (my 0x%llx 0x%llx)\n", (unsigned long long)k, (unsigned long long)U->key_fingerprint);
     U->state = sc_deleted;
   }
 
@@ -2419,32 +2935,28 @@ void do_create_keys_end (struct secret_chat *U) {
   BN_clear_free (a);
 }
 
-void do_send_create_encr_chat (void *x, unsigned char *random) {
+void tgl_do_send_create_encr_chat (void *x, unsigned char *random, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
   int user_id = (long)x;
   int i;
   unsigned char random_here[256];
-  secure_random (random_here, 256);
+  tglt_secure_random (random_here, 256);
   for (i = 0; i < 256; i++) {
     random[i] ^= random_here[i];
   }
-  if (!ctx) {
-    ctx = BN_CTX_new ();
-    ensure_ptr (ctx);
-  }
   BIGNUM *a = BN_bin2bn (random, 256, 0);
   ensure_ptr (a);
-  BIGNUM *p = BN_bin2bn (encr_prime, 256, 0); 
+  BIGNUM *p = BN_bin2bn (tgl_state.encr_prime, 256, 0); 
   ensure_ptr (p);
  
   BIGNUM *g = BN_new ();
   ensure_ptr (g);
 
-  ensure (BN_set_word (g, encr_root));
+  ensure (BN_set_word (g, tgl_state.encr_root));
 
   BIGNUM *r = BN_new ();
   ensure_ptr (r);
 
-  ensure (BN_mod_exp (r, g, a, p, ctx));
+  ensure (BN_mod_exp (r, g, a, p, tgl_state.BN_ctx));
 
   BN_clear_free (a);
 
@@ -2454,18 +2966,18 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
   BN_bn2bin (r, (void *)g_a);
   
   int t = lrand48 ();
-  while (user_chat_get (MK_ENCR_CHAT (t))) {
+  while (tgl_peer_get (TGL_MK_ENCR_CHAT (t))) {
     t = lrand48 ();
   }
 
   bl_do_encr_chat_init (t, user_id, (void *)random, (void *)g_a);
-  peer_t *_E = user_chat_get (MK_ENCR_CHAT (t));
+  tgl_peer_t *_E = tgl_peer_get (TGL_MK_ENCR_CHAT (t));
   assert (_E);
-  struct secret_chat *E = &_E->encr_chat;
+  struct tgl_secret_chat *E = &_E->encr_chat;
   
   clear_packet ();
   out_int (CODE_messages_request_encryption);
-  peer_t *U = user_chat_get (MK_USER (E->user_id));
+  tgl_peer_t *U = tgl_peer_get (TGL_MK_USER (E->user_id));
   assert (U);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
@@ -2475,21 +2987,21 @@ void do_send_create_encr_chat (void *x, unsigned char *random) {
     out_int (CODE_input_user_contact);
     out_int (E->user_id);
   }
-  out_int (get_peer_id (E->id));
+  out_int (tgl_get_peer_id (E->id));
   out_cstring (g_a, 256);
-  write_secret_chat_file ();
+  //write_secret_chat_file ();
   
   BN_clear_free (g);
   BN_clear_free (p);
   BN_clear_free (r);
 
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_request_methods, E);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &send_encr_request_methods, E, callback, callback_extra);
 }
 
-int get_dh_config_on_answer (struct query *q UU) {
+static int get_dh_config_on_answer (struct query *q UU) {
   unsigned x = fetch_int ();
-  assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified || LOG_DH_CONFIG);
-  if (x == CODE_messages_dh_config || x == LOG_DH_CONFIG)  {
+  assert (x == CODE_messages_dh_config || x == CODE_messages_dh_config_not_modified);
+  if (x == CODE_messages_dh_config)  {
     int a = fetch_int ();
     int l = prefetch_strlen ();
     assert (l == 256);
@@ -2499,17 +3011,18 @@ int get_dh_config_on_answer (struct query *q UU) {
 
     BIGNUM *p = BN_bin2bn ((void *)s, 256, 0);
     ensure_ptr (p);
-    assert (check_DH_params (p, a) >= 0);
+    assert (tglmp_check_DH_params (p, a) >= 0);
     BN_free (p);      
+  } else {
+    assert (tgl_state.encr_param_version);
   }
-  if (x == LOG_DH_CONFIG) { return 0; }
   int l = prefetch_strlen ();
   assert (l == 256);
   unsigned char *random = talloc (256);
   memcpy (random, fetch_str (256), 256);
   if (q->extra) {
     void **x = q->extra;
-    ((void (*)(void *, void *))(*x))(x[1], random);
+    ((void (*)(void *, void *, void *, void *))(*x))(x[1], random, q->callback, q->callback_extra);
     tfree (x, 2 * sizeof (void *));
     tfree_secure (random, 256);
   } else {
@@ -2518,110 +3031,149 @@ int get_dh_config_on_answer (struct query *q UU) {
   return 0;
 }
 
-struct query_methods get_dh_config_methods  = {
-  .on_answer = get_dh_config_on_answer
+static struct query_methods get_dh_config_methods  = {
+  .on_answer = get_dh_config_on_answer,
+  .type = TYPE_TO_PARAM(messages_dh_config)
 };
 
-void do_accept_encr_chat_request (struct secret_chat *E) {
+void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
+  if (E->state != sc_request) {
+    if (callback) {
+      callback (callback_extra, 0, E);
+    }
+    return;
+  }
   assert (E->state == sc_request);
   
   clear_packet ();
   out_int (CODE_messages_get_dh_config);
-  out_int (encr_param_version);
+  out_int (tgl_state.encr_param_version);
   out_int (256);
   void **x = talloc (2 * sizeof (void *));
-  x[0] = do_send_accept_encr_chat;
+  x[0] = tgl_do_send_accept_encr_chat;
   x[1] = E;
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x, callback, callback_extra);
 }
 
-void do_create_encr_chat_request (int user_id) {
+void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_get_dh_config);
-  out_int (encr_param_version);
+  out_int (tgl_state.encr_param_version);
   out_int (256);
   void **x = talloc (2 * sizeof (void *));
-  x[0] = do_send_create_encr_chat;
+  x[0] = tgl_do_send_create_encr_chat;
   x[1] = (void *)(long)(user_id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_dh_config_methods, x, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Get difference */
-int unread_messages;
-int difference_got;
-int seq, pts, qts, last_date;
-int get_state_on_answer (struct query *q UU) {
+//int unread_messages;
+//int difference_got;
+//int seq, pts, qts, last_date;
+static int get_state_on_answer (struct query *q UU) {
+  assert (tgl_state.locks & TGL_LOCK_DIFF);
+  tgl_state.locks ^= TGL_LOCK_DIFF;
   assert (fetch_int () == (int)CODE_updates_state);
   bl_do_set_pts (fetch_int ());
   bl_do_set_qts (fetch_int ());
   bl_do_set_date (fetch_int ());
   bl_do_set_seq (fetch_int ());
-  unread_messages = fetch_int ();
-  write_state_file ();
-  difference_got = 1;
+  //unread_messages = fetch_int ();
+  fetch_int ();
+  //write_state_file ();
+  //difference_got = 1;
+
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+  }
   return 0;
 }
 
-int get_difference_active;
-int get_difference_on_answer (struct query *q UU) {
-  get_difference_active = 0;
+//int get_difference_active;
+static int get_difference_on_answer (struct query *q UU) {
+  //get_difference_active = 0;
+  assert (tgl_state.locks & TGL_LOCK_DIFF);
+  tgl_state.locks ^= TGL_LOCK_DIFF;
+
   unsigned x = fetch_int ();
   if (x == CODE_updates_difference_empty) {
     bl_do_set_date (fetch_int ());
     bl_do_set_seq (fetch_int ());
-    difference_got = 1;
+    //difference_got = 1;
+    
+    vlogprintf (E_DEBUG, "Empty difference. Seq = %d\n", tgl_state.seq);
+    if (q->callback) {
+      ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+    }
   } else if (x == CODE_updates_difference || x == CODE_updates_difference_slice) {
     int n, i;
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
-    static struct message *ML[10000];
+    struct tgl_message **ML = talloc (n * sizeof (void *));
     int ml_pos = 0;
     for (i = 0; i < n; i++) {
-      if (ml_pos < 10000) {
-        ML[ml_pos ++] = fetch_alloc_message ();
-      } else {
-        fetch_alloc_message ();
-      }
+      ML[ml_pos ++] = tglf_fetch_alloc_message ();
+    }
+    assert (fetch_int () == CODE_vector);
+    n = fetch_int ();
+    struct tgl_message **EL = talloc (n * sizeof (void *));
+    int el_pos = 0;
+    for (i = 0; i < n; i++) {
+      EL[el_pos ++] = tglf_fetch_alloc_encrypted_message ();
     }
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
-      if (ml_pos < 10000) {
-        ML[ml_pos ++] = fetch_alloc_encrypted_message ();
-      } else {
-        fetch_alloc_encrypted_message ();
-      }
+      tglu_work_update (0, 0);
     }
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
-      work_update (0, 0);
+      tglf_fetch_alloc_chat ();
     }
     assert (fetch_int () == CODE_vector);
     n = fetch_int ();
     for (i = 0; i < n; i++) {
-      fetch_alloc_chat ();
-    }
-    assert (fetch_int () == CODE_vector);
-    n = fetch_int ();
-    for (i = 0; i < n; i++) {
-      fetch_alloc_user ();
+      tglf_fetch_alloc_user ();
     }
     assert (fetch_int () == (int)CODE_updates_state);
     bl_do_set_pts (fetch_int ());
     bl_do_set_qts (fetch_int ());
     bl_do_set_date (fetch_int ());
-    bl_do_set_seq (fetch_int ());
-    unread_messages = fetch_int ();
-    write_state_file ();
-    for (i = 0; i < ml_pos; i++) {
-      print_message (ML[i]);
-    }
-    if (x == CODE_updates_difference_slice) {
-      do_get_difference ();
+    if (x == CODE_updates_difference) {
+      bl_do_set_seq (fetch_int ());
+      vlogprintf (E_DEBUG, "Difference end. New seq = %d\n", tgl_state.seq);
     } else {
-      difference_got = 1;
+      fetch_int ();
+    }
+    //unread_messages = fetch_int ();
+    fetch_int ();
+    //write_state_file ();
+    /*for (i = 0; i < ml_pos; i++) {
+      print_message (ML[i]);
+    }*/
+    for (i = 0; i < ml_pos; i++) {
+      //tgl_state.callback.new_msg (ML[i]);
+      bl_do_msg_update (ML[i]->id);
+    }
+    for (i = 0; i < el_pos; i++) {
+      //tgl_state.callback.new_msg (EL[i]);
+      bl_do_msg_update (EL[i]->id);
+    }
+    tfree (ML, ml_pos * sizeof (void *));
+    tfree (EL, el_pos * sizeof (void *));
+
+    if (x == CODE_updates_difference_slice) {
+      //if (q->callback) {
+      //  ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+      //}
+      tgl_do_get_difference (0, q->callback, q->callback_extra);
+    } else {
+      //difference_got = 1;
+      if (q->callback) {
+        ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+      }
     }
   } else {
     assert (0);
@@ -2629,41 +3181,50 @@ int get_difference_on_answer (struct query *q UU) {
   return 0;   
 }
 
-struct query_methods get_state_methods = {
-  .on_answer = get_state_on_answer
+static struct query_methods get_state_methods = {
+  .on_answer = get_state_on_answer,
+  .type = TYPE_TO_PARAM(updates_state)
 };
 
-struct query_methods get_difference_methods = {
-  .on_answer = get_difference_on_answer
+static struct query_methods get_difference_methods = {
+  .on_answer = get_difference_on_answer,
+  .type = TYPE_TO_PARAM(updates_difference)
 };
 
-void do_get_difference (void) {
-  get_difference_active = 1;
-  difference_got = 0;
+void tgl_do_get_difference (int sync_from_start, void (*callback)(void *callback_extra, int success), void *callback_extra) {
+  //get_difference_active = 1;
+  //difference_got = 0;
+  if (tgl_state.locks & TGL_LOCK_DIFF) {
+    if (callback) {
+      callback (callback_extra, 0);
+    }
+    return;
+  }
+  tgl_state.locks |= TGL_LOCK_DIFF;
   clear_packet ();
-  do_insert_header ();
-  if (seq > 0 || sync_from_start) {
-    if (pts == 0) { pts = 1; }
-    if (qts == 0) { qts = 1; }
-    if (last_date == 0) { last_date = 1; }
+  tgl_do_insert_header ();
+  if (tgl_state.seq > 0 || sync_from_start) {
+    if (tgl_state.pts == 0) { tgl_state.pts = 1; }
+    //if (tgl_state.qts == 0) { tgl_state.qts = 1; }
+    if (tgl_state.date == 0) { tgl_state.date = 1; }
     out_int (CODE_updates_get_difference);
-    out_int (pts);
-    out_int (last_date);
-    out_int (qts);
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_difference_methods, 0);
+    out_int (tgl_state.pts);
+    out_int (tgl_state.date);
+    out_int (tgl_state.qts);
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_difference_methods, 0, callback, callback_extra);
   } else {
     out_int (CODE_updates_get_state);
-    send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_state_methods, 0);
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_state_methods, 0, callback, callback_extra);
   }
 }
 /* }}} */
 
 /* {{{ Visualize key */
-char *colors[4] = {COLOR_GREY, COLOR_CYAN, COLOR_BLUE, COLOR_GREEN};
+/*char *colors[4] = {COLOR_GREY, COLOR_CYAN, COLOR_BLUE, COLOR_GREEN};
 
-void do_visualize_key (peer_id_t id) {
-  assert (get_peer_type (id) == PEER_ENCR_CHAT);
-  peer_t *P = user_chat_get (id);
+void tgl_do_visualize_key (tgl_peer_id_t id) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
+  tgl_peer_t *P = tgl_peer_get (id);
   assert (P);
   if (P->encr_chat.state != sc_ok) {
     rprintf ("Chat is not initialized yet\n");
@@ -2687,11 +3248,24 @@ void do_visualize_key (peer_id_t id) {
     if (i & 1) { printf ("\n"); }
   }
   print_end ();
+}*/
+
+void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
+  tgl_peer_t *P = tgl_peer_get (id);
+  assert (P);
+  if (P->encr_chat.state != sc_ok) {
+    vlogprintf (E_WARNING, "Chat is not initialized yet\n");
+    return;
+  }
+  unsigned char res[20];
+  SHA1 ((void *)P->encr_chat.key, 256, res);
+  memcpy (buf, res, 16);
 }
 /* }}} */
 
 /* {{{ Get suggested */
-int get_suggested_on_answer (struct query *q UU) {
+/*int get_suggested_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_contacts_suggested);
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
@@ -2710,8 +3284,8 @@ int get_suggested_on_answer (struct query *q UU) {
   print_start ();
   push_color (COLOR_YELLOW);
   for (i = 0; i < m; i++) {
-    peer_t *U = (void *)fetch_alloc_user ();
-    assert (get_peer_id (U->id) == l[2 * i]);
+    tgl_peer_t *U = (void *)tglf_fetch_alloc_user ();
+    assert (tgl_get_peer_id (U->id) == l[2 * i]);
     print_user_name (U->id, U);
     printf (" phone %s: %d mutual friends\n", U->user.phone, l[2 * i + 1]);
   }
@@ -2721,86 +3295,89 @@ int get_suggested_on_answer (struct query *q UU) {
 }
 
 struct query_methods get_suggested_methods = {
-  .on_answer = get_suggested_on_answer
+  .on_answer = get_suggested_on_answer,
+  .type = TYPE_TO_PARAM(contacts_suggested)
 };
 
-void do_get_suggested (void) {
+void tgl_do_get_suggested (void) {
   clear_packet ();
   out_int (CODE_contacts_get_suggested);
   out_int (100);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &get_suggested_methods, 0);
-}
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &get_suggested_methods, 0);
+}*/
 /* }}} */
 
 /* {{{ Add user to chat */
 
-struct query_methods add_user_to_chat_methods = {
-  .on_answer = fwd_msg_on_answer
+static struct query_methods add_user_to_chat_methods = {
+  .on_answer = fwd_msg_on_answer,
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-void do_add_user_to_chat (peer_id_t chat_id, peer_id_t id, int limit) {
+void tgl_do_add_user_to_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, int limit, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_add_chat_user);
-  out_int (get_peer_id (chat_id));
+  out_int (tgl_get_peer_id (chat_id));
   
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
   out_int (limit);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0, callback, callback_extra);
 }
 
-void do_del_user_from_chat (peer_id_t chat_id, peer_id_t id) {
+void tgl_do_del_user_from_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_delete_chat_user);
-  out_int (get_peer_id (chat_id));
+  out_int (tgl_get_peer_id (chat_id));
   
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &add_user_to_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Create secret chat */
-char *create_print_name (peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
+//char *create_print_name (tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 
-void do_create_secret_chat (peer_id_t id) {
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+void tgl_do_create_secret_chat (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (!U) { 
-    rprintf ("Can not create chat with unknown user\n");
+    vlogprintf (E_WARNING, "Can not create chat with unknown user\n");
     return;
   }
 
-  do_create_encr_chat_request (get_peer_id (id)); 
+  tgl_do_create_encr_chat_request (tgl_get_peer_id (id), callback, callback_extra); 
 }
 /* }}} */
 
 /* {{{ Create group chat */
-struct query_methods create_group_chat_methods = {
-  .on_answer = fwd_msg_on_answer
+static struct query_methods create_group_chat_methods = {
+  .on_answer = fwd_msg_on_answer,
+  .type = TYPE_TO_PARAM(messages_stated_message)
 };
 
-void do_create_group_chat (peer_id_t id, char *chat_topic) {
-  assert (get_peer_type (id) == PEER_USER);
-  peer_t *U = user_chat_get (id);
+void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  tgl_peer_t *U = tgl_peer_get (id);
   if (!U) { 
-    rprintf ("Can not create chat with unknown user\n");
+    vlogprintf (E_WARNING, "Can not create chat with unknown user\n");
     return;
   }
   clear_packet ();
@@ -2809,77 +3386,204 @@ void do_create_group_chat (peer_id_t id, char *chat_topic) {
   out_int (1); // Number of users, currently we support only 1 user.
   if (U && U->user.access_hash) {
     out_int (CODE_input_user_foreign);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
     out_long (U->user.access_hash);
   } else {
     out_int (CODE_input_user_contact);
-    out_int (get_peer_id (id));
+    out_int (tgl_get_peer_id (id));
   }
   out_string (chat_topic);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &create_group_chat_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
-
 /* {{{ Delete msg */
 
-int delete_msg_on_answer (struct query *q UU) {
+static int delete_msg_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   fetch_skip (n);
-  logprintf ("Deleted %d messages\n", n);
+
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+  }
   return 0;
 }
 
-struct query_methods delete_msg_methods = {
-  .on_answer = delete_msg_on_answer
+static struct query_methods delete_msg_methods = {
+  .on_answer = delete_msg_on_answer,
+  .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM (bare_int))
 };
 
-void do_delete_msg (long long id) {
+void tgl_do_delete_msg (long long id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_delete_messages);
   out_int (CODE_vector);
   out_int (1);
   out_int (id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &delete_msg_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &delete_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
 /* {{{ Restore msg */
 
-int restore_msg_on_answer (struct query *q UU) {
+static int restore_msg_on_answer (struct query *q UU) {
   assert (fetch_int () == CODE_vector);
   int n = fetch_int ();
   fetch_skip (n);
-  logprintf ("Restored %d messages\n", n);
+  //logprintf ("Restored %d messages\n", n);
+  
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+  }
   return 0;
 }
 
-struct query_methods restore_msg_methods = {
-  .on_answer = restore_msg_on_answer
+static struct query_methods restore_msg_methods = {
+  .on_answer = restore_msg_on_answer,
+  .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM (bare_int))
 };
 
-void do_restore_msg (long long id) {
+void tgl_do_restore_msg (long long id, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   clear_packet ();
   out_int (CODE_messages_restore_messages);
   out_int (CODE_vector);
   out_int (1);
   out_int (id);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &restore_msg_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &restore_msg_methods, 0, callback, callback_extra);
 }
 /* }}} */
-int update_status_on_answer (struct query *q UU) {
+
+/* {{{ Export card */
+
+static int export_card_on_answer (struct query *q UU) {
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  //logprintf ("Restored %d messages\n", n);
+  int *r = talloc (4 * n);
+  fetch_ints (r, n);
+  
+  if (q->callback) {
+    ((void (*)(void *, int, int, int *))q->callback) (q->callback_extra, 1, n, r);
+  }
+  free (r);
+  return 0;
+}
+
+static struct query_methods export_card_methods = {
+  .on_answer = export_card_on_answer,
+  .type = TYPE_TO_PARAM_1(vector, TYPE_TO_PARAM (bare_int))
+};
+
+void tgl_do_export_card (void (*callback)(void *callback_extra, int success, int size, int *card), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_contacts_export_card);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &export_card_methods, 0, callback, callback_extra);
+}
+/* }}} */
+
+/* {{{ Import card */
+
+static int import_card_on_answer (struct query *q UU) {
+  struct tgl_user *U = tglf_fetch_alloc_user ();
+  
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_user *))q->callback) (q->callback_extra, 1, U);
+  }
+  return 0;
+}
+
+static struct query_methods import_card_methods = {
+  .on_answer = import_card_on_answer,
+  .type = TYPE_TO_PARAM (user)
+};
+
+void tgl_do_import_card (int size, int *card, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_contacts_import_card);
+  out_int (CODE_vector);
+  out_int (size);
+  out_ints (card, size);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &import_card_methods, 0, callback, callback_extra);
+}
+/* }}} */
+
+static int ext_query_on_answer (struct query *q UU) {
+  if (q->callback) {
+    char *buf = tglf_extf_fetch (q->type);
+    ((void (*)(void *, int, char *))q->callback) (q->callback_extra, 1, buf);
+  }
+  tgl_paramed_type_free (q->type);
+  return 0;
+}
+
+static struct query_methods ext_query_methods = {
+  .on_answer = ext_query_on_answer,
+};
+
+void tgl_do_send_extf (char *data, int data_len, void (*callback)(void *callback_extra, int success, char *buf), void *callback_extra) {
+  clear_packet ();
+
+  ext_query_methods.type = tglf_extf_store (data, data_len);
+
+  if (ext_query_methods.type) { 
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &ext_query_methods, 0, callback, callback_extra);
+  }
+}
+
+static void set_flag_4 (void *_D, int success) {
+  struct tgl_dc *D = _D;
+  assert (success);
+  D->flags |= 4;
+
+  static struct timeval ptimeout;
+  ptimeout.tv_sec = tgl_state.temp_key_expire_time * 0.9;
+  event_add (D->ev, &ptimeout);
+}
+
+static int send_bind_temp_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_bool_true);
+  struct tgl_dc *D = q->extra;
+  D->flags |= 2;
+  tgl_do_help_get_config_dc (D, set_flag_4, D);
+  vlogprintf (E_DEBUG, "Bind successful in dc %d\n", D->id);
+  return 0;
+}
+
+static struct query_methods send_bind_temp_methods = {
+  .on_answer = send_bind_temp_on_answer,
+  .on_error = fail_on_error,
+  .type = TYPE_TO_PARAM (bool)
+};
+
+void tgl_do_send_bind_temp_key (struct tgl_dc *D, long long nonce, int expires_at, void *data, int len, long long msg_id) {
+  clear_packet ();
+  out_int (CODE_auth_bind_temp_auth_key);
+  out_long (D->auth_key_id);
+  out_long (nonce);
+  out_int (expires_at);
+  out_cstring (data, len);
+  struct query *q = tglq_send_query_ex (D, packet_ptr - packet_buffer, packet_buffer, &send_bind_temp_methods, D, 0, 0, 2);
+  assert (q->msg_id == msg_id);
+}
+
+static int update_status_on_answer (struct query *q UU) {
   fetch_bool ();
+  
+  if (q->callback) {
+    ((void (*)(void *, int))q->callback) (q->callback_extra, 1);
+  }
   return 0;
 }
 
 struct query_methods update_status_methods = {
-  .on_answer = update_status_on_answer
+  .on_answer = update_status_on_answer,
+  .type = TYPE_TO_PARAM(bool)
 };
 
-void do_update_status (int online UU) {
+void tgl_do_update_status (int online UU, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   clear_packet ();
   out_int (CODE_account_update_status);
   out_int (online ? CODE_bool_false : CODE_bool_true);
-  send_query (DC_working, packet_ptr - packet_buffer, packet_buffer, &update_status_methods, 0);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &update_status_methods, 0, callback, callback_extra);
 }

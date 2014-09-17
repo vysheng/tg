@@ -1,24 +1,25 @@
 /*
-    This file is part of telegram-client.
+    This file is part of telegram-cli.
 
-    Telegram-client is free software: you can redistribute it and/or modify
+    Telegram-cli is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
 
-    Telegram-client is distributed in the hope that it will be useful,
+    Telegram-cli is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this telegram-client.  If not, see <http://www.gnu.org/licenses/>.
+    along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright Vitaly Valtman 2013
+    Copyright Vitaly Valtman 2013-2014
 */
 #ifndef __INTERFACE_H__
 #define __INTERFACE_H__
 #include "structures.h"
+#include "tgl-layout.h"
 
 #define COLOR_RED "\033[0;31m"
 #define COLOR_REDB "\033[1;31m"
@@ -40,16 +41,24 @@ void interpreter (char *line);
 
 void rprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
-void hexdump (int *in_ptr, int *in_end);
 
-struct message;
-union peer;
-void print_message (struct message *M);
-void print_chat_name (peer_id_t id, union peer *C);
-void print_user_name (peer_id_t id, union peer *U);
-void print_encr_chat_name_full (peer_id_t id, peer_t *C);
-void print_encr_chat_name (peer_id_t id, peer_t *C);
-//void print_media (struct message_media *M);
+#define vlogprintf(v,...) \
+  do { \
+    if (tgl_state.verbosity >= (v)) {\
+      logprintf (__VA_ARGS__);\
+    }\
+  } while (0);\
+
+
+//void hexdump (int *in_ptr, int *in_end);
+
+struct tgl_message;
+void print_message (struct tgl_message *M);
+void print_chat_name (tgl_peer_id_t id, tgl_peer_t *C);
+void print_user_name (tgl_peer_id_t id, tgl_peer_t *U);
+void print_encr_chat_name_full (tgl_peer_id_t id, tgl_peer_t *C);
+void print_encr_chat_name (tgl_peer_id_t id, tgl_peer_t *C);
+//void print_media (struct tgl_message_media *M);
 void pop_color (void);
 void push_color (const char *color);
 void print_start (void);

@@ -1,0 +1,332 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:		engine
+# Required-Start:	$local_fs $syslog
+# Required-Stop:	$local_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	KittenDB Meta Engine
+### END INIT INFO
+
+#
+# run script for KittenDB Engine
+# author: kot
+# author: burunduk
+# author: burunduk
+#
+# Version: 2013-06-06
+#
+
+# Features added:
+# -- flock to avoid parallel execution
+# -- checks to avoid creating empty engine configuration files
+
+
+# a bit changed it for telegram-daemon to use different folders 
+# and to have posiiblilities to have fake root
+# Vitaly Valtman
+
+ROOT=""
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMONDIR=$ROOT/usr/share/telegram-daemon/bin
+DAEMONBOOTSTRAP=$ROOT/usr/share/telegram-daemon/bin/start-telegram-daemon
+NAME=telegram-daemon
+DESC="KOT's meta engine"
+PIDFILE=$ROOT/var/run/$NAME
+LOCKFILE=$ROOT/var/lock/$NAME
+CONFFILE=$ROOT/etc/telegram-daemon/$NAME
+LOCK_WAIT=5
+STOP_TIMEOUT=5
+KILL_TIMEOUT=5
+
+test -x $DAEMONDIR || exit 0
+test -x $DAEMONBOOTSTRAP || exit 0
+
+set -e
+
+## Utilitary functions
+
+# Send information to stderr
+function echo_stderr() {
+    echo "$*" 1>&2
+}
+
+# Get engine status. Returns 0 on running engine, 1 otherwise.
+function engine_status() {
+    local id="$1"
+    local pif="$PIDFILE.$id.pid"
+    if ! [ -f "$pif" ] ; then
+        echo "stopped"
+        return 1
+    fi
+    local pid="$(<$pif)"
+    if [ -z "$pid" ]; then
+        echo "corrupt pid file"
+        return 1
+    fi
+    if [ -d "/proc/$pid/" ]; then
+        echo "$pid"
+        return 0
+    else
+        echo "failed (pid $pid)"
+        return 1
+    fi
+}
+
+# Start engine. Usage: engine_start <eid>
+function engine_start() {
+    local eid="$1"
+    local r=''
+    local pid=''
+    pid="$(engine_status "$eid")" && r='ok' || r='fail'
+    if [ "$r" == 'ok' ] ; then
+        echo_stderr "telegram-daemon-$eid: already running ($pid)"
+    else
+        start-stop-daemon --start --quiet --exec $DAEMONBOOTSTRAP -- .$eid 100> /dev/null
+    fi
+    return 0
+}
+
+# Stop engine. Usage: engine_stop <eid>
+function engine_stop() {
+    local eid="$1"
+    local r=''
+    local status="$(engine_status "$eid")" && r='ok' || r='fail'
+    local pif="$PIDFILE.$eid.pid"
+    if [ "$r" == 'ok' ] ; then
+        start-stop-daemon --stop --quiet --oknodo --pidfile "$pif"
+        local ti=0
+        while [ $ti -lt $((10 * $STOP_TIMEOUT)) ] ; do
+            status="$(engine_status "$eid")" && r='ok' || r='fail'
+            if [ "$r" == 'fail' ]; then
+                break
+            fi
+            sleep 0.1
+            ti=$(($ti + 1))
+        done
+        if [ "$r" == 'ok' ] ; then
+            echo_stderr "telegram-daemon-$eid: not stopped, sending SIGKILL..."
+            start-stop-daemon --stop --quiet --oknodo --pidfile "$pif" --signal KILL
+            ti=0
+            while [ $ti -lt $((10 * $KILL_TIMEOUT)) ] ; do
+                status="$(engine_status "$eid")" && r='ok' || r='fail'
+                if [ "$r" == 'fail' ]; then
+                    break
+                fi
+                sleep 0.1
+                ti=$(($ti + 1))
+            done
+        fi
+        if [ "$r" == 'ok' ] ; then
+            echo_stderr "telegram-daemon-$eid: not stopped with SIGKILL, giving up"
+            return 1
+        else
+            if [ -f "$pif" ] ; then
+              rm "$pif"
+            fi
+            echo "telegram-daemon-$eid: stopped"
+        fi
+    else
+        echo_stderr "telegram-daemon-$eid: not running: $status"
+    fi
+    return 0
+}
+
+# usage: engine_disable <id>
+function engine_disable() {
+    local eid="$1"
+    local conf="$CONFFILE.$eid.conf"
+    [ -e "$conf" ] || return 1 # work only with existing engines
+    if grep -E '^quit 1$' "$conf" > /dev/null ; then
+        echo_stderr "telegram-daemon-$eid: already disabled"
+    else
+        echo 'quit 1' >> "$conf"
+    fi
+    return 0
+}
+
+# usage: engine_enable <id>
+function engine_enable() {
+    local eid="$1"
+    local conf="$CONFFILE.$eid.conf"
+    [ -e "$conf" ] || return 1 # work only with existing engines
+    if ! grep -E '^quit' "$conf" > /dev/null ; then
+        echo_stderr "telegram-daemon-$eid: already enabled"
+    else
+        sed -i~ -e '/^quit/d' -- "$conf"
+    fi
+    return 0
+}
+
+# Wait for engine's command to be completed
+function engine_wait() {
+    local eid="$1"
+    (
+        flock -x -w $(($LOCK_WAIT + $STOP_TIMEOUT + $KILL_TIMEOUT)) 100 || exit 1
+    ) 100> $LOCKFILE.$eid.lock || echo "Unable to wait for $eid"
+    return 0
+}
+
+# Run a single command
+# Only one instance of this command per engine is supposed to work
+function run_one() {
+    local eid="$1"
+    shift
+    local command="$*"
+    [ "${#eid}" -gt 5 ] && return 0 # avoid long engine ids
+    (
+        flock -x -w $LOCK_WAIT 100 || exit 1
+        $command "$eid"
+    ) 100> $LOCKFILE.$eid.lock
+    return 0
+}
+
+# Run commands
+function run() {
+    local mode="$1"
+    shift
+    local command="$*"
+    local eid=''
+    if [ "$mode" == 'parallel' ] ; then
+        for eid in $arguments ; do
+            run_one "$eid" "$command" &
+        done
+        sleep 0.1
+        for eid in $arguments ; do
+            engine_wait "$eid"
+        done
+    else
+        for eid in $arguments ; do
+            run_one "$eid" "$command"
+        done
+    fi
+    return 0
+}
+
+# Get all actual engine ids
+function arguments_all() {
+    local file=''
+    local id=''
+    local list=''
+    for file in $(ls $CONFFILE.?*.conf 2> /dev/null) ; do
+        id=${file#$CONFFILE.}
+        id=${id%.conf}
+        list="$list $id"
+    done
+    for file in $(ls $PIDFILE.?*.pid 2> /dev/null) ; do
+        id=${file#$PIDFILE.}
+        id=${id%.pid}
+        list="$list $id"
+    done
+    local f=''
+    for f in $list ; do echo "$f" ; done | sort -u
+    return 0
+}
+
+## Commands
+
+# Start engine.
+function engine_command_start() {
+    local eid="$1"
+    engine_start "$eid"
+}
+
+# Stop engine.
+function engine_command_stop() {
+    local eid="$1"
+    engine_stop "$eid"
+}
+
+# Enable engine.
+function engine_command_enable() {
+    local eid="$1"
+    engine_enable "$eid"
+    engine_start "$eid"
+}
+
+# Disable engine.
+function engine_command_disable() {
+    local eid="$1"
+    engine_disable "$eid"
+    engine_stop "$eid"
+}
+
+# Restart engine.
+function engine_command_restart() {
+    local eid="$1"
+    engine_stop "$eid"
+    echo "restarting telegram-daemon-$eid..."
+    engine_start "$eid"
+}
+
+# Send signal to engine. Usage: engine_command_signal <signal> <id>
+function engine_command_signal() {
+    local id="$2"
+    local signal="$1"
+    local r=''
+    local comment="$(engine_status "$id")" && r='ok' || r='fail'
+    local res=''
+    if [ "$r" == 'ok' ]; then
+        start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE.$id.pid --signal "$signal"
+    else
+        echo_stderr "telegram-daemon-$id: not running: $comment"
+    fi
+    return 0
+}
+
+# Get engine status
+function engine_command_status() {
+    local id="$1"
+    local res="telegram-daemon-$id: "
+    local r=''
+    local pid=''
+    pid="$(engine_status "$id")" && r='ok' || r='fail'
+    if [ "$r" == 'ok' ]; then
+        res="$res $(COLUMNS=10000 ps -o pid,c,stime,time,cmd --no-header --pid $pid | sed -e 's/\/usr\/share\/telegram-daemon\/bin\///')"
+    else
+        res="$res $pid"
+    fi
+    echo "$res"
+    return 0
+}
+
+## Entry point
+
+command="$1"
+shift
+
+arguments="$*"
+if [ -z "$arguments" ] ; then
+    if [ "$command" == "status" -o "$command" == "start" -o "$command" == "rotate-logs" -o "$command" == "stop" ] ; then
+        arguments="$(arguments_all)"
+    fi
+elif [ "$arguments" == "all" ] ; then
+    arguments="$(arguments_all)"
+fi
+if [ -z "$arguments" ] ; then
+    echo "nothing to do"
+    exit 0
+fi
+
+case "$command" in
+    ('disable') run parallel engine_command_disable ;;
+    ('enable') run parallel engine_command_enable ;;
+    #
+    ('start') run parallel engine_command_start ;;
+    ('status') run normal engine_command_status ;;
+    ('stop') run parallel engine_command_stop ;;
+    #
+    ('rotate-logs') run parallel engine_command_signal USR1 ;;
+    #
+    ('restart'|'force-reload') run parallel engine_command_restart ;;
+    (*)
+        N=/etc/init.d/$NAME
+        echo "Usage: $N {start|stop|restart|rotate-logs|status} [<ids...>|all]" >&2
+        echo "  additional commands: disable <ids...>, enable <ids...>, reindex <ids...> (use with caution)" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
+

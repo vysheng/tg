@@ -8,6 +8,16 @@ Documentation for Telegram API is available here: http://core.telegram.org/api
 
 Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
 
+### Upgrading to version 1.0
+
+First of all, the binary is now in ./bin folder and is named telegram-cli. So be careful, not to use old binary.
+
+Second, config folder is now ${HOME}/.telegram-cli
+
+Third, database is not compatible with older versions, so you'll have to login again.
+
+Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%d' in case of two peers having same name).
+
 ### Installation
 
 Clone GitHub Repository
@@ -24,13 +34,13 @@ or download and extract zip
 Install libs: readline or libedit, openssl and (if you want to use config) libconfig and liblua.
 If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively.
 
-On ubuntu use: 
+On Ubuntu/Debian use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev
 
 On gentoo:
 
-     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua
+     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent
 
 On Fedora:
 
@@ -56,9 +66,17 @@ Then,
      ./configure
      make
 
+#### Other methods to install on linux
+
+On Gentoo: use ebuild provided.
+
+On Arch: https://aur.archlinux.org/packages/telegram-git/ 
+
 #### Mac OS X
 
-The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually, e.g. using [Homebrew](http://brew.sh/).
+The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually.
+
+If using [Homebrew](http://brew.sh/):
 
      brew install libconfig
      brew install readline
@@ -69,6 +87,14 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
+If using [MacPorts](https://www.macports.org):
+     
+     sudo port install libconfig-hr
+     sudo port install readline
+     sudo port install lua51
+     export CFLAGS="-I/usr/local/include -I/opt/local/include"
+     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib/"
+     ./configure && make
 
 Install these ports:
 
@@ -85,13 +111,17 @@ Then build:
 
 If you manage to launch it on other UNIX, please let me know.
 
+### Contacts 
+If you would like to ask a question, you can write to my telegram or to the github (or both). To contact me via telegram, you should use import_card method with argument 000653bf:0738ca5d:5521fbac:29246815:a27d0cda
+
+
 ### Usage
 
-    ./telegram -k <public-server-key>
+    bin/telegram-cli -k <public-server-key>
     
-By default public key is stored in the same folder named tg-server.pub or in /etc/telegram/server.pub, if it's not, specify where to find it:
+By default public key is stored in the same folder named tg-server.pub or in /etc/telegram-cli/server.pub, if it's not, specify where to find it:
 
-    ./telegram -k tg-server.pub
+    bin/telegram-cli -k tg-server.pub
 
 Client support TAB completion and command history.
 
@@ -112,14 +142,19 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **add_contact** \<phone-number\> \<first-name\> \<last-name\> - tries to add contact to contact-list by phone
 * **rename_contact** \<user\> \<first-name\> \<last-name\> - tries to rename contact. If you have another device it will be a fight
 * **mark_read** \<peer\> - mark read all received messages with peer
+* **delete_msg** \<msg-seqno\> - deletes message (not completly, though)
+* **restore_msg** \<msg-seqno\> - restores delete message. Impossible for secret chats. Only possible short time (one hour, I think) after deletion
 
 #### Multimedia
 
 * **send_photo** \<peer\> \<photo-file-name\> - sends photo to peer
 * **send_video** \<peer\> \<video-file-name\> - sends video to peer
 * **send_text** \<peer\> \<text-file-name> - sends text file as plain messages
-* **load_photo**/load_video/load_video_thumb \<msg-seqno\> - loads photo/video to download dir
-* **view_photo**/view_video/view_video_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
+* **load_photo**/load_video/load_video_thumb/load_audio/load_document/load_document_thumb \<msg-seqno\> - loads photo/video/audio/document to download dir
+* **view_photo**/view_video/view_video_thumb/view_audio/view_document/view_document_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
+* **fwd_media** \<msg-seqno\> send media in your message. Use this to prevent sharing info about author of media (though, it is possible to determine user_id from media itself, it is not possible get access_hash of this user)
+* **set_profile_photo** \<photo-file-name\> - sets userpic. Photo should be square, or server will cut biggest central square part
+
 
 #### Group chat options
 
@@ -128,6 +163,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **chat_del_user** \<chat\> \<user\> - remove user from chat
 * **rename_chat** \<chat\> \<new-name\>
 * **create_group_chat** \<user\> \<chat topic\> - creates a groupchat with user, use chat_add_user to add more users
+* **chat_set_photo** \<chat\> \<photo-file-name\> - sets group chat photo. Same limits as for profile photos.
 
 #### Search
 
@@ -138,6 +174,8 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 
 * **create_secret_chat** \<user\> - creates secret chat with this user
 * **visualize_key** \<secret_chat\> - prints visualization of encryption key. You should compare it to your partner's one
+* **set_ttl** \<secret_chat\> \<ttl\> - sets ttl to secret chat. Though client does ignore it, client on other end can make use of it
+* **accept_secret_chat** \<secret_chat\> - manually accept secret chat (only useful when starting with -E key)
 
 #### Stats and various info
 
@@ -149,3 +187,11 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **stats** - just for debugging
 * **show_license** - prints contents of GPLv2
 * **help** - prints this help
+
+#### Card
+* **export_card** - print your 'card' that anyone can later use to import your contact
+* **import_card** \<card\> - gets user by card. You can write messages to him after that.
+
+#### Other
+* **quit** - quit
+* **safe_quit** - wait for all queries to end then quit
