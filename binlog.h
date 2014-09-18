@@ -93,5 +93,7 @@ void bl_do_delete_msg (struct tgl_message *M);
 void bl_do_msg_seq_update (long long id);
 void bl_do_msg_update (long long id);
 
+void bl_do_reset_authorization (void);
+
 //void bl_do_add_dc (int id, const char *ip, int l, int port, long long auth_key_id, const char *auth_key);
 #endif

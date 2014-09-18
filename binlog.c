@@ -1198,6 +1198,20 @@ static int fetch_comb_binlog_msg_update (void *extra) {
   return 0;
 }
 
+static int fetch_comb_binlog_reset_authorization (void *extra) {
+  int i;
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i]) {
+    struct tgl_dc *D = tgl_state.DC_list[i];
+    D->flags = 0;
+    D->state = st_init;
+    D->auth_key_id = D->temp_auth_key_id = 0;
+    D->has_auth = 0;
+  }
+  tgl_state.seq = 0;
+  tgl_state.qts = 0;
+  return 0;
+}
+
 #define FETCH_COMBINATOR_FUNCTION(NAME) \
   case CODE_ ## NAME:\
     ok = fetch_comb_ ## NAME (0); \
@@ -1288,6 +1302,7 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_delete_msg)
   FETCH_COMBINATOR_FUNCTION (binlog_msg_seq_update)
   FETCH_COMBINATOR_FUNCTION (binlog_msg_update)
+  FETCH_COMBINATOR_FUNCTION (binlog_reset_authorization)
   default:
     vlogprintf (E_ERROR, "Unknown op 0x%08x\n", op);
     assert (0);
@@ -2102,6 +2117,11 @@ void bl_do_msg_update (long long id) {
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 
+void bl_do_reset_authorization (void) {
+  clear_packet ();
+  out_int (CODE_binlog_reset_authorization);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
 /*void bl_do_add_dc (int id, const char *ip, int l, int port, long long auth_key_id, const char *auth_key) {
   clear_packet ();
   out_int (CODE_binlog_add_dc);

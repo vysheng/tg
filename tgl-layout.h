@@ -72,7 +72,7 @@ struct tgl_dc {
   int flags;
   enum tgl_dc_state state;
   char *ip;
-  char *user;
+  //char *user;
   struct tgl_session *sessions[MAX_DC_SESSIONS];
   char auth_key[256];
   char temp_auth_key[256];

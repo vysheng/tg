@@ -97,6 +97,7 @@ char *lua_file;
 int disable_colors;
 int readline_disabled;
 int disable_output;
+int reset_authorization;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -519,7 +520,7 @@ int change_user_group () {
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:q"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -598,6 +599,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'D':
       disable_output ++;
+      break;
+    case 'q':
+      reset_authorization ++;
       break;
     case 'h':
     default:

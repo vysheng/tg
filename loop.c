@@ -73,6 +73,7 @@ extern int safe_quit;
 extern int sync_from_start;
 
 extern int disable_output;
+extern int reset_authorization;
 
 void got_it (char *line, int len);
 void write_state_file (void);
@@ -609,7 +610,15 @@ int loop (void) {
     lua_binlog_end ();
   #endif
   update_prompt ();
-    
+   
+  if (reset_authorization) {
+    tgl_peer_t *P = tgl_peer_get (TGL_MK_USER (tgl_state.our_id));
+    if (P && P->user.phone && reset_authorization == 1) {
+      set_default_username (P->user.phone);
+    }
+    bl_do_reset_authorization ();
+  }
+
   net_loop (0, all_authorized);
 
   int i;
