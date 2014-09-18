@@ -261,15 +261,18 @@ void push_media (struct tgl_message_media *M) {
     lua_add_string_field ("type", "document");
     break;
   case tgl_message_media_unsupported:
-    lua_pushstring (luaState, "unsupported");
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "unsupported");
     break;
   case tgl_message_media_geo:
     lua_newtable (luaState);
+    lua_add_string_field ("type", "geo");
     lua_add_num_field ("longitude", M->geo.longitude);
     lua_add_num_field ("latitude", M->geo.latitude);
     break;
   case tgl_message_media_contact:
     lua_newtable (luaState);
+    lua_add_string_field ("type", "contact");
     lua_add_string_field ("phone", M->phone);
     lua_add_string_field ("first_name", M->first_name);
     lua_add_string_field ("last_name", M->last_name);
