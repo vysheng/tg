@@ -482,6 +482,7 @@ struct command {
   char *name;
   enum command_argument args[10];
   void (*fun)(int arg_num, struct arg args[]);
+  char *desc;
 };
 
 
@@ -498,45 +499,15 @@ void print_card_gw (void *extra, int success, int size, int *card);
 void print_user_gw (void *extra, int success, struct tgl_user *U);
 void print_msg_gw (void *extra, int success, struct tgl_message *M);
 
+struct command commands[];
 void do_help (int arg_num, struct arg args[]) {
   assert (!arg_num);
   push_color (COLOR_YELLOW);
-  printf (
-      "help - prints this help\n"
-      "msg <peer> Text - sends message to this peer\n"
-      "contact_list - prints info about users in your contact list\n"
-      "stats - just for debugging \n"
-      "history <peer> [limit] - prints history (and marks it as read). Default limit = 40\n"
-      "dialog_list - prints info about your dialogs\n"
-      "send_photo <peer> <photo-file-name> - sends photo to peer\n"
-      "send_video <peer> <video-file-name> - sends video to peer\n"
-      "send_text <peer> <text-file-name> - sends text file as plain messages\n"
-      "chat_info <chat> - prints info about chat\n"
-      "user_info <user> - prints info about user\n"
-      "fwd <user> <msg-seqno> - forward message to user. You can see message numbers starting client with -N\n"
-      "rename_chat <chat> <new-name>\n"
-      "load_photo/load_video/load_video_thumb <msg-seqno> - loads photo/video to download dir. You can see message numbers starting client with -N\n"
-      "view_photo/view_video/view_video_thumb <msg-seqno> - loads photo/video to download dir and starts system default viewer. You can see message numbers starting client with -N\n"
-      "show_license - prints contents of GPLv2\n"
-      "search <peer> pattern - searches pattern in messages with peer\n"
-      "global_search pattern - searches pattern in all messages\n"
-      "mark_read <peer> - mark read all received messages with peer\n"
-      "add_contact <phone-number> <first-name> <last-name> - tries to add contact to contact-list by phone\n"
-      "create_secret_chat <user> - creates secret chat with this user\n"
-      "create_group_chat <user> <chat-topic> - creates group chat with this user, add more users with chat_add_user <user>\n"
-      "rename_contact <user> <first-name> <last-name> - tries to rename contact. If you have another device it will be a fight\n"
-      "suggested_contacts - print info about contacts, you have max common friends\n"
-      "visualize_key <secret_chat> - prints visualization of encryption key. You should compare it to your partner's one\n"
-      "set <param> <param-value>. Possible <param> values are:\n"
-      "\tdebug_verbosity - just as it sounds. Debug verbosity\n"
-      "\tlog_level - level of logging of new events. Lower is less verbose:\n"
-      "\t\tLevel 1: prints info about read messages\n"
-      "\t\tLevel 2: prints line, when somebody is typing in chat\n"
-      "\t\tLevel 3: prints line, when somebody changes online status\n"
-      "\tmsg_num - enables/disables numeration of messages\n"
-      "\talert - enables/disables alert sound notifications\n"
-      "chat_with_peer <peer> - starts chat with this peer. Every command after is message to this peer. Type /exit or /quit to end this mode\n"
-      );
+  struct command *cmd = commands;
+  while (cmd->name) {
+    printf ("%s\n", cmd->desc);
+    cmd ++;
+  }
   pop_color ();
   fflush (stdout);
 }
@@ -887,61 +858,61 @@ void do_send_contact (int arg_num, struct arg args[]) {
 }
 
 struct command commands[] = {
-  {"help", {ca_none}, do_help},
-  {"contact_list", {ca_none}, do_contact_list},
-  {"stats", {ca_none}, do_stats},
-  {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history},
-  {"dialog_list", {ca_none}, do_dialog_list},
-  {"send_photo", {ca_peer, ca_file_name_end, ca_none}, do_send_photo},
-  {"send_video", {ca_peer, ca_file_name_end, ca_none}, do_send_video},
-  {"send_audio", {ca_peer, ca_file_name_end, ca_none}, do_send_audio},
-  {"send_document", {ca_peer, ca_file_name_end, ca_none}, do_send_document},
-  {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text},
-  {"chat_info", {ca_chat, ca_none}, do_chat_info},
-  {"user_info", {ca_user, ca_none}, do_user_info},
-  {"fwd", {ca_peer, ca_number, ca_none}, do_fwd},
-  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media},
-  {"msg", {ca_peer, ca_string_end, ca_none}, do_msg},
-  {"rename_chat", {ca_peer, ca_string_end, ca_none}, do_rename_chat},
-  {"load_photo", {ca_number, ca_none}, do_load_photo},
-  {"view_photo", {ca_number, ca_none}, do_open_photo},
-  {"load_video_thumb", {ca_number, ca_none}, do_load_video_thumb},
-  {"view_video_thumb", {ca_number, ca_none}, do_open_video_thumb},
-  {"load_video", {ca_number, ca_none}, do_load_video},
-  {"view_video", {ca_number, ca_none}, do_open_video},
-  {"load_audio", {ca_number, ca_none}, do_load_audio},
-  {"view_audio", {ca_number, ca_none}, do_open_audio},
-  {"load_document", {ca_number, ca_none}, do_load_document},
-  {"view_document", {ca_number, ca_none}, do_open_document},
-  {"load_document_thumb", {ca_number, ca_none}, do_load_document_thumb},
-  {"view_document_thumb", {ca_number, ca_none}, do_open_document_thumb},
-  {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact},
-  {"del_contact", {ca_user, ca_none}, do_del_contact},
-  {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact},
-  {"show_license", {ca_none}, do_show_license},
-  {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search},
-  {"mark_read", {ca_peer, ca_none}, do_mark_read},
-  {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key},
-  {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat},
-  {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user},
-  {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user},
-  {"status_online", {ca_none}, do_status_online},
-  {"status_offline", {ca_none}, do_status_offline},
-  {"quit", {ca_none}, do_quit},
-  {"safe_quit", {ca_none}, do_safe_quit},
-  {"set", {ca_string, ca_number, ca_none}, do_set},
-  {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer},
-  {"delete_msg", {ca_number, ca_none}, do_delete_msg},
-  {"restore_msg", {ca_number, ca_none}, do_restore_msg},
-  {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat},
-  {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo},
-  {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo},
-  {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat},
-  {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl},
-  {"export_card", {ca_none}, do_export_card},
-  {"import_card", {ca_string, ca_none}, do_import_card},
-  {"send_contact", {ca_peer, ca_string, ca_string, ca_string}, do_send_contact},
-  {0, {ca_none}, 0}
+  {"help", {ca_none}, do_help, "help\tPrints this help"},
+  {"contact_list", {ca_none}, do_contact_list, "contact_list\tPrints contact list"},
+  {"stats", {ca_none}, do_stats, "stats\tFor debug purpose"},
+  {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read"},
+  {"dialog_list", {ca_none}, do_dialog_list, "dialog_list\tList of last conversations"},
+  {"send_photo", {ca_peer, ca_file_name_end, ca_none}, do_send_photo, "send_photo <peer> <file>\tSends photo to peer"},
+  {"send_video", {ca_peer, ca_file_name_end, ca_none}, do_send_video, "send_video <peer> <file>\tSends video to peer"},
+  {"send_audio", {ca_peer, ca_file_name_end, ca_none}, do_send_audio, "send_audio <peer> <file>\tSends audio to peer"},
+  {"send_document", {ca_peer, ca_file_name_end, ca_none}, do_send_document, "send_document <peer> <file>\tSends document to peer"},
+  {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message"},
+  {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)"},
+  {"user_info", {ca_user, ca_none}, do_user_info, "user_info <user>\tPrints info about user (id, last online, phone)"},
+  {"fwd", {ca_peer, ca_number, ca_none}, do_fwd, "fwd <peer> <msg-id>\tForwards message to peer. Forward to secret chats is forbidden"},
+  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd"},
+  {"msg", {ca_peer, ca_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer"},
+  {"rename_chat", {ca_peer, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
+  {"load_photo", {ca_number, ca_none}, do_load_photo, "load_photo <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
+  {"load_video", {ca_number, ca_none}, do_load_video, "load_video <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
+  {"load_audio", {ca_number, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
+  {"load_document", {ca_number, ca_none}, do_load_document, "load_document <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
+  {"load_video_thumb", {ca_number, ca_none}, do_load_video_thumb, "load_video_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
+  {"load_document_thumb", {ca_number, ca_none}, do_load_document_thumb, "load_document_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
+  {"view_photo", {ca_number, ca_none}, do_open_photo, "view_photo <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"view_video", {ca_number, ca_none}, do_open_video, "view_video <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"view_audio", {ca_number, ca_none}, do_open_audio, "view_audio <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"view_document", {ca_number, ca_none}, do_open_document, "view_document <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"view_video_thumb", {ca_number, ca_none}, do_open_video_thumb, "view_video_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"view_document_thumb", {ca_number, ca_none}, do_open_document_thumb, "view_document_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact, "add_contact <phone> <first name> <last name>\tTries to add user to contact list"},
+  {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list"},
+  {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
+  {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license"},
+  {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [from] [to] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
+  {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read"},
+  {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key, "visualize_key <secret chat>\tPrints visualization of encryption key (first 16 bytes sha1 of it in fact}"},
+  {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat"},
+  {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100"},
+  {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat"},
+  {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online"},
+  {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline"},
+  {"quit", {ca_none}, do_quit, "quit\tQuits immideatly"},
+  {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
+  {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
+  {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer, "chat_with_peer <peer>\tInterface option. All input will be treated as messages to this peer. Type /quit to end this mode"},
+  {"delete_msg", {ca_number, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message"},
+  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
+  {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat, "create_group_chat <name> <user>+\tCreates group chat with users"},
+  {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo, "chat_set_photo <chat> <filename>\tSets chat photo. Photo will be cropped to square"},
+  {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo, "set_profile_photo <filename>\tSets profile photo. Photo will be cropped to square"},
+  {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option"},
+  {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl"},
+  {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method"},
+  {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual"},
+  {"send_contact", {ca_peer, ca_string, ca_string, ca_string}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
+  {0, {ca_none}, 0, ""}
 };
 
 
