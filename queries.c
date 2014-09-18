@@ -3245,7 +3245,7 @@ void tgl_do_get_difference (int sync_from_start, void (*callback)(void *callback
   tgl_state.locks |= TGL_LOCK_DIFF;
   clear_packet ();
   tgl_do_insert_header ();
-  if (tgl_state.seq > 0 || sync_from_start) {
+  if (tgl_state.pts > 0 || sync_from_start) {
     if (tgl_state.pts == 0) { tgl_state.pts = 1; }
     //if (tgl_state.qts == 0) { tgl_state.qts = 1; }
     if (tgl_state.date == 0) { tgl_state.date = 1; }
