@@ -88,6 +88,12 @@ end
 function on_get_difference_end ()
 end
 
+function cron()
+  -- do something
+  postpone (cron, false, 1.0)
+end
+
 function on_binlog_replay_end ()
   started = 1
+  postpone (cron, false, 1.0)
 end
