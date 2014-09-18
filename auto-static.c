@@ -418,7 +418,7 @@ static void print_escaped_string (const char *str, int len) {
         eprintf ("\\\\");
         break;
       case '"':
-        eprintf ("\"");
+        eprintf ("\\\"");
         break;
       default:
         eprintf ("\\x%02x", (int)(unsigned char)*str);
