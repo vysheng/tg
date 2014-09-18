@@ -2715,8 +2715,76 @@ void tgl_do_del_contact (tgl_peer_id_t id, void (*callback)(void *callback_extra
  /* }}} */
 
 /* {{{ Msg search */
+void _tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, int offset, int max_id, char *s, int list_offset, int list_size, struct tgl_message **list, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
 static int msg_search_on_answer (struct query *q UU) {
-  return get_history_on_answer (q);
+  int count = -1;
+  int i;
+  int x = fetch_int ();
+  assert (x == (int)CODE_messages_messages_slice || x == (int)CODE_messages_messages);
+  if (x == (int)CODE_messages_messages_slice) {
+    count = fetch_int ();
+    //fetch_int ();
+  }
+  assert (fetch_int () == CODE_vector);
+  void **T = q->extra;
+  struct tgl_message **ML = T[0];
+  int list_offset = (long)T[1];
+  int list_size = (long)T[2];
+  tgl_peer_id_t id = tgl_set_peer_id ((long)T[4], (long)T[3]);
+  int limit = (long)T[5];
+  int offset = (long)T[6];
+  int from = (long)T[7];
+  int to = (long)T[8];
+  char *s = T[9];
+  tfree (T, sizeof (void *) * 10);
+  
+  int n = fetch_int ();
+
+  if (list_size - list_offset < n) {
+    int new_list_size = 2 * list_size;
+    if (new_list_size - list_offset < n) {
+      new_list_size = n + list_offset;
+    }
+    ML = trealloc (ML, list_size * sizeof (void *), new_list_size * sizeof (void *));
+    assert (ML);
+    list_size = new_list_size;
+  }
+  //struct tgl_message **ML = talloc (sizeof (void *) * n);
+  for (i = 0; i < n; i++) {
+    ML[i + list_offset] = tglf_fetch_alloc_message ();
+  }
+  list_offset += n;
+  offset += n;
+  limit -= n;
+  if (count >= 0 && limit + offset >= count) {
+    limit = count - offset;
+    if (limit < 0) { limit = 0; }
+  }
+  assert (limit >= 0);
+  
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    tglf_fetch_alloc_chat ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+  for (i = 0; i < n; i++) {
+    tglf_fetch_alloc_user ();
+  }
+
+ 
+  if (limit <= 0 || x == (int)CODE_messages_messages) {
+    if (q->callback) {
+      ((void (*)(void *, int, int, struct tgl_message **))q->callback) (q->callback_extra, 1, list_offset, ML);
+    }
+  
+    tfree_str (s);
+    tfree (ML, sizeof (void *) * list_size);
+  } else {
+   _tgl_do_msg_search (id, from, to, limit, 0, ML[list_offset - 1]->id, s, list_offset, list_size, ML, q->callback, q->callback_extra);
+  }
+  return 0;
 }
 
 static struct query_methods msg_search_methods = {
@@ -2724,7 +2792,7 @@ static struct query_methods msg_search_methods = {
   .type = TYPE_TO_PARAM(messages_messages)
 };
 
-void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, const char *s, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+void _tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, int offset, int max_id, char *s, int list_offset, int list_size, struct tgl_message **list, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
   if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
     vlogprintf (E_WARNING, "Can not search in secure chat\n");
     if (callback) {
@@ -2739,14 +2807,30 @@ void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, const cha
   } else {
     out_peer_id (id);
   }
+  void **T = talloc (sizeof (void *) * 10);
+  T[0] = list;
+  T[1] = (void *)(long)list_offset;
+  T[2] = (void *)(long)list_size;
+  T[3] = (void *)(long)tgl_get_peer_id (id);
+  T[4] = (void *)(long)tgl_get_peer_type (id);
+  T[5] = (void *)(long)limit;
+  T[6] = (void *)(long)offset;
+  T[7] = (void *)(long)from;
+  T[8] = (void *)(long)to;
+  T[9] = s;
+
   out_string (s);
   out_int (CODE_input_messages_filter_empty);
   out_int (from);
   out_int (to);
-  out_int (0); // offset
-  out_int (0); // max_id
+  out_int (offset); // offset
+  out_int (max_id); // max_id
   out_int (limit);
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, 0, callback, callback_extra);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_search_methods, T, callback, callback_extra);
+}
+
+void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, int offset, const char *s, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra) {
+  _tgl_do_msg_search (id, from, to, limit, offset, 0, tstrdup (s), 0, 0, 0, callback, callback_extra);
 }
 /* }}} */
 

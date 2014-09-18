@@ -649,7 +649,7 @@ void do_show_license (int arg_num, struct arg args[]) {
 }
 
 void do_search (int arg_num, struct arg args[]) {
-  assert (arg_num == 5);
+  assert (arg_num == 6);
   tgl_peer_id_t id;
   if (args[0].P) {
     id = args[0].P->id;
@@ -674,7 +674,13 @@ void do_search (int arg_num, struct arg args[]) {
   } else {
     to = 0;
   }
-  tgl_do_msg_search (id, from, to, limit, args[4].str, print_msg_list_gw, 0);
+  int offset;
+  if (args[4].num != NOT_FOUND) {
+    offset = args[4].num; 
+  } else {
+    offset = 0;
+  }
+  tgl_do_msg_search (id, from, to, limit, offset, args[5].str, print_msg_list_gw, 0);
 }
 
 void do_mark_read (int arg_num, struct arg args[]) {
@@ -890,7 +896,7 @@ struct command commands[] = {
   {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list"},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
   {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license"},
-  {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [from] [to] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
+  {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
   {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read"},
   {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key, "visualize_key <secret chat>\tPrints visualization of encryption key (first 16 bytes sha1 of it in fact}"},
   {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat"},
@@ -1817,11 +1823,6 @@ void interpreter (char *line UU) {
         }
 
         if (opt && !ok) {
-          if (op != ca_number) {
-            args[args_num ++].P = 0;
-          } else {
-            args[args_num ++].num = NOT_FOUND;
-          }
           line_ptr = save;
           flags ++;
           continue;

@@ -1020,13 +1020,13 @@ void lua_do_all (void) {
       break;
     case lq_search:
       s = lua_ptr[p + 2];
-      tgl_do_msg_search (((tgl_peer_t *)lua_ptr[p + 1])->id, 0, 0, 40, s, lua_msg_list_cb, lua_ptr[p]);
+      tgl_do_msg_search (((tgl_peer_t *)lua_ptr[p + 1])->id, 0, 0, 40, 0, s, lua_msg_list_cb, lua_ptr[p]);
       free (s);
       p += 3;
       break;
     case lq_global_search:
       s = lua_ptr[p + 1];
-      tgl_do_msg_search (tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, s, lua_msg_list_cb, lua_ptr[p]);
+      tgl_do_msg_search (tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, s, lua_msg_list_cb, lua_ptr[p]);
       free (s);
       p += 2;
       break;

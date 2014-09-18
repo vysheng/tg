@@ -267,7 +267,7 @@ void tgl_do_load_document_thumb (struct tgl_document *video, void (*callback)(vo
 void tgl_do_load_encr_video (struct tgl_encr_video *V, void (*callback)(void *callback_extra, int success, char *filename), void *callback_extra);
 void tgl_do_export_auth (int num, void (*callback) (void *callback_extra, int success), void *callback_extra);
 void tgl_do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force, void (*callback)(void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra);
-void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, const char *s, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
+void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, int offset, const char *s, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
 void tgl_do_contacts_search (int limit, const char *s, void (*callback) (void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra);
 void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
 void tgl_do_create_secret_chat (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
