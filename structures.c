@@ -87,7 +87,7 @@ char *tgls_default_create_print_name (tgl_peer_id_t id, const char *a1, const ch
   }
   char *s = buf;
   while (*s) {
-    if (*s == ' ') { *s = '_'; }
+    if (((unsigned char)*s) <= ' ') { *s = '_'; }
     if (*s == '#') { *s = '@'; }
     s++;
   }

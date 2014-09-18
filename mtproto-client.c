@@ -659,7 +659,7 @@ static long long msg_id_override;
 static void mpc_on_get_config (void *extra, int success);
 static int process_auth_complete (struct connection *c UU, char *packet, int len, int temp_key) {
   struct tgl_dc *D = tgl_state.net_methods->get_dc (c);
-  vlogprintf (E_DEBUG, "process_dh_answer(), len=%d\n", len);
+  vlogprintf (E_DEBUG - 1, "process_dh_answer(), len=%d\n", len);
   assert (len == 72);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
