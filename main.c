@@ -336,7 +336,7 @@ void parse_config (void) {
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
   
-  int pfs_enabled;
+  int pfs_enabled = 0;
   strcpy (buf + l, "pfs_enabled");
   config_lookup_bool (&conf, buf, &pfs_enabled);
   if (pfs_enabled) {

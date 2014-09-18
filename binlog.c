@@ -266,6 +266,7 @@ static int fetch_comb_binlog_user_set_full_photo (void *extra) {
     tgls_free_photo (&U->user.photo);
   }
   tglf_fetch_photo (&U->user.photo);
+  U->flags |= FLAG_HAS_PHOTO; 
   
   if (tgl_state.callback.user_update) {
     tgl_state.callback.user_update ((void *)U, TGL_UPDATE_PHOTO);
@@ -655,6 +656,7 @@ static int fetch_comb_binlog_chat_set_full_photo (void *extra) {
     tgls_free_photo (&C->chat.photo);
   }
   tglf_fetch_photo (&C->chat.photo);
+  C->flags |= FLAG_HAS_PHOTO; 
   
   if (tgl_state.callback.chat_update) {
     tgl_state.callback.chat_update ((void *)C, TGL_UPDATE_PHOTO);

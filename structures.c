@@ -1476,7 +1476,6 @@ void tgls_free_photo_size (struct tgl_photo_size *S) {
 }
 
 void tgls_free_photo (struct tgl_photo *P) {
-  if (!P->access_hash) { return; }
   if (P->caption) { tfree_str (P->caption); }
   if (P->sizes) {
     int i;
@@ -1488,12 +1487,18 @@ void tgls_free_photo (struct tgl_photo *P) {
 }
 
 void tgls_free_video (struct tgl_video *V) {
+  tfree_str (V->mime_type);
   if (!V->access_hash) { return; }
   tfree_str (V->caption);
   tgls_free_photo_size (&V->thumb);
 }
 
+void tgls_free_audio (struct tgl_audio *A) {
+  tfree_str (A->mime_type);
+}
+
 void tgls_free_document (struct tgl_document *D) {
+  tfree_str (D->mime_type);
   if (!D->access_hash) { return; }
   tfree_str (D->caption);
   tfree_str (D->mime_type);
@@ -1504,7 +1509,9 @@ void tgls_free_message_media (struct tgl_message_media *M) {
   switch (M->type) {
   case tgl_message_media_none:
   case tgl_message_media_geo:
+    return;
   case tgl_message_media_audio:
+    tgls_free_audio (&M->audio);
     return;
   case tgl_message_media_photo:
     tgls_free_photo (&M->photo);
