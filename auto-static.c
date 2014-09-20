@@ -149,13 +149,6 @@ void tgl_paramed_type_free (struct paramed_type *P) {
   free (P);
 }
 
-static void print_offset (void) {
-  int i;
-  for (i = 0; i < multiline_offset; i++) {
-    printf (" ");
-  }
-}
-
 static char *buffer_pos, *buffer_end;
 
 static int is_wspc (char c) {
@@ -428,6 +421,13 @@ static void print_escaped_string (const char *str, int len) {
     }
   }
   eprintf ("\"");
+}
+
+static void print_offset (void) {
+  int i;
+  for (i = 0; i < multiline_offset; i++) {
+    eprintf (" ");
+  }
 }
 
 char *tglf_extf_fetch (struct paramed_type *T) {

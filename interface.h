@@ -38,6 +38,7 @@ char *get_default_prompt (void);
 char *complete_none (const char *text, int state);
 char **complete_text (char *text, int start, int end);
 void interpreter (char *line);
+void interpreter_ex (char *line, void *ex);
 
 void rprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
@@ -52,19 +53,31 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
 
 //void hexdump (int *in_ptr, int *in_end);
 
+struct bufferevent;
+struct in_ev {
+  struct bufferevent *bev;
+  char in_buf[4096];
+  int in_buf_pos;
+  int refcnt;
+  int error;
+};
+
+
 struct tgl_message;
-void print_message (struct tgl_message *M);
-void print_chat_name (tgl_peer_id_t id, tgl_peer_t *C);
-void print_user_name (tgl_peer_id_t id, tgl_peer_t *U);
-void print_encr_chat_name_full (tgl_peer_id_t id, tgl_peer_t *C);
-void print_encr_chat_name (tgl_peer_id_t id, tgl_peer_t *C);
+struct in_ev;
+void print_message (struct in_ev *ev, struct tgl_message *M);
+void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
+void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U);
+void print_encr_chat_name_full (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
+void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
 //void print_media (struct tgl_message_media *M);
+//
 void pop_color (void);
 void push_color (const char *color);
 void print_start (void);
 void print_end (void);
-void print_date_full (long t);
-void print_date (long t);
+void print_date_full (struct in_ev *ev, long t);
+void print_date (struct in_ev *ev, long t);
 
 void play_sound (void);
 void update_prompt (void);

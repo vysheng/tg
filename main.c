@@ -48,6 +48,7 @@
 #endif
 
 #include <grp.h>
+#include <arpa/inet.h>
 
 #include "telegram.h"
 #include "loop.h"
@@ -98,6 +99,7 @@ int disable_colors;
 int readline_disabled;
 int disable_output;
 int reset_authorization;
+int port;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -420,6 +422,7 @@ void usage (void) {
   printf ("  -U <user-name>      change uid after start\n");
   printf ("  -G <group-name>     change gid after start\n");
   printf ("  -D                  disable output\n");
+  printf ("  -P <port>           port to listen for input commands\n");
 
   exit (1);
 }
@@ -520,7 +523,7 @@ int change_user_group () {
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:q"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -603,6 +606,9 @@ void args_parse (int argc, char **argv) {
     case 'q':
       reset_authorization ++;
       break;
+    case 'P':
+      port = atoi (optarg);
+      break;
     case 'h':
     default:
       usage ();
@@ -643,14 +649,42 @@ void sig_abrt_handler (int signum __attribute__ ((unused))) {
   exit (EXIT_FAILURE);
 }
 
+int sfd;
+
 int main (int argc, char **argv) {
-  change_user_group ();
   signal (SIGSEGV, sig_segv_handler);
   signal (SIGABRT, sig_abrt_handler);
 
   log_level = 10;
   
   args_parse (argc, argv);
+  
+  change_user_group ();
+
+  if (port > 0) {
+    struct sockaddr_in serv_addr;
+
+    sfd = socket (AF_INET, SOCK_STREAM, 0);
+    if (sfd < 0) {
+      perror ("socket");
+      exit(1);
+    }
+
+    memset (&serv_addr, 0, sizeof (serv_addr));
+    
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = htonl (0x7f000001);
+    serv_addr.sin_port = htons (port);
+ 
+    if (bind (sfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
+      perror ("bind");
+      exit(1);
+    }
+
+    listen (sfd,5);
+  } else {
+    sfd = -1;
+  }
 
   if (daemonize) {
     signal (SIGHUP, sighup_handler);

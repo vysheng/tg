@@ -30,8 +30,8 @@
 #define TG_SERVER_TEST_DC 2
 
 // JUST RANDOM STRING
-#define TGL_BUILD "2013"
-#define TGL_VERSION "1.0.4"
+#define TGL_BUILD "2014"
+#define TGL_VERSION "1.0.5"
 
 #define TGL_ENCRYPTED_LAYER 16
 

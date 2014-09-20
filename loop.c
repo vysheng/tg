@@ -45,6 +45,7 @@
 
 #ifdef EVENT_V2
 #include <event2/event.h>
+#include <event2/bufferevent.h>
 #else
 #include <event.h>
 #include "event-old.h"
@@ -74,6 +75,8 @@ extern int sync_from_start;
 
 extern int disable_output;
 extern int reset_authorization;
+
+extern int sfd;
 
 void got_it (char *line, int len);
 void write_state_file (void);
@@ -584,6 +587,68 @@ void dlist_cb (void *callback_extra, int success, int size, tgl_peer_id_t peers[
   d_got_ok = 1;
 }
 
+static void read_incoming (struct bufferevent *bev, void *_arg) {
+  vlogprintf (E_WARNING, "Read from incoming connection\n");
+  struct in_ev *ev = _arg;
+  assert (ev->bev == bev);
+  ev->in_buf_pos += bufferevent_read (bev, ev->in_buf + ev->in_buf_pos, 4096 - ev->in_buf_pos);
+
+  while (1) {
+    int pos = 0;
+    int ok = 0;
+    while (pos < ev->in_buf_pos) {
+      if (ev->in_buf[pos] == '\n') {
+        if (!ev->error) {
+          ev->in_buf[pos] = 0;
+          interpreter_ex (ev->in_buf, ev);
+        } else {
+          ev->error = 0;
+        }
+        ok = 1;
+        ev->in_buf_pos -= (pos + 1);
+        memmove (ev->in_buf, ev->in_buf + pos + 1, ev->in_buf_pos);
+        pos = 0;
+      } else {
+        pos ++;
+      }
+    }
+    if (ok) {
+      ev->in_buf_pos += bufferevent_read (bev, ev->in_buf + ev->in_buf_pos, 4096 - ev->in_buf_pos);
+    } else {
+      if (ev->in_buf_pos == 4096) {
+        ev->error = 1;
+      }
+      break;
+    }
+  }
+}
+
+static void event_incoming (struct bufferevent *bev, short what, void *_arg) {
+  struct in_ev *ev = _arg;
+  if (what & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
+    vlogprintf (E_WARNING, "Closing incoming connection\n");
+    bufferevent_free (bev);
+    ev->bev = 0;
+    ev->refcnt --;
+  }
+}
+
+static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
+  unsigned clilen;
+  struct sockaddr_in cli_addr;
+  int fd = accept (sfd, (struct sockaddr *)&cli_addr, &clilen);
+
+  assert (fd >= 0);
+  struct bufferevent *bev = bufferevent_socket_new (tgl_state.ev_base, fd, BEV_OPT_CLOSE_ON_FREE);
+  struct in_ev *e = malloc (sizeof (*e));
+  e->bev = bev;
+  e->refcnt = 1;
+  e->in_buf_pos = 0;
+  e->error = 0;
+  bufferevent_setcb (bev, read_incoming, 0, event_incoming, e);
+  bufferevent_enable(bev, EV_READ|EV_WRITE);
+}
+
 int loop (void) {
   //on_start ();
   tgl_set_callback (&upd_cb);
@@ -605,10 +670,16 @@ int loop (void) {
     read_state_file ();
     read_secret_chat_file ();
   }
+
   binlog_read = 1;
   #ifdef USE_LUA
     lua_binlog_end ();
   #endif
+  
+  if (sfd >= 0) {
+    struct event *ev = event_new (tgl_state.ev_base, sfd, EV_READ, accept_incoming, 0);
+    event_add (ev, 0);
+  }
   update_prompt ();
    
   if (reset_authorization) {
