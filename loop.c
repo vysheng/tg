@@ -633,11 +633,12 @@ static void event_incoming (struct bufferevent *bev, short what, void *_arg) {
     close (ev->fd);
     bufferevent_free (bev);
     ev->bev = 0;
-    ev->refcnt --;
+    if (!--ev->refcnt) { free (ev); }
   }
 }
 
 static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
+  vlogprintf (E_WARNING, "Accepting incoming connection\n");
   unsigned clilen;
   struct sockaddr_in cli_addr;
   int fd = accept (sfd, (struct sockaddr *)&cli_addr, &clilen);
@@ -682,7 +683,7 @@ int loop (void) {
   #endif
   
   if (sfd >= 0) {
-    struct event *ev = event_new (tgl_state.ev_base, sfd, EV_READ, accept_incoming, 0);
+    struct event *ev = event_new (tgl_state.ev_base, sfd, EV_READ | EV_PERSIST, accept_incoming, 0);
     event_add (ev, 0);
   }
   update_prompt ();
