@@ -60,6 +60,7 @@ struct in_ev {
   int in_buf_pos;
   int refcnt;
   int error;
+  int fd;
 };
 
 

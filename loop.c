@@ -629,9 +629,8 @@ static void event_incoming (struct bufferevent *bev, short what, void *_arg) {
   struct in_ev *ev = _arg;
   if (what & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
     vlogprintf (E_WARNING, "Closing incoming connection\n");
-    int fd = bufferevent_getfd (bev);
-    assert (fd >= 0);
-    close (fd);
+    assert (ev->fd >= 0);
+    close (ev->fd);
     bufferevent_free (bev);
     ev->bev = 0;
     ev->refcnt --;
@@ -650,6 +649,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   e->refcnt = 1;
   e->in_buf_pos = 0;
   e->error = 0;
+  e->fd = fd;
   bufferevent_setcb (bev, read_incoming, 0, event_incoming, e);
   bufferevent_enable(bev, EV_READ|EV_WRITE);
 }
