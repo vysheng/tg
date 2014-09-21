@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 
 #ifdef EVENT_V2
 #include <event2/event.h>
@@ -628,6 +629,9 @@ static void event_incoming (struct bufferevent *bev, short what, void *_arg) {
   struct in_ev *ev = _arg;
   if (what & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
     vlogprintf (E_WARNING, "Closing incoming connection\n");
+    int fd = bufferevent_getfd (bev);
+    assert (fd >= 0);
+    close (fd);
     bufferevent_free (bev);
     ev->bev = 0;
     ev->refcnt --;
@@ -640,7 +644,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   int fd = accept (sfd, (struct sockaddr *)&cli_addr, &clilen);
 
   assert (fd >= 0);
-  struct bufferevent *bev = bufferevent_socket_new (tgl_state.ev_base, fd, BEV_OPT_CLOSE_ON_FREE);
+  struct bufferevent *bev = bufferevent_socket_new (tgl_state.ev_base, fd, 0);
   struct in_ev *e = malloc (sizeof (*e));
   e->bev = bev;
   e->refcnt = 1;
