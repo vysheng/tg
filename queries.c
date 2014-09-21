@@ -3216,6 +3216,21 @@ static int get_state_on_answer (struct query *q UU) {
   return 0;
 }
 
+static int lookup_state_on_answer (struct query *q UU) {
+  assert (fetch_int () == (int)CODE_updates_state);
+  int pts = fetch_int ();
+  int qts = fetch_int ();
+  fetch_int ();
+  int seq = fetch_int ();
+  fetch_int ();
+
+  if (pts > tgl_state.pts || qts > tgl_state.qts || seq > tgl_state.seq) {
+    tgl_do_get_difference (0, 0, 0);
+  }
+  return 0;
+}
+
+
 //int get_difference_active;
 static int get_difference_on_answer (struct query *q UU) {
   //get_difference_active = 0;
@@ -3307,6 +3322,11 @@ static int get_difference_on_answer (struct query *q UU) {
   return 0;   
 }
 
+static struct query_methods lookup_state_methods = {
+  .on_answer = lookup_state_on_answer,
+  .type = TYPE_TO_PARAM(updates_state)
+};
+
 static struct query_methods get_state_methods = {
   .on_answer = get_state_on_answer,
   .type = TYPE_TO_PARAM(updates_state)
@@ -3316,6 +3336,16 @@ static struct query_methods get_difference_methods = {
   .on_answer = get_difference_on_answer,
   .type = TYPE_TO_PARAM(updates_difference)
 };
+
+void tgl_do_lookup_state (void) {
+  if (tgl_state.locks & TGL_LOCK_DIFF) {
+    return;
+  }
+  clear_packet ();
+  tgl_do_insert_header ();
+  out_int (CODE_updates_get_state);
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &lookup_state_methods, 0, 0, 0);
+}
 
 void tgl_do_get_difference (int sync_from_start, void (*callback)(void *callback_extra, int success), void *callback_extra) {
   //get_difference_active = 1;

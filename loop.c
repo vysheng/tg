@@ -164,6 +164,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     }
     event_add (ev, 0);
   }
+  int last_get_state = time (0);
   while (!is_end || !is_end ()) {
 
     event_base_loop (tgl_state.ev_base, EVLOOP_ONCE);
@@ -182,6 +183,10 @@ void net_loop (int flags, int (*is_end)(void)) {
         rl_callback_handler_remove ();
       }
       exit (0);
+    }
+    if (time (0) - last_get_state > 3600) {
+      tgl_do_lookup_state ();
+      last_get_state = time (0);
     }
     write_state_file ();
     update_prompt ();

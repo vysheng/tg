@@ -273,6 +273,7 @@ void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callba
 void tgl_do_create_secret_chat (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
 void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
 void tgl_do_get_difference (int sync_from_start, void (*callback)(void *callback_extra, int success), void *callback_extra);
+void tgl_do_lookup_state (void);
 void tgl_do_add_user_to_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, int limit, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_del_user_from_chat (tgl_peer_id_t chat_id, tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_create_group_chat (tgl_peer_id_t id, char *chat_topic, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
