@@ -1735,8 +1735,12 @@ void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
 }
 
 void print_card_gw (void *extra, int success, int size, int *card) {
-  assert (success);
   struct in_ev *ev = extra;
+  if (ev && !--ev->refcnt) {
+    free (ev);
+    return;
+  }
+  if (!success) { return; }
   mprint_start (ev);
   mprintf (ev, "Card: ");
   int i;
@@ -1748,6 +1752,11 @@ void print_card_gw (void *extra, int success, int size, int *card) {
 
 void callback_extf (void *extra, int success, char *buf) {
   struct in_ev *ev = extra;
+  if (ev && !--ev->refcnt) {
+    free (ev);
+    return;
+  }
+  if (!success) { return; }
   mprint_start (ev);
   mprintf (ev, "%s\n", buf);
   mprint_end (ev);
@@ -1794,7 +1803,9 @@ void interpreter_ex (char *line UU, void *ex) {
   }
   
   if (*line == '(') { 
-    tgl_do_send_extf (line, strlen (line), callback_extf, ex);
+    struct in_ev *ev = ex;
+    if (ev) { ev->refcnt ++; }
+    tgl_do_send_extf (line, strlen (line), callback_extf, ev);
     in_readline = 0;
     return; 
   }
