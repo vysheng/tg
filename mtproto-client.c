@@ -1408,12 +1408,17 @@ void tglmp_regenerate_temp_auth_key (struct tgl_dc *D) {
     return;
   }
 
+
   struct tgl_session *S = D->sessions[0];
   tglt_secure_random (&S->session_id, 8);
   S->seq_no = 0;
 
   event_del (S->ev);
   S->ack_tree = tree_clear_long (S->ack_tree);
+  
+  if (D->state != st_authorized) {
+    return;
+  }
 
   if (S->c) {
     create_temp_auth_key (S->c);

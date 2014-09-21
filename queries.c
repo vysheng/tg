@@ -2970,6 +2970,8 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
     }
     return; 
   } // Already generated key for this chat
+  assert (E->g_key);
+  assert (tgl_state.BN_ctx);
   unsigned char random_here[256];
   tglt_secure_random (random_here, 256);
   for (i = 0; i < 256; i++) {

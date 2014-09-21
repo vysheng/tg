@@ -1708,12 +1708,13 @@ void secret_chat_update_gw (struct tgl_secret_chat *U, unsigned flags) {
     write_secret_chat_file ();
   }
   
+  if (!binlog_read) { return; }
+
   if ((flags & TGL_UPDATE_REQUESTED) && !disable_auto_accept)  {
     tgl_do_accept_encr_chat_request (U, 0, 0);
   }
   
   if (disable_output && !notify_ev) { return; }
-  if (!binlog_read) { return; }
   struct in_ev *ev = notify_ev;
 
 
