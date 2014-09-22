@@ -43,6 +43,32 @@ print ("HI, this is lua script")
 function ok_cb(extra, success, result)
 end
 
+-- Notification code {{{
+
+function get_title (P, Q)
+  if (Q.type == 'user') then
+    return P.first_name .. " " .. P.last_name
+  elseif (Q.type == 'chat') then
+    return Q.title
+  elseif (Q.type == 'encr_chat') then
+    return 'Secret chat with ' .. P.first_name .. ' ' .. P.last_name
+  else
+    return ''
+  end
+end
+
+local lgi = require ('lgi')
+local notify = lgi.require('Notify')
+notify.init ("Telegram updates")
+local icon = os.getenv("HOME") .. "/.telegram-cli/telegram-pics/telegram_64.png"
+
+function do_notify (user, msg)
+  local n = notify.Notification.new(user, msg, icon)
+  n:show ()
+end
+
+-- }}}
+
 function on_msg_receive (msg)
   if started == 0 then
     return
@@ -50,6 +76,7 @@ function on_msg_receive (msg)
   if msg.out then
     return
   end
+  do_notify (get_title (msg.from, msg.to), text)
 
   if (msg.text == 'ping') then
     if (msg.to.id == our_id) then
