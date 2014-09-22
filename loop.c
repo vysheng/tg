@@ -79,6 +79,7 @@ extern int disable_output;
 extern int reset_authorization;
 
 extern int sfd;
+extern int usfd;
 
 void got_it (char *line, int len);
 void write_state_file (void);
@@ -87,6 +88,8 @@ static char *line_buffer;
 static int line_buffer_size;
 static int line_buffer_pos;
 static int delete_stdin_event;
+
+extern volatile int sigterm_cnt;
 
 static void stdin_read_callback_all (int arg, short what, struct event *self) {
   if (!readline_disabled) {
@@ -179,10 +182,10 @@ void net_loop (int flags, int (*is_end)(void)) {
     #endif
     if (safe_quit && !tgl_state.active_queries) {
       printf ("All done. Exit\n");
-      if (!readline_disabled) {
-        rl_callback_handler_remove ();
-      }
-      exit (0);
+      do_halt (0);
+    }
+    if (sigterm_cnt > 0) {
+      do_halt (0);
     }
     if (time (0) - last_get_state > 3600) {
       tgl_do_lookup_state ();
@@ -264,7 +267,7 @@ int got_config (void) {
 void on_get_config (void *extra, int success) {
   if (!success) {
     logprintf ("Can not get config.\n");
-    exit (1);
+    do_halt (1);
   }
   config_got = 1;
 
@@ -275,7 +278,7 @@ char *hash;
 void sign_in_callback (void *extra, int success, int registered, const char *mhash) {
   if (!success) {
     logprintf ("Can not send code\n");
-    exit (1);
+    do_halt (1);
   }
   should_register = !registered;
   hash = strdup (mhash);
@@ -288,7 +291,7 @@ int signed_in_ok;
 void sign_in_result (void *extra, int success, struct tgl_user *U) {
   if (!success) {
     logprintf ("Can not login\n");
-    exit (1);
+    do_halt (1);
   }
   signed_in_ok = 1;
 }
@@ -308,7 +311,7 @@ int dc_signed_in (void) {
 void export_auth_callback (void *DC, int success) {
   if (!success) {
     logprintf ("Can not export auth\n");
-    exit (1);
+    do_halt (1);
   }
 }
 
@@ -378,7 +381,7 @@ void write_state_file (void) {
   int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
   if (state_file_fd < 0) {
     logprintf ("Can not write state file '%s': %m\n", get_state_filename ());
-    exit (2);
+    do_halt (1);
   }
   int x[6];
   x[0] = STATE_FILE_MAGIC;
@@ -646,7 +649,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   vlogprintf (E_WARNING, "Accepting incoming connection\n");
   unsigned clilen;
   struct sockaddr_in cli_addr;
-  int fd = accept (sfd, (struct sockaddr *)&cli_addr, &clilen);
+  int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
 
   assert (fd >= 0);
   struct bufferevent *bev = bufferevent_socket_new (tgl_state.ev_base, fd, 0);
@@ -691,6 +694,10 @@ int loop (void) {
     struct event *ev = event_new (tgl_state.ev_base, sfd, EV_READ | EV_PERSIST, accept_incoming, 0);
     event_add (ev, 0);
   }
+  if (usfd >= 0) {
+    struct event *ev = event_new (tgl_state.ev_base, usfd, EV_READ | EV_PERSIST, accept_incoming, 0);
+    event_add (ev, 0);
+  }
   update_prompt ();
    
   if (reset_authorization) {
@@ -711,7 +718,7 @@ int loop (void) {
   if (!tgl_signed_dc (tgl_state.DC_working)) {
     if (disable_output) {
       fprintf (stderr, "Can not login without output\n");
-      exit (2);
+      do_halt (1);
     }
     if (!default_username) {
       size_t size = 0;
@@ -721,7 +728,7 @@ int loop (void) {
         printf ("Telephone number (with '+' sign): ");         
         if (net_getline (&user, &size) == -1) {
           perror ("getline()");
-          exit (EXIT_FAILURE);
+          do_halt (1);
         }
         set_default_username (user);
       }
@@ -739,7 +746,7 @@ int loop (void) {
       while (1) {
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
-          exit (EXIT_FAILURE);
+          do_halt (1);
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
@@ -759,31 +766,31 @@ int loop (void) {
       size_t size;
       if (net_getline (&code, &size) == -1) {
         perror ("getline()");
-        exit (EXIT_FAILURE);
+        do_halt (1);
       }
       if (!*code || *code == 'y' || *code == 'Y') {
         printf ("Ok, starting registartion.\n");
       } else {
         printf ("Then try again\n");
-        exit (EXIT_SUCCESS);
+        do_halt (1);
       }
       char *first_name;
       printf ("First name: ");
       if (net_getline (&first_name, &size) == -1) {
         perror ("getline()");
-        exit (EXIT_FAILURE);
+        do_halt (1);
       }
       char *last_name;
       printf ("Last name: ");
       if (net_getline (&last_name, &size) == -1) {
         perror ("getline()");
-        exit (EXIT_FAILURE);
+        do_halt (1);
       }
       printf ("Code from sms (if you did not receive an SMS and want to be called, type \"call\"): ");
       while (1) {
         if (net_getline (&code, &size) == -1) {
           perror ("getline()");
-          exit (EXIT_FAILURE);
+          do_halt (1);
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");

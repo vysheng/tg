@@ -36,6 +36,8 @@
 #endif
 
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <time.h>
 #include <fcntl.h>
 
@@ -71,6 +73,7 @@
 #define SECRET_CHAT_FILE "secret"
 #define DOWNLOADS_DIRECTORY "downloads"
 #define BINLOG_FILE "binlog"
+
 
 #define CONFIG_DIRECTORY_MODE 0700
 
@@ -423,6 +426,7 @@ void usage (void) {
   printf ("  -G <group-name>     change gid after start\n");
   printf ("  -D                  disable output\n");
   printf ("  -P <port>           port to listen for input commands\n");
+  printf ("  -S <socket-name>    unix socket to create\n");
 
   exit (1);
 }
@@ -521,9 +525,11 @@ int change_user_group () {
   return 0;
 }
 
+char *unix_socket;
+
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -609,6 +615,9 @@ void args_parse (int argc, char **argv) {
     case 'P':
       port = atoi (optarg);
       break;
+    case 'S':
+      unix_socket = optarg;
+      break;
     case 'h':
     default:
       usage ();
@@ -631,29 +640,83 @@ void print_backtrace (void) {
 }
 #endif
 
-void sig_segv_handler (int signum __attribute__ ((unused))) {
-  set_terminal_attributes ();
-  if (write (1, "SIGSEGV received\n", 18) < 0) { 
-    // Sad thing
-  }
-  print_backtrace ();
-  exit (EXIT_FAILURE);
-}
-
-void sig_abrt_handler (int signum __attribute__ ((unused))) {
-  set_terminal_attributes ();
-  if (write (1, "SIGABRT received\n", 18) < 0) { 
-    // Sad thing
-  }
-  print_backtrace ();
-  exit (EXIT_FAILURE);
-}
-
 int sfd;
+int usfd;
+
+void termination_signal_handler (int signum) {
+  if (!readline_disabled) {
+    rl_free_line_state ();
+    rl_cleanup_after_signal ();
+  }
+  
+  if (write (1, "SIGNAL received\n", 18) < 0) { 
+    // Sad thing
+  }
+ 
+  if (unix_socket) {
+    unlink (unix_socket);
+  }
+  
+  if (usfd > 0) {
+    close (usfd);
+  }
+  if (sfd > 0) {
+    close (sfd);
+  }
+  print_backtrace ();
+  
+  exit (EXIT_FAILURE);
+}
+
+volatile int sigterm_cnt;
+
+void sig_term_handler (int signum __attribute__ ((unused))) {
+  signal (signum, termination_signal_handler);
+  //set_terminal_attributes ();
+  if (write (1, "SIGTERM/SIGINT received\n", 25) < 0) { 
+    // Sad thing
+  }
+  sigterm_cnt ++;
+}
+
+void do_halt (int error) {
+  if (!readline_disabled) {
+    rl_free_line_state ();
+    rl_cleanup_after_signal ();
+  }
+  
+  if (write (1, "halt\n", 5) < 0) { 
+    // Sad thing
+  }
+ 
+  if (unix_socket) {
+    unlink (unix_socket);
+  }
+  
+  if (usfd > 0) {
+    close (usfd);
+  }
+  if (sfd > 0) {
+    close (sfd);
+  }
+  
+  exit (error ? EXIT_FAILURE : EXIT_SUCCESS);
+}
 
 int main (int argc, char **argv) {
-  signal (SIGSEGV, sig_segv_handler);
-  signal (SIGABRT, sig_abrt_handler);
+  signal (SIGSEGV, termination_signal_handler);
+  signal (SIGABRT, termination_signal_handler);
+  signal (SIGBUS, termination_signal_handler);
+  signal (SIGQUIT, termination_signal_handler);
+  signal (SIGFPE, termination_signal_handler);
+
+  signal (SIGPIPE, SIG_IGN);
+  
+  signal (SIGTERM, sig_term_handler);
+  signal (SIGINT, sig_term_handler);
+
+  rl_catch_signals = 0;
+
 
   log_level = 10;
   
@@ -681,9 +744,35 @@ int main (int argc, char **argv) {
       exit(1);
     }
 
-    listen (sfd,5);
+    listen (sfd, 5);
   } else {
     sfd = -1;
+  }
+  
+  if (unix_socket) {
+    assert (strlen (unix_socket) < 100);
+    struct sockaddr_un serv_addr;
+
+    usfd = socket (AF_UNIX, SOCK_STREAM, 0);
+    if (usfd < 0) {
+      perror ("socket");
+      exit(1);
+    }
+
+    memset (&serv_addr, 0, sizeof (serv_addr));
+    
+    serv_addr.sun_family = AF_UNIX;
+
+    snprintf (serv_addr.sun_path, 108, "%s", unix_socket);
+ 
+    if (bind (usfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
+      perror ("bind");
+      exit(1);
+    }
+
+    listen (usfd, 5);    
+  } else {
+    usfd = -1;
   }
 
   if (daemonize) {

@@ -36,6 +36,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
+#include <unistd.h>
 
 #include "include.h"
 //#include "queries.h"
@@ -99,6 +100,9 @@ extern int readline_disabled;
 extern int disable_output;
 
 struct in_ev *notify_ev;
+
+extern int usfd;
+extern int sfd;
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -833,7 +837,7 @@ void do_status_offline (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_quit (int arg_num, struct arg args[], struct in_ev *ev) {
-  exit (0);
+  do_halt (0);
 }
 
 void do_safe_quit (int arg_num, struct arg args[], struct in_ev *ev) {
