@@ -76,7 +76,7 @@ function on_msg_receive (msg)
   if msg.out then
     return
   end
-  do_notify (get_title (msg.from, msg.to), text)
+  do_notify (get_title (msg.from, msg.to), msg.text)
 
   if (msg.text == 'ping') then
     if (msg.to.id == our_id) then
