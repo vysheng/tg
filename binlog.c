@@ -1140,7 +1140,6 @@ static int fetch_comb_binlog_set_msg_id (void *extra) {
   M->id = fetch_int ();
   if (tgl_message_get (M->id)) {
     tgls_free_message (M);
-    tfree (M, sizeof (*M));
   } else {
     tglm_message_insert_tree (M);
     tglm_message_add_peer (M);
@@ -1159,7 +1158,6 @@ static int fetch_comb_binlog_delete_msg (void *extra) {
   tglm_message_del_peer (M);
   tglm_message_del_use (M);
   tgls_free_message (M);
-  tfree (M, sizeof (*M));
   return 0;
 }
 

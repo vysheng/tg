@@ -572,6 +572,30 @@ static struct tgl_session *get_session (struct connection *c) {
   return c->session;
 }
 
+static void tgln_free (struct connection *c) {
+  if (c->ip) { tfree_str (c->ip); }
+  struct connection_buffer *b = c->out_head;
+  while (b) {
+    struct connection_buffer *d = b;
+    b = b->next;
+    delete_connection_buffer (d);
+  }
+  b = c->in_head;
+  while (b) {
+    struct connection_buffer *d = b;
+    b = b->next;
+    delete_connection_buffer (d);
+  }
+
+  if (c->ping_ev) { event_free (c->ping_ev); }
+  if (c->fail_ev) { event_free (c->fail_ev); }
+  if (c->read_ev) { event_free (c->read_ev); }
+  if (c->write_ev) { event_free (c->write_ev); }
+
+  if (c->fd >= 0) { close (c->fd); }
+  tfree (c, sizeof (*c));
+}
+
 struct tgl_net_methods tgl_conn_methods = {
   .write_out = tgln_write_out,
   .read_in = tgln_read_in,
@@ -580,5 +604,6 @@ struct tgl_net_methods tgl_conn_methods = {
   .incr_out_packet_num = incr_out_packet_num,
   .get_dc = get_dc,
   .get_session = get_session,
-  .create_connection = tgln_create_connection
+  .create_connection = tgln_create_connection,
+  .free = tgln_free
 };

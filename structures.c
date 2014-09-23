@@ -34,6 +34,7 @@
 #include "queries.h"
 #include "binlog.h"
 #include "updates.h"
+#include "mtproto-client.h"
 
 #include "tgl.h"
 
@@ -634,6 +635,7 @@ void tglf_fetch_message_action (struct tgl_message_action *M) {
     M->user = fetch_int ();
     break;
   default:
+    vlogprintf (E_ERROR, "type = %d\n", x);
     assert (0);
   }
 }
@@ -1326,7 +1328,7 @@ struct tgl_message *tglf_fetch_alloc_geo_message (void) {
   if (M1) {
     tglm_message_del_use (M1);
     tglm_message_del_peer (M1);
-    tgls_free_message (M1);
+    tgls_clear_message (M1);
     memcpy (M1, M, sizeof (*M));
     tfree (M, sizeof (*M));
     tglm_message_add_use (M1);
@@ -1461,12 +1463,6 @@ void tgl_insert_empty_chat (int cid) {
 }
 
 /* {{{ Free */
-void tgls_free_user (struct tgl_user *U) {
-  if (U->first_name) { tfree_str (U->first_name); }
-  if (U->last_name) { tfree_str (U->last_name); }
-  if (U->print_name) { tfree_str (U->print_name); }
-  if (U->phone) { tfree_str (U->phone); }
-}
 
 void tgls_free_photo_size (struct tgl_photo_size *S) {
   tfree_str (S->type);
@@ -1498,10 +1494,9 @@ void tgls_free_audio (struct tgl_audio *A) {
 }
 
 void tgls_free_document (struct tgl_document *D) {
-  tfree_str (D->mime_type);
   if (!D->access_hash) { return; }
-  tfree_str (D->caption);
-  tfree_str (D->mime_type);
+  if (D->mime_type) { tfree_str (D->mime_type);}
+  if (D->caption) {tfree_str (D->caption);}
   tgls_free_photo_size (&D->thumb);
 }
 
@@ -1558,17 +1553,25 @@ void tgls_free_message_action (struct tgl_message_action *M) {
     tgls_free_photo (&M->photo);
     break;
   case tgl_message_action_chat_delete_photo:
-    break;
   case tgl_message_action_chat_add_user:
-    break;
   case tgl_message_action_chat_delete_user:
+  case tgl_message_action_geo_chat_create:
+  case tgl_message_action_geo_chat_checkin:
+  case tgl_message_action_set_message_ttl:
+  case tgl_message_action_read_messages:
+  case tgl_message_action_delete_messages:
+  case tgl_message_action_screenshot_messages:
+  case tgl_message_action_flush_history:
+  case tgl_message_action_notify_layer:
     break;
+  
   default:
+    vlogprintf (E_ERROR, "type = 0x%08x\n", M->type);
     assert (0);
   }
 }
 
-void tgls_free_message (struct tgl_message *M) {
+void tgls_clear_message (struct tgl_message *M) {
   if (!M->service) {
     if (M->message) { tfree (M->message, M->message_len + 1); }
     tgls_free_message_media (&M->media);
@@ -1577,9 +1580,49 @@ void tgls_free_message (struct tgl_message *M) {
   }
 }
 
+void tgls_free_message (struct tgl_message *M) {
+  tgls_clear_message (M);
+  tfree (M, sizeof (*M));
+}
+
 void tgls_free_chat (struct tgl_chat *U) {
   if (U->title) { tfree_str (U->title); }
   if (U->print_title) { tfree_str (U->print_title); }
+  if (U->user_list) {
+    tfree (U->user_list, U->user_list_size * 12);
+  }
+  tgls_free_photo (&U->photo);
+  tfree (U, sizeof (*U));
+}
+
+void tgls_free_user (struct tgl_user *U) {
+  if (U->first_name) { tfree_str (U->first_name); }
+  if (U->last_name) { tfree_str (U->last_name); }
+  if (U->print_name) { tfree_str (U->print_name); }
+  if (U->phone) { tfree_str (U->phone); }
+  if (U->real_first_name) { tfree_str (U->real_first_name); }
+  if (U->real_last_name) { tfree_str (U->real_last_name); }
+  tgls_free_photo (&U->photo);
+  tfree (U, sizeof (*U));
+}
+
+void tgls_free_encr_chat (struct tgl_secret_chat *U) {
+  if (U->print_name) { tfree_str (U->print_name); }
+  if (U->g_key) { tfree (U->g_key, 256); } 
+  if (U->nonce) { tfree (U->nonce, 256); } 
+  tfree (U, sizeof (*U));
+}
+
+void tgls_free_peer (tgl_peer_t *P) {
+  if (tgl_get_peer_type (P->id) == TGL_PEER_USER) {
+    tgls_free_user ((void *)P);
+  } else if (tgl_get_peer_type (P->id) == TGL_PEER_CHAT) {
+    tgls_free_chat ((void *)P);
+  } else if (tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT) {
+    tgls_free_encr_chat ((void *)P);
+  } else {
+    assert (0);
+  }
 }
 /* }}} */
 
@@ -1812,6 +1855,32 @@ int tgl_complete_peer_list (int index, const char *text, int len, char **R) {
     return index;
   } else {
     return -1;
+  }
+}
+
+void tgl_free_all (void) { 
+  tree_act_peer (tgl_peer_tree, tgls_free_peer);
+  tgl_peer_tree = tree_clear_peer (tgl_peer_tree);
+  peer_by_name_tree = tree_clear_peer_by_name (peer_by_name_tree);
+  tree_act_message (message_tree, tgls_free_message);
+  message_tree = tree_clear_message (message_tree);
+  tree_act_message (message_unsent_tree, tgls_free_message);
+  message_unsent_tree = tree_clear_message (message_unsent_tree);
+
+  if (tgl_state.encr_prime) { tfree (tgl_state.encr_prime, 256); }
+
+
+  if (tgl_state.binlog_name) { tfree_str (tgl_state.binlog_name); }
+  if (tgl_state.auth_file) { tfree_str (tgl_state.auth_file); }
+  if (tgl_state.downloads_directory) { tfree_str (tgl_state.downloads_directory); }
+
+  int i;
+  for (i = 0; i < tgl_state.rsa_key_num; i++) {
+    tfree_str (tgl_state.rsa_key_list[i]);
+  }
+
+  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i]) {
+    tgls_free_dc (tgl_state.DC_list[i]);
   }
 }
 

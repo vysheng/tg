@@ -1424,3 +1424,22 @@ void tglmp_regenerate_temp_auth_key (struct tgl_dc *D) {
     create_temp_auth_key (S->c);
   }
 }
+
+void tgls_free_session (struct tgl_session *S) {
+  S->ack_tree = tree_clear_long (S->ack_tree);
+  if (S->ev) { event_free (S->ev); }
+  if (S->c) {
+    tgl_state.net_methods->free (S->c);
+  }
+  tfree (S, sizeof (*S));
+}
+
+void tgls_free_dc (struct tgl_dc *DC) {
+  if (DC->ip) { tfree_str (DC->ip); }
+
+  struct tgl_session *S = DC->sessions[0];
+  if (S) { tgls_free_session (S); }
+
+  if (DC->ev) { event_free (DC->ev); }
+  tfree (DC, sizeof (*DC));
+}

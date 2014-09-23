@@ -957,6 +957,33 @@ void do_main_session (int arg_num, struct arg args[], struct in_ev *ev) {
   if (ev) { ev->refcnt ++; }
 }
 
+extern char *default_username;
+extern char *config_filename;
+extern char *prefix;
+extern char *auth_file_name;
+extern char *state_file_name;
+extern char *secret_chat_file_name;
+extern char *downloads_directory;
+extern char *config_directory;
+extern char *binlog_file_name;
+extern char *lua_file;
+
+void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
+  tgl_free_all ();
+  free (default_username);
+  free (config_filename);
+  free (prefix);
+  free (auth_file_name);
+  free (state_file_name);
+  free (secret_chat_file_name);
+  free (downloads_directory);
+  free (config_directory);
+  free (binlog_file_name);
+  free (lua_file);
+  do_halt (0);
+}
+
+
 struct command commands[] = {
   {"help", {ca_none}, do_help, "help\tPrints this help"},
   {"contact_list", {ca_none}, do_contact_list, "contact_list\tPrints contact list"},
@@ -1013,6 +1040,7 @@ struct command commands[] = {
   {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual"},
   {"send_contact", {ca_peer, ca_string, ca_string, ca_string, ca_none}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
   {"main_session", {ca_none}, do_main_session, "main_session\tSends updates to this connection (or terminal). Useful only with listening socket"},
+  {"clear", {ca_none}, do_clear, "clear\tClears all data and exits. For debug."},
   {0, {ca_none}, 0, ""}
 };
 

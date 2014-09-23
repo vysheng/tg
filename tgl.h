@@ -103,6 +103,7 @@ struct tgl_net_methods {
   int (*read_in_lookup) (struct connection *c, void *data, int len);
   void (*flush_out) (struct connection *c);
   void (*incr_out_packet_num) (struct connection *c);
+  void (*free) (struct connection *c);
   struct tgl_dc *(*get_dc) (struct connection *c);
   struct tgl_session *(*get_session) (struct connection *c);
 
@@ -323,5 +324,7 @@ int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R,
 struct paramed_type *tglf_extf_store (const char *data, int data_len);
 void tgl_do_send_extf (char *data, int data_len, void (*callback)(void *callback_extra, int success, char *data), void *callback_extra);
 char *tglf_extf_fetch (struct paramed_type *T);
+
+void tgl_free_all (void);
 
 #endif

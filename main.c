@@ -82,9 +82,8 @@
   "# Feel free to put something here\n"
 
 int verbosity;
-char *default_username;
-char *auth_token;
 int msg_num_mode;
+char *default_username;
 char *config_filename;
 char *prefix;
 char *auth_file_name;
@@ -93,11 +92,11 @@ char *secret_chat_file_name;
 char *downloads_directory;
 char *config_directory;
 char *binlog_file_name;
+char *lua_file;
 int binlog_enabled;
 extern int log_level;
 int sync_from_start;
 int allow_weak_random;
-char *lua_file;
 int disable_colors;
 int readline_disabled;
 int disable_output;
@@ -371,6 +370,7 @@ void parse_config (void) {
       printf ("[%s] created\n", downloads_directory);
     }
   }
+  config_destroy (&conf);
 }
 #else
 void parse_config (void) {

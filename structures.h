@@ -31,6 +31,7 @@ void tgls_free_user (struct tgl_user *U);
 void tgls_free_chat (struct tgl_chat *U);
 void tgls_free_photo (struct tgl_photo *P);
 void tgls_free_message (struct tgl_message *M);
+void tgls_clear_message (struct tgl_message *M);
 
 struct tgl_message *tglm_message_alloc (long long id);
 void tglm_message_insert_tree (struct tgl_message *M);
