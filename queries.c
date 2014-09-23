@@ -2993,7 +2993,7 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
   ensure (BN_mod_exp (r, g_a, b, p, tgl_state.BN_ctx));
   static unsigned char kk[256];
   memset (kk, 0, sizeof (kk));
-  BN_bn2bin (r, kk);
+  BN_bn2bin (r, kk + (256 - BN_num_bytes (r)));
   for (i = 0; i < 256; i++) {
     kk[i] ^= E->nonce[i];
   }
@@ -3012,7 +3012,7 @@ void tgl_do_send_accept_encr_chat (struct tgl_secret_chat *E, unsigned char *ran
   ensure (BN_mod_exp (r, g_a, b, p, tgl_state.BN_ctx));
   static unsigned char buf[256];
   memset (buf, 0, sizeof (buf));
-  BN_bn2bin (r, buf);
+  BN_bn2bin (r, buf + (256 - BN_num_bytes (r)));
   out_cstring ((void *)buf, 256);
 
   out_long (E->key_fingerprint);
@@ -3041,7 +3041,7 @@ void tgl_do_create_keys_end (struct tgl_secret_chat *U) {
   memcpy (t, U->key, 256);
   
   memset (U->key, 0, sizeof (U->key));
-  BN_bn2bin (r, (void *)U->key);
+  BN_bn2bin (r, (void *)(((char *)(U->key)) + (256 - BN_num_bytes (r))));
   int i;
   for (i = 0; i < 64; i++) {
     U->key[i] ^= *(((int *)U->nonce) + i);
@@ -3091,7 +3091,7 @@ void tgl_do_send_create_encr_chat (void *x, unsigned char *random, void (*callba
   static char g_a[256];
   memset (g_a, 0, 256);
 
-  BN_bn2bin (r, (void *)g_a);
+  BN_bn2bin (r, (void *)(g_a + (256 - BN_num_bytes (r))));
   
   int t = lrand48 ();
   while (tgl_peer_get (TGL_MK_ENCR_CHAT (t))) {
