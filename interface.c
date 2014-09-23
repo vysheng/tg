@@ -967,6 +967,7 @@ extern char *downloads_directory;
 extern char *config_directory;
 extern char *binlog_file_name;
 extern char *lua_file;
+extern struct event *term_ev;
 
 void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_free_all ();
@@ -980,6 +981,9 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   free (config_directory);
   free (binlog_file_name);
   free (lua_file);
+  clear_history ();
+  event_free (term_ev);
+  event_base_free (tgl_state.ev_base);
   do_halt (0);
 }
 

@@ -153,28 +153,28 @@ static void stdin_read_callback_line (evutil_socket_t fd, short what, void *arg)
   stdin_read_callback_all (2, what, arg);
 }
 
+struct event *term_ev = 0;
 void net_loop (int flags, int (*is_end)(void)) {
   delete_stdin_event = 0;
   if (verbosity >= E_DEBUG) {
     logprintf ("Starting netloop\n");
   }
-  struct event *ev = 0;
   if (flags & 3) {
     if (flags & 1) {
-      ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_char, 0);
+      term_ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_char, 0);
     } else {
-      ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_line, 0);
+      term_ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_line, 0);
     }
-    event_add (ev, 0);
+    event_add (term_ev, 0);
   }
   int last_get_state = time (0);
   while (!is_end || !is_end ()) {
 
     event_base_loop (tgl_state.ev_base, EVLOOP_ONCE);
 
-    if (ev && delete_stdin_event) {
-      event_free (ev);
-      ev = 0;
+    if (term_ev && delete_stdin_event) {
+      event_free (term_ev);
+      term_ev = 0;
     }
 
     #ifdef USE_LUA
@@ -202,8 +202,8 @@ void net_loop (int flags, int (*is_end)(void)) {
     }   
   }
 
-  if (ev) {
-    event_free (ev);
+  if (term_ev) {
+    event_free (term_ev);
   }
   
   if (verbosity >= E_DEBUG) {

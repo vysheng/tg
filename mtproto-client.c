@@ -1443,3 +1443,7 @@ void tgls_free_dc (struct tgl_dc *DC) {
   if (DC->ev) { event_free (DC->ev); }
   tfree (DC, sizeof (*DC));
 }
+
+void tgls_free_pubkey (void) {
+  RSA_free (pubKey);
+}

@@ -30,6 +30,7 @@
 #include "tree.h"
 #include "loop.h"
 #include <openssl/aes.h>
+#include <openssl/bn.h>
 #include <openssl/sha.h>
 #include "queries.h"
 #include "binlog.h"
@@ -1882,6 +1883,8 @@ void tgl_free_all (void) {
   for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i]) {
     tgls_free_dc (tgl_state.DC_list[i]);
   }
+  BN_CTX_free (tgl_state.BN_ctx);
+  tgls_free_pubkey ();
 }
 
 int tgl_print_stat (char *s, int len) {

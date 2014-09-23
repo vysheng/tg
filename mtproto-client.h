@@ -56,4 +56,5 @@ void tgln_insert_msg_id (struct tgl_session *S, long long id);
 void tglmp_on_start (void);
 void tgl_dc_authorize (struct tgl_dc *DC);
 void tgls_free_dc (struct tgl_dc *DC);
+void tgls_free_pubkey (void);
 #endif
