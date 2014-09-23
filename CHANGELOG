@@ -1,5 +1,5 @@
 1.0.5
-* listening socket for commands
+* listening socket (tcp and unix) for commands
 1.0.4
 * changed create_group_chat format
 * changed search query
