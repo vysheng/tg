@@ -141,6 +141,7 @@ static void stdin_read_callback_all (int arg, short what, struct event *self) {
           break;
         }
       }
+      break;
     }
   }
 }

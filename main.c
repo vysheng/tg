@@ -34,6 +34,14 @@
 #else
 #include <editline/readline.h>
 #endif
+#ifdef EVENT_V2
+#include <event2/event.h>
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#else
+#include <event.h>
+#include "event-old.h"
+#endif
 
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -675,6 +683,9 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
   //set_terminal_attributes ();
   if (write (1, "SIGTERM/SIGINT received\n", 25) < 0) { 
     // Sad thing
+  }
+  if (tgl_state.ev_base) {
+    event_base_loopbreak(tgl_state.ev_base);
   }
   sigterm_cnt ++;
 }

@@ -970,6 +970,7 @@ extern char *lua_file;
 extern struct event *term_ev;
 
 void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
+  logprintf ("Do_clear\n");
   tgl_free_all ();
   free (default_username);
   free (config_filename);
