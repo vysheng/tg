@@ -506,7 +506,7 @@ int tglmp_check_g (unsigned char p[256], BIGNUM *g) {
   static unsigned char s[256];
   memset (s, 0, 256);
   assert (BN_num_bytes (g) <= 256);
-  BN_bn2bin (g, s);
+  BN_bn2bin (g, s + (256 - BN_num_bytes (g)));
   int ok = 0;
   int i;
   for (i = 0; i < 64; i++) {
@@ -541,7 +541,7 @@ int tglmp_check_g (unsigned char p[256], BIGNUM *g) {
 int tglmp_check_g_bn (BIGNUM *p, BIGNUM *g) {
   static unsigned char s[256];
   memset (s, 0, 256);
-  assert (BN_num_bytes (p) <= 256);
+  assert (BN_num_bytes (p) == 256);
   BN_bn2bin (p, s);
   return tglmp_check_g (s, g);
 }
