@@ -205,6 +205,7 @@ void net_loop (int flags, int (*is_end)(void)) {
 
   if (term_ev) {
     event_free (term_ev);
+    term_ev = 0;
   }
   
   if (verbosity >= E_DEBUG) {
