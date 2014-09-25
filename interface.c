@@ -1030,7 +1030,7 @@ struct command commands[] = {
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat"},
   {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online"},
   {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline"},
-  {"quit", {ca_none}, do_quit, "quit\tQuits immideatly"},
+  {"quit", {ca_none}, do_quit, "quit\tQuits immediately"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
   {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer, "chat_with_peer <peer>\tInterface option. All input will be treated as messages to this peer. Type /quit to end this mode"},
