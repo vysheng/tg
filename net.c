@@ -345,6 +345,10 @@ static void restart_connection (struct connection *c) {
   struct sockaddr_in addr;
   addr.sin_family = AF_INET; 
   addr.sin_port = htons (c->port);
+  if (strcmp (c->ip, c->dc->ip)) {
+    tfree_str (c->ip);
+    c->ip = tstrdup (c->dc->ip);
+  }
   addr.sin_addr.s_addr = inet_addr (c->ip);
 
 

@@ -1341,19 +1341,26 @@ static void regen_temp_key_gw (evutil_socket_t fd, short what, void *arg) {
 }
 
 struct tgl_dc *tglmp_alloc_dc (int id, char *ip, int port UU) {
-  assert (!tgl_state.DC_list[id]);
-  struct tgl_dc *DC = talloc0 (sizeof (*DC));
-  DC->id = id;
-  DC->ip = ip;
-  DC->port = port;
-  tgl_state.DC_list[id] = DC;
-  if (id > tgl_state.max_dc_num) {
-    tgl_state.max_dc_num = id;
+  //assert (!tgl_state.DC_list[id]);
+  if (!tgl_state.DC_list[id]) {
+    struct tgl_dc *DC = talloc0 (sizeof (*DC));
+    DC->id = id;
+    DC->ip = ip;
+    DC->port = port;
+    tgl_state.DC_list[id] = DC;
+    if (id > tgl_state.max_dc_num) {
+      tgl_state.max_dc_num = id;
+    }
+    DC->ev = evtimer_new (tgl_state.ev_base, regen_temp_key_gw, DC);
+    static struct timeval p;
+    event_add (DC->ev, &p);
+    return DC;
+  } else {
+    struct tgl_dc *DC = tgl_state.DC_list[id];
+    tfree_str (DC->ip);
+    DC->ip = tstrdup (ip);
+    return DC;
   }
-  DC->ev = evtimer_new (tgl_state.ev_base, regen_temp_key_gw, DC);
-  static struct timeval p;
-  event_add (DC->ev, &p);
-  return DC;
 }
 
 static struct mtproto_methods mtproto_methods = {
