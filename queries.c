@@ -94,7 +94,7 @@ struct query *tglq_query_get (long long id) {
 
 static int alarm_query (struct query *q) {
   assert (q);
-  vlogprintf (E_DEBUG, "Alarm query %lld\n", q->msg_id);
+  vlogprintf (E_DEBUG - 1, "Alarm query %lld\n", q->msg_id);
   //q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   //insert_event_timer (&q->ev);
   
@@ -118,7 +118,9 @@ static int alarm_query (struct query *q) {
     tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, q->flags & QUERY_FORCE_SEND);
   } else {
     q->flags &= ~QUERY_ACK_RECEIVED;
-    queries_tree = tree_delete_query (queries_tree, q);
+    if (tree_lookup_query (queries_tree, q)) {
+      queries_tree = tree_delete_query (queries_tree, q);
+    }
     q->msg_id = tglmp_encrypt_send_message (q->session->c, q->data, q->data_len, (q->flags & QUERY_FORCE_SEND) | 1);
     queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
     q->session_id = q->session->session_id;
@@ -219,14 +221,26 @@ void tglq_query_error (long long id) {
       event_del (q->ev);
     }
     queries_tree = tree_delete_query (queries_tree, q);
-    if (q->methods && q->methods->on_error) {
-      q->methods->on_error (q, error_code, error_len, error);
+    int res = 0;
+    if (q->methods && q->methods->on_error && error_code != 500) {
+      res = q->methods->on_error (q, error_code, error_len, error);
     } else {
-      vlogprintf ( E_WARNING, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
+      if (error_code == 420 || error_code == 500) {
+        assert (!strncmp (error, "FLOOD_WAIT_", 11));
+        int wait = atoll (error + 11);
+        q->flags &= ~QUERY_ACK_RECEIVED;
+        static struct timeval ptimeout;
+        ptimeout.tv_sec = wait;
+        event_add (q->ev, &ptimeout);
+        q->session_id = 0;
+        res = 1;
+      }
     }
-    tfree (q->data, q->data_len * 4);
-    event_free (q->ev);
-    tfree (q, sizeof (*q));
+    if (res <= 0) {
+      tfree (q->data, q->data_len * 4);
+      event_free (q->ev);
+      tfree (q, sizeof (*q));
+    }
   }
   tgl_state.active_queries --;
 }
@@ -914,7 +928,17 @@ static int msg_send_on_answer (struct query *q UU) {
 }
 
 static int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
-  vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
+  //vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
+  if (error_code == 420) {
+    assert (!strncmp (error, "FLOOD_WAIT_", 11));
+    int wait = atoll (error + 11);
+    q->flags &= ~QUERY_ACK_RECEIVED;
+    static struct timeval ptimeout;
+    ptimeout.tv_sec = wait;
+    event_add (q->ev, &ptimeout);
+    q->session_id = 0;
+    return 1;
+  }
   long long x = *(long long *)q->extra;
   tfree (q->extra, 8);
   struct tgl_message *M = tgl_message_get (x);

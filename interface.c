@@ -1957,7 +1957,10 @@ void interpreter_ex (char *line UU, void *ex) {
     if (op == ca_none) { 
       next_token ();
       if (cur_token_end_str) {
-        fun (args_num, args, ex);
+        int z;
+        for (z = 0; z < count; z ++) {
+          fun (args_num, args, ex);
+        }
       }
       break;
     }
@@ -1969,7 +1972,10 @@ void interpreter_ex (char *line UU, void *ex) {
       } else {
         args[args_num].flags = 1;
         args[args_num ++].str = strndup (cur_token, cur_token_len);
-        fun (args_num, args, ex);
+        int z;
+        for (z = 0; z < count; z ++) {
+          fun (args_num, args, ex);
+        }
         break;
       }
     }
@@ -1978,7 +1984,10 @@ void interpreter_ex (char *line UU, void *ex) {
     next_token ();
 
     if (period && cur_token_end_str) {
-      fun (args_num, args, ex);
+      int z;
+      for (z = 0; z < count; z ++) {
+        fun (args_num, args, ex);
+      }
       break;
     }
 
