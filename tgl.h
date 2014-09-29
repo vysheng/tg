@@ -36,8 +36,8 @@
 #define TG_SERVER_TEST_3 "174.140.142.5"
 
 // JUST RANDOM STRING
-#define TGL_BUILD "2014"
-#define TGL_VERSION "1.0.5"
+#define TGL_BUILD "2234"
+#define TGL_VERSION "1.0.6"
 
 #define TGL_ENCRYPTED_LAYER 17
 
