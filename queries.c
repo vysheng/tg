@@ -226,8 +226,13 @@ void tglq_query_error (long long id) {
       res = q->methods->on_error (q, error_code, error_len, error);
     } else {
       if (error_code == 420 || error_code == 500) {
-        assert (!strncmp (error, "FLOOD_WAIT_", 11));
-        int wait = atoll (error + 11);
+        int wait;
+        if (error_code == 420) {
+          assert (!strncmp (error, "FLOOD_WAIT_", 11));
+          wait = atoll (error + 11);
+        } else {
+          wait = 10;
+        }
         q->flags &= ~QUERY_ACK_RECEIVED;
         static struct timeval ptimeout;
         ptimeout.tv_sec = wait;
