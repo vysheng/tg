@@ -99,24 +99,28 @@ void tglu_work_update (struct connection *c, long long msg_id) {
     break;
   case CODE_update_user_typing:
     {
+      //vlogprintf (E_ERROR, "user typing\n");
       tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *U = tgl_peer_get (id);
+      enum tgl_typing_status status = tglf_fetch_typing ();
 
       if (tgl_state.callback.type_notification && U) {
-        tgl_state.callback.type_notification ((void *)U);
+        tgl_state.callback.type_notification ((void *)U, status);
       }
     }
     break;
   case CODE_update_chat_user_typing:
     {
+      //vlogprintf (E_ERROR, "chat typing\n");
       tgl_peer_id_t chat_id = TGL_MK_CHAT (fetch_int ());
       tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *C = tgl_peer_get (chat_id);
       tgl_peer_t *U = tgl_peer_get (id);
+      enum tgl_typing_status status = tglf_fetch_typing ();
       
       if (U && C) {
         if (tgl_state.callback.type_in_chat_notification) {
-          tgl_state.callback.type_in_chat_notification ((void *)U, (void *)C);
+          tgl_state.callback.type_in_chat_notification ((void *)U, (void *)C, status);
         }
       }
     }

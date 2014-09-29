@@ -314,7 +314,7 @@ static void out_random (int n) {
 
 int allow_send_linux_version;
 void tgl_do_insert_header (void) {
-  out_int (CODE_invoke_with_layer16);  
+  out_int (CODE_invoke_with_layer17);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -957,7 +957,13 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
-  out_int (CODE_decrypted_message_service);
+  if (P->encr_chat.layer <= 16) {
+    out_int (CODE_decrypted_message_service_l16);
+  } else {
+    out_int (CODE_decrypted_message_service);
+    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
+  }
   out_long (M->id);
   static int buf[4];
   tglt_secure_random (buf, 16);
@@ -1001,7 +1007,14 @@ void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callbac
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
-  out_int (CODE_decrypted_message);
+  if (P->encr_chat.layer <= 16) {
+    out_int (CODE_decrypted_message_l16);
+  } else {
+    out_int (CODE_decrypted_message);
+    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
+    out_int (0);
+  }
   out_long (M->id);
   static int buf[4];
   tglt_secure_random (buf, 16);
@@ -1141,6 +1154,7 @@ void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, int offset, void (
   out_peer_id (id);
   out_int (max_id);
   out_int (offset);
+  out_int (CODE_bool_true);
   int *t = talloc (12);
   t[0] = tgl_get_peer_type (id);
   t[1] = tgl_get_peer_id (id);
@@ -1738,7 +1752,14 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       tglt_secure_random (&r, 8);
       out_long (r);
       encr_start ();
-      out_int (CODE_decrypted_message);
+      if (P->encr_chat.layer <= 16) {
+        out_int (CODE_decrypted_message_l16);
+      } else {
+        out_int (CODE_decrypted_message);
+        out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+        out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
+        out_int (0);
+      }
       out_long (r);
       out_random (15 + 4 * (lrand48 () % 3));
       out_string ("");
@@ -2906,6 +2927,9 @@ static int send_encr_accept_on_answer (struct query *q UU) {
     print_end ();
   }*/
 
+  if (E->state == sc_ok) {
+    tgl_do_send_encr_chat_layer (E);
+  }
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_secret_chat *))q->callback) (q->callback_extra, E->state == sc_ok, E);
   }

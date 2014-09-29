@@ -33,7 +33,7 @@
 #define TGL_BUILD "2014"
 #define TGL_VERSION "1.0.5"
 
-#define TGL_ENCRYPTED_LAYER 16
+#define TGL_ENCRYPTED_LAYER 17
 
 struct connection;
 struct mtproto_methods;
@@ -70,8 +70,8 @@ struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);
   void (*marked_read)(int num, struct tgl_message *list[]);
   void (*logprintf)(const char *format, ...)  __attribute__ ((format (printf, 1, 2)));
-  void (*type_notification)(struct tgl_user *U);
-  void (*type_in_chat_notification)(struct tgl_user *U, struct tgl_chat *C);
+  void (*type_notification)(struct tgl_user *U, enum tgl_typing_status status);
+  void (*type_in_chat_notification)(struct tgl_user *U, struct tgl_chat *C, enum tgl_typing_status status);
   void (*type_in_secret_chat_notification)(struct tgl_secret_chat *E);
   void (*status_notification)(struct tgl_user *U);
   void (*user_registered)(struct tgl_user *U);

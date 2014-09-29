@@ -1594,26 +1594,68 @@ void mark_read_upd (int num, struct tgl_message *list[]) {
   }
 }
 
-void type_notification_upd (struct tgl_user *U) {
+void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
+  switch (status) {
+  case tgl_typing_none:
+    mprintf (ev, "doing nothing");
+    break;
+  case tgl_typing_typing:
+    mprintf (ev, "typing");
+    break;
+  case tgl_typing_cancel:
+    mprintf (ev, "deleting typed message");
+    break;
+  case tgl_typing_record_video:
+    mprintf (ev, "recording video");
+    break;
+  case tgl_typing_upload_video:
+    mprintf (ev, "uploading video");
+    break;
+  case tgl_typing_record_audio:
+    mprintf (ev, "recording audio");
+    break;
+  case tgl_typing_upload_audio:
+    mprintf (ev, "uploading audio");
+    break;
+  case tgl_typing_upload_photo:
+    mprintf (ev, "uploading photo");
+    break;
+  case tgl_typing_upload_document:
+    mprintf (ev, "uploading document");
+    break;
+  case tgl_typing_geo:
+    mprintf (ev, "choosing location");
+    break;
+  case tgl_typing_choose_contact:
+    mprintf (ev, "choosing contact");
+    break;
+  }
+}
+
+void type_notification_upd (struct tgl_user *U, enum tgl_typing_status status) {
   if (log_level < 2 || (disable_output && !notify_ev)) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
   mprintf (ev, "User ");
   print_user_name (ev, U->id, (void *)U);
-  mprintf (ev, " is typing\n");
+  mprintf (ev, " is ");
+  print_typing (ev, status);
+  mprintf (ev, "\n");
   mpop_color (ev);
   mprint_end (ev);
 }
 
-void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C) {
+void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C, enum tgl_typing_status status) {
   if (log_level < 2 || (disable_output && !notify_ev)) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
   mprintf (ev, "User ");
   print_user_name (ev, U->id, (void *)U);
-  mprintf (ev, " is typing in chat ");
+  mprintf (ev, " is ");
+  print_typing (ev, status);
+  mprintf (ev, " in chat ");
   print_chat_name (ev, C->id, (void *)C);
   mprintf (ev, "\n");
   mpop_color (ev);
@@ -2384,6 +2426,10 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     break;
   case tgl_message_action_notify_layer:
     mprintf (ev, " updated layer to %d\n", M->action.layer);
+    break;
+  case tgl_message_action_typing:
+    mprintf (ev, " is ");
+    print_typing (ev, M->action.typing);
     break;
   default:
     assert (0);

@@ -108,6 +108,34 @@ char *tgls_default_create_print_name (tgl_peer_id_t id, const char *a1, const ch
   return tstrdup (s);
 }
 
+enum tgl_typing_status tglf_fetch_typing (void) {
+  switch (fetch_int ()) {
+  case CODE_send_message_typing_action:
+    return tgl_typing_typing;
+  case CODE_send_message_cancel_action:
+    return tgl_typing_cancel;
+  case CODE_send_message_record_video_action:
+    return tgl_typing_record_video;
+  case CODE_send_message_upload_video_action:
+    return tgl_typing_upload_video;
+  case CODE_send_message_record_audio_action:
+    return tgl_typing_record_audio;
+  case CODE_send_message_upload_audio_action:
+    return tgl_typing_upload_audio;
+  case CODE_send_message_upload_photo_action:
+    return tgl_typing_upload_photo;
+  case CODE_send_message_upload_document_action:
+    return tgl_typing_upload_document;
+  case CODE_send_message_geo_location_action:
+    return tgl_typing_geo;
+  case CODE_send_message_choose_contact_action:
+    return tgl_typing_choose_contact;
+  default:
+    assert (0);
+    return tgl_typing_none;
+  }
+}
+
 /* {{{ Fetch */
 
 int tglf_fetch_file_location (struct tgl_file_location *loc) {
@@ -990,6 +1018,10 @@ void tglf_fetch_message_action_encrypted (struct tgl_message_action *M) {
   case CODE_decrypted_message_action_flush_history:
     M->type = tgl_message_action_flush_history;
     break;
+  case CODE_decrypted_message_action_typing:
+    M->type = tgl_message_action_typing;
+    M->typing = tglf_fetch_typing ();
+    break;
   default:
     vlogprintf (E_ERROR, "x = 0x%08x\n", x);
     assert (0);
@@ -1009,6 +1041,10 @@ tgl_peer_id_t tglf_fetch_peer_id (void) {
 void tglf_fetch_message (struct tgl_message *M) {
   unsigned x = fetch_int ();
   assert (x == CODE_message_empty || x == CODE_message || x == CODE_message_forwarded || x == CODE_message_service);
+  int flags = 0;
+  if (x != CODE_message_empty) {
+    flags = fetch_int ();
+  }
   int id = fetch_int ();
   assert (M->id == id);
   if (x == CODE_message_empty) {
@@ -1024,11 +1060,12 @@ void tglf_fetch_message (struct tgl_message *M) {
   int from_id = fetch_int ();
   tgl_peer_id_t to_id = tglf_fetch_peer_id ();
 
-  fetch_bool (); // out.
+  //fetch_bool (); // out.
 
-  int unread = fetch_bool ();
+  //int unread = fetch_bool ();
   int date = fetch_int ();
 
+  int unread = (flags & 1) != 0;
   int new = !(M->flags & FLAG_CREATED);
 
   if (x == CODE_message_service) {
@@ -1190,12 +1227,30 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
       assert (layer >= 0);
       x = fetch_int ();
     }
-    assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service);
+    assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
     //assert (id == fetch_long ());
+    if (x == CODE_decrypted_message || x == CODE_decrypted_message_service) {
+      int out_seq_no = fetch_int ();
+      int in_seq_no = fetch_int ();
+      if (in_seq_no / 2 <= P->encr_chat.in_seq_no) {
+        vlogprintf (E_WARNING, "Hole in seq in secret chat. in_seq_no = %d, expect_seq_no = %d\n", in_seq_no / 2, P->encr_chat.in_seq_no + 1);
+      }
+      if (in_seq_no / 2 > P->encr_chat.in_seq_no + 1) {
+        vlogprintf (E_WARNING, "Hole in seq in secret chat. in_seq_no = %d, expect_seq_no = %d\n", in_seq_no / 2, P->encr_chat.in_seq_no + 1);
+      }
+      //vlogprintf (E_WARNING, "in = %d, out = %d\n", in_seq_no, out_seq_no);
+      assert (out_seq_no / 2 <= P->encr_chat.out_seq_no);
+      P->encr_chat.in_seq_no = in_seq_no / 2;
+      if (x == CODE_decrypted_message) {
+        fetch_int (); // ttl
+      }
+    } else {
+      P->encr_chat.in_seq_no ++;
+    }
     fetch_long ();
     ll = prefetch_strlen ();
     fetch_str (ll); // random_bytes
-    if (x == CODE_decrypted_message) {
+    if (x == CODE_decrypted_message || x == CODE_decrypted_message_l16) {
       l = prefetch_strlen ();
       s = fetch_str (l);
       start = in_ptr;
@@ -1216,9 +1271,9 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     if (ok) {
       int *start_file = in_ptr;
       assert (skip_type_any (TYPE_TO_PARAM (encrypted_file)) >= 0);
-      if (x == CODE_decrypted_message) {
+      if (x == CODE_decrypted_message || x == CODE_decrypted_message_l16) {
         bl_do_create_message_media_encr (id, P->encr_chat.user_id, TGL_PEER_ENCR_CHAT, to_id, date, l, s, start, end - start, start_file, in_ptr - start_file);
-      } else if (x == CODE_decrypted_message_service) {
+      } else if (x == CODE_decrypted_message_service || x == CODE_decrypted_message_service_l16) {
         bl_do_create_message_service_encr (id, P->encr_chat.user_id, TGL_PEER_ENCR_CHAT, to_id, date, start, end - start);
       }
     } else {
@@ -1226,7 +1281,7 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
       M->media.type = CODE_message_media_empty;
     }    
   } else {
-    if (ok && x == CODE_decrypted_message_service) {
+    if (ok && (x == CODE_decrypted_message_service || x == CODE_decrypted_message_service_l16)) {
       bl_do_create_message_service_encr (id, P->encr_chat.user_id, TGL_PEER_ENCR_CHAT, to_id, date, start, end - start);
     }
   }
@@ -1310,12 +1365,12 @@ struct tgl_user *tglf_fetch_alloc_user_full (void) {
 }
 
 struct tgl_message *tglf_fetch_alloc_message (void) {
-  int data[2];
-  prefetch_data (data, 8);
-  struct tgl_message *M = tgl_message_get (data[1]);
+  int data[3];
+  prefetch_data (data, 12);
+  struct tgl_message *M = tgl_message_get (data[0] != (int)CODE_message_empty ? data[2] : data[1]);
 
   if (!M) {
-    M = tglm_message_alloc (data[1]);
+    M = tglm_message_alloc (data[0] != (int)CODE_message_empty ? data[2] : data[1]);
   }
   tglf_fetch_message (M);
   return M;
