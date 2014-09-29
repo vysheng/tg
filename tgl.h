@@ -24,10 +24,16 @@
 #include <string.h>
 
 #define TGL_MAX_DC_NUM 100
-#define TG_SERVER "149.154.167.50"
-#define TG_SERVER_TEST "149.154.167.40"
-#define TG_SERVER_DC 2
-#define TG_SERVER_TEST_DC 2
+#define TG_SERVER_1 "173.240.5.1"
+#define TG_SERVER_2 "149.154.167.51"
+#define TG_SERVER_3 "174.140.142.6"
+#define TG_SERVER_4 "149.154.167.91"
+#define TG_SERVER_5 "149.154.171.5"
+
+
+#define TG_SERVER_TEST_1 "173.240.5.253"
+#define TG_SERVER_TEST_2 "149.154.167.40"
+#define TG_SERVER_TEST_3 "174.140.142.5"
 
 // JUST RANDOM STRING
 #define TGL_BUILD "2014"
