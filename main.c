@@ -283,7 +283,7 @@ void parse_config_val (config_t *conf, char **s, char *param_name, const char *d
   strcpy (buf + l, param_name);
   config_lookup_string (conf, buf, &r);
   if (r) {
-    if (path) {
+    if (path && *r != '/') {
       tasprintf (s, "%s/%s", path, r);
     } else {
       *s = tstrdup (r);
