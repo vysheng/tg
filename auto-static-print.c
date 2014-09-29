@@ -18,8 +18,9 @@
     Copyright Vitaly Valtman 2014
 */
 
-#include "mtproto-common.h"
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 static int cur_token_len;
 static char *cur_token;
@@ -28,6 +29,29 @@ static int cur_token_quoted;
 static int multiline_output = 1;
 static int multiline_offset;
 static int multiline_offset_size = 2;
+
+static int *in_ptr, *in_end;
+
+static inline int fetch_int (void) {
+  return *(in_ptr ++); 
+}
+
+static inline int fetch_long (void) {
+  long long r = *(long long *)in_ptr;
+  in_ptr += 2;
+  return r; 
+}
+
+static inline int fetch_long (void) {
+  long long r = *(long long *)in_ptr;
+  in_ptr += 2;
+  return r; 
+}
+
+static inline void out_int (int a) {}
+static inline void out_double (double a) {}
+static inline void out_string (char *s, int l) {}
+static inline void out_long (long long a) {}
 
 static int disable_field_names;
 
@@ -432,6 +456,6 @@ static void print_offset (void) {
 
 char *tglf_extf_fetch (struct paramed_type *T) {
   out_buf_pos = 0;
-  if (fetch_type_any (T) < 0) { return 0; }
+  fetch_type_any (T);
   return out_buf;
 }

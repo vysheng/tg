@@ -201,7 +201,6 @@ static inline int prefetch_strlen (void) {
 
 static inline char *fetch_str (int len) {
   assert (len >= 0);
-  vlogprintf (E_DEBUG + 3, "fetch_string: len = %d\n", len);    
   if (len < 254) {
     char *str = (char *) in_ptr + 1;
     in_ptr += 1 + (len >> 2);
@@ -294,12 +293,10 @@ int tgl_fetch_bignum (BIGNUM *x);
 
 static inline int fetch_int (void) {
   assert (in_ptr + 1 <= in_end);
-  vlogprintf (E_DEBUG + 3, "fetch_int: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   return *(in_ptr ++);
 }
 
 static inline int fetch_bool (void) {
-  vlogprintf (E_DEBUG + 3, "fetch_bool: 0x%08x (%d)\n", *in_ptr, *in_ptr);
   assert (in_ptr + 1 <= in_end);
   assert (*(in_ptr) == (int)CODE_bool_true || *(in_ptr) == (int)CODE_bool_false);
   return *(in_ptr ++) == (int)CODE_bool_true;

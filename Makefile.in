@@ -23,10 +23,11 @@ LIB_LIST=${LIB}/libtgl.a
 TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o
 TGL_OBJECTS=${OBJ}/net.o ${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/auto/auto.o ${OBJ}/tgl.o ${OBJ}/updates.o
 TLC_OBJECTS=${OBJ}/tlc.o ${OBJ}/tl-parser.o ${OBJ}/crc32.o
+TLD_OBJECTS=${OBJ}/dump-tl-file.o
 GENERATE_OBJECTS=${OBJ}/generate.o
 COMMON_OBJECTS=${OBJ}/tools.o
-OBJ_LIST=${TG_OBJECTS} ${TLC_OBJECTS} ${GENERATE_OBJECTS} ${COMMON_OBJECTS} ${TGL_OBJECTS}
-OBJ_C=${TLC_OBJECTS} ${GENERATE_OBJECTS} ${COMMON_OBJECTS} ${TGL_OBJECTS}
+OBJ_LIST=${TG_OBJECTS} ${TLC_OBJECTS} ${GENERATE_OBJECTS} ${COMMON_OBJECTS} ${TGL_OBJECTS} ${TLD_OBJECTS}
+OBJ_C=${TLC_OBJECTS} ${GENERATE_OBJECTS} ${COMMON_OBJECTS} ${TGL_OBJECTS} ${TLD_OBJECTS}
 
 DEPENDENCE=$(subst ${OBJ}/,${DEP}/,$(patsubst %.o,%.d,${OBJ_LIST}))
 DEPENDENCE_LIST=${DEPENDENCE}
@@ -41,6 +42,7 @@ CC=@CC@
 all: ${EXE_LIST} ${DIR_LIST} ${LIB_LIST}
 create_dirs_and_headers: ${DIR_LIST} ${AUTO}/auto.c ${AUTO}/auto-header.h ${AUTO}/constants.h
 create_dirs: ${DIR_LIST}
+dump-tl: ${EXE}/dump-tl-file
 
 ${DIR_LIST}:
 	@test -d $@ || mkdir -p $@
@@ -84,6 +86,9 @@ ${AUTO}/auto-header.h: ${AUTO}/scheme.tlo ${EXE}/generate
 
 ${AUTO}/constants.h: ${AUTO}/scheme2.tl ${srcdir}/gen_constants_h.awk
 	awk -f ${srcdir}/gen_constants_h.awk < $< > $@
+
+${EXE}/dump-tl-file: ${OBJ}/auto/auto.o ${TLD_OBJECTS}
+	${CC} ${OBJ}/auto/auto.o ${TLD_OBJECTS} ${LINK_FLAGS} -o $@
 
 clean:
 	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"

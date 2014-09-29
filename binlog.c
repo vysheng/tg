@@ -782,6 +782,12 @@ static int fetch_comb_binlog_send_message_text (void *extra) {
   }
 
   M->to_id = tgl_set_peer_id (t, fetch_int ());
+  if (t == TGL_PEER_ENCR_CHAT) {
+    tgl_peer_t *P = tgl_peer_get (M->to_id);
+    if (P) {
+      P->encr_chat.out_seq_no ++;
+    }
+  }
   M->date = fetch_int ();
       
   int l = prefetch_strlen ();
@@ -824,6 +830,11 @@ static int fetch_comb_binlog_send_message_action_encr (void *extra) {
       
   M->media.type = tgl_message_media_none;
   tglf_fetch_message_action_encrypted (&M->action);
+
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
+  if (P) {
+    P->encr_chat.out_seq_no ++;
+  }
   
   M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
@@ -952,6 +963,11 @@ static int fetch_comb_binlog_create_message_media_encr_pending (void *extra) {
   int t = fetch_int ();
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
+  
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
+  if (P) {
+    P->encr_chat.out_seq_no ++;
+  }
       
   int l = prefetch_strlen ();
   M->message = talloc (l + 1);

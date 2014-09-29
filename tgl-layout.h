@@ -120,7 +120,22 @@ enum tgl_message_action_type {
   tgl_message_action_delete_messages,
   tgl_message_action_screenshot_messages,
   tgl_message_action_flush_history,
-  tgl_message_action_notify_layer
+  tgl_message_action_notify_layer,
+  tgl_message_action_typing
+};
+
+enum tgl_typing_status {
+  tgl_typing_none,
+  tgl_typing_typing,
+  tgl_typing_cancel,
+  tgl_typing_record_video,
+  tgl_typing_upload_video,
+  tgl_typing_record_audio,
+  tgl_typing_upload_audio,
+  tgl_typing_upload_photo,
+  tgl_typing_upload_document,
+  tgl_typing_geo,
+  tgl_typing_choose_contact
 };
 
 struct tgl_file_location {
@@ -288,6 +303,8 @@ struct tgl_secret_chat {
   int date;
   int ttl;
   int layer;
+  int in_seq_no;
+  int out_seq_no;
   long long access_hash;
   unsigned char *g_key;
   unsigned char *nonce;
@@ -367,6 +384,7 @@ struct tgl_message_action {
     int read_cnt;
     int delete_cnt;
     int screenshot_cnt;
+    enum tgl_typing_status typing;
   };
 };
 
