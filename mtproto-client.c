@@ -284,6 +284,13 @@ static int process_respq_answer (struct connection *c, char *packet, int len, in
   unsigned long long what;
   unsigned p1, p2;
   int i;
+  
+  long long packet_auth_key_id = *(long long *)packet;
+  if (packet_auth_key_id) {
+    assert (temp_key);
+    vlogprintf (E_WARNING, "received packet during creation of temp auth key. Probably answer on old query. Drop\n");
+    return 0;
+  }
   vlogprintf (E_DEBUG, "process_respq_answer(), len=%d, op=0x%08x\n", len, *(int *)(packet + 20));
   assert (len >= 76);
   assert (!*(long long *) packet);
@@ -552,6 +559,12 @@ static int process_dh_answer (struct connection *c, char *packet, int len, int t
   //if (len < 116) {
   //  vlogprintf (E_ERROR, "%u * %u = %llu", p1, p2, what);
   //}
+  long long packet_auth_key_id = *(long long *)packet;
+  if (packet_auth_key_id) {
+    assert (temp_key);
+    vlogprintf (E_WARNING, "received packet during creation of temp auth key. Probably answer on old query. Drop\n");
+    return 0;
+  }
   assert (len >= 116);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -660,6 +673,13 @@ static void mpc_on_get_config (void *extra, int success);
 static int process_auth_complete (struct connection *c UU, char *packet, int len, int temp_key) {
   struct tgl_dc *D = tgl_state.net_methods->get_dc (c);
   vlogprintf (E_DEBUG - 1, "process_dh_answer(), len=%d\n", len);
+  
+  long long packet_auth_key_id = *(long long *)packet;
+  if (packet_auth_key_id) {
+    assert (temp_key);
+    vlogprintf (E_WARNING, "received packet during creation of temp auth key. Probably answer on old query. Drop\n");
+    return 0;
+  }
   assert (len == 72);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -1058,8 +1078,9 @@ static int process_rpc_message (struct connection *c UU, struct encrypted_messag
   assert (len >= MINSZ && (len & 15) == (UNENCSZ & 15));
   struct tgl_dc *DC = tgl_state.net_methods->get_dc (c);
   if (enc->auth_key_id != DC->temp_auth_key_id && enc->auth_key_id != DC->auth_key_id) {
-    vlogprintf (E_ERROR, "received msg from dc %d with auth_key_id %lld (perm_auth_key_id %lld temp_auth_key_id %lld)\n",
+    vlogprintf (E_WARNING, "received msg from dc %d with auth_key_id %lld (perm_auth_key_id %lld temp_auth_key_id %lld). Dropping\n",
     DC->id, enc->auth_key_id, DC->auth_key_id, DC->temp_auth_key_id);
+    return 0;
   }
   if (enc->auth_key_id == DC->temp_auth_key_id) {
     assert (enc->auth_key_id == DC->temp_auth_key_id);
