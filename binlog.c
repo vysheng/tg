@@ -1773,7 +1773,7 @@ void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned
 
 void bl_do_set_pts (int pts) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
-  if (pts == tgl_state.pts) { return; }
+  if (pts <= tgl_state.pts) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_pts;
   ev[1] = pts;
@@ -1782,7 +1782,7 @@ void bl_do_set_pts (int pts) {
 
 void bl_do_set_qts (int qts) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
-  if (qts == tgl_state.qts) { return; }
+  if (qts <= tgl_state.qts) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_qts;
   ev[1] = qts;
@@ -1791,7 +1791,7 @@ void bl_do_set_qts (int qts) {
 
 void bl_do_set_date (int date) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
-  if (date == tgl_state.date) { return; }
+  if (date <= tgl_state.date) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_date;
   ev[1] = date;

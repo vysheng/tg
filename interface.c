@@ -300,17 +300,17 @@ tgl_peer_id_t cur_token_user (void) {
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
 
-  if (l >= 6 && !memcmp (s, "user#", 5)) {
-    s += 5;    
-    l -= 5;
+  if (l >= 8 && !memcmp (s, "user#id", 7)) {
+    s += 7;    
+    l -= 7;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
     else { return TGL_PEER_NOT_FOUND; }
   }
-  if (l >= 8 && !memcmp (s, "user#id", 7)) {
-    s += 7;    
-    l -= 7;
+  if (l >= 6 && !memcmp (s, "user#", 5)) {
+    s += 5;    
+    l -= 5;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
@@ -335,18 +335,17 @@ tgl_peer_id_t cur_token_chat (void) {
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
   
-  if (l >= 6 && !memcmp (s, "chat#", 5)) {
-    s += 5;    
-    l -= 5;
+  if (l >= 8 && !memcmp (s, "chat#id", 7)) {
+    s += 7;    
+    l -= 7;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
     else { return TGL_PEER_NOT_FOUND; }
   }
-  
-  if (l >= 8 && !memcmp (s, "chat#id", 7)) {
-    s += 7;    
-    l -= 7;
+  if (l >= 6 && !memcmp (s, "chat#", 5)) {
+    s += 5;    
+    l -= 5;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
@@ -386,22 +385,6 @@ tgl_peer_id_t cur_token_peer (void) {
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
   
-  if (l >= 6 && !memcmp (s, "user#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 6 && !memcmp (s, "chat#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
   if (l >= 8 && !memcmp (s, "user#id", 7)) {
     s += 7;    
     l -= 7;
@@ -413,6 +396,22 @@ tgl_peer_id_t cur_token_peer (void) {
   if (l >= 8 && !memcmp (s, "chat#id", 7)) {
     s += 7;    
     l -= 7;
+    int r = atoi (s);
+    cur_token[cur_token_len] = c;
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
+    else { return TGL_PEER_NOT_FOUND; }
+  }
+  if (l >= 6 && !memcmp (s, "user#", 5)) {
+    s += 5;    
+    l -= 5;
+    int r = atoi (s);
+    cur_token[cur_token_len] = c;
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
+    else { return TGL_PEER_NOT_FOUND; }
+  }
+  if (l >= 6 && !memcmp (s, "chat#", 5)) {
+    s += 5;    
+    l -= 5;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
@@ -432,6 +431,15 @@ tgl_peer_id_t cur_token_peer (void) {
 static tgl_peer_t *mk_peer (tgl_peer_id_t id) {
   if (tgl_get_peer_type (id) == NOT_FOUND) { return 0; }
   tgl_peer_t *P = tgl_peer_get (id);
+  if (!P) {
+    if (tgl_get_peer_type (id) == TGL_PEER_USER) {
+      tgl_insert_empty_user (tgl_get_peer_id (id));
+    }
+    if (tgl_get_peer_type (id) == TGL_PEER_CHAT) {
+      tgl_insert_empty_chat (tgl_get_peer_id (id));
+    }
+    P = tgl_peer_get (id);
+  }
   return P;
 }
 
