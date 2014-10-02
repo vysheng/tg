@@ -422,7 +422,7 @@ void usage (void) {
   #endif
   printf ("  -l                  log level\n");
   printf ("  -f                  during authorization fetch all messages since registration\n");
-  printf ("  -E                  diable auto accept of encrypted chats\n");
+  printf ("  -E                  disable auto accept of encrypted chats\n");
   #ifdef USE_LUA
   printf ("  -s                  lua script file\n");
   #endif
