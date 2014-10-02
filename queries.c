@@ -228,8 +228,12 @@ void tglq_query_error (long long id) {
       if (error_code == 420 || error_code == 500) {
         int wait;
         if (error_code == 420) {
-          assert (!strncmp (error, "FLOOD_WAIT_", 11));
-          wait = atoll (error + 11);
+          if (!strncmp (error, "FLOOD_WAIT_", 11)) {
+            vlogprintf (E_ERROR, "error = '%s'\n", error);
+            wait = 10;
+          } else {
+            wait = atoll (error + 11);
+          }
         } else {
           wait = 10;
         }
