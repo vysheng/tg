@@ -1,17 +1,23 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
 
 VERSION=$(shell dpkg-parsechangelog | sed -n 's/^Version: //p' | cut -f1 -d'-')
 PACKAGE_NAME=$(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
-
 %:
-	dh $@  --with autotools-dev
-
+			dh $@ --with autotools-dev
 build-orig:
-	mkdir -p $(PACKAGE_NAME)-$(VERSION)
-	tar --exclude=ax_lua.m4 --exclude=debian --exclude=\.pc	\
-		--exclude=$(PACKAGE_NAME)-$(VERSION) -cf - . \
-		| ( cd $(PACKAGE_NAME)-$(VERSION) && tar xf - )
-	tar -cf ../$(PACKAGE_NAME)_$(VERSION).orig.tar $(PACKAGE_NAME)-$(VERSION)
-	$(RM) -r $(PACKAGE_NAME)-$(VERSION)
-	xz ../$(PACKAGE_NAME)_$(VERSION).orig.tar
+			mkdir -p $(PACKAGE_NAME)-$(VERSION)
+			tar --exclude=ax_lua.m4 --exclude=debian --exclude=\.pc \
+						--exclude=$(PACKAGE_NAME)-$(VERSION) -cf - . \
+						| ( cd $(PACKAGE_NAME)-$(VERSION) && tar xf - )
+			tar -cf ../$(PACKAGE_NAME)_$(VERSION).orig.tar $(PACKAGE_NAME)-$(VERSION)
+			$(RM) -r $(PACKAGE_NAME)-$(VERSION)
+			xz ../$(PACKAGE_NAME)_$(VERSION).orig.tar
