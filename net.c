@@ -26,11 +26,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/types.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/fcntl.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <stdio.h>
