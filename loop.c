@@ -91,6 +91,8 @@ static int delete_stdin_event;
 
 extern volatile int sigterm_cnt;
 
+extern char *start_command;
+
 static void stdin_read_callback_all (int arg, short what, struct event *self) {
   if (!readline_disabled) {
     if (((long)arg) & 1) {
@@ -852,6 +854,20 @@ int loop (void) {
     lua_diff_end ();
   #endif
 
+  if (start_command) {
+    safe_quit = 1;
+    while (*start_command) {
+      char *start = start_command;
+      while (*start_command && *start_command != '\n') {
+        start_command ++;
+      }
+      if (*start_command) {
+        *start_command = 0;
+        start_command ++;
+      } 
+      interpreter_ex (start, 0);
+    }
+  }
 
   /*tgl_do_get_dialog_list (get_dialogs_callback, 0);
   if (wait_dialog_list) {

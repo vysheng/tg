@@ -111,6 +111,7 @@ int readline_disabled;
 int disable_output;
 int reset_authorization;
 int port;
+char *start_command;
 
 void set_default_username (const char *s) {
   if (default_username) { 
@@ -436,6 +437,7 @@ void usage (void) {
   printf ("  -D                  disable output\n");
   printf ("  -P <port>           port to listen for input commands\n");
   printf ("  -S <socket-name>    unix socket to create\n");
+  printf ("  -e <commands>       make commands end exit\n");
 
   exit (1);
 }
@@ -538,7 +540,7 @@ char *unix_socket;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -626,6 +628,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'S':
       unix_socket = optarg;
+      break;
+    case 'e':
+      start_command = optarg;
       break;
     case 'h':
     default:
