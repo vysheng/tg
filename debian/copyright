@@ -3,7 +3,7 @@ Upstream-Name: telegram-cli
 Source: https://github.com/vysheng/tg
 
 Files: *
-Copyright: 2013-2014 vysheng
+Copyright: 2013-2014 Vitaly Valtman <https://github.com/vysheng>
 License: GPL-3.0+
 
 Files: debian/*
