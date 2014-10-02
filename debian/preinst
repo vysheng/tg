@@ -1,0 +1,18 @@
+#!/bin/sh
+adduser --system --home /var/lib/telegram-daemon/ telegramd
+        usermod -c "Telegram Daemon" telegramd
+        usermod -d "/var/lib/telegram-daemon/" telegramd
+        usermod -g "telegramd" telegramd
+        usermod -s "/bin/false" telegramd
+
+mkdir /etc/telegram-daemon/
+mkdir /var/log/telegram-daemon/
+touch /etc/telegram-daemon/telegram-daemon.achat.conf
+echo "execute telegram-cli" > /etc/telegram-daemon/telegram-daemon.achat.conf
+echo "-d" >> /etc/telegram-daemon/telegram-daemon.achat.conf 
+echo "-vvvv" >> /etc/telegram-daemon/telegram-daemon.achat.conf 
+echo "-E" >> /etc/telegram-daemon/telegram-daemon.achat.conf 
+echo "-R" >> /etc/telegram-daemon/telegram-daemon.achat.conf 
+echo "-D" >> /etc/telegram-daemon/telegram-daemon.achat.conf
+echo "-C" >> /etc/telegram-daemon/telegram-daemon.achat.conf
+echo "-P 2391" >> /etc/telegram-daemon/telegram-daemon.achat.conf
