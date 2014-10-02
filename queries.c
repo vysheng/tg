@@ -2415,6 +2415,10 @@ static int download_on_answer (struct query *q) {
   struct download *D = q->extra;
   if (D->fd == -1) {
     D->fd = open (D->name, O_CREAT | O_WRONLY, 0640);
+    if (D->fd < 0) {
+      vlogprintf (E_ERROR, "Can not open for writing: %m\n");
+      assert (D->fd >= 0);
+    }
   }
   fetch_int (); // mtime
   int len = prefetch_strlen ();

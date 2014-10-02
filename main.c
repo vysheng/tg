@@ -401,6 +401,11 @@ void parse_config (void) {
     tasprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE);
   }
   tgl_set_download_directory (downloads_directory);
+  if (!mkdir (downloads_directory, CONFIG_DIRECTORY_MODE)) {
+    if (!disable_output) {
+      printf ("[%s] created\n", downloads_directory);
+    }
+  }
 }
 #endif
 
