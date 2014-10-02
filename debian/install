@@ -1,1 +1,3 @@
-telegram        usr/bin
+bin/telegram-cli usr/bin
+bin/tlc usr/bin
+server.pub etc/telegram-cli

@@ -1,0 +1,48 @@
+.TH man 8 "02 October 2014" "1.0.5.1" "telegram-cli man page"
+.SH NAME
+telegram-cli \- Command-line interface for Telegram messenger
+.SH SYNOPSIS
+telegram-cli -k [keyfile]
+.SH DESCRIPTION
+ Telegram messenger is a cloud-based instant messaging designed for
+ smart phones and similar to Whatsapp but more flexible, and
+ powerful. You can send messages, photos, videos and documents to
+ people who are in your phone contacts (and have Telegram). Telegram
+ also supports secret chats whose provide a private (encrypted) way of
+ communication.
+ .
+ This package contains a command-line based client for Telegram with
+ the following features:
+  * Colored terminal messages.
+  * Message management: history, stats, etc.
+  * Group chat: create and manage groups.
+  * Secret chat: secured and encrypted conversations.
+  * Contact management: add/edit/remove contacts.
+  * Multimedia support: send/load photos and videos.
+.SH OPTIONS
+Telegram-cli Usage
+  -u                  specify username (would not be asked during authorization)
+  -k                  specify location of public key (possible multiple entries)
+  -v                  increase verbosity (0-ERROR 1-WARNIN 2-NOTICE 3+-DEBUG-levels)
+  -N                  message num mode
+  -c                  config file name
+  -p                  use specified profile
+  -l                  log level
+  -f                  during authorization fetch all messages since registration
+  -E                  diable auto accept of encrypted chats
+  -s                  lua script file
+  -W                  send dialog_list query and wait for answer before reading input
+  -C                  disable color output
+  -R                  disable readline
+  -d                  daemon mode
+  -L <log-name>       log file name
+  -U <user-name>      change uid after start
+  -G <group-name>     change gid after start
+  -D                  disable output
+  -P <port>           port to listen for input commands
+  -S <socket-name>    unix socket to create
+.SH SEE ALSO
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Vitaliy Vatman (-@-)
