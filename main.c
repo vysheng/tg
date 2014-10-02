@@ -59,6 +59,7 @@
 
 #include <grp.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "telegram.h"
 #include "loop.h"
