@@ -2,3 +2,5 @@
 deluser telegramd
 rm -r /etc/telegram-daemon/
 rm -r /var/log/telegram-daemon/
+rm -r /var/lib/telegram-daemon
+rm /etc/init.d/telegram-daemon

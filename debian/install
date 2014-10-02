@@ -1,5 +1,6 @@
 bin/telegram-cli usr/bin
 bin/telegram-cli usr/share/telegram-daemon/bin
 start-telegram-daemon /usr/share/telegram-daemon/bin
-test.lua /var/lib/telegram-daemon/
+test.lua var/lib/telegram-daemon/
+telegram-daemon etc/init.d
 server.pub etc/telegram-cli

@@ -1,0 +1,2 @@
+#!/bin/sh
+mv /var/lib/telegram-daemon/test.lua /var/lib/telegram-daemon/script-achat.lua

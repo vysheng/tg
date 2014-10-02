@@ -16,3 +16,4 @@ echo "-R" >> /etc/telegram-daemon/telegram-daemon.achat.conf
 echo "-D" >> /etc/telegram-daemon/telegram-daemon.achat.conf
 echo "-C" >> /etc/telegram-daemon/telegram-daemon.achat.conf
 echo "-P 2391" >> /etc/telegram-daemon/telegram-daemon.achat.conf
+touch /var/lib/telegram-daemon/script-achat.lua
