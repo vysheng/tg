@@ -295,6 +295,7 @@ void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, co
 void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_del_contact (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_set_encr_chat_ttl (struct tgl_secret_chat *E, int ttl, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
+void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);
