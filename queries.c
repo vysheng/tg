@@ -3303,7 +3303,6 @@ void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback
 }
 
 void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra) {
-  assert (0);
   clear_packet ();
   out_int (CODE_messages_get_dh_config);
   out_int (tgl_state.encr_param_version);
