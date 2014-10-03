@@ -12,3 +12,4 @@ objs/
 dep/
 auto/
 libs/
+debian/telegram-cl*
