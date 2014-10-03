@@ -13,3 +13,4 @@ dep/
 auto/
 libs/
 debian/telegram-cl*
+debian/files
