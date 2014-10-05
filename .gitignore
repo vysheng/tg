@@ -14,3 +14,4 @@ auto/
 libs/
 debian/telegram-cli.[a-z]
 debian/files
+debian/telegram-cli/*
