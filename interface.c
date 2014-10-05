@@ -292,6 +292,23 @@ long long cur_token_int (void) {
   }
 }
 
+double cur_token_double (void) {
+  if (cur_token_len <= 0) {
+    return NOT_FOUND;
+  } else {
+    char c = cur_token[cur_token_len];
+    cur_token[cur_token_len] = 0;
+    char *end = 0;
+    double x = strtod (cur_token, &end);
+    cur_token[cur_token_len] = c;
+    if (end != cur_token + cur_token_len) {
+      return NOT_FOUND;
+    } else {
+      return x;
+    }
+  }
+}
+
 tgl_peer_id_t cur_token_user (void) {
   if (cur_token_len <= 0) { return TGL_PEER_NOT_FOUND; }
   int l = cur_token_len;
@@ -519,6 +536,7 @@ enum command_argument {
   ca_file_name_end,
   ca_period,
   ca_number,
+  ca_double,
   ca_string_end,
   ca_string,
   ca_modifier,
@@ -536,6 +554,7 @@ struct arg {
     struct tgl_message *M;
     char *str;
     long long num;
+    double dval;
   };
 };
 
@@ -996,6 +1015,11 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   do_halt (0);
 }
 
+void do_send_location (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 3);
+  tgl_do_send_location (args[0].P->id, args[1].dval, args[2].dval, 0, 0);
+}
+
 
 struct command commands[] = {
   {"help", {ca_none}, do_help, "help\tPrints this help"},
@@ -1054,6 +1078,7 @@ struct command commands[] = {
   {"send_contact", {ca_peer, ca_string, ca_string, ca_string, ca_none}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
   {"main_session", {ca_none}, do_main_session, "main_session\tSends updates to this connection (or terminal). Useful only with listening socket"},
   {"clear", {ca_none}, do_clear, "clear\tClears all data and exits. For debug."},
+  {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location"},
   {0, {ca_none}, 0, ""}
 };
 
@@ -1116,7 +1141,7 @@ enum command_argument get_complete_mode (void) {
     
     char *save = line_ptr;
     next_token ();
-    if (op == ca_user || op == ca_chat || op == ca_secret_chat || op == ca_peer || op == ca_number) {
+    if (op == ca_user || op == ca_chat || op == ca_secret_chat || op == ca_peer || op == ca_number || op == ca_double) {
       if (cur_token_quoted) {
         if (opt) {
           line_ptr = save;
@@ -1144,6 +1169,9 @@ enum command_argument get_complete_mode (void) {
           break;
         case ca_number:
           ok = (cur_token_int () != NOT_FOUND);
+          break;
+        case ca_double:
+          ok = (cur_token_double () != NOT_FOUND);
           break;
         default:
           assert (0);
@@ -1230,7 +1258,7 @@ char *command_generator (const char *text, int state) {
     if (index == -1) { return 0; }
   }
   
-  if (mode == ca_none || mode == ca_string || mode == ca_string_end || mode == ca_number) { 
+  if (mode == ca_none || mode == ca_string || mode == ca_string_end || mode == ca_number || mode == ca_double) { 
     if (c) { rl_line_buffer[rl_point] = c; }
     return 0; 
   }
@@ -1999,13 +2027,17 @@ void interpreter_ex (char *line UU, void *ex) {
       break;
     }
 
-    if (op == ca_user || op == ca_chat || op == ca_secret_chat || op == ca_peer || op == ca_number) {
+    if (op == ca_user || op == ca_chat || op == ca_secret_chat || op == ca_peer || op == ca_number || op == ca_double) {
       if (cur_token_quoted) {
         if (opt) {
-          if (op != ca_number) {
+          if (op != ca_number && op != ca_double) {
             args[args_num ++].P = 0;
           } else {
-            args[args_num ++].num = NOT_FOUND;
+            if (op == ca_number) {
+              args[args_num ++].num = NOT_FOUND;
+            } else {
+              args[args_num ++].dval = NOT_FOUND;
+            }
           }
           line_ptr = save;
           flags ++;
@@ -2016,10 +2048,14 @@ void interpreter_ex (char *line UU, void *ex) {
       } else {
         if (cur_token_end_str) { 
           if (opt) {
-            if (op != ca_number) {
+            if (op != ca_number && op != ca_double) {
               args[args_num ++].P = 0;
             } else {
-              args[args_num ++].num = NOT_FOUND;
+              if (op == ca_number) {
+                args[args_num ++].num = NOT_FOUND;
+              } else {
+                args[args_num ++].dval = NOT_FOUND;
+              }
             }
             line_ptr = save;
             flags ++;
@@ -2049,6 +2085,10 @@ void interpreter_ex (char *line UU, void *ex) {
         case ca_number:
           args[args_num ++].num = cur_token_int ();
           ok = (args[args_num - 1].num != NOT_FOUND);
+          break;
+        case ca_double:
+          args[args_num ++].dval = cur_token_double ();
+          ok = (args[args_num - 1].dval != NOT_FOUND);
           break;
         default:
           assert (0);

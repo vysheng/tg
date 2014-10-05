@@ -12,4 +12,5 @@ objs/
 dep/
 auto/
 libs/
-debian/telegram-cli*
+debian/telegram-cli.[a-z]
+debian/files

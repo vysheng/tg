@@ -1,0 +1,8 @@
+fa3223ea6f102c82f09722afb471680c  usr/bin/telegram-cli
+a491fae59cac8dfd507f262f60c7145d  usr/bin/tlc
+ee6fbdf0a90599cc893dd1bc52c62df5  usr/share/doc/telegram-cli/README-LUA
+0ade98b594fb92d79ba3aa69411949aa  usr/share/doc/telegram-cli/README.es.gz
+0136d70c21b079cb72401a7f9f67efcb  usr/share/doc/telegram-cli/README.md.gz
+e3de59df64a4dcca7a4ee2162bed92a7  usr/share/doc/telegram-cli/changelog.Debian.gz
+340464ada745a0c792764a501e5b5586  usr/share/doc/telegram-cli/copyright
+6b61123786d05dad4fde589934c08cb8  usr/share/man/man8/telegram-cli.8.gz
