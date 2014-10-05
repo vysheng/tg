@@ -51,5 +51,6 @@ void tglp_peer_delete_name (tgl_peer_t *P);
 void tglp_insert_encrypted_chat (tgl_peer_t *P);
 void tglp_insert_user (tgl_peer_t *P);
 void tglp_insert_chat (tgl_peer_t *P);
+enum tgl_typing_status tglf_fetch_typing (void);
 
 #endif

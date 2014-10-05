@@ -91,6 +91,8 @@ static int delete_stdin_event;
 
 extern volatile int sigterm_cnt;
 
+extern char *start_command;
+
 static void stdin_read_callback_all (int arg, short what, struct event *self) {
   if (!readline_disabled) {
     if (((long)arg) & 1) {
@@ -500,9 +502,19 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 }
 
 void empty_auth_file (void) {
-  char *ip = tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER;
-  bl_do_dc_option (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC, 0, "", strlen (ip), ip, 443);
-  bl_do_set_working_dc (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
+  if (tgl_state.test_mode) {
+    bl_do_dc_option (1, 0, "", strlen (TG_SERVER_TEST_1), TG_SERVER_TEST_1, 443);
+    bl_do_dc_option (2, 0, "", strlen (TG_SERVER_TEST_2), TG_SERVER_TEST_2, 443);
+    bl_do_dc_option (3, 0, "", strlen (TG_SERVER_TEST_3), TG_SERVER_TEST_3, 443);
+    bl_do_set_working_dc (2);
+  } else {
+    bl_do_dc_option (1, 0, "", strlen (TG_SERVER_1), TG_SERVER_1, 443);
+    bl_do_dc_option (2, 0, "", strlen (TG_SERVER_2), TG_SERVER_2, 443);
+    bl_do_dc_option (3, 0, "", strlen (TG_SERVER_3), TG_SERVER_3, 443);
+    bl_do_dc_option (4, 0, "", strlen (TG_SERVER_4), TG_SERVER_4, 443);
+    bl_do_dc_option (5, 0, "", strlen (TG_SERVER_5), TG_SERVER_5, 443);
+    bl_do_set_working_dc (2);
+  }
 }
 
 int need_dc_list_update;
@@ -842,6 +854,20 @@ int loop (void) {
     lua_diff_end ();
   #endif
 
+  if (start_command) {
+    safe_quit = 1;
+    while (*start_command) {
+      char *start = start_command;
+      while (*start_command && *start_command != '\n') {
+        start_command ++;
+      }
+      if (*start_command) {
+        *start_command = 0;
+        start_command ++;
+      } 
+      interpreter_ex (start, 0);
+    }
+  }
 
   /*tgl_do_get_dialog_list (get_dialogs_callback, 0);
   if (wait_dialog_list) {

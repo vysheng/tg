@@ -80,7 +80,7 @@
 #define MAX_NET_RES        (1L << 16)
 //extern int log_level;
 
-#ifndef HAVE___BUILTIN_BSWAP32
+#if !defined(HAVE___BUILTIN_BSWAP32) && !defined(__FreeBSD__) && !defined(__OpenBSD__)
 static inline unsigned __builtin_bswap32(unsigned x) {
   return ((x << 24) & 0xff000000 ) |
   ((x << 8) & 0x00ff0000 ) |
@@ -284,6 +284,13 @@ static int process_respq_answer (struct connection *c, char *packet, int len, in
   unsigned long long what;
   unsigned p1, p2;
   int i;
+  
+  long long packet_auth_key_id = *(long long *)packet;
+  if (packet_auth_key_id) {
+    assert (temp_key);
+    vlogprintf (E_WARNING, "received packet during creation of temp auth key. Probably answer on old query. Drop\n");
+    return 0;
+  }
   vlogprintf (E_DEBUG, "process_respq_answer(), len=%d, op=0x%08x\n", len, *(int *)(packet + 20));
   assert (len >= 76);
   assert (!*(long long *) packet);
@@ -552,6 +559,12 @@ static int process_dh_answer (struct connection *c, char *packet, int len, int t
   //if (len < 116) {
   //  vlogprintf (E_ERROR, "%u * %u = %llu", p1, p2, what);
   //}
+  long long packet_auth_key_id = *(long long *)packet;
+  if (packet_auth_key_id) {
+    assert (temp_key);
+    vlogprintf (E_WARNING, "received packet during creation of temp auth key. Probably answer on old query. Drop\n");
+    return 0;
+  }
   assert (len >= 116);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -660,6 +673,13 @@ static void mpc_on_get_config (void *extra, int success);
 static int process_auth_complete (struct connection *c UU, char *packet, int len, int temp_key) {
   struct tgl_dc *D = tgl_state.net_methods->get_dc (c);
   vlogprintf (E_DEBUG - 1, "process_dh_answer(), len=%d\n", len);
+  
+  long long packet_auth_key_id = *(long long *)packet;
+  if (packet_auth_key_id) {
+    assert (temp_key);
+    vlogprintf (E_WARNING, "received packet during creation of temp auth key. Probably answer on old query. Drop\n");
+    return 0;
+  }
   assert (len == 72);
   assert (!*(long long *) packet);
   assert (*(int *) (packet + 16) == len - 20);
@@ -1058,8 +1078,9 @@ static int process_rpc_message (struct connection *c UU, struct encrypted_messag
   assert (len >= MINSZ && (len & 15) == (UNENCSZ & 15));
   struct tgl_dc *DC = tgl_state.net_methods->get_dc (c);
   if (enc->auth_key_id != DC->temp_auth_key_id && enc->auth_key_id != DC->auth_key_id) {
-    vlogprintf (E_ERROR, "received msg from dc %d with auth_key_id %lld (perm_auth_key_id %lld temp_auth_key_id %lld)\n",
+    vlogprintf (E_WARNING, "received msg from dc %d with auth_key_id %lld (perm_auth_key_id %lld temp_auth_key_id %lld). Dropping\n",
     DC->id, enc->auth_key_id, DC->auth_key_id, DC->temp_auth_key_id);
+    return 0;
   }
   if (enc->auth_key_id == DC->temp_auth_key_id) {
     assert (enc->auth_key_id == DC->temp_auth_key_id);
@@ -1280,7 +1301,7 @@ void tglmp_on_start (void) {
   }
 
   if (!ok) {
-    vlogprintf (E_ERROR, "No pubic keys found\n");
+    vlogprintf (E_ERROR, "No public keys found\n");
     exit (1);
   }
   
@@ -1341,19 +1362,26 @@ static void regen_temp_key_gw (evutil_socket_t fd, short what, void *arg) {
 }
 
 struct tgl_dc *tglmp_alloc_dc (int id, char *ip, int port UU) {
-  assert (!tgl_state.DC_list[id]);
-  struct tgl_dc *DC = talloc0 (sizeof (*DC));
-  DC->id = id;
-  DC->ip = ip;
-  DC->port = port;
-  tgl_state.DC_list[id] = DC;
-  if (id > tgl_state.max_dc_num) {
-    tgl_state.max_dc_num = id;
+  //assert (!tgl_state.DC_list[id]);
+  if (!tgl_state.DC_list[id]) {
+    struct tgl_dc *DC = talloc0 (sizeof (*DC));
+    DC->id = id;
+    DC->ip = ip;
+    DC->port = port;
+    tgl_state.DC_list[id] = DC;
+    if (id > tgl_state.max_dc_num) {
+      tgl_state.max_dc_num = id;
+    }
+    DC->ev = evtimer_new (tgl_state.ev_base, regen_temp_key_gw, DC);
+    static struct timeval p;
+    event_add (DC->ev, &p);
+    return DC;
+  } else {
+    struct tgl_dc *DC = tgl_state.DC_list[id];
+    tfree_str (DC->ip);
+    DC->ip = tstrdup (ip);
+    return DC;
   }
-  DC->ev = evtimer_new (tgl_state.ev_base, regen_temp_key_gw, DC);
-  static struct timeval p;
-  event_add (DC->ev, &p);
-  return DC;
 }
 
 static struct mtproto_methods mtproto_methods = {

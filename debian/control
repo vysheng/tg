@@ -1,16 +1,16 @@
 Source: telegram-cli
 Section: net
-Priority: optional
-Maintainer: Cleto Martín <cleto@debian.org>
-Build-Depends: debhelper (>= 8.0.0),
-               autotools-dev,
-               autoconf-archive,
-               libreadline-dev,
-               libconfig-dev,
-               libssl-dev,
-               lua5.2,
-               liblua5.2-dev
-Standards-Version: 3.9.4
+Priority: extra
+Maintainer: Steve Illichevsky <still.ru@gmail.com>
+Build-Depends: 	debhelper (>= 8.0.0),
+				autotools-dev,
+				autoconf-archive,
+				libreadline-dev,
+				libconfig-dev,
+				libssl-dev,
+				lua5.1,
+				liblua5.1-dev
+Standards-Version: 3.9.2
 Homepage: https://github.com/vysheng/tg
 Vcs-Git: git://github.com/vysheng/tg.git
 Vcs-Browser: https://github.com/vysheng/tg

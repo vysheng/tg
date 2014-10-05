@@ -26,11 +26,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/types.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/fcntl.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <stdio.h>
@@ -345,6 +345,10 @@ static void restart_connection (struct connection *c) {
   struct sockaddr_in addr;
   addr.sin_family = AF_INET; 
   addr.sin_port = htons (c->port);
+  if (strcmp (c->ip, c->dc->ip)) {
+    tfree_str (c->ip);
+    c->ip = tstrdup (c->dc->ip);
+  }
   addr.sin_addr.s_addr = inet_addr (c->ip);
 
 

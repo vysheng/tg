@@ -24,16 +24,22 @@
 #include <string.h>
 
 #define TGL_MAX_DC_NUM 100
-#define TG_SERVER "149.154.167.50"
-#define TG_SERVER_TEST "149.154.167.40"
-#define TG_SERVER_DC 2
-#define TG_SERVER_TEST_DC 2
+#define TG_SERVER_1 "173.240.5.1"
+#define TG_SERVER_2 "149.154.167.51"
+#define TG_SERVER_3 "174.140.142.6"
+#define TG_SERVER_4 "149.154.167.91"
+#define TG_SERVER_5 "149.154.171.5"
+
+
+#define TG_SERVER_TEST_1 "173.240.5.253"
+#define TG_SERVER_TEST_2 "149.154.167.40"
+#define TG_SERVER_TEST_3 "174.140.142.5"
 
 // JUST RANDOM STRING
-#define TGL_BUILD "2014"
-#define TGL_VERSION "1.0.5"
+#define TGL_BUILD "2234"
+#define TGL_VERSION "1.0.6"
 
-#define TGL_ENCRYPTED_LAYER 16
+#define TGL_ENCRYPTED_LAYER 17
 
 struct connection;
 struct mtproto_methods;
@@ -70,8 +76,8 @@ struct tgl_update_callback {
   void (*new_msg)(struct tgl_message *M);
   void (*marked_read)(int num, struct tgl_message *list[]);
   void (*logprintf)(const char *format, ...)  __attribute__ ((format (printf, 1, 2)));
-  void (*type_notification)(struct tgl_user *U);
-  void (*type_in_chat_notification)(struct tgl_user *U, struct tgl_chat *C);
+  void (*type_notification)(struct tgl_user *U, enum tgl_typing_status status);
+  void (*type_in_chat_notification)(struct tgl_user *U, struct tgl_chat *C, enum tgl_typing_status status);
   void (*type_in_secret_chat_notification)(struct tgl_secret_chat *E);
   void (*status_notification)(struct tgl_user *U);
   void (*user_registered)(struct tgl_user *U);
@@ -289,6 +295,7 @@ void tgl_do_send_contact (tgl_peer_id_t id, const char *phone, int phone_len, co
 void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_del_contact (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_set_encr_chat_ttl (struct tgl_secret_chat *E, int ttl, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
+void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);

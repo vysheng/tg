@@ -495,6 +495,7 @@ enum lua_query_type {
   lq_send_contact,
   lq_status_online,
   lq_status_offline,
+  lq_send_location,
   lq_extf
 };
 
@@ -1086,6 +1087,14 @@ void lua_do_all (void) {
       free (s);
       p += 2;
       break;
+    case lq_send_location:
+      if (sizeof (void *) == 4) {
+        tgl_do_send_location (((tgl_peer_t *)lua_ptr[p + 1])->id , *(float *)(lua_ptr + p + 2), *(float *)(lua_ptr + p + 3), lua_msg_cb, lua_ptr[p]);
+      } else {
+        tgl_do_send_location (((tgl_peer_t *)lua_ptr[p + 1])->id , *(double *)(lua_ptr + p + 2), *(double *)(lua_ptr + p + 3), lua_msg_cb, lua_ptr[p]);
+      }
+      p += 4;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1120,7 +1129,8 @@ enum lua_function_param {
   lfp_number,
   lfp_positive_number,
   lfp_nonnegative_number,
-  lfp_msg
+  lfp_msg,
+  lfp_double
 };
 
 struct lua_function {
@@ -1168,6 +1178,7 @@ struct lua_function functions[] = {
   {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
   {"status_online", lq_status_online, { lfp_none }},
   {"status_offline", lq_status_offline, { lfp_none }},
+  {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
@@ -1203,6 +1214,7 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
     const char *s;
     tgl_peer_t *P;
     long long num;
+    double dval;
     struct tgl_message *M;
     switch (F->params[p]) {
     case lfp_none:
@@ -1254,6 +1266,17 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
       num = lua_tonumber (L, -cc);
       
       lua_ptr[pos + p] = (void *)(long)num;
+      break;
+    
+    case lfp_double:
+      dval  = lua_tonumber (L, -cc);
+    
+      if (sizeof (void *) == 4) {
+        *(float *)(lua_ptr + pos + p) = dval;
+      } else {
+        assert (sizeof (void *) >= 8);
+        *(double *)(lua_ptr + pos + p) = dval;
+      }
       break;
     
     case lfp_positive_number:

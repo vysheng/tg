@@ -782,6 +782,12 @@ static int fetch_comb_binlog_send_message_text (void *extra) {
   }
 
   M->to_id = tgl_set_peer_id (t, fetch_int ());
+  if (t == TGL_PEER_ENCR_CHAT) {
+    tgl_peer_t *P = tgl_peer_get (M->to_id);
+    if (P) {
+      P->encr_chat.out_seq_no ++;
+    }
+  }
   M->date = fetch_int ();
       
   int l = prefetch_strlen ();
@@ -824,6 +830,11 @@ static int fetch_comb_binlog_send_message_action_encr (void *extra) {
       
   M->media.type = tgl_message_media_none;
   tglf_fetch_message_action_encrypted (&M->action);
+
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
+  if (P) {
+    P->encr_chat.out_seq_no ++;
+  }
   
   M->unread = 1;
   M->out = tgl_get_peer_id (M->from_id) == tgl_state.our_id;
@@ -952,6 +963,11 @@ static int fetch_comb_binlog_create_message_media_encr_pending (void *extra) {
   int t = fetch_int ();
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   M->date = fetch_int ();
+  
+  tgl_peer_t *P = tgl_peer_get (M->to_id);
+  if (P) {
+    P->encr_chat.out_seq_no ++;
+  }
       
   int l = prefetch_strlen ();
   M->message = talloc (l + 1);
@@ -1316,13 +1332,53 @@ static void create_new_binlog (void) {
   static int s[1000];
   packet_ptr = s;
   out_int (CODE_binlog_start);
-  out_int (CODE_binlog_dc_option);
-  out_int (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
-  out_string ("");
-  out_string (tgl_state.test_mode ? TG_SERVER_TEST : TG_SERVER);
-  out_int (443);
-  out_int (CODE_binlog_default_dc);
-  out_int (tgl_state.test_mode ? TG_SERVER_TEST_DC : TG_SERVER_DC);
+  if (tgl_state.test_mode) {
+    out_int (CODE_binlog_dc_option);
+    out_int (1);
+    out_string ("");
+    out_string (TG_SERVER_TEST_1);
+    out_int (443);
+    out_int (CODE_binlog_dc_option);
+    out_int (2);
+    out_string ("");
+    out_string (TG_SERVER_TEST_2);
+    out_int (443);
+    out_int (CODE_binlog_dc_option);
+    out_int (3);
+    out_string ("");
+    out_string (TG_SERVER_TEST_3);
+    out_int (443);
+    out_int (CODE_binlog_default_dc);
+    out_int (2);
+  } else {
+    out_int (CODE_binlog_dc_option);
+    out_int (1);
+    out_string ("");
+    out_string (TG_SERVER_1);
+    out_int (443);
+    out_int (CODE_binlog_dc_option);
+    out_int (2);
+    out_string ("");
+    out_string (TG_SERVER_2);
+    out_int (443);
+    out_int (CODE_binlog_dc_option);
+    out_int (3);
+    out_string ("");
+    out_string (TG_SERVER_3);
+    out_int (443);
+    out_int (CODE_binlog_dc_option);
+    out_int (4);
+    out_string ("");
+    out_string (TG_SERVER_4);
+    out_int (443);
+    out_int (CODE_binlog_dc_option);
+    out_int (5);
+    out_string ("");
+    out_string (TG_SERVER_5);
+    out_int (443);
+    out_int (CODE_binlog_default_dc);
+    out_int (2);
+  }
   
   int fd = open (get_binlog_file_name (), O_WRONLY | O_EXCL | O_CREAT, 0600);
   if (fd < 0) {
@@ -1542,7 +1598,7 @@ void bl_do_user_set_friend (struct tgl_user *U, int friend) {
 
 void bl_do_dc_option (int id, int l1, const char *name, int l2, const char *ip, int port) {
   struct tgl_dc *DC = tgl_state.DC_list[id];
-  if (DC) { return; }
+  if (DC && !strncmp (ip, DC->ip, l2)) { return; }
   
   clear_packet ();
   out_int (CODE_binlog_dc_option);
@@ -1717,7 +1773,7 @@ void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned
 
 void bl_do_set_pts (int pts) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
-  if (pts == tgl_state.pts) { return; }
+  if (pts <= tgl_state.pts) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_pts;
   ev[1] = pts;
@@ -1726,7 +1782,7 @@ void bl_do_set_pts (int pts) {
 
 void bl_do_set_qts (int qts) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
-  if (qts == tgl_state.qts) { return; }
+  if (qts <= tgl_state.qts) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_qts;
   ev[1] = qts;
@@ -1735,7 +1791,7 @@ void bl_do_set_qts (int qts) {
 
 void bl_do_set_date (int date) {
   if (tgl_state.locks & TGL_LOCK_DIFF) { return; }
-  if (date == tgl_state.date) { return; }
+  if (date <= tgl_state.date) { return; }
   int *ev = alloc_log_event (8);
   ev[0] = CODE_binlog_set_date;
   ev[1] = date;

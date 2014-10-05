@@ -1,5 +1,5 @@
-telegram-cli (0.1-1) unstable; urgency=low
+telegram-cli (1.0.5.1-1) unstable; urgency=low
 
-  * Initial release (Closes #737563)
+  * Initial release 
 
- -- Cleto Martín <cleto@debian.org>  Mon, 03 Feb 2014 20:00:03 +0000
+ -- Steve Illichevsky <still.ru@gmail.com>  Wed, 01 Oct 2014 21:06:28 +0400
