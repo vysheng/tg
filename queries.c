@@ -1837,9 +1837,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_cstring ((void *)f->key, 32);
       out_cstring ((void *)f->init_iv, 32);
 
-      long long msg_id;
-      tglt_secure_random (&msg_id, 8);
-      bl_do_create_message_media_encr_pending (msg_id, tgl_state.our_id, tgl_get_peer_type (f->to_id), tgl_get_peer_id (f->to_id), time (0), 0, 0, save_ptr, packet_ptr - save_ptr);
+      bl_do_create_message_media_encr_pending (r, tgl_state.our_id, tgl_get_peer_type (f->to_id), tgl_get_peer_id (f->to_id), time (0), 0, 0, save_ptr, packet_ptr - save_ptr);
 
       encr_finish (&P->encr_chat);
       if (f->size < (16 << 20)) {
@@ -1861,7 +1859,7 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_int ((*(int *)md5) ^ (*(int *)(md5 + 4)));
 
       tfree_secure (f->iv, 32);
-      struct tgl_message *M = tgl_message_get (msg_id);
+      struct tgl_message *M = tgl_message_get (r);
       assert (M);
       
       //M->media.encr_photo.key = f->key;
@@ -1996,6 +1994,7 @@ void tgl_do_set_profile_photo (char *file_name, void (*callback)(void *callback_
   _tgl_do_send_photo (tgl_message_media_photo, TGL_MK_USER(tgl_state.our_id), file_name, -1, (void *)callback, callback_extra);
 }
 /* }}} */
+
 
 /* {{{ Forward */
 static int fwd_msg_on_answer (struct query *q UU) {
@@ -2144,6 +2143,65 @@ void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callb
   out_long (r);
 
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+}
+/* }}} */
+
+/* {{{ Send location */
+
+void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra) {
+  if (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT) {
+    clear_packet ();
+    out_int (CODE_messages_send_encrypted);
+    out_int (CODE_input_encrypted_chat);
+    out_int (tgl_get_peer_id (id));
+    tgl_peer_t *P = tgl_peer_get (id);
+    assert (P);
+    out_long (P->encr_chat.access_hash);
+
+    long long r;
+    tglt_secure_random (&r, 8);
+    out_long (r);
+    encr_start ();
+    if (P->encr_chat.layer <= 16) {
+      out_int (CODE_decrypted_message_l16);
+    } else {
+      out_int (CODE_decrypted_message);
+      out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+      out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
+      out_int (0);
+    }
+    out_long (r);
+    out_random (15 + 4 * (lrand48 () % 3));
+    out_string ("");
+    int *save_ptr = packet_ptr;
+    out_int (CODE_decrypted_message_media_geo_point);
+    out_double (latitude);
+    out_double (longitude);
+
+    bl_do_create_message_media_encr_pending (r, tgl_state.our_id, tgl_get_peer_type (id), tgl_get_peer_id (id), time (0), 0, 0, save_ptr, packet_ptr - save_ptr);
+
+    encr_finish (&P->encr_chat);
+      
+    struct tgl_message *M = tgl_message_get (r);
+    assert (M);
+    
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &msg_send_encr_methods, M, callback, callback_extra);
+  } else {
+    long long t;
+    tglt_secure_random (&t, 8);
+    vlogprintf (E_DEBUG, "t = %lld\n", t);
+
+    clear_packet ();
+    out_int (CODE_messages_send_media);
+    out_peer_id (id);
+    out_int (CODE_input_media_geo_point);
+    out_int (CODE_input_geo_point);
+    out_double (latitude);
+    out_double (longitude);
+    out_long (t);
+
+    tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &fwd_msg_methods, 0, callback, callback_extra);
+  }
 }
 /* }}} */
 

@@ -74,5 +74,7 @@ Function_list (arguments are listed aside from cb_function and cb_extra, :
   status_online ()
   status_offline ()
 
+  send_location (peer, latitude, longitude)
+
 Also, you have function 
   postpone (cb_function, cb_extra, timeout). It will call your cb_function in specified number of seconds (number of seconds may be double).
