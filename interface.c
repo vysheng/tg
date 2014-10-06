@@ -2304,7 +2304,7 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       }
       return;
     case tgl_message_media_geo:
-      mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
+      mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.longitude, M->geo.latitude);
       return;
     case tgl_message_media_contact:
       mprintf (ev, "[contact] ");

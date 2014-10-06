@@ -994,13 +994,13 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
     out_int (CODE_decrypted_message_service_l16);
   } else {
     out_int (CODE_decrypted_message_service);
+  }
+  out_long (M->id);
+  out_random (15 + 4 * (lrand48 () % 3));
+  if (P->encr_chat.layer >= 17) {
     out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
     out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
   }
-  out_long (M->id);
-  static int buf[4];
-  tglt_secure_random (buf, 16);
-  out_cstring ((void *)buf, 16);
 
   switch (M->action.type) {
   case tgl_message_action_notify_layer:
@@ -1044,14 +1044,14 @@ void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callbac
     out_int (CODE_decrypted_message_l16);
   } else {
     out_int (CODE_decrypted_message);
+  }
+  out_long (M->id);
+  out_random (15 + 4 * (lrand48 () % 3));
+  if (P->encr_chat.layer >= 17) {
     out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
     out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
     out_int (0);
   }
-  out_long (M->id);
-  static int buf[4];
-  tglt_secure_random (buf, 16);
-  out_cstring ((void *)buf, 16);
   out_cstring ((void *)M->message, M->message_len);
   out_int (CODE_decrypted_message_media_empty);
   encr_finish (&P->encr_chat);
@@ -1789,12 +1789,14 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
         out_int (CODE_decrypted_message_l16);
       } else {
         out_int (CODE_decrypted_message);
+      }
+      out_long (r);
+      out_random (15 + 4 * (lrand48 () % 3));
+      if (P->encr_chat.layer >= 17) {
         out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
         out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
         out_int (0);
       }
-      out_long (r);
-      out_random (15 + 4 * (lrand48 () % 3));
       out_string ("");
       int *save_ptr = packet_ptr;
       if (f->media_type == CODE_input_media_uploaded_photo) {
@@ -2166,12 +2168,14 @@ void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, v
       out_int (CODE_decrypted_message_l16);
     } else {
       out_int (CODE_decrypted_message);
+    }
+    out_long (r);
+    out_random (15 + 4 * (lrand48 () % 3));
+    if (P->encr_chat.layer >= 17) {
       out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
       out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
       out_int (0);
     }
-    out_long (r);
-    out_random (15 + 4 * (lrand48 () % 3));
     out_string ("");
     int *save_ptr = packet_ptr;
     out_int (CODE_decrypted_message_media_geo_point);

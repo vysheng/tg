@@ -1229,6 +1229,9 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     }
     assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
     //assert (id == fetch_long ());
+    fetch_long ();
+    ll = prefetch_strlen ();
+    fetch_str (ll); // random_bytes
     if (x == CODE_decrypted_message || x == CODE_decrypted_message_service) {
       int out_seq_no = fetch_int ();
       int in_seq_no = fetch_int ();
@@ -1247,9 +1250,6 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     } else {
       P->encr_chat.in_seq_no ++;
     }
-    fetch_long ();
-    ll = prefetch_strlen ();
-    fetch_str (ll); // random_bytes
     if (x == CODE_decrypted_message || x == CODE_decrypted_message_l16) {
       l = prefetch_strlen ();
       s = fetch_str (l);
