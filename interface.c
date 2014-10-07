@@ -1911,6 +1911,7 @@ void interpreter_ex (char *line UU, void *ex) {
   offline_mode = 0;
   count = 1;
   if (!line) { 
+    do_safe_quit (0, NULL, NULL);
     in_readline = 0;
     return; 
   }
