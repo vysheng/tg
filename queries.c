@@ -518,105 +518,6 @@ void tgl_do_phone_call (const char *user, const char *hash,void (*callback)(void
 }
 /* }}} */
 
-/* {{{ Check phone */
-/*int check_phone_result;
-int cr_f (void) {
-  return check_phone_result >= 0;
-}
-
-int check_phone_on_answer (struct query *q UU) {
-  assert (fetch_int () == (int)CODE_auth_checked_phone);
-  check_phone_result = fetch_bool ();
-  fetch_bool ();
-  return 0;
-}
-
-int check_phone_on_error (struct query *q UU, int error_code, int l, char *error) {
-  int s = strlen ("PHONE_MIGRATE_");
-  int s2 = strlen ("NETWORK_MIGRATE_");
-  if (l >= s && !memcmp (error, "PHONE_MIGRATE_", s)) {
-    int i = error[s] - '0';
-    assert (DC_list[i]);
-
-    dc_working_num = i;
-    tgl_state.DC_working = DC_list[i];
-    write_auth_file ();
-
-    bl_do_set_working_dc (i);
-
-    check_phone_result = 1;
-  } else if (l >= s2 && !memcmp (error, "NETWORK_MIGRATE_", s2)) {
-    int i = error[s2] - '0';
-    assert (DC_list[i]);
-    dc_working_num = i;
-
-    bl_do_set_working_dc (i);
-
-    tgl_state.DC_working = DC_list[i];
-    write_auth_file ();
-    check_phone_result = 1;
-  } else {
-    logprintf ( "error_code = %d, error = %.*s\n", error_code, l, error);
-    assert (0);
-  }
-  return 0;
-}
-
-struct query_methods check_phone_methods = {
-  .on_answer = check_phone_on_answer,
-  .on_error = check_phone_on_error,
-  .type = TYPE_TO_PARAM(auth_checked_phone)
-};
-
-int tgl_do_auth_check_phone (const char *user) {
-  suser = tstrdup (user);
-  clear_packet ();
-  out_int (CODE_auth_check_phone);
-  out_string (user);
-  check_phone_result = -1;
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
-  net_loop (0, cr_f);
-  check_phone_result = -1;
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &check_phone_methods, 0);
-  net_loop (0, cr_f);
-  return check_phone_result;
-}*/
-/* }}} */
-
-/* {{{ Nearest DC */
-/*int nearest_dc_num;
-int nr_f (void) {
-  return nearest_dc_num >= 0;
-}
-
-int nearest_dc_on_answer (struct query *q UU) {
-  assert (fetch_int () == (int)CODE_nearest_dc);
-  char *country = fetch_str_dup ();
-  if (verbosity > 0) {
-    logprintf ("Server thinks that you are in %s\n", country);
-  }
-  fetch_int (); // this_dc
-  nearest_dc_num = fetch_int ();
-  assert (nearest_dc_num >= 0);
-  return 0;
-}
-
-struct query_methods nearest_dc_methods = {
-  .on_answer = nearest_dc_on_answer,
-  .on_error = fail_on_error,
-  .type = TYPE_TO_PARAM(nearest_dc)
-};
-
-int tgl_do_get_nearest_dc (void) {
-  clear_packet ();
-  out_int (CODE_help_get_nearest_dc);
-  nearest_dc_num = -1;
-  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &nearest_dc_methods, 0);
-  net_loop (0, nr_f);
-  return nearest_dc_num;
-}*/
-/* }}} */
-
 /* {{{ Sign in / Sign up */
 static int sign_in_on_answer (struct query *q UU) {
   assert (fetch_int () == (int)CODE_auth_authorization);
@@ -1922,7 +1823,7 @@ void _tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, 
   f->part_num = 0;
   f->avatar = avatar;
   int tmp = ((size + 2999) / 3000);
-  f->part_size = (1 << 10);
+  f->part_size = (1 << 14);
   while (f->part_size < tmp) {
     f->part_size *= 2;
   }
@@ -1997,6 +1898,30 @@ void tgl_do_set_profile_photo (char *file_name, void (*callback)(void *callback_
 }
 /* }}} */
 
+/* {{{ Profile name */
+
+int set_profile_name_on_answer (struct query *q) {
+  struct tgl_user *U = tglf_fetch_alloc_user ();
+  if (q->callback) {
+    ((void (*)(void *, int, struct tgl_user  *))q->callback) (q->callback_extra, 1, U);
+  }
+  return 0;
+}
+
+static struct query_methods set_profile_name_methods = {
+  .on_answer = set_profile_name_on_answer,
+  .type = TYPE_TO_PARAM(user)
+};
+
+void tgl_do_set_profile_name (char *first_name, char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_account_update_profile);
+  out_string (first_name);
+  out_string (last_name);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &set_profile_name_methods, 0, callback, callback_extra);
+}
+/* }}} */
 
 /* {{{ Forward */
 static int fwd_msg_on_answer (struct query *q UU) {
@@ -2435,6 +2360,7 @@ struct download {
   unsigned char *iv;
   unsigned char *key;
   int type;
+  int refcnt;
 };
 
 
@@ -2502,11 +2428,14 @@ static int download_on_answer (struct query *q) {
     assert (write (D->fd, fetch_str (len), len) == len);
   }
   D->offset += len;
+  D->refcnt --;
   if (D->offset < D->size) {
     load_next_part (D, q->callback, q->callback_extra);
     return 0;
   } else {
-    end_load (D, q->callback, q->callback_extra);
+    if (!D->refcnt) {
+      end_load (D, q->callback, q->callback_extra);
+    }
     return 0;
   }
 }
@@ -2546,6 +2475,7 @@ static void load_next_part (struct download *D, void *callback, void *callback_e
     tgl_state.cur_downloaded_bytes += D->offset;
     //update_prompt ();
   }
+  D->refcnt ++;
   clear_packet ();
   out_int (CODE_upload_get_file);
   if (!D->id) {

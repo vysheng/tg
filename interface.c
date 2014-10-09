@@ -920,6 +920,11 @@ void do_set_profile_photo (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_set_profile_photo (args[0].str, 0, 0);
 }
 
+void do_set_profile_name (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  tgl_do_set_profile_name (args[0].str, args[1].str, print_user_gw, ev);
+}
+
 void do_accept_secret_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   tgl_do_accept_encr_chat_request (&args[0].P->encr_chat, 0, 0);
@@ -1071,6 +1076,7 @@ struct command commands[] = {
   {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat, "create_group_chat <name> <user>+\tCreates group chat with users"},
   {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo, "chat_set_photo <chat> <filename>\tSets chat photo. Photo will be cropped to square"},
   {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo, "set_profile_photo <filename>\tSets profile photo. Photo will be cropped to square"},
+  {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name."},
   {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option"},
   {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl"},
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method"},

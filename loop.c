@@ -115,6 +115,7 @@ static void stdin_read_callback_all (int arg, short what, struct event *self) {
       //logprintf ("r = %d, size = %d, pos = %d, what = 0x%x, fd = %d\n", r, line_buffer_size, line_buffer_pos, (int)what, fd);
       if (r < 0) {
         perror ("read");
+        delete_stdin_event = 1;
         break;
       }
       if (r == 0) {

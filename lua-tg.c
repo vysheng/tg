@@ -464,6 +464,7 @@ enum lua_query_type {
   lq_send_photo,
   lq_chat_set_photo,
   lq_set_profile_photo,
+  lq_set_profile_name,
   lq_send_video,
   lq_send_text,
   lq_fwd,
@@ -1041,6 +1042,14 @@ void lua_do_all (void) {
       free (s);
       p += 2;
       break;
+    case lq_set_profile_name:
+      s1 = lua_ptr[p + 1];
+      s2 = lua_ptr[p + 1];
+      tgl_do_set_profile_name (s1, s2, lua_user_cb, lua_ptr[p]);
+      free (s1);
+      free (s2);
+      p += 3;
+      break;
     case lq_create_secret_chat:
       tgl_do_create_secret_chat (((tgl_peer_t *)lua_ptr[p + 1])->id, lua_secret_chat_cb, lua_ptr[p]);
       p += 2;
@@ -1170,6 +1179,7 @@ struct lua_function functions[] = {
   {"msg_global_search", lq_global_search, { lfp_string, lfp_none }},
   {"mark_read", lq_mark_read, { lfp_peer, lfp_none }},
   {"set_profile_photo", lq_set_profile_photo, { lfp_string, lfp_none }},
+  {"set_profile_name", lq_set_profile_name, { lfp_string, lfp_none }},
   {"create_secret_chat", lq_create_secret_chat, { lfp_user, lfp_none }},
   {"create_group_chat", lq_create_group_chat, { lfp_user, lfp_string, lfp_none }},
   {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
