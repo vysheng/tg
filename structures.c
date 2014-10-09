@@ -540,8 +540,8 @@ void tglf_fetch_photo_size (struct tgl_photo_size *S) {
 void tglf_fetch_geo (struct tgl_geo *G) {
   unsigned x = fetch_int ();
   if (x == CODE_geo_point) {
-    G->latitude = fetch_double ();
     G->longitude = fetch_double ();
+    G->latitude = fetch_double ();
   } else {
     assert (x == CODE_geo_point_empty);
     G->longitude = 0;

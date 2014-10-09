@@ -1911,6 +1911,7 @@ void interpreter_ex (char *line UU, void *ex) {
   offline_mode = 0;
   count = 1;
   if (!line) { 
+    do_safe_quit (0, NULL, NULL);
     in_readline = 0;
     return; 
   }
@@ -2304,7 +2305,7 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       }
       return;
     case tgl_message_media_geo:
-      mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.longitude, M->geo.latitude);
+      mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
       return;
     case tgl_message_media_contact:
       mprintf (ev, "[contact] ");
