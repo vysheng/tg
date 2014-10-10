@@ -239,11 +239,15 @@ void check_type_sizes (void) {
 
 void running_for_first_time (void) {
   check_type_sizes ();
-  if (config_filename) {
+  if (!str_empty (config_filename)) {
     return; // Do not create custom config file
   }
-  tasprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE);
+  if (str_empty (config_directory)) {
+    config_directory = get_config_directory ();
+  }
+  tasprintf (&config_filename, "%s/%s", config_directory, CONFIG_FILE);
   config_filename = make_full_path (config_filename);
+  // printf ("I: config file=[%s]\n", config_filename);
 
   int config_file_fd;
   char *config_directory = get_config_directory ();
