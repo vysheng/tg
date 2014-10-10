@@ -247,11 +247,13 @@ void running_for_first_time (void) {
   }
   tasprintf (&config_filename, "%s/%s", config_directory, CONFIG_FILE);
   config_filename = make_full_path (config_filename);
+  if (!disable_output) {
+    printf ("I: config dir=[%s]\n", config_directory);
+  }
   // printf ("I: config file=[%s]\n", config_filename);
 
   int config_file_fd;
   char *config_directory = get_config_directory ();
-  printf ("I: config dir=[%s]\n", config_directory);
   //char *downloads_directory = get_downloads_directory ();
 
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
