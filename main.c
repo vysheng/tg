@@ -180,6 +180,15 @@ char *get_config_directory (void) {
   char *config_directory;
   config_directory = getenv("TELEGRAM_CONFIG_DIR");
   if (!str_empty (config_directory)) { return tstrdup (config_directory); }
+  // XDG: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+  config_directory = getenv("XDG_CONFIG_HOME");
+  if (!str_empty (config_directory)) {
+    tasprintf (&config_directory, "%s/" PROG_NAME, config_directory);
+    // :TODO: someone check whether it could be required to pass tasprintf
+    //        a tstrdup()ed config_directory instead; works for me without.
+    //        should work b/c this scope's lifespan encompasses tasprintf()
+    return config_directory;
+  }
   tasprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ());
   return config_directory;
 }
@@ -238,6 +247,7 @@ void running_for_first_time (void) {
 
   int config_file_fd;
   char *config_directory = get_config_directory ();
+  printf ("I: config dir=[%s]\n", config_directory);
   //char *downloads_directory = get_downloads_directory ();
 
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
