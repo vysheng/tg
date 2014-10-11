@@ -1,5 +1,12 @@
+telegram-cli (1.0.6-1) unstable; urgency=low
+
+  * Upstream update version
+  * Inpliment -e option
+
+ -- Steve Illichevsky <still.ru@gmail.com>  Sat, 11 Oct 2014 08:47:07 +0400
+
 telegram-cli (1.0.5.1-1) unstable; urgency=low
 
-  * Initial release 
+  * Initial release
 
- -- Steve Illichevsky <still.ru@gmail.com>  Wed, 01 Oct 2014 21:06:28 +0400
+ -- Steve Illichevsky <still.ru@gmail.com>  Sun, 05 Oct 2014 09:37:06 +0400

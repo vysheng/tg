@@ -1,0 +1,10 @@
+# Service
+
+setuid telegramd
+setgid telegramd
+
+script
+   exec /usr/bin/telegram-cli -s /var/lib/telegram-cli/test.lua -W -d -C -vvvv -l 0 -L /var/lib/telegram-cli/telegram-cli.log -P 8002
+	# This example for Daemon wich keep log in his home directory
+        # This daemon can listen localhost:8002 tcp port
+end script

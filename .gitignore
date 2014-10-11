@@ -12,3 +12,8 @@ objs/
 dep/
 auto/
 libs/
+debian/telegram-cli.[a-z]
+debian/files
+debian/telegram-cli/*
+debian/telegram-cli.debhelper.log
+debian/telegram-cli.substvars

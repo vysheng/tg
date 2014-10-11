@@ -1,0 +1,8 @@
+# Automatically added by dh_installinit
+if [ -e "/etc/init/telegram-cli.conf" ]; then
+	invoke-rc.d telegram-cli start || exit $?
+fi
+# End automatically added section
+# Automatically added by dh_installinit
+update-rc.d -f telegram-cli remove >/dev/null || exit $?
+# End automatically added section
