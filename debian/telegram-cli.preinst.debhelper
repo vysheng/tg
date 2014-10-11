@@ -1,0 +1,14 @@
+# Automatically added by dh_installinit
+if [ "$1" = install ] || [ "$1" = upgrade ]; then
+	if [ -e "/etc/init.d/telegram-cli" ] && [ ! -L "/etc/init.d/telegram-cli" ]; then
+		if [ "`md5sum \"/etc/init.d/telegram-cli\" | sed -e \"s/ .*//\"`" != \
+		     "`dpkg-query -W -f='${Conffiles}' telegram-cli | sed -n -e \"\\\\' /etc/init.d/telegram-cli '{s/ obsolete$//;s/.* //p}\"`" ]
+		then
+			echo "Obsolete conffile /etc/init.d/telegram-cli has been modified by you, renaming to .dpkg-bak"
+			mv -f "/etc/init.d/telegram-cli" "/etc/init.d/telegram-cli.dpkg-bak"
+		else
+			rm -f "/etc/init.d/telegram-cli"
+		fi
+	fi
+fi
+# End automatically added section

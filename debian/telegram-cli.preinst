@@ -1,0 +1,1 @@
+adduser --system --home /var/lib/telegram-cli --gecos "Telegram Daemon User"  --group telegramd
