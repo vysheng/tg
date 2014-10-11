@@ -151,11 +151,16 @@ void set_terminal_attributes (void) {
 }
 /* }}} */
 
+int str_empty (char *str) {
+  return ((str == NULL) || (strlen(str) < 1));
+}
+
 char *get_home_directory (void) {
   static char *home_directory = NULL;
-  if (home_directory != NULL) {
-    return home_directory;
-  }
+  home_directory = getenv("TELEGRAM_HOME");
+  if (!str_empty (home_directory)) { return tstrdup (home_directory); }
+  home_directory = getenv("HOME");
+  if (!str_empty (home_directory)) { return tstrdup (home_directory); }
   struct passwd *current_passwd;
   uid_t user_id;
   setpwent ();
@@ -167,14 +172,23 @@ char *get_home_directory (void) {
     }
   }
   endpwent ();
-  if (home_directory == NULL) {
-    home_directory = tstrdup (".");
-  }
+  if (str_empty (home_directory)) { home_directory = tstrdup ("."); }
   return home_directory;
 }
 
 char *get_config_directory (void) {
   char *config_directory;
+  config_directory = getenv("TELEGRAM_CONFIG_DIR");
+  if (!str_empty (config_directory)) { return tstrdup (config_directory); }
+  // XDG: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+  config_directory = getenv("XDG_CONFIG_HOME");
+  if (!str_empty (config_directory)) {
+    tasprintf (&config_directory, "%s/" PROG_NAME, config_directory);
+    // :TODO: someone check whether it could be required to pass tasprintf
+    //        a tstrdup()ed config_directory instead; works for me without.
+    //        should work b/c this scope's lifespan encompasses tasprintf()
+    return config_directory;
+  }
   tasprintf (&config_directory, "%s/" CONFIG_DIRECTORY, get_home_directory ());
   return config_directory;
 }
@@ -225,11 +239,18 @@ void check_type_sizes (void) {
 
 void running_for_first_time (void) {
   check_type_sizes ();
-  if (config_filename) {
+  if (!str_empty (config_filename)) {
     return; // Do not create custom config file
   }
-  tasprintf (&config_filename, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, CONFIG_FILE);
+  if (str_empty (config_directory)) {
+    config_directory = get_config_directory ();
+  }
+  tasprintf (&config_filename, "%s/%s", config_directory, CONFIG_FILE);
   config_filename = make_full_path (config_filename);
+  if (!disable_output) {
+    printf ("I: config dir=[%s]\n", config_directory);
+  }
+  // printf ("I: config file=[%s]\n", config_filename);
 
   int config_file_fd;
   char *config_directory = get_config_directory ();
@@ -249,6 +270,7 @@ void running_for_first_time (void) {
     config_file_fd = open (config_filename, O_CREAT | O_RDWR, 0600);
     if (config_file_fd == -1)  {
       perror ("open[config_file]");
+      printf ("I: config_file=[%s]\n", config_filename);
       exit (EXIT_FAILURE);
     }
     if (write (config_file_fd, DEFAULT_CONFIG_CONTENTS, strlen (DEFAULT_CONFIG_CONTENTS)) <= 0) {
