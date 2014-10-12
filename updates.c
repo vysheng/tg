@@ -152,7 +152,11 @@ void tglu_work_update (struct connection *c, long long msg_id) {
         char *l = fetch_str (l2);
         struct tgl_user *U = &UC->user;
         bl_do_user_set_real_name (U, f, l1, l, l2);
+        int l3 = prefetch_strlen ();
+        f = fetch_str (l3);
+        bl_do_user_set_username (U, f, l3);
       } else {
+        fetch_skip_str ();
         fetch_skip_str ();
         fetch_skip_str ();
       }
@@ -402,6 +406,17 @@ void tglu_work_update (struct connection *c, long long msg_id) {
     {
        assert (skip_type_any (TYPE_TO_PARAM (notify_peer)) >= 0);
        assert (skip_type_any (TYPE_TO_PARAM (peer_notify_settings)) >= 0);
+    }
+    break;
+  case CODE_update_service_notification:
+    {
+      int l1 = prefetch_strlen ();
+      char *type = fetch_str (l1);
+      int l2 = prefetch_strlen ();
+      char *message = fetch_str (l2);
+      skip_type_message_media (TYPE_TO_PARAM(message_media));
+      fetch_bool ();
+      vlogprintf (E_ERROR, "Notification %.*s: %.*s\n", l1, type, l2, message);
     }
     break;
   default:

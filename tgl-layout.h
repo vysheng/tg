@@ -254,6 +254,7 @@ struct tgl_user {
   int blocked;
   char *real_first_name;
   char *real_last_name;
+  char *username;
 };
 
 struct tgl_chat_user {

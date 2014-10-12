@@ -61,6 +61,7 @@ struct tgl_dc;
 #define TGL_UPDATE_ADMIN 4096
 #define TGL_UPDATE_MEMBERS 8192
 #define TGL_UPDATE_ACCESS_HASH 16384
+#define TGL_UPDATE_USERNAME (1 << 15)
 
 struct tgl_allocator {
   void *(*alloc)(size_t size);
@@ -262,6 +263,7 @@ void tgl_do_send_photo (enum tgl_message_media_type type, tgl_peer_id_t to_id, c
 void tgl_do_set_chat_photo (tgl_peer_id_t chat_id, char *file_name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_set_profile_photo (char *file_name, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_set_profile_name (char *first_name, char *last_name, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra);
+void tgl_do_set_username (char *name, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra);
 void tgl_do_forward_message (tgl_peer_id_t id, int n, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_rename_chat (tgl_peer_id_t id, char *name, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_get_chat_info (tgl_peer_id_t id, int offline_mode, void (*callback)(void *callback_extra, int success, struct tgl_chat *C), void *callback_extra);
@@ -276,7 +278,7 @@ void tgl_do_load_encr_video (struct tgl_encr_video *V, void (*callback)(void *ca
 void tgl_do_export_auth (int num, void (*callback) (void *callback_extra, int success), void *callback_extra);
 void tgl_do_add_contact (const char *phone, int phone_len, const char *first_name, int first_name_len, const char *last_name, int last_name_len, int force, void (*callback)(void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra);
 void tgl_do_msg_search (tgl_peer_id_t id, int from, int to, int limit, int offset, const char *s, void (*callback)(void *callback_extra, int success, int size, struct tgl_message *list[]), void *callback_extra);
-void tgl_do_contacts_search (int limit, const char *s, void (*callback) (void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra);
+//void tgl_do_contacts_search (int limit, const char *s, void (*callback) (void *callback_extra, int success, int size, struct tgl_user *users[]), void *callback_extra);
 void tgl_do_create_encr_chat_request (int user_id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
 void tgl_do_create_secret_chat (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
 void tgl_do_accept_encr_chat_request (struct tgl_secret_chat *E, void (*callback)(void *callback_extra, int success, struct tgl_secret_chat *E), void *callback_extra);
@@ -297,6 +299,7 @@ void tgl_do_forward_media (tgl_peer_id_t id, int n, void (*callback)(void *callb
 void tgl_do_del_contact (tgl_peer_id_t id, void (*callback)(void *callback_extra, int success), void *callback_extra);
 void tgl_do_set_encr_chat_ttl (struct tgl_secret_chat *E, int ttl, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
 void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, void (*callback)(void *callback_extra, int success, struct tgl_message *M), void *callback_extra);
+void tgl_do_contact_search (char *name, int limit, void (*callback)(void *callback_extra, int success, int cnt, struct tgl_user *U[]), void *callback_extra);
 
 
 void tgl_do_visualize_key (tgl_peer_id_t id, unsigned char buf[16]);

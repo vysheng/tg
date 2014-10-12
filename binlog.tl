@@ -27,6 +27,7 @@ binlog.userSetBlocked id:int blocked:int = binlog.Update;
 binlog.userSetRealName id:int real_first_name:string real_last_name:string = binlog.Update;
 binlog.userSetName id:int first_name:string last_name:string = binlog.Update;
 binlog.userSetPhoto id:int photo:UserProfilePhoto = binlog.Update;
+binlog.userSetUsername id:int username:string = binlog.Update;
 
 binlog.encrChatDelete id:int = binlog.Update;
 binlog.encrChatRequested id:int hash:long date:int admin:int user:int key:64*[int] nonce:64*[int] = binlog.Update;

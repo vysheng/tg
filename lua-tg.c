@@ -184,6 +184,9 @@ void push_update_types (unsigned flags) {
   if (flags & TGL_UPDATE_ACCESS_HASH) {
     lua_add_string_field_arr (cc++, "access_hash");
   }
+  if (flags & TGL_UPDATE_USERNAME) {
+    lua_add_string_field_arr (cc++, "username");
+  }
 
 }
 

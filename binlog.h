@@ -32,6 +32,7 @@ void bl_do_user_add (int id, const char *f, int fl, const char *l, int ll, long 
 void bl_do_user_delete (struct tgl_user *U);
 void bl_do_set_user_profile_photo (struct tgl_user *U, long long photo_id, struct tgl_file_location *big, struct tgl_file_location *small);
 void bl_do_user_set_name (struct tgl_user *U, const char *f, int fl, const char *l, int ll);
+void bl_do_user_set_username (struct tgl_user *U, const char *f, int l);
 void bl_do_user_set_access_hash (struct tgl_user *U, long long access_token);
 void bl_do_user_set_phone (struct tgl_user *U, const char *p, int pl);
 void bl_do_user_set_friend (struct tgl_user *U, int friend);

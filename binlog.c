@@ -326,6 +326,20 @@ static int fetch_comb_binlog_user_set_name (void *extra) {
   return 0;
 }
 
+static int fetch_comb_binlog_user_set_username (void *extra) {
+  tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
+  tgl_peer_t *U = tgl_peer_get (id);
+  assert (U);
+
+  if (U->user.username) { tfree_str (U->user.username); }
+  U->user.username = fetch_str_dup ();
+  
+  if (tgl_state.callback.user_update) {
+    tgl_state.callback.user_update ((void *)U, TGL_UPDATE_USERNAME);
+  }
+  return 0;
+}
+
 static int fetch_comb_binlog_user_set_photo (void *extra) {
   tgl_peer_id_t id = TGL_MK_USER (fetch_int ());
   tgl_peer_t *U = tgl_peer_get (id);
@@ -1270,6 +1284,7 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_user_set_full_photo)
   FETCH_COMBINATOR_FUNCTION (binlog_user_set_blocked)
   FETCH_COMBINATOR_FUNCTION (binlog_user_set_name)
+  FETCH_COMBINATOR_FUNCTION (binlog_user_set_username)
   FETCH_COMBINATOR_FUNCTION (binlog_user_set_photo)
 
   FETCH_COMBINATOR_FUNCTION (binlog_user_set_real_name)
@@ -1564,6 +1579,18 @@ void bl_do_user_set_name (struct tgl_user *U, const char *f, int fl, const char 
   out_int (tgl_get_peer_id (U->id));
   out_cstring (f, fl);
   out_cstring (l, ll);
+  add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
+}
+
+void bl_do_user_set_username (struct tgl_user *U, const char *f, int l) {
+  if ((U->username && (int)strlen (U->username) == l && !strncmp (U->username, f, l)) || 
+      (!l && !U->username)) {
+    return;
+  }
+  clear_packet ();
+  out_int (CODE_binlog_user_set_username);
+  out_int (tgl_get_peer_id (U->id));
+  out_cstring (f, l);
   add_log_event (packet_buffer, 4 * (packet_ptr - packet_buffer));
 }
 

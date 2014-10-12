@@ -218,9 +218,13 @@ int tglf_fetch_user (struct tgl_user *U) {
     int l2 = prefetch_strlen ();
     assert (l2 >= 0);
     char *s2 = fetch_str (l2);
+
+    int l3 = prefetch_strlen ();
+    char *s3 = fetch_str (l3);
     
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
       bl_do_user_add (tgl_get_peer_id (U->id), s1, l1, s2, l2, 0, 0, 0, 0);
+      bl_do_user_set_username (U, s3, l3);
       bl_do_user_delete (U);
     }
     if (x != CODE_user_deleted) {
@@ -236,6 +240,7 @@ int tglf_fetch_user (struct tgl_user *U) {
         phone = fetch_str (phone_len);
       }
       bl_do_user_add (tgl_get_peer_id (U->id), s1, l1, s2, l2, access_hash, phone, phone_len, x == CODE_user_contact);
+      bl_do_user_set_username (U, s3, l3);
       assert (tglf_fetch_user_photo (U) >= 0);
       assert (tglf_fetch_user_status (&U->status) >= 0);
 
@@ -250,6 +255,10 @@ int tglf_fetch_user (struct tgl_user *U) {
     char *s2 = fetch_str (l2);
     
     bl_do_user_set_name (U, s1, l1, s2, l2);
+    
+    int l3 = prefetch_strlen ();
+    char *s3 = fetch_str (l3);
+    bl_do_user_set_username (U, s3, l3);
 
     if (x == CODE_user_deleted && !(U->flags & FLAG_DELETED)) {
       bl_do_user_delete (U);

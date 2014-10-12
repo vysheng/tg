@@ -337,7 +337,8 @@ static void out_random (int n) {
 
 int allow_send_linux_version;
 void tgl_do_insert_header (void) {
-  out_int (CODE_invoke_with_layer17);  
+  out_int (CODE_invoke_with_layer18);  
+  //out_int (0x50858a19);
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -1920,6 +1921,55 @@ void tgl_do_set_profile_name (char *first_name, char *last_name, void (*callback
   out_string (last_name);
 
   tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &set_profile_name_methods, 0, callback, callback_extra);
+}
+
+void tgl_do_set_username (char *name, void (*callback)(void *callback_extra, int success, struct tgl_user *U), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_account_update_username);
+  out_string (name);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &set_profile_name_methods, 0, callback, callback_extra);
+}
+/* }}} */
+
+/* {{{ Contacts search */
+
+int contact_search_on_answer (struct query *q) {
+  assert (fetch_int () == CODE_contacts_found);
+  assert (fetch_int () == CODE_vector);
+  int n = fetch_int ();
+  int i;
+  for (i = 0; i < n; i++) {
+    assert (fetch_int () == (int)CODE_contact_found);
+    fetch_int ();
+  }
+  assert (fetch_int () == CODE_vector);
+  n = fetch_int ();
+
+  struct tgl_user **UL = talloc (sizeof (void *) * n);
+  for (i = 0; i < n; i++) {
+    UL[i] = tglf_fetch_alloc_user ();
+  }
+
+  if (q->callback) {
+    ((void (*)(void *, int, int, struct tgl_user  **))q->callback) (q->callback_extra, 1, n, UL);
+  }
+  tfree (UL, sizeof (void *) * n);
+  return 0;
+}
+
+static struct query_methods contact_search_methods = {
+  .on_answer = contact_search_on_answer,
+  .type = TYPE_TO_PARAM(contacts_found)
+};
+
+void tgl_do_contact_search (char *name, int limit, void (*callback)(void *callback_extra, int success, int cnt, struct tgl_user *U[]), void *callback_extra) {
+  clear_packet ();
+  out_int (CODE_contacts_search);
+  out_string (name);
+  out_int (limit);
+
+  tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &contact_search_methods, 0, callback, callback_extra);
 }
 /* }}} */
 
