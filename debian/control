@@ -10,7 +10,8 @@ Build-Depends: 	debhelper (>= 8.0.0),
 		libssl-dev,
 		lua5.1,
 		liblua5.1-dev,
-		lua-lgi
+		lua-lgi,
+		libevent-dev
 Standards-Version: 3.9.5
 Homepage: https://github.com/vysheng/tg
 Vcs-Git: git://github.com/vysheng/tg.git
