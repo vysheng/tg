@@ -111,6 +111,7 @@ int readline_disabled;
 int disable_output;
 int reset_authorization;
 int port;
+int use_ids;
 char *start_command;
 
 void set_default_username (const char *s) {
@@ -465,6 +466,7 @@ void usage (void) {
   printf ("  -P <port>           port to listen for input commands\n");
   printf ("  -S <socket-name>    unix socket to create\n");
   printf ("  -e <commands>       make commands end exit\n");
+  printf ("  -I                  use user and chat IDs in updates instead of names\n");
 
   exit (1);
 }
@@ -567,7 +569,7 @@ char *unix_socket;
 
 void args_parse (int argc, char **argv) {
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -658,6 +660,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'e':
       start_command = optarg;
+      break;
+    case 'I':
+      use_ids ++;
       break;
     case 'h':
     default:
