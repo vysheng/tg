@@ -2354,7 +2354,7 @@ int unknown_user_list[1000];
 void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   assert (tgl_get_peer_type (id) == TGL_PEER_USER);
   mpush_color (ev, COLOR_RED);
-  if (!U || use_ids) {
+  if (!U) {
     mprintf (ev, "user#%d", tgl_get_peer_id (id));
     int i;
     int ok = 1;
@@ -2375,7 +2375,9 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
     if ((U->flags & FLAG_DELETED)) {
       mprintf (ev, "deleted user#%d", tgl_get_peer_id (id));
     } else if (!(U->flags & FLAG_CREATED)) {
-      mprintf (ev, "empty user#%d", tgl_get_peer_id (id));
+      mprintf (ev, "user#%d", tgl_get_peer_id (id));
+    } else if (use_ids) {
+      mprintf (ev, "user#%d", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
       mprintf (ev, "%s", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
