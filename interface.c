@@ -103,6 +103,7 @@ struct in_ev *notify_ev;
 
 extern int usfd;
 extern int sfd;
+extern int use_ids;
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -2374,7 +2375,9 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
     if ((U->flags & FLAG_DELETED)) {
       mprintf (ev, "deleted user#%d", tgl_get_peer_id (id));
     } else if (!(U->flags & FLAG_CREATED)) {
-      mprintf (ev, "empty user#%d", tgl_get_peer_id (id));
+      mprintf (ev, "user#%d", tgl_get_peer_id (id));
+    } else if (use_ids) {
+      mprintf (ev, "user#%d", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
       mprintf (ev, "%s", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
@@ -2392,7 +2395,7 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
 void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
   mpush_color (ev, COLOR_MAGENTA);
-  if (!C) {
+  if (!C || use_ids) {
     mprintf (ev, "chat#%d", tgl_get_peer_id (id));
   } else {
     mprintf (ev, "%s", C->chat.title);
@@ -2403,7 +2406,7 @@ void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
 void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   mpush_color (ev, COLOR_MAGENTA);
-  if (!C) {
+  if (!C || use_ids) {
     mprintf (ev, "encr_chat#%d", tgl_get_peer_id (id));
   } else {
     mprintf (ev, "%s", C->print_name);
@@ -2414,7 +2417,7 @@ void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
 void print_encr_chat_name_full (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   mpush_color (ev, COLOR_MAGENTA);
-  if (!C) {
+  if (!C || use_ids) {
     mprintf (ev, "encr_chat#%d", tgl_get_peer_id (id));
   } else {
     mprintf (ev, "%s", C->print_name);
