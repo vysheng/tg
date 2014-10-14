@@ -306,6 +306,7 @@ struct tgl_secret_chat {
   int layer;
   int in_seq_no;
   int out_seq_no;
+  int last_in_seq_no;
   long long access_hash;
   unsigned char *g_key;
   unsigned char *nonce;

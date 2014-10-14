@@ -39,7 +39,7 @@
 #define TGL_BUILD "2234"
 #define TGL_VERSION "1.0.6"
 
-#define TGL_ENCRYPTED_LAYER 17
+#define TGL_ENCRYPTED_LAYER 18
 
 struct connection;
 struct mtproto_methods;

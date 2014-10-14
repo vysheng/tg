@@ -51,6 +51,7 @@ void bl_do_encr_chat_set_layer (struct tgl_secret_chat *U, int layer);
 void bl_do_encr_chat_accepted (struct tgl_secret_chat *U, const unsigned char g_key[], const unsigned char nonce[], long long key_fingerprint);
 void bl_do_encr_chat_set_key (struct tgl_secret_chat *E, unsigned char key[], long long key_fingerprint);
 void bl_do_encr_chat_init (int id, int user_id, unsigned char random[], unsigned char g_a[]);
+void bl_do_encr_chat_update_seq (struct tgl_secret_chat *E, int in_seq_no, int out_seq_no);
 
 void bl_do_dc_signed (int id);
 void bl_do_set_working_dc (int num);

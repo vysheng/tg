@@ -507,6 +507,15 @@ static int fetch_comb_binlog_encr_chat_set_key (void *extra) {
   return 0;
 }
 
+static int fetch_comb_binlog_encr_chat_update_seq (void *extra) {
+  tgl_peer_id_t id = TGL_MK_ENCR_CHAT (fetch_int ());
+  tgl_peer_t *_U = tgl_peer_get (id);
+  assert (_U);
+  _U->encr_chat.in_seq_no = fetch_int ();
+  _U->encr_chat.last_in_seq_no = fetch_int ();
+  return 0;
+}
+
 static int fetch_comb_binlog_encr_chat_init (void *extra) {
   tgl_peer_t *P = talloc0 (sizeof (*P));
   P->id = TGL_MK_ENCR_CHAT (fetch_int ());
@@ -798,7 +807,7 @@ static int fetch_comb_binlog_send_message_text (void *extra) {
   M->to_id = tgl_set_peer_id (t, fetch_int ());
   if (t == TGL_PEER_ENCR_CHAT) {
     tgl_peer_t *P = tgl_peer_get (M->to_id);
-    if (P) {
+    if (P && P->encr_chat.layer >= 17) {
       P->encr_chat.out_seq_no ++;
     }
   }
@@ -847,7 +856,9 @@ static int fetch_comb_binlog_send_message_action_encr (void *extra) {
 
   tgl_peer_t *P = tgl_peer_get (M->to_id);
   if (P) {
-    P->encr_chat.out_seq_no ++;
+    if (P->encr_chat.layer >= 17) {
+      P->encr_chat.out_seq_no ++;
+    }
   }
   
   M->unread = 1;
@@ -980,7 +991,9 @@ static int fetch_comb_binlog_create_message_media_encr_pending (void *extra) {
   
   tgl_peer_t *P = tgl_peer_get (M->to_id);
   if (P) {
-    P->encr_chat.out_seq_no ++;
+    if (P->encr_chat.layer >= 17) {
+      P->encr_chat.out_seq_no ++;
+    }
   }
       
   int l = prefetch_strlen ();
@@ -1212,6 +1225,7 @@ static int fetch_comb_binlog_msg_seq_update (void *extra) {
 
 static int fetch_comb_binlog_msg_update (void *extra) {
   struct tgl_message *M = tgl_message_get (fetch_long ());
+  if (!M) { return 0; }
   assert (M);
   
   if (!(M->flags & FLAG_ENCRYPTED)) {
@@ -1297,6 +1311,7 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_state)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_key)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_update_seq)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_create)
 
@@ -1732,7 +1747,7 @@ void bl_do_encr_chat_set_ttl (struct tgl_secret_chat *U, int ttl) {
 }
 
 void bl_do_encr_chat_set_layer (struct tgl_secret_chat *U, int layer) {
-  if (U->layer == layer) { return; }
+  if (U->layer >= layer) { return; }
   int *ev = alloc_log_event (12);
   ev[0] = CODE_binlog_encr_chat_set_layer;
   ev[1] = tgl_get_peer_id (U->id);
@@ -1777,6 +1792,15 @@ void bl_do_encr_chat_set_key (struct tgl_secret_chat *E, unsigned char key[], lo
   memcpy (ev + 2, key, 256);
   *(long long *)(ev + 66) = key_fingerprint;
   add_log_event (ev, 272);
+}
+
+void bl_do_encr_chat_update_seq (struct tgl_secret_chat *E, int in_seq_no, int out_seq_no) {
+  int *ev = alloc_log_event (16);
+  ev[0] = CODE_binlog_encr_chat_update_seq;
+  ev[1] = tgl_get_peer_id (E->id);
+  ev[2] = in_seq_no;
+  ev[3] = out_seq_no;
+  add_log_event (ev, 16);
 }
 
 void bl_do_set_dh_params (int root, unsigned char prime[], int version) {

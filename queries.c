@@ -895,6 +895,8 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   if (P->encr_chat.layer <= 16) {
     out_int (CODE_decrypted_message_service_l16);
   } else {
+    out_int (CODE_decrypted_message_layer);
+    out_int (TGL_ENCRYPTED_LAYER);
     out_int (CODE_decrypted_message_service);
   }
   out_long (M->id);
@@ -945,6 +947,8 @@ void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callbac
   if (P->encr_chat.layer <= 16) {
     out_int (CODE_decrypted_message_l16);
   } else {
+    out_int (CODE_decrypted_message_layer);
+    out_int (TGL_ENCRYPTED_LAYER);
     out_int (CODE_decrypted_message);
   }
   out_long (M->id);
@@ -1690,6 +1694,8 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       if (P->encr_chat.layer <= 16) {
         out_int (CODE_decrypted_message_l16);
       } else {
+        out_int (CODE_decrypted_message_layer);
+        out_int (TGL_ENCRYPTED_LAYER);
         out_int (CODE_decrypted_message);
       }
       out_long (r);
@@ -2142,6 +2148,8 @@ void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, v
     if (P->encr_chat.layer <= 16) {
       out_int (CODE_decrypted_message_l16);
     } else {
+      out_int (CODE_decrypted_message_layer);
+      out_int (TGL_ENCRYPTED_LAYER);
       out_int (CODE_decrypted_message);
     }
     out_long (r);

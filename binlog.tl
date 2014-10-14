@@ -42,6 +42,8 @@ binlog.encrChatSetLayer id:int layer:int = binlog.Update;
 binlog.encrChatSetState id:int state:int = binlog.Update;
 binlog.encrChatSetKey id:int key:64*[int] fingerprint:long = binlog.Update;
 
+binlog.encrChatUpdateSeq id:int in_seq_no:int out_seq_no:int = binlog.Update;
+
 binlog.chatCreate id:int flags:int title:string user_num:int date:int version:int photo_big:%binlog.FileLocation photo_small:%binlog.FileLocation = binlog.Update;
 binlog.chatChangeFlags id:int set_flags:int clear_flags:int = binlog.Update;
 binlog.chatSetTitle id:int title:string = binlog.Update;
