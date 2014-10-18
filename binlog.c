@@ -1359,8 +1359,10 @@ static void replay_log_event (void) {
 }
 
 static void create_new_binlog (void) {
-  static int s[1000];
-  packet_ptr = s;
+  clear_packet ();
+  //static int s[1000];
+
+  //packet_ptr = s;
   out_int (CODE_binlog_start);
   if (tgl_state.test_mode) {
     out_int (CODE_binlog_dc_option);
@@ -1415,7 +1417,7 @@ static void create_new_binlog (void) {
     perror ("Write new binlog");
     exit (2);
   }
-  assert (write (fd, s, (packet_ptr - s) * 4) == (packet_ptr - s) * 4);
+  assert (write (fd, packet_buffer, (packet_ptr - packet_buffer) * 4) == (packet_ptr - packet_buffer) * 4);
   close (fd);
 }
 
