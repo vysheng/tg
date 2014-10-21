@@ -82,6 +82,11 @@ static char buf[1 << 20];
 int buf_size;
 int *buf_ptr = (int *)buf;
 int *buf_end;
+#ifndef DISABLE_EXTF
+int skip_only = 0;
+#else
+int skip_only = 1;
+#endif
 
 int verbosity;
 
@@ -872,6 +877,7 @@ void gen_constructor_store (struct tl_combinator *c) {
   sprintf (s, "T");
   
   int *vars = malloc0 (c->var_num * 4);;
+  assert (c->var_num <= 10);
   gen_uni_skip (c->result, s, vars, 1, 0);
 
   if (c->name == NAME_INT) {
@@ -937,6 +943,7 @@ void gen_constructor_autocomplete (struct tl_combinator *c) {
   sprintf (s, "T");
   
   int *vars = malloc0 (c->var_num * 4);;
+  assert (c->var_num <= 10);
   gen_uni_skip (c->result, s, vars, 1, 0);
 
   if (c->name == NAME_INT) {
@@ -1145,6 +1152,7 @@ void gen_function_store (struct tl_combinator *f) {
   int i;
   
   int *vars = malloc0 (f->var_num * 4);;
+  assert (f->var_num <= 10);
 
   for (i = 0; i < f->args_num; i++) if (!(f->args[i]->flags & FLAG_OPT_VAR)) {
     if (f->args[i]->flags & FLAG_EXCL) {
@@ -1169,6 +1177,7 @@ void gen_function_autocomplete (struct tl_combinator *f) {
   int i;
   
   int *vars = malloc0 (f->var_num * 4);;
+  assert (f->var_num <= 10);
 
   for (i = 0; i < f->args_num; i++) if (!(f->args[i]->flags & FLAG_OPT_VAR)) {
     if (f->args[i]->flags & FLAG_EXCL) {
@@ -1561,7 +1570,8 @@ int parse_tlo_file (void) {
   }
 
   assert (buf_ptr == buf_end);
-    
+ 
+
   int j;
   for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type")) {
     tps[i]->name = 0;
@@ -1579,21 +1589,27 @@ int parse_tlo_file (void) {
     for (i = 0; i < tn; i++) {
       for (j = 0; j < tps[i]->constructors_num; j ++) {
         gen_constructor_skip (tps[i]->constructors[j]);
-        gen_constructor_store (tps[i]->constructors[j]);
-        gen_constructor_fetch (tps[i]->constructors[j]);
-        gen_constructor_autocomplete (tps[i]->constructors[j]);
+        if (!skip_only) {
+          gen_constructor_store (tps[i]->constructors[j]);
+          gen_constructor_fetch (tps[i]->constructors[j]);
+          gen_constructor_autocomplete (tps[i]->constructors[j]);
+        }
       }
     }
     for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type")) {
       gen_type_skip (tps[i]);
-      gen_type_store (tps[i]);
-      gen_type_fetch (tps[i]);
-      gen_type_autocomplete (tps[i]);
-      gen_type_do_autocomplete (tps[i]);
+      if (!skip_only) {
+        gen_type_store (tps[i]);
+        gen_type_fetch (tps[i]);
+        gen_type_autocomplete (tps[i]);
+        gen_type_do_autocomplete (tps[i]);
+      }
     }
-    for (i = 0; i < fn; i++) {
-      gen_function_store (fns[i]);
-      gen_function_autocomplete (fns[i]);
+    if (!skip_only) {
+      for (i = 0; i < fn; i++) {
+        gen_function_store (fns[i]);
+        gen_function_autocomplete (fns[i]);
+      }
     }
     printf ("int skip_type_any (struct paramed_type *T) {\n");
     printf ("  switch (T->type->name) {\n");
@@ -1603,76 +1619,78 @@ int parse_tlo_file (void) {
     }
     printf ("  default: return -1; }\n");
     printf ("}\n");
-    printf ("int store_type_any (struct paramed_type *T) {\n");
-    printf ("  switch (T->type->name) {\n");
-    for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type") && tps[i]->name) {
-      printf ("  case 0x%08x: return store_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
-      printf ("  case 0x%08x: return store_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
-    }
-    printf ("  default: return -1; }\n");
-    printf ("}\n");
-    printf ("int fetch_type_any (struct paramed_type *T) {\n");
-    printf ("  switch (T->type->name) {\n");
-    for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type") && tps[i]->name) {
-      printf ("  case 0x%08x: return fetch_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
-      printf ("  case 0x%08x: return fetch_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
-    }
-    printf ("  default: return -1; }\n");
-    printf ("}\n");
-    printf ("int autocomplete_type_any (struct paramed_type *T) {\n");
-    printf ("  switch (T->type->name) {\n");
-    for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type") && tps[i]->name) {
-      printf ("  case 0x%08x: return autocomplete_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
-      printf ("  case 0x%08x: return autocomplete_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
-    }
-    printf ("  default: return -1; }\n");
-    printf ("}\n");
-    printf ("struct paramed_type *store_function_any (void) {\n");
-    printf ("  if (cur_token_len != 1 || *cur_token != '(') { return 0; }\n");
-    printf ("  local_next_token ();\n");
-    printf ("  if (cur_token_len == 1 || *cur_token == '.') { \n");
-    printf ("    local_next_token ();\n");
-    printf ("    if (cur_token_len != 1 || *cur_token != '=') { return 0; }\n");
-    printf ("    local_next_token ();\n");
-    printf ("  };\n");
-    printf ("  if (cur_token_len < 0) { return 0; }\n");
-    for (i = 0; i < fn; i++) {
-      printf ("  if (cur_token_len == %d && !memcmp (cur_token, \"%s\", cur_token_len)) {\n", (int)strlen (fns[i]->id), fns[i]->id);
-      printf ("    out_int (0x%08x);\n", fns[i]->name);
+    if (!skip_only) {
+      printf ("int store_type_any (struct paramed_type *T) {\n");
+      printf ("  switch (T->type->name) {\n");
+      for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type") && tps[i]->name) {
+        printf ("  case 0x%08x: return store_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
+        printf ("  case 0x%08x: return store_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
+      }
+      printf ("  default: return -1; }\n");
+      printf ("}\n");
+      printf ("int fetch_type_any (struct paramed_type *T) {\n");
+      printf ("  switch (T->type->name) {\n");
+      for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type") && tps[i]->name) {
+        printf ("  case 0x%08x: return fetch_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
+        printf ("  case 0x%08x: return fetch_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
+      }
+      printf ("  default: return -1; }\n");
+      printf ("}\n");
+      printf ("int autocomplete_type_any (struct paramed_type *T) {\n");
+      printf ("  switch (T->type->name) {\n");
+      for (i = 0; i < tn; i++) if (tps[i]->id[0] != '#' && strcmp (tps[i]->id, "Type") && tps[i]->name) {
+        printf ("  case 0x%08x: return autocomplete_type_%s (T);\n", tps[i]->name, tps[i]->print_id);
+        printf ("  case 0x%08x: return autocomplete_type_bare_%s (T);\n", ~tps[i]->name, tps[i]->print_id);
+      }
+      printf ("  default: return -1; }\n");
+      printf ("}\n");
+      printf ("struct paramed_type *store_function_any (void) {\n");
+      printf ("  if (cur_token_len != 1 || *cur_token != '(') { return 0; }\n");
+      printf ("  local_next_token ();\n");
+      printf ("  if (cur_token_len == 1 || *cur_token == '.') { \n");
       printf ("    local_next_token ();\n");
-      printf ("    struct paramed_type *P = store_function_%s ();\n", fns[i]->print_id);
-      printf ("    if (!P) { return 0; }\n");
-      printf ("    if (cur_token_len != 1 || *cur_token != ')') { return 0; }\n");
+      printf ("    if (cur_token_len != 1 || *cur_token != '=') { return 0; }\n");
       printf ("    local_next_token ();\n");
-      printf ("    return P;\n");
-      printf ("  }\n");
+      printf ("  };\n");
+      printf ("  if (cur_token_len < 0) { return 0; }\n");
+      for (i = 0; i < fn; i++) {
+        printf ("  if (cur_token_len == %d && !memcmp (cur_token, \"%s\", cur_token_len)) {\n", (int)strlen (fns[i]->id), fns[i]->id);
+        printf ("    out_int (0x%08x);\n", fns[i]->name);
+        printf ("    local_next_token ();\n");
+        printf ("    struct paramed_type *P = store_function_%s ();\n", fns[i]->print_id);
+        printf ("    if (!P) { return 0; }\n");
+        printf ("    if (cur_token_len != 1 || *cur_token != ')') { return 0; }\n");
+        printf ("    local_next_token ();\n");
+        printf ("    return P;\n");
+        printf ("  }\n");
+      }
+      printf ("  return 0;\n");
+      printf ("}\n");
+      printf ("int do_autocomplete_function (const char *text, int text_len, int index, char **R) {\n");
+      printf ("  index ++;\n");  
+      int i;
+      for (i = 0; i < fn; i++) {
+        printf ("  if (index == %d) { if (!strncmp (text, \"%s\", text_len)) { *R = tstrdup (\"%s\"); return index; } else { index ++; }}\n", i, fns[i]->id, fns[i]->id);
+      }
+      printf ("  *R = 0;\n");
+      printf ("  return 0;\n");
+      printf ("}\n");
+      printf ("struct paramed_type *autocomplete_function_any (void) {\n");
+      printf ("  expect_token_ptr_autocomplete (\"(\", 1);\n");
+      printf ("  if (cur_token_len == -3) { set_autocomplete_type (do_autocomplete_function); }\n");
+      printf ("  if (cur_token_len < 0) { return 0; }\n");
+      for (i = 0; i < fn; i++) {
+        printf ("  if (cur_token_len == %d && !memcmp (cur_token, \"%s\", cur_token_len)) {\n", (int)strlen (fns[i]->id), fns[i]->id);
+        printf ("    local_next_token ();\n");
+        printf ("    struct paramed_type *P = autocomplete_function_%s ();\n", fns[i]->print_id);
+        printf ("    if (!P) { return 0; }\n");
+        printf ("    expect_token_ptr_autocomplete (\")\", 1);\n");
+        printf ("    return P;\n");
+        printf ("  }\n");
+      }
+      printf ("  return 0;\n");
+      printf ("}\n");
     }
-    printf ("  return 0;\n");
-    printf ("}\n");
-    printf ("int do_autocomplete_function (const char *text, int text_len, int index, char **R) {\n");
-    printf ("  index ++;\n");  
-    int i;
-    for (i = 0; i < fn; i++) {
-      printf ("  if (index == %d) { if (!strncmp (text, \"%s\", text_len)) { *R = tstrdup (\"%s\"); return index; } else { index ++; }}\n", i, fns[i]->id, fns[i]->id);
-    }
-    printf ("  *R = 0;\n");
-    printf ("  return 0;\n");
-    printf ("}\n");
-    printf ("struct paramed_type *autocomplete_function_any (void) {\n");
-    printf ("  expect_token_ptr_autocomplete (\"(\", 1);\n");
-    printf ("  if (cur_token_len == -3) { set_autocomplete_type (do_autocomplete_function); }\n");
-    printf ("  if (cur_token_len < 0) { return 0; }\n");
-    for (i = 0; i < fn; i++) {
-      printf ("  if (cur_token_len == %d && !memcmp (cur_token, \"%s\", cur_token_len)) {\n", (int)strlen (fns[i]->id), fns[i]->id);
-      printf ("    local_next_token ();\n");
-      printf ("    struct paramed_type *P = autocomplete_function_%s ();\n", fns[i]->print_id);
-      printf ("    if (!P) { return 0; }\n");
-      printf ("    expect_token_ptr_autocomplete (\")\", 1);\n");
-      printf ("    return P;\n");
-      printf ("  }\n");
-    }
-    printf ("  return 0;\n");
-    printf ("}\n");
   } else {
     for (i = 0; i < tn; i++) {
       for (j = 0; j < tps[i]->constructors_num; j ++) {
@@ -1724,7 +1742,6 @@ int parse_tlo_file (void) {
       printf ("};\n");
     }
   }
-
 
   
   return 0;

@@ -692,6 +692,7 @@ enable_option_checking
 with_openssl
 with_zlib
 enable_libconfig
+enable_extf
 enable_liblua
 with_progname
 '
@@ -1317,6 +1318,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 --enable-libconfig/--disable-libconfig
+--enable-extf/--disable-extf
 --enable-liblua/--disable-liblua
 
 Optional Packages:
@@ -4498,6 +4500,18 @@ else
   as_fn_error $? "No libconfig found. Try --disable-libconfig" "$LINENO" 5
 fi
 
+
+fi
+
+
+# Check whether --enable-extf was given.
+if test "${enable_extf+set}" = set; then :
+  enableval=$enable_extf;
+  if test "x$enableval" = "xno" ; then
+
+$as_echo "#define DISABLE_EXTF 1" >>confdefs.h
+
+  fi
 
 fi
 

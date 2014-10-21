@@ -19,8 +19,10 @@
 */
 
 #include "mtproto-common.h"
+#include "config.h"
 #include <string.h>
 
+#ifndef DISABLE_EXTF
 static int cur_token_len;
 static char *cur_token;
 static int cur_token_real_len;
@@ -435,3 +437,4 @@ char *tglf_extf_fetch (struct paramed_type *T) {
   if (fetch_type_any (T) < 0) { return 0; }
   return out_buf;
 }
+#endif

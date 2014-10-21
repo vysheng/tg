@@ -3809,6 +3809,7 @@ void tgl_do_import_card (int size, int *card, void (*callback)(void *callback_ex
 }
 /* }}} */
 
+#ifndef DISABLE_EXTF
 static int ext_query_on_answer (struct query *q UU) {
   if (q->callback) {
     char *buf = tglf_extf_fetch (q->type);
@@ -3831,6 +3832,13 @@ void tgl_do_send_extf (char *data, int data_len, void (*callback)(void *callback
     tglq_send_query (tgl_state.DC_working, packet_ptr - packet_buffer, packet_buffer, &ext_query_methods, 0, callback, callback_extra);
   }
 }
+#else
+void tgl_do_send_extf (char *data, int data_len, void (*callback)(void *callback_extra, int success, char *buf), void *callback_extra) {
+  if (callback) {
+    callback (callback_extra, 0, 0);
+  }
+}
+#endif
 
 static void set_flag_4 (void *_D, int success) {
   struct tgl_dc *D = _D;

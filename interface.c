@@ -1252,7 +1252,10 @@ int complete_command_list (int index, const char *text, int len, char **R) {
 }
 
 char *command_generator (const char *text, int state) {  
-  static int len, index;
+#ifndef DISABLE_EXTF
+  static int len;
+#endif
+  static int index;
   static enum command_argument mode;
   static char *command_pos;
   static int command_len;
@@ -1267,7 +1270,9 @@ char *command_generator (const char *text, int state) {
   c = rl_line_buffer[rl_point];
   rl_line_buffer[rl_point] = 0;
   if (!state) {
+#ifndef DISABLE_EXTF
     len = strlen (text);
+#endif
     index = -1;
     
     mode = get_complete_mode ();
@@ -1314,10 +1319,12 @@ char *command_generator (const char *text, int state) {
     index = complete_string_list (modifiers, index, command_pos, command_len, &R);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
+#ifndef DISABLE_EXTF
   case ca_extf:
     index = tglf_extf_autocomplete (text, len, index, &R, rl_line_buffer, rl_point);
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
+#endif
   default:
     if (c) { rl_line_buffer[rl_point] = c; }
     return 0;
