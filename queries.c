@@ -896,14 +896,15 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
     out_int (CODE_decrypted_message_service_l16);
   } else {
     out_int (CODE_decrypted_message_layer);
+    out_random (15 + 4 * (lrand48 () % 3));
     out_int (TGL_ENCRYPTED_LAYER);
+    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) - 2);
     out_int (CODE_decrypted_message_service);
   }
   out_long (M->id);
-  out_random (15 + 4 * (lrand48 () % 3));
-  if (P->encr_chat.layer >= 17) {
-    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
-    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
+  if (P->encr_chat.layer < 17) {
+    out_random (15 + 4 * (lrand48 () % 3));
   }
 
   switch (M->action.type) {
@@ -945,17 +946,19 @@ void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callbac
   out_long (M->id);
   encr_start ();
   if (P->encr_chat.layer <= 16) {
-    out_int (CODE_decrypted_message_l16);
+    out_int (CODE_decrypted_message_service_l16);
   } else {
     out_int (CODE_decrypted_message_layer);
+    out_random (15 + 4 * (lrand48 () % 3));
     out_int (TGL_ENCRYPTED_LAYER);
+    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) - 2);
     out_int (CODE_decrypted_message);
   }
   out_long (M->id);
-  out_random (15 + 4 * (lrand48 () % 3));
-  if (P->encr_chat.layer >= 17) {
-    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
-    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
+  if (P->encr_chat.layer < 17) {
+    out_random (15 + 4 * (lrand48 () % 3));
+  } else {
     out_int (0);
   }
   out_cstring ((void *)M->message, M->message_len);
@@ -1692,17 +1695,19 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       out_long (r);
       encr_start ();
       if (P->encr_chat.layer <= 16) {
-        out_int (CODE_decrypted_message_l16);
+        out_int (CODE_decrypted_message_service_l16);
       } else {
         out_int (CODE_decrypted_message_layer);
+        out_random (15 + 4 * (lrand48 () % 3));
         out_int (TGL_ENCRYPTED_LAYER);
+        out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+        out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
         out_int (CODE_decrypted_message);
       }
       out_long (r);
-      out_random (15 + 4 * (lrand48 () % 3));
-      if (P->encr_chat.layer >= 17) {
-        out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
-        out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
+      if (P->encr_chat.layer < 17) {
+        out_random (15 + 4 * (lrand48 () % 3));
+      } else {
         out_int (0);
       }
       out_string ("");
@@ -2146,17 +2151,19 @@ void tgl_do_send_location(tgl_peer_id_t id, double latitude, double longitude, v
     out_long (r);
     encr_start ();
     if (P->encr_chat.layer <= 16) {
-      out_int (CODE_decrypted_message_l16);
+      out_int (CODE_decrypted_message_service_l16);
     } else {
       out_int (CODE_decrypted_message_layer);
+      out_random (15 + 4 * (lrand48 () % 3));
       out_int (TGL_ENCRYPTED_LAYER);
+      out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+      out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
       out_int (CODE_decrypted_message);
     }
     out_long (r);
-    out_random (15 + 4 * (lrand48 () % 3));
-    if (P->encr_chat.layer >= 17) {
-      out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
-      out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
+    if (P->encr_chat.layer < 17) {
+      out_random (15 + 4 * (lrand48 () % 3));
+    } else {
       out_int (0);
     }
     out_string ("");

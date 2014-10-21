@@ -1,3 +1,5 @@
+1.0.6
+* layer 18 support
 1.0.5
 * listening socket (tcp and unix) for commands
 1.0.4

@@ -1235,26 +1235,22 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     in_end = in_ptr + ll; 
     x = fetch_int ();
     if (x == CODE_decrypted_message_layer) {
+      ll = prefetch_strlen ();
+      fetch_str (ll); // random_bytes
+
       int layer = fetch_int ();
       assert (layer >= 0);
       if (P && ((P->flags) & FLAG_CREATED)) {
         bl_do_encr_chat_set_layer ((void *)P, layer);
       }
-      x = fetch_int ();
-    }
-    assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
-    //assert (id == fetch_long ());
-    long long new_id = fetch_long ();
-    if (P && P->encr_chat.layer >= 17) {
-      assert (new_id == id);
-    }
-    ll = prefetch_strlen ();
-    fetch_str (ll); // random_bytes
-    if (x == CODE_decrypted_message || x == CODE_decrypted_message_service) {
+      //x = fetch_int ();
+      //assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service);
+      
+
       out_seq_no = fetch_int ();
       in_seq_no = fetch_int ();
-      if (in_seq_no / 2 != P->encr_chat.in_seq_no + 1) {
-        vlogprintf (E_WARNING, "Hole in seq in secret chat. in_seq_no = %d, expect_seq_no = %d\n", in_seq_no / 2, P->encr_chat.in_seq_no + 1);
+      if (in_seq_no / 2 != P->encr_chat.in_seq_no) {
+        vlogprintf (E_WARNING, "Hole in seq in secret chat. in_seq_no = %d, expect_seq_no = %d\n", in_seq_no / 2, P->encr_chat.in_seq_no);
         drop = 1;
       }
       if ((in_seq_no & 1)  != 1 - (P->encr_chat.admin_id == tgl_state.our_id) || 
@@ -1272,9 +1268,21 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
       }
       //vlogprintf (E_WARNING, "in = %d, out = %d\n", in_seq_no, out_seq_no);
       //P->encr_chat.in_seq_no = in_seq_no / 2;
+      x = fetch_int ();
+    }
+    assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
+    //assert (id == fetch_long ());
+    long long new_id = fetch_long ();
+    if (P && P->encr_chat.layer >= 17) {
+      assert (new_id == id);
+    }
+    if (x == CODE_decrypted_message || x == CODE_decrypted_message_service) {
       if (x == CODE_decrypted_message) {
         fetch_int (); // ttl
       }
+    } else {
+      ll = prefetch_strlen ();
+      fetch_str (ll); // random_bytes
     }
     if (x == CODE_decrypted_message || x == CODE_decrypted_message_l16) {
       l = prefetch_strlen ();
@@ -1285,8 +1293,8 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     } else {
       start = in_ptr;
       if (skip_type_any (TYPE_TO_PARAM (decrypted_message_action)) < 0) {
-        vlogprintf (E_ERROR, "Skipped %ld int out of %ld. Magic = 0x%08x\n", (long)(in_ptr - start), (long)(in_end - start), *start);
-        assert (0);
+        vlogprintf (E_ERROR, "Can not decrypt: Skipped %ld int out of %ld. Magic = 0x%08x\n", (long)(in_ptr - start), (long)(in_end - start), *start);
+        drop = 1;
       }
       end = in_ptr;
     }
@@ -1320,7 +1328,9 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
     }
   }
   if (!drop) {
-    bl_do_encr_chat_update_seq ((void *)P, in_seq_no / 2, out_seq_no / 2);
+    if (in_seq_no >= 0 && out_seq_no >= 0) {
+      bl_do_encr_chat_update_seq ((void *)P, in_seq_no / 2 + 1, out_seq_no / 2);
+    }
   }
 }
 
