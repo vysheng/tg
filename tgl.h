@@ -261,6 +261,10 @@ static inline void tgl_set_test_mode (void) {
   tgl_state.test_mode ++;
 }
 
+static inline void tgl_set_net_methods (struct tgl_net_methods *methods) {
+  tgl_state.net_methods = methods;
+}
+
 struct pollfd;
 int tgl_connections_make_poll_array (struct pollfd *fds, int max);
 void tgl_connections_poll_result (struct pollfd *fds, int max);
