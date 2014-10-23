@@ -1733,6 +1733,9 @@ void print_message_gw (struct tgl_message *M) {
     lua_new_msg (M);
   #endif
   if (!binlog_read) { return; }
+  if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) { 
+    write_secret_chat_file ();
+  }
   if (alert_sound) {
     play_sound ();
   }

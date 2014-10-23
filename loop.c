@@ -458,6 +458,9 @@ void write_secret_chat (tgl_peer_t *_P, void *extra) {
   assert (write (fd, &P->state, 4) == 4);
   assert (write (fd, &P->key_fingerprint, 8) == 8);
   assert (write (fd, &P->key, 256) == 256);
+  assert (write (fd, &P->in_seq_no, 4) == 4);
+  assert (write (fd, &P->last_in_seq_no, 4) == 4);
+  assert (write (fd, &P->out_seq_no, 4) == 4);
 }
 
 void write_secret_chat_file (void) {
@@ -466,7 +469,7 @@ void write_secret_chat_file (void) {
   assert (secret_chat_fd >= 0);
   int x = SECRET_CHAT_FILE_MAGIC;
   assert (write (secret_chat_fd, &x, 4) == 4);
-  x = 0; 
+  x = 1; 
   assert (write (secret_chat_fd, &x, 4) == 4); // version
   assert (write (secret_chat_fd, &x, 4) == 4); // num
 
@@ -559,7 +562,7 @@ void read_auth_file (void) {
   close (auth_file_fd);
 }
 
-void read_secret_chat (int fd) {
+void read_secret_chat (int fd, int v) {
   int id, l, user_id, admin_id, date, ttl, layer, state;
   long long access_hash, key_fingerprint;
   static char s[1000];
@@ -578,6 +581,12 @@ void read_secret_chat (int fd) {
   assert (read (fd, &state, 4) == 4);
   assert (read (fd, &key_fingerprint, 8) == 8);
   assert (read (fd, &key, 256) == 256);
+  int in_seq_no = 0, out_seq_no = 0, last_in_seq_no = 0;
+  if (v >= 1) {
+    assert (read (fd, &in_seq_no, 4) == 4);
+    assert (read (fd, &last_in_seq_no, 4) == 4);
+    assert (read (fd, &out_seq_no, 4) == 4);
+  }
 
   bl_do_encr_chat_create (id, user_id, admin_id, s, l);
   struct tgl_secret_chat  *P = (void *)tgl_peer_get (TGL_MK_ENCR_CHAT (id));
@@ -588,6 +597,9 @@ void read_secret_chat (int fd) {
   bl_do_encr_chat_set_access_hash (P, access_hash);
   bl_do_encr_chat_set_state (P, state);
   bl_do_encr_chat_set_key (P, key, key_fingerprint);
+  if (v >= 1) {
+    bl_do_encr_chat_set_seq (P, in_seq_no, last_in_seq_no, out_seq_no);
+  }
 }
 
 void read_secret_chat_file (void) {
@@ -598,12 +610,13 @@ void read_secret_chat_file (void) {
   int x;
   if (read (secret_chat_fd, &x, 4) < 4) { close (secret_chat_fd); return; }
   if (x != SECRET_CHAT_FILE_MAGIC) { close (secret_chat_fd); return; }
-  assert (read (secret_chat_fd, &x, 4) == 4);
-  assert (!x); // version
+  int v = 0;
+  assert (read (secret_chat_fd, &v, 4) == 4);
+  assert (v == 0 || v == 1); // version
   assert (read (secret_chat_fd, &x, 4) == 4);
   assert (x >= 0);
   while (x --> 0) {
-    read_secret_chat (secret_chat_fd);
+    read_secret_chat (secret_chat_fd, v);
   }
   close (secret_chat_fd);
 }

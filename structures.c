@@ -28,7 +28,6 @@
 #include "mtproto-common.h"
 //#include "telegram.h"
 #include "tree.h"
-#include "loop.h"
 #include <openssl/aes.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
@@ -41,10 +40,6 @@
 
 #define sha1 SHA1
 
-#ifndef TGL_MAX_PEER_NUM
-#  define TGL_MAX_PEER_NUM 100000
-#endif
-
 static int id_cmp (struct tgl_message *M1, struct tgl_message *M2);
 #define peer_cmp(a,b) (tgl_cmp_peer_id (a->id, b->id))
 #define peer_cmp_name(a,b) (strcmp (a->print_name, b->print_name))
@@ -53,24 +48,8 @@ DEFINE_TREE(peer_by_name,tgl_peer_t *,peer_cmp_name,0)
 DEFINE_TREE(message,struct tgl_message *,id_cmp,0)
 
 
-static struct tgl_message message_list = {
-  .next_use = &message_list,
-  .prev_use = &message_list
-};
 
-static struct tree_peer *tgl_peer_tree;
-static struct tree_peer_by_name *peer_by_name_tree;
-static struct tree_message *message_tree;
-static struct tree_message *message_unsent_tree;
 
-static int users_allocated;
-static int chats_allocated;
-static int messages_allocated;
-static int peer_num;
-static int encr_chats_allocated;
-static int geo_chats_allocated;
-
-static tgl_peer_t *Peers[TGL_MAX_PEER_NUM];
 
 
 
@@ -1330,6 +1309,7 @@ void tglf_fetch_encrypted_message (struct tgl_message *M) {
   if (!drop) {
     if (in_seq_no >= 0 && out_seq_no >= 0) {
       bl_do_encr_chat_update_seq ((void *)P, in_seq_no / 2 + 1, out_seq_no / 2);
+      assert (P->encr_chat.in_seq_no == in_seq_no / 2 + 1);
     }
   }
 }
@@ -1360,17 +1340,30 @@ static int id_cmp (struct tgl_message *M1, struct tgl_message *M2) {
   else { return 0; }
 }
 
+static void increase_peer_size (void) {
+  if (tgl_state.peer_num == tgl_state.peer_size) {
+    int new_size = tgl_state.peer_size ? 2 * tgl_state.peer_size : 10;
+    int old_size = tgl_state.peer_size;
+    if (old_size) {
+      tgl_state.Peers = trealloc (tgl_state.Peers, old_size * sizeof (void *), new_size * sizeof (void *));
+    } else {
+      tgl_state.Peers = talloc (new_size * sizeof (void *));
+    }
+    tgl_state.peer_size = new_size;
+  }
+}
+
 struct tgl_user *tglf_fetch_alloc_user (void) {
   int data[2];
   prefetch_data (data, 8);
   tgl_peer_t *U = tgl_peer_get (TGL_MK_USER (data[1]));
   if (!U) {
-    users_allocated ++;
+    tgl_state.users_allocated ++;
     U = talloc0 (sizeof (*U));
     U->id = TGL_MK_USER (data[1]);
-    tgl_peer_tree = tree_insert_peer (tgl_peer_tree, U, lrand48 ());
-    assert (peer_num < TGL_MAX_PEER_NUM);
-    Peers[peer_num ++] = U;
+    tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, U, lrand48 ());
+    increase_peer_size ();
+    tgl_state.Peers[tgl_state.peer_num ++] = U;
   }
   tglf_fetch_user (&U->user);
   return &U->user;
@@ -1383,10 +1376,10 @@ struct tgl_secret_chat *tglf_fetch_alloc_encrypted_chat (void) {
   if (!U) {
     U = talloc0 (sizeof (*U));
     U->id = TGL_MK_ENCR_CHAT (data[1]);
-    encr_chats_allocated ++;
-    tgl_peer_tree = tree_insert_peer (tgl_peer_tree, U, lrand48 ());
-    assert (peer_num < TGL_MAX_PEER_NUM);
-    Peers[peer_num ++] = U;
+    tgl_state.encr_chats_allocated ++;
+    tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, U, lrand48 ());
+    increase_peer_size ();
+    tgl_state.Peers[tgl_state.peer_num ++] = U;
   }
   tglf_fetch_encrypted_chat (&U->encr_chat);
   return &U->encr_chat;
@@ -1400,13 +1393,13 @@ struct tgl_user *tglf_fetch_alloc_user_full (void) {
     tglf_fetch_user_full (&U->user);
     return &U->user;
   } else {
-    users_allocated ++;
+    tgl_state.users_allocated ++;
     U = talloc0 (sizeof (*U));
     U->id = TGL_MK_USER (data[2]);
-    tgl_peer_tree = tree_insert_peer (tgl_peer_tree, U, lrand48 ());
+    tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, U, lrand48 ());
     tglf_fetch_user_full (&U->user);
-    assert (peer_num < TGL_MAX_PEER_NUM);
-    Peers[peer_num ++] = U;
+    increase_peer_size ();
+    tgl_state.Peers[tgl_state.peer_num ++] = U;
     return &U->user;
   }
 }
@@ -1426,8 +1419,8 @@ struct tgl_message *tglf_fetch_alloc_message (void) {
 struct tgl_message *tglf_fetch_alloc_geo_message (void) {
   struct tgl_message *M = talloc (sizeof (*M));
   tglf_tglf_fetch_geo_message (M);
-  struct tgl_message *M1 = tree_lookup_message (message_tree, M);
-  messages_allocated ++;
+  struct tgl_message *M1 = tree_lookup_message (tgl_state.message_tree, M);
+  tgl_state.messages_allocated ++;
   if (M1) {
     tglm_message_del_use (M1);
     tglm_message_del_peer (M1);
@@ -1436,12 +1429,12 @@ struct tgl_message *tglf_fetch_alloc_geo_message (void) {
     tfree (M, sizeof (*M));
     tglm_message_add_use (M1);
     tglm_message_add_peer (M1);
-    messages_allocated --;
+    tgl_state.messages_allocated --;
     return M1;
   } else {
     tglm_message_add_use (M);
     tglm_message_add_peer (M);
-    message_tree = tree_insert_message (message_tree, M, lrand48 ());
+    tgl_state.message_tree = tree_insert_message (tgl_state.message_tree, M, lrand48 ());
     return M;
   }
 }
@@ -1455,7 +1448,7 @@ struct tgl_message *tglf_fetch_alloc_encrypted_message (void) {
     M = talloc0 (sizeof (*M));
     M->id = *(long long *)(data + 1);
     tglm_message_insert_tree (M);
-    messages_allocated ++;
+    tgl_state.messages_allocated ++;
     assert (tgl_message_get (M->id) == M);
   }
   tglf_fetch_encrypted_message (M);
@@ -1471,7 +1464,7 @@ struct tgl_message *tglf_fetch_alloc_message_short (void) {
     M = talloc0 (sizeof (*M));
     M->id = data[0];
     tglm_message_insert_tree (M);
-    messages_allocated ++;
+    tgl_state.messages_allocated ++;
   }
   tglf_fetch_message_short (M);
   return M;
@@ -1486,7 +1479,7 @@ struct tgl_message *tglf_fetch_alloc_message_short_chat (void) {
     M = talloc0 (sizeof (*M));
     M->id = data[0];
     tglm_message_insert_tree (M);
-    messages_allocated ++;
+    tgl_state.messages_allocated ++;
   }
   tglf_fetch_message_short_chat (M);
   return M;
@@ -1497,12 +1490,12 @@ struct tgl_chat *tglf_fetch_alloc_chat (void) {
   prefetch_data (data, 8);
   tgl_peer_t *U = tgl_peer_get (TGL_MK_CHAT (data[1]));
   if (!U) {
-    chats_allocated ++;
+    tgl_state.chats_allocated ++;
     U = talloc0 (sizeof (*U));
     U->id = TGL_MK_CHAT (data[1]);
-    tgl_peer_tree = tree_insert_peer (tgl_peer_tree, U, lrand48 ());
-    assert (peer_num < TGL_MAX_PEER_NUM);
-    Peers[peer_num ++] = U;
+    tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, U, lrand48 ());
+    increase_peer_size ();
+    tgl_state.Peers[tgl_state.peer_num ++] = U;
   }
   tglf_fetch_chat (&U->chat);
   return &U->chat;
@@ -1516,37 +1509,37 @@ struct tgl_chat *tglf_fetch_alloc_chat_full (void) {
     tglf_fetch_chat_full (&U->chat);
     return &U->chat;
   } else {
-    chats_allocated ++;
+    tgl_state.chats_allocated ++;
     U = talloc0 (sizeof (*U));
     U->id = TGL_MK_CHAT (data[2]);
-    tgl_peer_tree = tree_insert_peer (tgl_peer_tree, U, lrand48 ());
+    tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, U, lrand48 ());
     tglf_fetch_chat_full (&U->chat);
-    assert (peer_num < TGL_MAX_PEER_NUM);
-    Peers[peer_num ++] = U;
+    increase_peer_size ();
+    tgl_state.Peers[tgl_state.peer_num ++] = U;
     return &U->chat;
   }
 }
 /* }}} */
 
 void tglp_insert_encrypted_chat (tgl_peer_t *P) {
-  encr_chats_allocated ++;
-  tgl_peer_tree = tree_insert_peer (tgl_peer_tree, P, lrand48 ());
-  assert (peer_num < TGL_MAX_PEER_NUM);
-  Peers[peer_num ++] = P;
+  tgl_state.encr_chats_allocated ++;
+  tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, P, lrand48 ());
+  increase_peer_size ();
+  tgl_state.Peers[tgl_state.peer_num ++] = P;
 }
 
 void tglp_insert_user (tgl_peer_t *P) {
-  users_allocated ++;
-  tgl_peer_tree = tree_insert_peer (tgl_peer_tree, P, lrand48 ());
-  assert (peer_num < TGL_MAX_PEER_NUM);
-  Peers[peer_num ++] = P;
+  tgl_state.users_allocated ++;
+  tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, P, lrand48 ());
+  increase_peer_size ();
+  tgl_state.Peers[tgl_state.peer_num ++] = P;
 }
 
 void tglp_insert_chat (tgl_peer_t *P) {
-  chats_allocated ++;
-  tgl_peer_tree = tree_insert_peer (tgl_peer_tree, P, lrand48 ());
-  assert (peer_num < TGL_MAX_PEER_NUM);
-  Peers[peer_num ++] = P;
+  tgl_state.chats_allocated ++;
+  tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, P, lrand48 ());
+  increase_peer_size ();
+  tgl_state.Peers[tgl_state.peer_num ++] = P;
 }
 
 void tgl_insert_empty_user (int uid) {
@@ -1737,8 +1730,8 @@ void tglm_message_del_use (struct tgl_message *M) {
 }
 
 void tglm_message_add_use (struct tgl_message *M) {
-  M->next_use = message_list.next_use;
-  M->prev_use = &message_list;
+  M->next_use = tgl_state.message_list.next_use;
+  M->prev_use = &tgl_state.message_list;
   M->next_use->prev_use = M;
   M->prev_use->next_use = M;
 }
@@ -1756,21 +1749,21 @@ void tglm_message_add_peer (struct tgl_message *M) {
     P->id = id;
     switch (tgl_get_peer_type (id)) {
     case TGL_PEER_USER:
-      users_allocated ++;
+      tgl_state.users_allocated ++;
       break;
     case TGL_PEER_CHAT:
-      chats_allocated ++;
+      tgl_state.chats_allocated ++;
       break;
     case TGL_PEER_GEO_CHAT:
-      geo_chats_allocated ++;
+      tgl_state.geo_chats_allocated ++;
       break;
     case TGL_PEER_ENCR_CHAT:
-      encr_chats_allocated ++;
+      tgl_state.encr_chats_allocated ++;
       break;
     }
-    tgl_peer_tree = tree_insert_peer (tgl_peer_tree, P, lrand48 ());
-    assert (peer_num < TGL_MAX_PEER_NUM);
-    Peers[peer_num ++] = P;
+    tgl_state.peer_tree = tree_insert_peer (tgl_state.peer_tree, P, lrand48 ());
+    increase_peer_size ();
+    tgl_state.Peers[tgl_state.peer_num ++] = P;
   }
   if (!P->last) {
     P->last = M;
@@ -1824,24 +1817,24 @@ struct tgl_message *tglm_message_alloc (long long id) {
   struct tgl_message *M = talloc0 (sizeof (*M));
   M->id = id;
   tglm_message_insert_tree (M);
-  messages_allocated ++;
+  tgl_state.messages_allocated ++;
   return M;
 }
 
 void tglm_update_message_id (struct tgl_message *M, long long id) {
-  message_tree = tree_delete_message (message_tree, M);
+  tgl_state.message_tree = tree_delete_message (tgl_state.message_tree, M);
   M->id = id;
-  message_tree = tree_insert_message (message_tree, M, lrand48 ());
+  tgl_state.message_tree = tree_insert_message (tgl_state.message_tree, M, lrand48 ());
 }
 
 void tglm_message_insert_tree (struct tgl_message *M) {
   assert (M->id);
-  message_tree = tree_insert_message (message_tree, M, lrand48 ());
+  tgl_state.message_tree = tree_insert_message (tgl_state.message_tree, M, lrand48 ());
 }
 
 void tglm_message_remove_tree (struct tgl_message *M) {
   assert (M->id);
-  message_tree = tree_delete_message (message_tree, M);
+  tgl_state.message_tree = tree_delete_message (tgl_state.message_tree, M);
 }
 
 void tglm_message_insert (struct tgl_message *M) {
@@ -1850,11 +1843,11 @@ void tglm_message_insert (struct tgl_message *M) {
 }
 
 void tglm_message_insert_unsent (struct tgl_message *M) {
-  message_unsent_tree = tree_insert_message (message_unsent_tree, M, lrand48 ());
+  tgl_state.message_unsent_tree = tree_insert_message (tgl_state.message_unsent_tree, M, lrand48 ());
 }
 
 void tglm_message_remove_unsent (struct tgl_message *M) {
-  message_unsent_tree = tree_delete_message (message_unsent_tree, M);
+  tgl_state.message_unsent_tree = tree_delete_message (tgl_state.message_unsent_tree, M);
 }
 
 static void __send_msg (struct tgl_message *M) {
@@ -1870,48 +1863,48 @@ static void __send_msg (struct tgl_message *M) {
 }
 
 void tglm_send_all_unsent (void ) {
-  tree_act_message (message_unsent_tree, __send_msg);
+  tree_act_message (tgl_state.message_unsent_tree, __send_msg);
 }
 /* }}} */
 
 void tglp_peer_insert_name (tgl_peer_t *P) {
-  peer_by_name_tree = tree_insert_peer_by_name (peer_by_name_tree, P, lrand48 ());
+  tgl_state.peer_by_name_tree = tree_insert_peer_by_name (tgl_state.peer_by_name_tree, P, lrand48 ());
 }
 
 void tglp_peer_delete_name (tgl_peer_t *P) {
-  peer_by_name_tree = tree_delete_peer_by_name (peer_by_name_tree, P);
+  tgl_state.peer_by_name_tree = tree_delete_peer_by_name (tgl_state.peer_by_name_tree, P);
 }
 
 tgl_peer_t *tgl_peer_get (tgl_peer_id_t id) {
   static tgl_peer_t U;
   U.id = id;
-  return tree_lookup_peer (tgl_peer_tree, &U);
+  return tree_lookup_peer (tgl_state.peer_tree, &U);
 }
 
 struct tgl_message *tgl_message_get (long long id) {
   struct tgl_message M;
   M.id = id;
-  return tree_lookup_message (message_tree, &M);
+  return tree_lookup_message (tgl_state.message_tree, &M);
 }
 
 tgl_peer_t *tgl_peer_get_by_name (const char *s) {
   static tgl_peer_t P;
   P.print_name = (void *)s;
-  tgl_peer_t *R = tree_lookup_peer_by_name (peer_by_name_tree, &P);
+  tgl_peer_t *R = tree_lookup_peer_by_name (tgl_state.peer_by_name_tree, &P);
   return R;
 }
 
 void tgl_peer_iterator_ex (void (*it)(tgl_peer_t *P, void *extra), void *extra) {
-  tree_act_ex_peer (tgl_peer_tree, it, extra);
+  tree_act_ex_peer (tgl_state.peer_tree, it, extra);
 }
 
 int tgl_complete_user_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || tgl_get_peer_type (Peers[index]->id) != TGL_PEER_USER)) {
+  while (index < tgl_state.peer_num && (!tgl_state.Peers[index]->print_name || strncmp (tgl_state.Peers[index]->print_name, text, len) || tgl_get_peer_type (tgl_state.Peers[index]->id) != TGL_PEER_USER)) {
     index ++;
   }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+  if (index < tgl_state.peer_num) {
+    *R = strdup (tgl_state.Peers[index]->print_name);
     assert (*R);
     return index;
   } else {
@@ -1921,11 +1914,11 @@ int tgl_complete_user_list (int index, const char *text, int len, char **R) {
 
 int tgl_complete_chat_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || tgl_get_peer_type (Peers[index]->id) != TGL_PEER_CHAT)) {
+  while (index < tgl_state.peer_num && (!tgl_state.Peers[index]->print_name || strncmp (tgl_state.Peers[index]->print_name, text, len) || tgl_get_peer_type (tgl_state.Peers[index]->id) != TGL_PEER_CHAT)) {
     index ++;
   }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+  if (index < tgl_state.peer_num) {
+    *R = strdup (tgl_state.Peers[index]->print_name);
     assert (*R);
     return index;
   } else {
@@ -1935,11 +1928,11 @@ int tgl_complete_chat_list (int index, const char *text, int len, char **R) {
 
 int tgl_complete_encr_chat_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len) || tgl_get_peer_type (Peers[index]->id) != TGL_PEER_ENCR_CHAT)) {
+  while (index < tgl_state.peer_num && (!tgl_state.Peers[index]->print_name || strncmp (tgl_state.Peers[index]->print_name, text, len) || tgl_get_peer_type (tgl_state.Peers[index]->id) != TGL_PEER_ENCR_CHAT)) {
     index ++;
   }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+  if (index < tgl_state.peer_num) {
+    *R = strdup (tgl_state.Peers[index]->print_name);
     assert (*R);
     return index;
   } else {
@@ -1949,11 +1942,11 @@ int tgl_complete_encr_chat_list (int index, const char *text, int len, char **R)
 
 int tgl_complete_peer_list (int index, const char *text, int len, char **R) {
   index ++;
-  while (index < peer_num && (!Peers[index]->print_name || strncmp (Peers[index]->print_name, text, len))) {
+  while (index < tgl_state.peer_num && (!tgl_state.Peers[index]->print_name || strncmp (tgl_state.Peers[index]->print_name, text, len))) {
     index ++;
   }
-  if (index < peer_num) {
-    *R = strdup (Peers[index]->print_name);
+  if (index < tgl_state.peer_num) {
+    *R = strdup (tgl_state.Peers[index]->print_name);
     assert (*R);
     return index;
   } else {
@@ -1962,13 +1955,13 @@ int tgl_complete_peer_list (int index, const char *text, int len, char **R) {
 }
 
 void tgl_free_all (void) { 
-  tree_act_peer (tgl_peer_tree, tgls_free_peer);
-  tgl_peer_tree = tree_clear_peer (tgl_peer_tree);
-  peer_by_name_tree = tree_clear_peer_by_name (peer_by_name_tree);
-  tree_act_message (message_tree, tgls_free_message);
-  message_tree = tree_clear_message (message_tree);
-  tree_act_message (message_unsent_tree, tgls_free_message);
-  message_unsent_tree = tree_clear_message (message_unsent_tree);
+  tree_act_peer (tgl_state.peer_tree, tgls_free_peer);
+  tgl_state.peer_tree = tree_clear_peer (tgl_state.peer_tree);
+  tgl_state.peer_by_name_tree = tree_clear_peer_by_name (tgl_state.peer_by_name_tree);
+  tree_act_message (tgl_state.message_tree, tgls_free_message);
+  tgl_state.message_tree = tree_clear_message (tgl_state.message_tree);
+  tree_act_message (tgl_state.message_unsent_tree, tgls_free_message);
+  tgl_state.message_unsent_tree = tree_clear_message (tgl_state.message_unsent_tree);
 
   if (tgl_state.encr_prime) { tfree (tgl_state.encr_prime, 256); }
 
@@ -1993,13 +1986,13 @@ int tgl_print_stat (char *s, int len) {
   return tsnprintf (s, len, 
     "users_allocated\t%d\n"
     "chats_allocated\t%d\n"
-    "secret_chats_allocated\t%d\n"
+    "encr_chats_allocated\t%d\n"
     "peer_num\t%d\n"
     "messages_allocated\t%d\n",
-    users_allocated,
-    chats_allocated,
-    encr_chats_allocated,
-    peer_num,
-    messages_allocated
+    tgl_state.users_allocated,
+    tgl_state.chats_allocated,
+    tgl_state.encr_chats_allocated,
+    tgl_state.peer_num,
+    tgl_state.messages_allocated
     );
 }

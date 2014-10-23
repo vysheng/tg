@@ -39,7 +39,6 @@
 #include "tree.h"
 #include "mtproto-common.h"
 //#include "telegram.h"
-#include "loop.h"
 #include "structures.h"
 //#include "interface.h"
 //#include "net.h"
