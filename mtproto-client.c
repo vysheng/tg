@@ -90,7 +90,6 @@ static inline unsigned __builtin_bswap32(unsigned x) {
 #endif
 
 //int verbosity;
-static int auth_success;
 //static enum tgl_dc_state c_state;
 //extern int binlog_enabled;
 //extern int disable_auto_accept;
@@ -713,7 +712,6 @@ static int process_auth_complete (struct connection *c UU, char *packet, int len
   D->state = st_authorized;
   //return 1;
   vlogprintf (E_DEBUG, "Auth success\n");
-  auth_success ++;
   if (temp_key) {
     //D->flags |= 2;
     
@@ -1308,13 +1306,8 @@ void tglmp_on_start (void) {
   pk_fingerprint = tgl_do_compute_rsa_key_fingerprint (pubKey);
 }
 
-//int auth_ok (void) {
-//  return auth_success;
-//}
-
 void tgl_dc_authorize (struct tgl_dc *DC) {
   //c_state = 0;
-  //auth_success = 0;
   if (!DC->sessions[0]) {
     tglmp_dc_create_session (DC);
   }

@@ -39,7 +39,6 @@
 #include "net.h"
 #include "include.h"
 #include "mtproto-client.h"
-#include "loop.h"
 
 #include "tgl.h"
 #include "auto.h"
@@ -52,7 +51,7 @@
 static int binlog_buffer[BINLOG_BUFFER_SIZE];
 static int *rptr;
 static int *wptr;
-static int binlog_fd;
+//static int tgl_state.binlog_fd;
 static int in_replay_log; // should be used ONLY for DEBUG
 
 
@@ -513,6 +512,16 @@ static int fetch_comb_binlog_encr_chat_update_seq (void *extra) {
   assert (_U);
   _U->encr_chat.in_seq_no = fetch_int ();
   _U->encr_chat.last_in_seq_no = fetch_int ();
+  return 0;
+}
+
+static int fetch_comb_binlog_encr_chat_set_seq (void *extra) {
+  tgl_peer_id_t id = TGL_MK_ENCR_CHAT (fetch_int ());
+  tgl_peer_t *_U = tgl_peer_get (id);
+  assert (_U);
+  _U->encr_chat.in_seq_no = fetch_int ();
+  _U->encr_chat.last_in_seq_no = fetch_int ();
+  _U->encr_chat.out_seq_no = fetch_int ();
   return 0;
 }
 
@@ -1312,6 +1321,7 @@ static void replay_log_event (void) {
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_accepted)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_key)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_update_seq)
+  FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_set_seq)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_init)
   FETCH_COMBINATOR_FUNCTION (binlog_encr_chat_create)
 
@@ -1467,14 +1477,14 @@ void tgl_replay_log (void) {
 static int b_packet_buffer[PACKET_BUFFER_SIZE];
 
 void tgl_reopen_binlog_for_writing (void) {
-  binlog_fd = open (get_binlog_file_name (), O_WRONLY);
-  if (binlog_fd < 0) {
+  tgl_state.binlog_fd = open (get_binlog_file_name (), O_WRONLY);
+  if (tgl_state.binlog_fd < 0) {
     perror ("binlog open");
     exit (2);
   }
   
-  assert (lseek (binlog_fd, binlog_pos, SEEK_SET) == binlog_pos);
-  if (flock (binlog_fd, LOCK_EX | LOCK_NB) < 0) {
+  assert (lseek (tgl_state.binlog_fd, binlog_pos, SEEK_SET) == binlog_pos);
+  if (flock (tgl_state.binlog_fd, LOCK_EX | LOCK_NB) < 0) {
     perror ("get lock");
     exit (2);
   } 
@@ -1493,8 +1503,8 @@ static void add_log_event (const int *data, int len) {
     assert (rptr == wptr);
   }
   if (tgl_state.binlog_enabled) {
-    assert (binlog_fd > 0);
-    assert (write (binlog_fd, data, len) == len);
+    assert (tgl_state.binlog_fd > 0);
+    assert (write (tgl_state.binlog_fd, data, len) == len);
   }
   in_ptr = in;
   in_end = end;
@@ -1803,6 +1813,16 @@ void bl_do_encr_chat_update_seq (struct tgl_secret_chat *E, int in_seq_no, int o
   ev[2] = in_seq_no;
   ev[3] = out_seq_no;
   add_log_event (ev, 16);
+}
+
+void bl_do_encr_chat_set_seq (struct tgl_secret_chat *E, int in_seq_no, int last_in_seq_no, int out_seq_no) {
+  int *ev = alloc_log_event (20);
+  ev[0] = CODE_binlog_encr_chat_set_seq;
+  ev[1] = tgl_get_peer_id (E->id);
+  ev[2] = in_seq_no;
+  ev[3] = last_in_seq_no;
+  ev[4] = out_seq_no;
+  add_log_event (ev, 20);
 }
 
 void bl_do_set_dh_params (int root, unsigned char prime[], int version) {

@@ -78,6 +78,9 @@ void tgl_init (void) {
     tgl_state.temp_key_expire_time = 100000;
   }
 
+  tgl_state.message_list.next_use = &tgl_state.message_list;
+  tgl_state.message_list.prev_use = &tgl_state.message_list;
+
   tglmp_on_start ();
 }
 

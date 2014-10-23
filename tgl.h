@@ -127,6 +127,7 @@ struct tgl_net_methods {
 
 #define TGL_MAX_RSA_KEYS_NUM 10
 // Do not modify this structure, unless you know what you do
+
 struct tgl_state {
   int our_id; // ID of logged in user
   int encr_root;
@@ -170,6 +171,24 @@ struct tgl_state {
   struct bignum_ctx *BN_ctx;
 
   struct tgl_allocator allocator;
+
+  struct tree_peer *peer_tree;
+  struct tree_peer_by_name *peer_by_name_tree;
+  struct tree_message *message_tree;
+  struct tree_message *message_unsent_tree;
+
+  int users_allocated;
+  int chats_allocated;
+  int messages_allocated;
+  int peer_num;
+  int peer_size;
+  int encr_chats_allocated;
+  int geo_chats_allocated;
+
+  tgl_peer_t **Peers;
+  struct tgl_message message_list;
+
+  int binlog_fd;
 };
 extern struct tgl_state tgl_state;
 
