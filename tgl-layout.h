@@ -62,8 +62,7 @@ struct tgl_session {
   int seq_no;
   struct connection *c;
   struct tree_long *ack_tree;
-  struct event *ev;
-  //struct event_timer ev;
+  struct tgl_timer *ev;
 };
 
 struct tgl_dc {
@@ -83,7 +82,7 @@ struct tgl_dc {
   long long temp_auth_key_id;
 
   long long server_salt;
-  struct event *ev;
+  struct tgl_timer *ev;
 
   int server_time_delta;
   double server_time_udelta;

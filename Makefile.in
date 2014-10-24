@@ -21,7 +21,7 @@ EXE_LIST=${EXE}/generate ${EXE}/tlc ${EXE}/telegram-cli
 LIB_LIST=${LIB}/libtgl.a
 
 TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o
-TGL_OBJECTS=${OBJ}/net.o ${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/auto/auto.o ${OBJ}/tgl.o ${OBJ}/updates.o
+TGL_OBJECTS=${OBJ}/net.o ${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/auto/auto.o ${OBJ}/tgl.o ${OBJ}/updates.o ${OBJ}/tgl-timers.o
 TLC_OBJECTS=${OBJ}/tlc.o ${OBJ}/tl-parser.o ${OBJ}/crc32.o
 TLD_OBJECTS=${OBJ}/dump-tl-file.o
 GENERATE_OBJECTS=${OBJ}/generate.o

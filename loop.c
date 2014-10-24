@@ -59,6 +59,8 @@
 #include "lua-tg.h"
 #include "tgl.h"
 #include "binlog.h"
+#include "net.h"
+#include "tgl-timers.h"
 
 int verbosity;
 extern int readline_disabled;
@@ -92,6 +94,7 @@ static int delete_stdin_event;
 extern volatile int sigterm_cnt;
 
 extern char *start_command;
+extern struct tgl_state *TLS;
 
 static void stdin_read_callback_all (int arg, short what, struct event *self) {
   if (!readline_disabled) {
@@ -119,7 +122,7 @@ static void stdin_read_callback_all (int arg, short what, struct event *self) {
         break;
       }
       if (r == 0) {
-        //struct event *ev = event_base_get_running_event (tgl_state.ev_base);
+        //struct event *ev = event_base_get_running_event (TLS->ev_base);
         //event_del (ev);
         //event_del (self);
         
@@ -165,16 +168,16 @@ void net_loop (int flags, int (*is_end)(void)) {
   }
   if (flags & 3) {
     if (flags & 1) {
-      term_ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_char, 0);
+      term_ev = event_new (TLS->ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_char, 0);
     } else {
-      term_ev = event_new (tgl_state.ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_line, 0);
+      term_ev = event_new (TLS->ev_base, 0, EV_READ | EV_PERSIST, stdin_read_callback_line, 0);
     }
     event_add (term_ev, 0);
   }
   int last_get_state = time (0);
   while (!is_end || !is_end ()) {
 
-    event_base_loop (tgl_state.ev_base, EVLOOP_ONCE);
+    event_base_loop (TLS->ev_base, EVLOOP_ONCE);
 
     if (term_ev && delete_stdin_event) {
       event_free (term_ev);
@@ -184,7 +187,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     #ifdef USE_LUA
       lua_do_all ();
     #endif
-    if (safe_quit && !tgl_state.active_queries) {
+    if (safe_quit && !TLS->active_queries) {
       printf ("All done. Exit\n");
       do_halt (0);
     }
@@ -192,7 +195,7 @@ void net_loop (int flags, int (*is_end)(void)) {
       do_halt (0);
     }
     if (time (0) - last_get_state > 3600) {
-      tgl_do_lookup_state ();
+      tgl_do_lookup_state (TLS);
       last_get_state = time (0);
     }
     write_state_file ();
@@ -200,7 +203,7 @@ void net_loop (int flags, int (*is_end)(void)) {
     if (unknown_user_list_pos) {
       int i;
       for (i = 0; i < unknown_user_list_pos; i++) {
-        tgl_do_get_user_info (TGL_MK_USER (unknown_user_list[i]), 0, 0, 0);
+        tgl_do_get_user_info (TLS, TGL_MK_USER (unknown_user_list[i]), 0, 0, 0);
       }
       unknown_user_list_pos = 0;
     }   
@@ -250,13 +253,13 @@ int main_loop (void) {
 
 struct tgl_dc *cur_a_dc;
 int is_authorized (void) {
-  return tgl_authorized_dc (cur_a_dc);
+  return tgl_authorized_dc (TLS, cur_a_dc);
 }
 
 int all_authorized (void) {
   int i;
-  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i]) {
-    if (!tgl_authorized_dc (tgl_state.DC_list[i])) {
+  for (i = 0; i <= TLS->max_dc_num; i++) if (TLS->DC_list[i]) {
+    if (!tgl_authorized_dc (TLS, TLS->DC_list[i])) {
       return 0;
     }
   }
@@ -280,7 +283,8 @@ void on_get_config (void *extra, int success) {
 
 int should_register;
 char *hash;
-void sign_in_callback (void *extra, int success, int registered, const char *mhash) {
+void sign_in_callback (struct tgl_state *TLSR, void *extra, int success, int registered, const char *mhash) {
+  assert (TLSR == TLS);
   if (!success) {
     logprintf ("Can not send code\n");
     do_halt (1);
@@ -293,7 +297,8 @@ void sign_in_callback (void *extra, int success, int registered, const char *mha
 
 int signed_in_ok;
 
-void sign_in_result (void *extra, int success, struct tgl_user *U) {
+void sign_in_result (struct tgl_state *TLSR, void *extra, int success, struct tgl_user *U) {
+  assert (TLSR == TLS);
   if (!success) {
     logprintf ("Can not login\n");
     do_halt (1);
@@ -310,10 +315,11 @@ int sent_code (void) {
 }
 
 int dc_signed_in (void) {
-  return tgl_signed_dc (cur_a_dc);
+  return tgl_signed_dc (TLS, cur_a_dc);
 }
 
-void export_auth_callback (void *DC, int success) {
+void export_auth_callback (struct tgl_state *TLSR, void *DC, int success) {
+  assert (TLSR == TLS);
   if (!success) {
     logprintf ("Can not export auth\n");
     do_halt (1);
@@ -321,7 +327,8 @@ void export_auth_callback (void *DC, int success) {
 }
 
 int d_got_ok;
-void get_difference_callback (void *extra, int success) {
+void get_difference_callback (struct tgl_state *TLSR, void *extra, int success) {
+  assert (TLSR == TLS);
   assert (success);
   d_got_ok = 1;
 }
@@ -368,10 +375,10 @@ void read_state_file (void) {
   int seq = x[2];
   int date = x[3];
   close (state_file_fd); 
-  bl_do_set_seq (seq);
-  bl_do_set_pts (pts);
-  bl_do_set_qts (qts);
-  bl_do_set_date (date);
+  bl_do_set_seq (TLS, seq);
+  bl_do_set_pts (TLS, pts);
+  bl_do_set_qts (TLS, qts);
+  bl_do_set_date (TLS, date);
 }
 
 
@@ -381,8 +388,8 @@ void write_state_file (void) {
   static int wpts;
   static int wqts;
   static int wdate;
-  if (wseq >= tgl_state.seq && wpts >= tgl_state.pts && wqts >= tgl_state.qts && wdate >= tgl_state.date) { return; }
-  wseq = tgl_state.seq; wpts = tgl_state.pts; wqts = tgl_state.qts; wdate = tgl_state.date;
+  if (wseq >= TLS->seq && wpts >= TLS->pts && wqts >= TLS->qts && wdate >= TLS->date) { return; }
+  wseq = TLS->seq; wpts = TLS->pts; wqts = TLS->qts; wdate = TLS->date;
   int state_file_fd = open (get_state_filename (), O_CREAT | O_RDWR, 0600);
   if (state_file_fd < 0) {
     logprintf ("Can not write state file '%s': %m\n", get_state_filename ());
@@ -426,12 +433,12 @@ void write_auth_file (void) {
   assert (auth_file_fd >= 0);
   int x = DC_SERIALIZED_MAGIC;
   assert (write (auth_file_fd, &x, 4) == 4);
-  assert (write (auth_file_fd, &tgl_state.max_dc_num, 4) == 4);
-  assert (write (auth_file_fd, &tgl_state.dc_working_num, 4) == 4);
+  assert (write (auth_file_fd, &TLS->max_dc_num, 4) == 4);
+  assert (write (auth_file_fd, &TLS->dc_working_num, 4) == 4);
 
-  tgl_dc_iterator_ex (write_dc, &auth_file_fd);
+  tgl_dc_iterator_ex (TLS, write_dc, &auth_file_fd);
 
-  assert (write (auth_file_fd, &tgl_state.our_id, 4) == 4);
+  assert (write (auth_file_fd, &TLS->our_id, 4) == 4);
   close (auth_file_fd);
 }
 
@@ -477,7 +484,7 @@ void write_secret_chat_file (void) {
   y[0] = secret_chat_fd;
   y[1] = 0;
 
-  tgl_peer_iterator_ex (write_secret_chat, y);
+  tgl_peer_iterator_ex (TLS, write_secret_chat, y);
 
   lseek (secret_chat_fd, 8, SEEK_SET);
   assert (write (secret_chat_fd, &y[1], 4) == 4);
@@ -500,24 +507,24 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
   assert (read (auth_file_fd, auth_key, 256) == 256);
 
   //bl_do_add_dc (id, ip, l, port, auth_key_id, auth_key);
-  bl_do_dc_option (id, 2, "DC", l, ip, port);
-  bl_do_set_auth_key_id (id, auth_key);
-  bl_do_dc_signed (id);
+  bl_do_dc_option (TLS, id, 2, "DC", l, ip, port);
+  bl_do_set_auth_key_id (TLS, id, auth_key);
+  bl_do_dc_signed (TLS, id);
 }
 
 void empty_auth_file (void) {
-  if (tgl_state.test_mode) {
-    bl_do_dc_option (1, 0, "", strlen (TG_SERVER_TEST_1), TG_SERVER_TEST_1, 443);
-    bl_do_dc_option (2, 0, "", strlen (TG_SERVER_TEST_2), TG_SERVER_TEST_2, 443);
-    bl_do_dc_option (3, 0, "", strlen (TG_SERVER_TEST_3), TG_SERVER_TEST_3, 443);
-    bl_do_set_working_dc (2);
+  if (TLS->test_mode) {
+    bl_do_dc_option (TLS, 1, 0, "", strlen (TG_SERVER_TEST_1), TG_SERVER_TEST_1, 443);
+    bl_do_dc_option (TLS, 2, 0, "", strlen (TG_SERVER_TEST_2), TG_SERVER_TEST_2, 443);
+    bl_do_dc_option (TLS, 3, 0, "", strlen (TG_SERVER_TEST_3), TG_SERVER_TEST_3, 443);
+    bl_do_set_working_dc (TLS, 2);
   } else {
-    bl_do_dc_option (1, 0, "", strlen (TG_SERVER_1), TG_SERVER_1, 443);
-    bl_do_dc_option (2, 0, "", strlen (TG_SERVER_2), TG_SERVER_2, 443);
-    bl_do_dc_option (3, 0, "", strlen (TG_SERVER_3), TG_SERVER_3, 443);
-    bl_do_dc_option (4, 0, "", strlen (TG_SERVER_4), TG_SERVER_4, 443);
-    bl_do_dc_option (5, 0, "", strlen (TG_SERVER_5), TG_SERVER_5, 443);
-    bl_do_set_working_dc (2);
+    bl_do_dc_option (TLS, 1, 0, "", strlen (TG_SERVER_1), TG_SERVER_1, 443);
+    bl_do_dc_option (TLS, 2, 0, "", strlen (TG_SERVER_2), TG_SERVER_2, 443);
+    bl_do_dc_option (TLS, 3, 0, "", strlen (TG_SERVER_3), TG_SERVER_3, 443);
+    bl_do_dc_option (TLS, 4, 0, "", strlen (TG_SERVER_4), TG_SERVER_4, 443);
+    bl_do_dc_option (TLS, 5, 0, "", strlen (TG_SERVER_5), TG_SERVER_5, 443);
+    bl_do_set_working_dc (TLS, 4);
   }
 }
 
@@ -550,14 +557,14 @@ void read_auth_file (void) {
       read_dc (auth_file_fd, i, m);
     }
   }
-  bl_do_set_working_dc (dc_working_num);
+  bl_do_set_working_dc (TLS, dc_working_num);
   int our_id;
   int l = read (auth_file_fd, &our_id, 4);
   if (l < 4) {
     assert (!l);
   }
   if (our_id) {
-    bl_do_set_our_id (our_id);
+    bl_do_set_our_id (TLS, our_id);
   }
   close (auth_file_fd);
 }
@@ -588,17 +595,17 @@ void read_secret_chat (int fd, int v) {
     assert (read (fd, &out_seq_no, 4) == 4);
   }
 
-  bl_do_encr_chat_create (id, user_id, admin_id, s, l);
-  struct tgl_secret_chat  *P = (void *)tgl_peer_get (TGL_MK_ENCR_CHAT (id));
+  bl_do_encr_chat_create (TLS, id, user_id, admin_id, s, l);
+  struct tgl_secret_chat  *P = (void *)tgl_peer_get (TLS, TGL_MK_ENCR_CHAT (id));
   assert (P && (P->flags & FLAG_CREATED));
-  bl_do_encr_chat_set_date (P, date);
-  bl_do_encr_chat_set_ttl (P, ttl);
-  bl_do_encr_chat_set_layer (P, layer);
-  bl_do_encr_chat_set_access_hash (P, access_hash);
-  bl_do_encr_chat_set_state (P, state);
-  bl_do_encr_chat_set_key (P, key, key_fingerprint);
+  bl_do_encr_chat_set_date (TLS, P, date);
+  bl_do_encr_chat_set_ttl (TLS, P, ttl);
+  bl_do_encr_chat_set_layer (TLS ,P, layer);
+  bl_do_encr_chat_set_access_hash (TLS, P, access_hash);
+  bl_do_encr_chat_set_state (TLS, P, state);
+  bl_do_encr_chat_set_key (TLS, P, key, key_fingerprint);
   if (v >= 1) {
-    bl_do_encr_chat_set_seq (P, in_seq_no, last_in_seq_no, out_seq_no);
+    bl_do_encr_chat_set_seq (TLS, P, in_seq_no, last_in_seq_no, out_seq_no);
   }
 }
 
@@ -621,7 +628,8 @@ void read_secret_chat_file (void) {
   close (secret_chat_fd);
 }
 
-void dlist_cb (void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[])  {
+void dlist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[])  {
+  assert (TLSR == TLS);
   d_got_ok = 1;
 }
 
@@ -680,7 +688,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
 
   assert (fd >= 0);
-  struct bufferevent *bev = bufferevent_socket_new (tgl_state.ev_base, fd, 0);
+  struct bufferevent *bev = bufferevent_socket_new (TLS->ev_base, fd, 0);
   struct in_ev *e = malloc (sizeof (*e));
   e->bev = bev;
   e->refcnt = 1;
@@ -693,20 +701,24 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
 
 int loop (void) {
   //on_start ();
-  tgl_set_callback (&upd_cb);
-  //tgl_state.temp_key_expire_time = 60;
-  tgl_init ();
+  tgl_set_callback (TLS, &upd_cb);
+  //TLS->temp_key_expire_time = 60;
+  struct event_base *ev = event_base_new ();
+  tgl_set_ev_base (TLS, ev);
+  tgl_set_net_methods (TLS, &tgl_conn_methods);
+  tgl_set_timer_methods (TLS, &tgl_libevent_timers);
+  tgl_init (TLS);
  
   if (binlog_enabled) {
     double t = tglt_get_double_time ();
     if (verbosity >= E_DEBUG) {
       logprintf ("replay log start\n");
     }
-    tgl_replay_log ();
+    tgl_replay_log (TLS);
     if (verbosity >= E_DEBUG) {
       logprintf ("replay log end in %lf seconds\n", tglt_get_double_time () - t);
     }
-    tgl_reopen_binlog_for_writing ();
+    tgl_reopen_binlog_for_writing (TLS);
   } else {
     read_auth_file ();
     read_state_file ();
@@ -719,31 +731,31 @@ int loop (void) {
   #endif
   
   if (sfd >= 0) {
-    struct event *ev = event_new (tgl_state.ev_base, sfd, EV_READ | EV_PERSIST, accept_incoming, 0);
+    struct event *ev = event_new (TLS->ev_base, sfd, EV_READ | EV_PERSIST, accept_incoming, 0);
     event_add (ev, 0);
   }
   if (usfd >= 0) {
-    struct event *ev = event_new (tgl_state.ev_base, usfd, EV_READ | EV_PERSIST, accept_incoming, 0);
+    struct event *ev = event_new (TLS->ev_base, usfd, EV_READ | EV_PERSIST, accept_incoming, 0);
     event_add (ev, 0);
   }
   update_prompt ();
    
   if (reset_authorization) {
-    tgl_peer_t *P = tgl_peer_get (TGL_MK_USER (tgl_state.our_id));
+    tgl_peer_t *P = tgl_peer_get (TLS, TGL_MK_USER (TLS->our_id));
     if (P && P->user.phone && reset_authorization == 1) {
       set_default_username (P->user.phone);
     }
-    bl_do_reset_authorization ();
+    bl_do_reset_authorization (TLS);
   }
 
   net_loop (0, all_authorized);
 
   int i;
-  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_authorized_dc (tgl_state.DC_list[i])) {
+  for (i = 0; i <= TLS->max_dc_num; i++) if (TLS->DC_list[i] && !tgl_authorized_dc (TLS, TLS->DC_list[i])) {
     assert (0);
   }
 
-  if (!tgl_signed_dc (tgl_state.DC_working)) {
+  if (!tgl_signed_dc (TLS, TLS->DC_working)) {
     if (disable_output) {
       fprintf (stderr, "Can not login without output\n");
       do_halt (1);
@@ -761,7 +773,7 @@ int loop (void) {
         set_default_username (user);
       }
     }
-    tgl_do_send_code (default_username, sign_in_callback, 0);
+    tgl_do_send_code (TLS, default_username, sign_in_callback, 0);
     net_loop (0, sent_code);
    
     if (verbosity >= E_DEBUG) {
@@ -778,11 +790,11 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          tgl_do_phone_call (default_username, hash, 0, 0);
+          tgl_do_phone_call (TLS, default_username, hash, 0, 0);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (tgl_do_send_code_result (default_username, hash, code, sign_in_result, 0) >= 0) {
+        if (tgl_do_send_code_result (TLS, default_username, hash, code, sign_in_result, 0) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
@@ -822,11 +834,11 @@ int loop (void) {
         }
         if (!strcmp (code, "call")) {
           printf ("You typed \"call\", switching to phone system.\n");
-          tgl_do_phone_call (default_username, hash, 0, 0);
+          tgl_do_phone_call (TLS, default_username, hash, 0, 0);
           printf ("Calling you! Code: ");
           continue;
         }
-        if (tgl_do_send_code_result_auth (default_username, hash, code, first_name, last_name, sign_in_result, 0) >= 0) {
+        if (tgl_do_send_code_result_auth (TLS, default_username, hash, code, first_name, last_name, sign_in_result, 0) >= 0) {
           break;
         }
         printf ("Invalid code. Try again: ");
@@ -835,14 +847,14 @@ int loop (void) {
     }
 
     net_loop (0, signed_in);    
-    //bl_do_dc_signed (tgl_state.DC_working);
+    //bl_do_dc_signed (TLS->DC_working);
   }
 
-  for (i = 0; i <= tgl_state.max_dc_num; i++) if (tgl_state.DC_list[i] && !tgl_signed_dc (tgl_state.DC_list[i])) {
-    tgl_do_export_auth (i, export_auth_callback, (void*)(long)tgl_state.DC_list[i]);    
-    cur_a_dc = tgl_state.DC_list[i];
+  for (i = 0; i <= TLS->max_dc_num; i++) if (TLS->DC_list[i] && !tgl_signed_dc (TLS, TLS->DC_list[i])) {
+    tgl_do_export_auth (TLS, i, export_auth_callback, (void*)(long)TLS->DC_list[i]);    
+    cur_a_dc = TLS->DC_list[i];
     net_loop (0, dc_signed_in);
-    assert (tgl_signed_dc (tgl_state.DC_list[i]));
+    assert (tgl_signed_dc (TLS, TLS->DC_list[i]));
   }
   write_auth_file ();
   
@@ -854,14 +866,14 @@ int loop (void) {
 
   set_interface_callbacks ();
 
-  tglm_send_all_unsent ();
-  tgl_do_get_difference (sync_from_start, get_difference_callback, 0);
+  tglm_send_all_unsent (TLS);
+  tgl_do_get_difference (TLS, sync_from_start, get_difference_callback, 0);
   net_loop (0, dgot);
-  assert (!(tgl_state.locks & TGL_LOCK_DIFF));
-  tgl_state.started = 1;
+  assert (!(TLS->locks & TGL_LOCK_DIFF));
+  TLS->started = 1;
   if (wait_dialog_list) {
     d_got_ok = 0;
-    tgl_do_get_dialog_list (dlist_cb, 0);
+    tgl_do_get_dialog_list (TLS, dlist_cb, 0);
     net_loop (0, dgot);
   }
   #ifdef USE_LUA

@@ -114,6 +114,8 @@ int port;
 int use_ids;
 char *start_command;
 
+struct tgl_state *TLS;
+
 void set_default_username (const char *s) {
   if (default_username) { 
     tfree_str (default_username);
@@ -348,7 +350,7 @@ void parse_config (void) {
   strcpy (buf + l, "test");
   config_lookup_bool (&conf, buf, &test_mode);
   if (test_mode) {
-    tgl_set_test_mode ();
+    tgl_set_test_mode (TLS);
   }
   
   strcpy (buf + l, "log_level");
@@ -378,20 +380,20 @@ void parse_config (void) {
   strcpy (buf + l, "pfs_enabled");
   config_lookup_bool (&conf, buf, &pfs_enabled);
   if (pfs_enabled) {
-    tgl_enable_pfs ();
+    tgl_enable_pfs (TLS);
   }
 
   if (binlog_enabled) {
     parse_config_val (&conf, &binlog_file_name, "binlog", BINLOG_FILE, config_directory);
-    tgl_set_binlog_mode (1);
-    tgl_set_binlog_path (binlog_file_name);
+    tgl_set_binlog_mode (TLS, 1);
+    tgl_set_binlog_path (TLS, binlog_file_name);
   } else {
-    tgl_set_binlog_mode (0);
+    tgl_set_binlog_mode (TLS, 0);
     parse_config_val (&conf, &state_file_name, "state_file", STATE_FILE, config_directory);
     parse_config_val (&conf, &secret_chat_file_name, "secret", SECRET_CHAT_FILE, config_directory);
     //tgl_set_auth_file_path (auth_file_name);
   }
-  tgl_set_download_directory (downloads_directory);
+  tgl_set_download_directory (TLS, downloads_directory);
   
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
     if (!disable_output) {
@@ -414,16 +416,16 @@ void parse_config (void) {
   
   if (binlog_enabled) {
     tasprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE);
-    tgl_set_binlog_mode (1);
-    tgl_set_binlog_path (binlog_file_name);
+    tgl_set_binlog_mode (TLS, 1);
+    tgl_set_binlog_path (TLS, binlog_file_name);
   } else {
-    tgl_set_binlog_mode (0);
+    tgl_set_binlog_mode (TLS, 0);
     //tgl_set_auth_file_path (auth_file_name;
     tasprintf (&auth_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, AUTH_KEY_FILE);
     tasprintf (&state_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, STATE_FILE);
     tasprintf (&secret_chat_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, SECRET_CHAT_FILE);
   }
-  tgl_set_download_directory (downloads_directory);
+  tgl_set_download_directory (TLS, downloads_directory);
   if (!mkdir (downloads_directory, CONFIG_DIRECTORY_MODE)) {
     if (!disable_output) {
       printf ("[%s] created\n", downloads_directory);
@@ -568,6 +570,7 @@ int change_user_group () {
 char *unix_socket;
 
 void args_parse (int argc, char **argv) {
+  TLS = tgl_state_alloc ();
   int opt = 0;
   while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I"
 #ifdef HAVE_LIBCONFIG
@@ -586,10 +589,10 @@ void args_parse (int argc, char **argv) {
       break;
     case 'k':
       //rsa_public_key_name = tstrdup (optarg);
-      tgl_set_rsa_key (optarg);
+      tgl_set_rsa_key (TLS, optarg);
       break;
     case 'v':
-      tgl_incr_verbosity ();
+      tgl_incr_verbosity (TLS);
       verbosity ++;
       break;
     case 'N':
@@ -722,8 +725,8 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
   if (write (1, "SIGTERM/SIGINT received\n", 25) < 0) { 
     // Sad thing
   }
-  if (tgl_state.ev_base) {
-    event_base_loopbreak(tgl_state.ev_base);
+  if (TLS && TLS->ev_base) {
+    event_base_loopbreak (TLS->ev_base);
   }
   sigterm_cnt ++;
 }
@@ -841,8 +844,8 @@ int main (int argc, char **argv) {
   running_for_first_time ();
   parse_config ();
 
-  tgl_set_rsa_key ("/etc/" PROG_NAME "/server.pub");
-  tgl_set_rsa_key ("tg-server.pub");
+  tgl_set_rsa_key (TLS, "/etc/" PROG_NAME "/server.pub");
+  tgl_set_rsa_key (TLS, "tg-server.pub");
 
 
   get_terminal_attributes ();
