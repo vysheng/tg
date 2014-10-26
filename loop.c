@@ -683,7 +683,7 @@ static void event_incoming (struct bufferevent *bev, short what, void *_arg) {
 
 static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   vlogprintf (E_WARNING, "Accepting incoming connection\n");
-  unsigned clilen;
+  unsigned clilen = 0;
   struct sockaddr_in cli_addr;
   int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
 
