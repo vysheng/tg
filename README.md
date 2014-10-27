@@ -85,8 +85,9 @@ If using [MacPorts](https://www.macports.org):
      sudo port install libconfig-hr
      sudo port install readline
      sudo port install lua51
-     export CFLAGS="-I/usr/local/include -I/opt/local/include"
-     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib/"
+     sudo port install libevent
+     export CFLAGS="-I/usr/local/include -I/opt/local/include -I/opt/local/include/lua-5.1"
+     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
      ./configure && make
 
 Install these ports:
