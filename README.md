@@ -74,8 +74,8 @@ If using [Homebrew](http://brew.sh/):
      brew install libconfig
      brew install readline
      brew install lua
-     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
-     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
+     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
+     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
