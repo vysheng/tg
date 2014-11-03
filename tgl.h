@@ -22,6 +22,7 @@
 
 #include <tgl-layout.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define TGL_MAX_DC_NUM 100
 #define TG_SERVER_1 "173.240.5.1"
