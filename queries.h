@@ -24,16 +24,14 @@
 #include "auto.h"
 #include "tgl-layout.h"
 
-struct event;
-
 #define QUERY_ACK_RECEIVED 1
 #define QUERY_FORCE_SEND 2
 
 struct query;
 struct query_methods {
-  int (*on_answer)(struct query *q);
-  int (*on_error)(struct query *q, int error_code, int len, char *error);
-  int (*on_timeout)(struct query *q);
+  int (*on_answer)(struct tgl_state *TLS, struct query *q);
+  int (*on_error)(struct tgl_state *TLS, struct query *q, int error_code, int len, char *error);
+  int (*on_timeout)(struct tgl_state *TLS, struct query *q);
   struct paramed_type *type;
 };
 
@@ -45,7 +43,7 @@ struct query {
   long long session_id;
   void *data;
   struct query_methods *methods;
-  struct event *ev;
+  struct tgl_timer *ev;
   struct tgl_dc *DC;
   struct tgl_session *session;
   struct paramed_type *type;
@@ -55,20 +53,20 @@ struct query {
 };
 
 
-struct query *tglq_send_query (struct tgl_dc *DC, int len, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra);
-void tglq_query_ack (long long id);
-void tglq_query_error (long long id);
-void tglq_query_result (long long id);
-void tglq_query_restart (long long id);
+struct query *tglq_send_query (struct tgl_state *TLS, struct tgl_dc *DC, int len, void *data, struct query_methods *methods, void *extra, void *callback, void *callback_extra);
+void tglq_query_ack (struct tgl_state *TLS, long long id);
+void tglq_query_error (struct tgl_state *TLS, long long id);
+void tglq_query_result (struct tgl_state *TLS, long long id);
+void tglq_query_restart (struct tgl_state *TLS, long long id);
 
-double next_timer_in (void);
-void work_timers (void);
+//double next_timer_in (void);
+//void work_timers (void);
 
 //extern struct query_methods help_get_config_methods;
 
 double get_double_time (void);
 
-void tgl_do_send_bind_temp_key (struct tgl_dc *D, long long nonce, int expires_at, void *data, int len, long long msg_id);
+void tgl_do_send_bind_temp_key (struct tgl_state *TLS, struct tgl_dc *D, long long nonce, int expires_at, void *data, int len, long long msg_id);
 
 // For binlog
 

@@ -18,18 +18,10 @@
     Copyright Vitaly Valtman 2013-2014
 */
 
-#ifndef __UPDATES_H__
-#define __UPDATES_H__
-struct connection;
-void tglu_work_update (struct tgl_state *TLS, struct connection *c, long long msg_id);
-void tglu_work_updates_to_long (struct tgl_state *TLS, struct connection *c, long long msg_id);
-void tglu_work_update_short_chat_message (struct tgl_state *TLS, struct connection *c, long long msg_id);
-void tglu_work_update_short_message (struct tgl_state *TLS, struct connection *c, long long msg_id);
-void tglu_work_update_short (struct tgl_state *TLS, struct connection *c, long long msg_id);
-void tglu_work_updates (struct tgl_state *TLS, struct connection *c, long long msg_id);
+#ifndef __TGL_TIMERS_H__
+#define __TGL_TIMERS_H__
 
-void tglu_fetch_pts (struct tgl_state *TLS);
-void tglu_fetch_qts (struct tgl_state *TLS);
-void tglu_fetch_seq (struct tgl_state *TLS);
-void tglu_fetch_date (struct tgl_state *TLS);
+#include "tgl.h"
+extern struct tgl_timer_methods tgl_libevent_timers;
+
 #endif

@@ -26,70 +26,60 @@
 #include "tools.h"
 #include "mtproto-client.h"
 #include "structures.h"
-#include "net.h"
-
-#ifdef EVENT_V2
-#include <event2/event.h>
-#else
-#include <event.h>
-#include "event-old.h"
-#endif
+//#include "net.h"
 
 #include <assert.h>
 
 struct tgl_state tgl_state;
 
     
-void tgl_set_binlog_mode (int mode) {
-  tgl_state.binlog_enabled = mode;
+void tgl_set_binlog_mode (struct tgl_state *TLS, int mode) {
+  TLS->binlog_enabled = mode;
 }
 
-void tgl_set_binlog_path (const char *path) {
-  tgl_state.binlog_name = tstrdup (path);
+void tgl_set_binlog_path (struct tgl_state *TLS, const char *path) {
+  TLS->binlog_name = tstrdup (path);
 }
     
-void tgl_set_auth_file_path (const char *path) {
-  tgl_state.auth_file = tstrdup (path);
+void tgl_set_auth_file_path (struct tgl_state *TLS, const char *path) {
+  TLS->auth_file = tstrdup (path);
 }
 
-void tgl_set_download_directory (const char *path) {
-  tgl_state.downloads_directory = tstrdup (path);
+void tgl_set_download_directory (struct tgl_state *TLS, const char *path) {
+  TLS->downloads_directory = tstrdup (path);
 }
 
-void tgl_set_callback (struct tgl_update_callback *cb) {
-  tgl_state.callback = *cb;
+void tgl_set_callback (struct tgl_state *TLS, struct tgl_update_callback *cb) {
+  TLS->callback = *cb;
 }
 
-void tgl_set_rsa_key (const char *key) {
-  assert (tgl_state.rsa_key_num < TGL_MAX_RSA_KEYS_NUM);
-  tgl_state.rsa_key_list[tgl_state.rsa_key_num ++] = tstrdup (key);
+void tgl_set_rsa_key (struct tgl_state *TLS, const char *key) {
+  assert (TLS->rsa_key_num < TGL_MAX_RSA_KEYS_NUM);
+  TLS->rsa_key_list[TLS->rsa_key_num ++] = tstrdup (key);
 }
 
-void tgl_init (void) {
-  tgl_state.ev_base = event_base_new ();
-
-  if (!tgl_state.net_methods) {
-    tgl_state.net_methods = &tgl_conn_methods;
+void tgl_init (struct tgl_state *TLS) {
+  assert (TLS->timer_methods);
+  assert (TLS->net_methods);
+  if (!TLS->callback.create_print_name) {
+    TLS->callback.create_print_name = tgls_default_create_print_name;
   }
-  if (!tgl_state.callback.create_print_name) {
-    tgl_state.callback.create_print_name = tgls_default_create_print_name;
-  }
-  if (!tgl_state.temp_key_expire_time) {
-    tgl_state.temp_key_expire_time = 100000;
+  if (!TLS->temp_key_expire_time) {
+    TLS->temp_key_expire_time = 100000;
   }
 
-  tgl_state.message_list.next_use = &tgl_state.message_list;
-  tgl_state.message_list.prev_use = &tgl_state.message_list;
+  TLS->message_list.next_use = &TLS->message_list;
+  TLS->message_list.prev_use = &TLS->message_list;
 
-  tglmp_on_start ();
+  tglmp_on_start (TLS);
 }
 
-int tgl_authorized_dc (struct tgl_dc *DC) {
+int tgl_authorized_dc (struct tgl_state *TLS, struct tgl_dc *DC) {
   assert (DC);
   return (DC->flags & 4) != 0;//DC->auth_key_id;
 }
 
-int tgl_signed_dc (struct tgl_dc *DC) {
+int tgl_signed_dc (struct tgl_state *TLS, struct tgl_dc *DC) {
   assert (DC);
   return DC->has_auth;
 }

@@ -45,7 +45,7 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
 
 #define vlogprintf(v,...) \
   do { \
-    if (tgl_state.verbosity >= (v)) {\
+    if (TLS->verbosity >= (v)) {\
       logprintf (__VA_ARGS__);\
     }\
   } while (0);\

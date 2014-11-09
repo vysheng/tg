@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* disable extf queries */
+#undef DISABLE_EXTF
+
 /* Use libevent v1 */
 #undef EVENT_V1
 

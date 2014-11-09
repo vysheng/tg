@@ -52,6 +52,14 @@ AC_ARG_ENABLE(libconfig,[--enable-libconfig/--disable-libconfig],
     AC_CHECK_LIB([config],[config_init],[],AC_MSG_ERROR([No libconfig found. Try --disable-libconfig]))
   ])
 
+AC_ARG_ENABLE(extf,[--enable-extf/--disable-extf],
+  [ 
+  if test "x$enableval" = "xno" ; then    
+    AC_DEFINE([DISABLE_EXTF],[1],[disable extf queries])
+  fi 
+  ],[
+  ])
+
 AC_MSG_CHECKING([for liblua])
 AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
   [ 

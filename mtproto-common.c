@@ -57,7 +57,7 @@ static long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
 //int verbosity;
 
-static int get_random_bytes (unsigned char *buf, int n) {
+static int get_random_bytes (struct tgl_state *TLS, unsigned char *buf, int n) {
   int r = 0, h = open ("/dev/random", O_RDONLY | O_NONBLOCK);
   if (h >= 0) {
     r = read (h, buf, n);
@@ -107,7 +107,7 @@ static __inline__ unsigned long long rdtsc (void) {
 }
 #endif
 
-void tgl_prng_seed (const char *password_filename, int password_length) {
+void tgl_prng_seed (struct tgl_state *TLS, const char *password_filename, int password_length) {
   struct timespec T;
   tgl_my_clock_gettime (CLOCK_REALTIME, &T);
   RAND_add (&T, sizeof (T), 4.0);
@@ -120,7 +120,7 @@ void tgl_prng_seed (const char *password_filename, int password_length) {
   p = getppid ();
   RAND_add (&p, sizeof (p), 0.0);
   unsigned char rb[32];
-  int s = get_random_bytes (rb, 32);
+  int s = get_random_bytes (TLS, rb, 32);
   if (s > 0) {
     RAND_add (rb, s, s);
   }
@@ -142,8 +142,8 @@ void tgl_prng_seed (const char *password_filename, int password_length) {
       tfree_secure (a, password_length);
     }
   }
-  tgl_state.BN_ctx = BN_CTX_new ();
-  ensure_ptr (tgl_state.BN_ctx);
+  TLS->BN_ctx = BN_CTX_new ();
+  ensure_ptr (TLS->BN_ctx);
 }
 
 int tgl_serialize_bignum (BIGNUM *b, char *buffer, int maxlen) {
@@ -250,7 +250,7 @@ int tgl_fetch_bignum (BIGNUM *x) {
   return l;
 }
 
-int tgl_pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E) {
+int tgl_pad_rsa_encrypt (struct tgl_state *TLS, char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E) {
   int pad = (255000 - from_len - 32) % 255 + 32;
   int chunks = (from_len + pad) / 255;
   int bits = BN_num_bits (N);
@@ -265,7 +265,7 @@ int tgl_pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N
   rsa_encrypted_chunks += chunks;
   for (i = 0; i < chunks; i++) {
     BN_bin2bn ((unsigned char *) from, 255, &x);
-    assert (BN_mod_exp (&y, &x, E, N, tgl_state.BN_ctx) == 1);
+    assert (BN_mod_exp (&y, &x, E, N, TLS->BN_ctx) == 1);
     unsigned l = 256 - BN_num_bytes (&y);
     assert (l <= 256);
     memset (to, 0, l);
@@ -277,7 +277,7 @@ int tgl_pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N
   return chunks * 256;
 }
 
-int tgl_pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D) {
+int tgl_pad_rsa_decrypt (struct tgl_state *TLS, char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D) {
   if (from_len < 0 || from_len > 0x1000 || (from_len & 0xff)) {
     return -1;
   }
@@ -292,7 +292,7 @@ int tgl_pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N
   for (i = 0; i < chunks; i++) {
     ++rsa_decrypted_chunks;
     BN_bin2bn ((unsigned char *) from, 256, &x);
-    assert (BN_mod_exp (&y, &x, D, N, tgl_state.BN_ctx) == 1);
+    assert (BN_mod_exp (&y, &x, D, N, TLS->BN_ctx) == 1);
     int l = BN_num_bytes (&y);
     if (l > 255) {
       BN_free (&x);

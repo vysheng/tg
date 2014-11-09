@@ -19,8 +19,10 @@
 */
 
 #include "mtproto-common.h"
+#include "config.h"
 #include <string.h>
 
+#ifndef DISABLE_EXTF
 static int cur_token_len;
 static char *cur_token;
 static int cur_token_real_len;
@@ -301,7 +303,7 @@ static void free_vars_to_be_freed (void) {
   fvars_pos = 0;
 }
 
-int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R, char *data, int data_len) {
+int tglf_extf_autocomplete (struct tgl_state *TLS, const char *text, int text_len, int index, char **R, char *data, int data_len) {
   if (index == -1) {
     buffer_pos = data;
     buffer_end = data + data_len;
@@ -328,7 +330,7 @@ int tglf_extf_autocomplete (const char *text, int text_len, int index, char **R,
   }
 }
 
-struct paramed_type *tglf_extf_store (const char *data, int data_len) { 
+struct paramed_type *tglf_extf_store (struct tgl_state *TLS, const char *data, int data_len) { 
   buffer_pos = (char *)data;
   buffer_end = (char *)(data + data_len);
   local_next_token ();
@@ -430,8 +432,9 @@ static void print_offset (void) {
   }
 }
 
-char *tglf_extf_fetch (struct paramed_type *T) {
+char *tglf_extf_fetch (struct tgl_state *TLS, struct paramed_type *T) {
   out_buf_pos = 0;
   if (fetch_type_any (T) < 0) { return 0; }
   return out_buf;
 }
+#endif

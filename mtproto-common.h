@@ -117,7 +117,7 @@ struct encrypted_message {
 
 //BN_CTX *BN_ctx;
 
-void tgl_prng_seed (const char *password_filename, int password_length);
+void tgl_prng_seed (struct tgl_state *TLS, const char *password_filename, int password_length);
 int tgl_serialize_bignum (BIGNUM *b, char *buffer, int maxlen);
 long long tgl_do_compute_rsa_key_fingerprint (RSA *key);
 
@@ -356,8 +356,8 @@ static inline int in_remaining (void) {
 
 //int get_random_bytes (unsigned char *buf, int n);
 
-int tgl_pad_rsa_encrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
-int tgl_pad_rsa_decrypt (char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
+int tgl_pad_rsa_encrypt (struct tgl_state *TLS, char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *E);
+int tgl_pad_rsa_decrypt (struct tgl_state *TLS, char *from, int from_len, char *to, int size, BIGNUM *N, BIGNUM *D);
 
 //extern long long rsa_encrypted_chunks, rsa_decrypted_chunks;
 
