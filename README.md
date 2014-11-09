@@ -74,8 +74,8 @@ If using [Homebrew](http://brew.sh/):
      brew install libconfig
      brew install readline
      brew install lua
-     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.2.4/include"
-     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.2.4/lib"
+     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
+     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
@@ -85,8 +85,9 @@ If using [MacPorts](https://www.macports.org):
      sudo port install libconfig-hr
      sudo port install readline
      sudo port install lua51
-     export CFLAGS="-I/usr/local/include -I/opt/local/include"
-     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib/"
+     sudo port install libevent
+     export CFLAGS="-I/usr/local/include -I/opt/local/include -I/opt/local/include/lua-5.1"
+     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
      ./configure && make
 
 Install these ports:
