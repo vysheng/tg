@@ -1247,8 +1247,12 @@ void tglf_fetch_encrypted_message (struct tgl_state *TLS, struct tgl_message *M)
       //vlogprintf (E_WARNING, "in = %d, out = %d\n", in_seq_no, out_seq_no);
       //P->encr_chat.in_seq_no = in_seq_no / 2;
       x = fetch_int ();
+      vlogprintf (E_DEBUG - 2, "layer = %d, in = %d, out = %d\n", layer, in_seq_no, out_seq_no);
     }
-    assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
+    if (!(x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16)) {
+      vlogprintf (E_ERROR, "x = 0x%08x\n", x);
+      assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
+    }
     //assert (id == fetch_long ());
     long long new_id = fetch_long ();
     if (P && P->encr_chat.layer >= 17) {
