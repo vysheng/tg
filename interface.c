@@ -1413,10 +1413,12 @@ void print_success_gw (struct tgl_state *TLSR, void *extra, int success) {
 }
 
 void print_msg_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_message *M) {
+  write_secret_chat_file ();
   print_success_gw (TLS, extra, success);
 }
 
 void print_encr_chat_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_secret_chat *E) {
+  write_secret_chat_file ();
   print_success_gw (TLS, extra, success);
 }
 
