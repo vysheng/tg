@@ -1272,6 +1272,9 @@ int complete_string_list (char **list, int index, const char *text, int len, cha
     return -1;
   }
 }
+void print_msg_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_message *M);
+void print_encr_chat_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_secret_chat *E);;
+void print_success_gw (struct tgl_state *TLS, void *extra, int success);
 
 int complete_command_list (int index, const char *text, int len, char **R) {
   index ++;
@@ -1279,9 +1282,6 @@ int complete_command_list (int index, const char *text, int len, char **R) {
     index ++;
   }
   if (commands[index].name) {
-void print_msg_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_message *M);
-void print_encr_chat_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_secret_chat *E);;
-void print_success_gw (struct tgl_state *TLS, void *extra, int success);
     *R = strdup (commands[index].name);
     assert (*R);
     return index;
@@ -1413,10 +1413,12 @@ void print_success_gw (struct tgl_state *TLSR, void *extra, int success) {
 }
 
 void print_msg_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_message *M) {
+  write_secret_chat_file ();
   print_success_gw (TLS, extra, success);
 }
 
 void print_encr_chat_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_secret_chat *E) {
+  write_secret_chat_file ();
   print_success_gw (TLS, extra, success);
 }
 
@@ -1950,7 +1952,8 @@ void secret_chat_update_gw (struct tgl_state *TLSR, struct tgl_secret_chat *U, u
   if (!binlog_read) { return; }
 
   if ((flags & TGL_UPDATE_REQUESTED) && !disable_auto_accept)  {
-    tgl_do_accept_encr_chat_request (TLS, U, 0, 0);
+    //tgl_do_accept_encr_chat_request (TLS, U, 0, 0);
+    tgl_do_accept_encr_chat_request (TLS, U, print_encr_chat_success_gw, 0);
   }
   
   if (disable_output && !notify_ev) { return; }
