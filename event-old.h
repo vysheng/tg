@@ -2,6 +2,7 @@
 #define __EVENT_OLD_H__
 
 #include <assert.h>
+#include <stdlib.h>
 
 #define BEV_EVENT_READ EVBUFFER_READ
 #define BEV_EVENT_WRITE EVBUFFER_WRITE
@@ -39,5 +40,9 @@ static struct bufferevent *bufferevent_socket_new (struct event_base *base, int 
   struct bufferevent *bev = bufferevent_new(fd, 0, 0, 0, 0);
   bufferevent_base_set (base, bev);
   return bev;
+}
+
+static inline void *event_get_callback_arg(const struct event *ev) {
+  return ev->ev_arg;
 }
 #endif
