@@ -24,6 +24,7 @@ decryptedMessageActionScreenshotMessages#8ac1f475 random_ids:Vector<long> = Decr
 decryptedMessageActionFlushHistory#6719e45c = DecryptedMessageAction;
 decryptedMessageActionNotifyLayer#f3048883 layer:int = DecryptedMessageAction;
 
+decryptedMessageActionResend#511110b0 start_seq_no:int end_seq_no:int = DecryptedMessageAction;
 
 decryptedMessageActionTyping#ccb27641 action:SendMessageAction = DecryptedMessageAction;
 

@@ -61,7 +61,7 @@
 #endif
 
 //int want_dc_num;
-char *get_downloads_directory (void);
+//char *get_downloads_directory (void);
 //extern int offline_mode;
 
 //long long cur_uploading_bytes;
@@ -2492,9 +2492,9 @@ static void load_next_part (struct tgl_state *TLS, struct download *D, void *cal
     static char buf[PATH_MAX];
     int l;
     if (!D->id) {
-      l = tsnprintf (buf, sizeof (buf), "%s/download_%lld_%d", get_downloads_directory (), D->volume, D->local_id);
+      l = tsnprintf (buf, sizeof (buf), "%s/download_%lld_%d.jpg", TLS->downloads_directory, D->volume, D->local_id);
     } else {
-      l = tsnprintf (buf, sizeof (buf), "%s/download_%lld", get_downloads_directory (), D->id);
+      l = tsnprintf (buf, sizeof (buf), "%s/download_%lld", TLS->downloads_directory, D->id);
     }
     if (l >= (int) sizeof (buf)) {
       vlogprintf (E_ERROR, "Download filename is too long");

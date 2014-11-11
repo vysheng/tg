@@ -287,7 +287,7 @@ void push_media (struct tgl_message_media *M) {
   }
 }
 
-void push_message (struct tgl_message *M) {
+void push_message (struct tgl_message *M) {  
   assert (M);
   my_lua_checkstack (luaState, 10);
   lua_newtable (luaState);
@@ -295,6 +295,7 @@ void push_message (struct tgl_message *M) {
   static char s[30];
   snprintf (s, 30, "%lld", M->id);
   lua_add_string_field ("id", s);
+  if (!(M->flags & FLAG_CREATED)) { return; }
   lua_add_num_field ("flags", M->flags);
  
   if (tgl_get_peer_type (M->fwd_from_id)) {

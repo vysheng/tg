@@ -699,6 +699,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   bufferevent_enable(bev, EV_READ|EV_WRITE);
 }
 
+char *get_downloads_directory (void);
 int loop (void) {
   //on_start ();
   tgl_set_callback (TLS, &upd_cb);
@@ -707,6 +708,7 @@ int loop (void) {
   tgl_set_ev_base (TLS, ev);
   tgl_set_net_methods (TLS, &tgl_conn_methods);
   tgl_set_timer_methods (TLS, &tgl_libevent_timers);
+  tgl_set_download_directory (TLS, get_downloads_directory ());
   tgl_init (TLS);
  
   if (binlog_enabled) {
