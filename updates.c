@@ -23,6 +23,7 @@
 #include "binlog.h"
 #include "auto.h"
 #include "structures.h"
+#include "tree.h"
 
 #include <assert.h>
 
@@ -130,14 +131,13 @@ void tglu_work_update (struct tgl_state *TLS, struct connection *c, long long ms
       tgl_peer_id_t user_id = TGL_MK_USER (fetch_int ());
       tgl_peer_t *U = tgl_peer_get (TLS, user_id);
       if (U) {
-        tglf_fetch_user_status (TLS, &U->user.status);
+        tglf_fetch_user_status (TLS, &U->user.status, &U->user);
 
         if (TLS->callback.status_notification) {
           TLS->callback.status_notification (TLS, (void *)U);
         }
       } else {
-        struct tgl_user_status t;
-        tglf_fetch_user_status (TLS, &t);
+        assert (skip_type_any (TYPE_TO_PARAM (user_status)) >= 0);
       }
     }
     break;
@@ -543,4 +543,52 @@ void tglu_work_updates_to_long (struct tgl_state *TLS, struct connection *c, lon
   assert (fetch_int () == (int)CODE_updates_too_long);
   vlogprintf (E_NOTICE, "updates too long... Getting difference\n");
   tgl_do_get_difference (TLS, 0, 0, 0);
+}
+
+#define user_cmp(a,b) (tgl_get_peer_id ((a)->id) - tgl_get_peer_id ((b)->id))
+DEFINE_TREE(user, struct tgl_user *,user_cmp,0)
+
+static void notify_status (struct tgl_user *U, void *ex) {
+  struct tgl_state *TLS = ex;
+  if (TLS->callback.user_status_update) {
+    TLS->callback.user_status_update (TLS, U);
+  }
+}
+
+static void status_notify (struct tgl_state *TLS, void *arg) {
+  tree_act_ex_user (TLS->online_updates, notify_status, TLS);
+  tree_clear_user (TLS->online_updates);
+  TLS->online_updates = NULL;
+  TLS->timer_methods->free (TLS->online_updates_timer);
+  TLS->online_updates_timer = NULL;
+}
+
+void tgl_insert_status_update (struct tgl_state *TLS, struct tgl_user *U) {
+  if (!tree_lookup_user (TLS->online_updates, U)) {
+    TLS->online_updates = tree_insert_user (TLS->online_updates, U, lrand48 ());
+  }
+  if (!TLS->online_updates_timer) {
+    TLS->online_updates_timer = TLS->timer_methods->alloc (TLS, status_notify, 0);
+    TLS->timer_methods->insert (TLS->online_updates_timer, 0);
+  }
+}
+
+static void user_expire (struct tgl_state *TLS, void *arg) {
+  struct tgl_user *U = arg;
+  TLS->timer_methods->free (U->status.ev);
+  U->status.ev = 0;
+  U->status.online = -1;
+  U->status.when = tglt_get_double_time ();
+  tgl_insert_status_update (TLS, U);
+}
+
+void tgl_insert_status_expire (struct tgl_state *TLS, struct tgl_user *U) {
+  assert (!U->status.ev);
+  U->status.ev = TLS->timer_methods->alloc (TLS, user_expire, U);
+  TLS->timer_methods->insert (U->status.ev, U->status.when - tglt_get_double_time ()); 
+}
+
+void tgl_remove_status_expire (struct tgl_state *TLS, struct tgl_user *U) {
+  TLS->timer_methods->free (U->status.ev);
+  U->status.ev = 0;
 }

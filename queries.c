@@ -1106,8 +1106,7 @@ void tgl_do_mark_read (struct tgl_state *TLS, tgl_peer_id_t id, void (*callback)
   if (P->last) {
     tgl_do_messages_mark_read_encr (TLS, id, P->encr_chat.access_hash, P->last->date, callback, callback_extra);
   } else {
-    tgl_do_messages_mark_read_encr (TLS, id, P->encr_chat.access_hash, time (0) - 10, callback, callback_extra);
-    
+    tgl_do_messages_mark_read_encr (TLS, id, P->encr_chat.access_hash, 0, callback, callback_extra);
   }
 }
 /* }}} */

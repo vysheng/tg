@@ -22,7 +22,7 @@
 #include "tgl.h"
 
 int tglf_fetch_file_location (struct tgl_state *TLS, struct tgl_file_location *loc);
-int tglf_fetch_user_status (struct tgl_state *TLS, struct tgl_user_status *S);
+int tglf_fetch_user_status (struct tgl_state *TLS, struct tgl_user_status *S, struct tgl_user *U);
 int tglf_fetch_user (struct tgl_state *TLS, struct tgl_user *U);
 struct tgl_user *tglf_fetch_alloc_user (struct tgl_state *TLS);
 struct tgl_user *tglf_fetch_alloc_user_full (struct tgl_state *TLS);

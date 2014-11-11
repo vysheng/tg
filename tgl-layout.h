@@ -234,6 +234,7 @@ struct tgl_encr_file {
 struct tgl_user_status {
   int online;
   int when;
+  struct tgl_timer *ev;
 };
 
 struct tgl_user {

@@ -32,4 +32,8 @@ void tglu_fetch_pts (struct tgl_state *TLS);
 void tglu_fetch_qts (struct tgl_state *TLS);
 void tglu_fetch_seq (struct tgl_state *TLS);
 void tglu_fetch_date (struct tgl_state *TLS);
+
+void tgl_insert_status_update (struct tgl_state *TLS, struct tgl_user *U);
+void tgl_insert_status_expire (struct tgl_state *TLS, struct tgl_user *U);
+void tgl_remove_status_expire (struct tgl_state *TLS, struct tgl_user *U);
 #endif

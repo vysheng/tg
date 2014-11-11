@@ -93,6 +93,7 @@ struct tgl_update_callback {
   void (*msg_receive)(struct tgl_state *TLS, struct tgl_message *M);
   void (*our_id)(struct tgl_state *TLS, int id);
   void (*notification)(struct tgl_state *TLS, char *type, char *message);
+  void (*user_status_update)(struct tgl_state *TLS, struct tgl_user *U);
   char *(*create_print_name) (struct tgl_state *TLS, tgl_peer_id_t id, const char *a1, const char *a2, const char *a3, const char *a4);
 };
 
@@ -204,6 +205,10 @@ struct tgl_state {
   struct tree_query *queries_tree;
 
   char *base_path; 
+  
+  struct tree_user *online_updates;
+
+  struct tgl_timer *online_updates_timer;
 };
 #pragma pack(pop)
 //extern struct tgl_state tgl_state;

@@ -2006,6 +2006,25 @@ void callback_extf (struct tgl_state *TLS, void *extra, int success, char *buf) 
   mprint_end (ev);
 }
 
+void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
+  if (disable_output && !notify_ev) { return; }
+  if (!binlog_read) { return; }
+  if (log_level < 2) { return; }
+  struct in_ev *ev = notify_ev;
+  mprint_start (ev);
+  mpush_color (ev, COLOR_YELLOW);
+  mprintf (ev, "User ");
+  print_user_name (ev, U->id, (void *)U);
+  if (U->status.online > 0) {
+    mprintf (ev, " online");
+  } else {
+    mprintf (ev, " offline");
+  }
+  mprintf (ev, "\n");
+  mpop_color (ev);
+  mprint_end (ev);
+}
+
 struct tgl_update_callback upd_cb = {
   .new_msg = print_message_gw,
   .marked_read = mark_read_upd,
@@ -2021,7 +2040,8 @@ struct tgl_update_callback upd_cb = {
   .chat_update = chat_update_gw,
   .secret_chat_update = secret_chat_update_gw,
   .msg_receive = print_message_gw,
-  .our_id = our_id_gw
+  .our_id = our_id_gw,
+  .user_status_update = user_status_upd
 };
 
 

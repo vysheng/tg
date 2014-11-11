@@ -135,19 +135,40 @@ int tglf_fetch_file_location (struct tgl_state *TLS, struct tgl_file_location *l
   return 0;
 }
 
-int tglf_fetch_user_status (struct tgl_state *TLS, struct tgl_user_status *S) {
+int tglf_fetch_user_status (struct tgl_state *TLS, struct tgl_user_status *S, struct tgl_user *U) {
   unsigned x = fetch_int ();
   assert (x == CODE_user_status_empty || x == CODE_user_status_online || x == CODE_user_status_offline);
   switch (x) {
   case CODE_user_status_empty:
+    if (S->online) {
+      tgl_insert_status_update (TLS, U);
+      tgl_remove_status_expire (TLS, U);
+    }
     S->online = 0;
     S->when = 0;
     break;
   case CODE_user_status_online:
-    S->online = 1;
-    S->when = fetch_int ();
+    {
+      int when = fetch_int ();
+      if (S->online != 1) {
+        tgl_insert_status_update (TLS, U);
+        tgl_insert_status_expire (TLS, U);
+        S->online = 1;
+      } else {
+        if (when != S->when) {
+          tgl_remove_status_expire (TLS, U);
+          tgl_insert_status_expire (TLS, U);
+        }
+      }
+    }
     break;
   case CODE_user_status_offline:
+    if (S->online != -1) {
+      tgl_insert_status_update (TLS, U);
+      if (S->online == 1) {
+        tgl_remove_status_expire (TLS, U);
+      }
+    }
     S->online = -1;
     S->when = fetch_int ();
     break;
@@ -221,7 +242,7 @@ int tglf_fetch_user (struct tgl_state *TLS, struct tgl_user *U) {
       bl_do_user_add (TLS, tgl_get_peer_id (U->id), s1, l1, s2, l2, access_hash, phone, phone_len, x == CODE_user_contact);
       bl_do_user_set_username (TLS, U, s3, l3);
       assert (tglf_fetch_user_photo (TLS, U) >= 0);
-      assert (tglf_fetch_user_status (TLS, &U->status) >= 0);
+      assert (tglf_fetch_user_status (TLS, &U->status, U) >= 0);
 
       if (x == CODE_user_self) {
         fetch_bool ();
@@ -253,7 +274,7 @@ int tglf_fetch_user (struct tgl_state *TLS, struct tgl_user *U) {
       }
       assert (tglf_fetch_user_photo (TLS, U) >= 0);
     
-      tglf_fetch_user_status (TLS, &U->status);
+      tglf_fetch_user_status (TLS, &U->status, U);
       if (x == CODE_user_self) {
         fetch_bool ();
       }
