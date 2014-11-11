@@ -30,11 +30,12 @@
 #define TG_SERVER_3 "174.140.142.6"
 #define TG_SERVER_4 "149.154.167.91"
 #define TG_SERVER_5 "149.154.171.5"
-
+#define TG_SERVER_DEFAULT 4
 
 #define TG_SERVER_TEST_1 "173.240.5.253"
 #define TG_SERVER_TEST_2 "149.154.167.40"
 #define TG_SERVER_TEST_3 "174.140.142.5"
+#define TG_SERVER_TEST_DEFAULT 2
 
 // JUST RANDOM STRING
 #define TGL_BUILD "2590"
@@ -201,6 +202,8 @@ struct tgl_state {
   void *pubKey;
 
   struct tree_query *queries_tree;
+
+  char *base_path; 
 };
 #pragma pack(pop)
 //extern struct tgl_state tgl_state;

@@ -1422,7 +1422,7 @@ static void create_new_binlog (struct tgl_state *TLS) {
     out_int (2);
   }
   
-  int fd = open (get_binlog_file_name (), O_WRONLY | O_EXCL | O_CREAT, 0600);
+  int fd = open (TLS->binlog_name, O_WRONLY | O_EXCL | O_CREAT, 0600);
   if (fd < 0) {
     perror ("Write new binlog");
     exit (2);
@@ -1434,11 +1434,11 @@ static void create_new_binlog (struct tgl_state *TLS) {
 
 void tgl_replay_log (struct tgl_state *TLS) {
   if (!TLS->binlog_enabled) { return; }
-  if (access (get_binlog_file_name (), F_OK) < 0) {
+  if (access (TLS->binlog_name, F_OK) < 0) {
     printf ("No binlog found. Creating new one\n");
     create_new_binlog (TLS);
   }
-  int fd = open (get_binlog_file_name (), O_RDONLY);
+  int fd = open (TLS->binlog_name, O_RDONLY);
   if (fd < 0) {
     perror ("binlog open");
     exit (2);
@@ -1477,7 +1477,7 @@ void tgl_replay_log (struct tgl_state *TLS) {
 static int b_packet_buffer[PACKET_BUFFER_SIZE];
 
 void tgl_reopen_binlog_for_writing (struct tgl_state *TLS) {
-  TLS->binlog_fd = open (get_binlog_file_name (), O_WRONLY);
+  TLS->binlog_fd = open (TLS->binlog_name, O_WRONLY);
   if (TLS->binlog_fd < 0) {
     perror ("binlog open");
     exit (2);

@@ -1050,7 +1050,6 @@ extern struct event *term_ev;
 
 void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   logprintf ("Do_clear\n");
-  tgl_free_all (TLS);
   free (default_username);
   free (config_filename);
   free (prefix);
@@ -1064,6 +1063,7 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   clear_history ();
   event_free (term_ev);
   event_base_free (TLS->ev_base);
+  tgl_free_all (TLS);
   do_halt (0);
 }
 
