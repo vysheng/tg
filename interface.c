@@ -2009,7 +2009,7 @@ void callback_extf (struct tgl_state *TLS, void *extra, int success, char *buf) 
 void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
   if (disable_output && !notify_ev) { return; }
   if (!binlog_read) { return; }
-  if (log_level < 2) { return; }
+  if (log_level < 3) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
