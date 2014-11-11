@@ -119,6 +119,7 @@ enum tgl_message_action_type {
   tgl_message_action_delete_messages,
   tgl_message_action_screenshot_messages,
   tgl_message_action_flush_history,
+  tgl_message_action_resend,
   tgl_message_action_notify_layer,
   tgl_message_action_typing
 };
@@ -386,6 +387,10 @@ struct tgl_message_action {
     int delete_cnt;
     int screenshot_cnt;
     enum tgl_typing_status typing;
+    struct {
+      int start_seq_no;
+      int end_seq_no;
+    };
   };
 };
 

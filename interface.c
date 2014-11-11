@@ -2612,6 +2612,9 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   case tgl_message_action_flush_history:
     mprintf (ev, " cleared history\n");
     break;
+  case tgl_message_action_resend:
+    mprintf (ev, " resend query\n");
+    break;
   case tgl_message_action_notify_layer:
     mprintf (ev, " updated layer to %d\n", M->action.layer);
     break;

@@ -1010,6 +1010,11 @@ void tglf_fetch_message_action_encrypted (struct tgl_state *TLS, struct tgl_mess
     M->type = tgl_message_action_typing;
     M->typing = tglf_fetch_typing ();
     break;
+  case CODE_decrypted_message_action_resend:
+    M->type = tgl_message_action_resend;
+    M->start_seq_no = fetch_int ();
+    M->end_seq_no = fetch_int ();
+    break;
   default:
     vlogprintf (E_ERROR, "x = 0x%08x\n", x);
     assert (0);
@@ -1250,35 +1255,37 @@ void tglf_fetch_encrypted_message (struct tgl_state *TLS, struct tgl_message *M)
       vlogprintf (E_DEBUG - 2, "layer = %d, in = %d, out = %d\n", layer, in_seq_no, out_seq_no);
     }
     if (!(x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16)) {
-      vlogprintf (E_ERROR, "x = 0x%08x\n", x);
-      assert (x == CODE_decrypted_message || x == CODE_decrypted_message_service || x == CODE_decrypted_message_l16 || x == CODE_decrypted_message_service_l16);
+      vlogprintf (E_ERROR, "Incorrect message: x = 0x%08x\n", x);
+      drop = 1;
     }
     //assert (id == fetch_long ());
-    long long new_id = fetch_long ();
-    if (P && P->encr_chat.layer >= 17) {
-      assert (new_id == id);
-    }
-    if (x == CODE_decrypted_message || x == CODE_decrypted_message_service) {
-      if (x == CODE_decrypted_message) {
-        fetch_int (); // ttl
+    if (!drop) { 
+      long long new_id = fetch_long ();
+      if (P && P->encr_chat.layer >= 17) {
+        assert (new_id == id);
       }
-    } else {
-      ll = prefetch_strlen ();
-      fetch_str (ll); // random_bytes
-    }
-    if (x == CODE_decrypted_message || x == CODE_decrypted_message_l16) {
-      l = prefetch_strlen ();
-      s = fetch_str (l);
-      start = in_ptr;
-      assert (skip_type_any (TYPE_TO_PARAM (decrypted_message_media)) >= 0);
-      end = in_ptr;
-    } else {
-      start = in_ptr;
-      if (skip_type_any (TYPE_TO_PARAM (decrypted_message_action)) < 0) {
-        vlogprintf (E_ERROR, "Can not decrypt: Skipped %ld int out of %ld. Magic = 0x%08x\n", (long)(in_ptr - start), (long)(in_end - start), *start);
-        drop = 1;
+      if (x == CODE_decrypted_message || x == CODE_decrypted_message_service) {
+        if (x == CODE_decrypted_message) {
+          fetch_int (); // ttl
+        }
+      } else {
+        ll = prefetch_strlen ();
+        fetch_str (ll); // random_bytes
       }
-      end = in_ptr;
+      if (x == CODE_decrypted_message || x == CODE_decrypted_message_l16) {
+        l = prefetch_strlen ();
+        s = fetch_str (l);
+        start = in_ptr;
+        assert (skip_type_any (TYPE_TO_PARAM (decrypted_message_media)) >= 0);
+        end = in_ptr;
+      } else {
+        start = in_ptr;
+        if (skip_type_any (TYPE_TO_PARAM (decrypted_message_action)) < 0) {
+          vlogprintf (E_ERROR, "Can not decrypt: Skipped %ld int out of %ld. Magic = 0x%08x\n", (long)(in_ptr - start), (long)(in_end - start), *start);
+          drop = 1;
+        }
+        end = in_ptr;
+      }
     }
     in_ptr = save_in_ptr;
     in_end = save_in_end;
@@ -1661,6 +1668,7 @@ void tgls_free_message_action (struct tgl_state *TLS, struct tgl_message_action 
   case tgl_message_action_delete_messages:
   case tgl_message_action_screenshot_messages:
   case tgl_message_action_flush_history:
+  case tgl_message_action_resend:
   case tgl_message_action_notify_layer:
     break;
   
