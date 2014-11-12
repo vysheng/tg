@@ -12,5 +12,6 @@ install:
  - sudo apt-get install libevent-dev
 
 script:
+  - git submodule update --init --recursive
   - ./configure
   - make
