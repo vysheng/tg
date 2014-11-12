@@ -22,12 +22,7 @@ Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%
 
 Clone GitHub Repository
 
-     git clone https://github.com/vysheng/tg.git && cd tg
-
-or download and extract zip
-
-     wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
-     unzip tg-master.zip && cd tg-master
+     git clone --recursive https://github.com/vysheng/tg.git && cd tg
 
 #### Linux and BSDs
 

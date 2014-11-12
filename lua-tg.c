@@ -24,7 +24,6 @@
 #ifdef USE_LUA
 #include "lua-tg.h"
 
-#include "include.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -42,7 +41,7 @@ lua_State *luaState;
 
 //#include "interface.h"
 //#include "auto/constants.h"
-#include "tgl.h"
+#include <tgl/tgl.h>
 #include "interface.h"
 
 #include <assert.h>
@@ -52,7 +51,7 @@ extern struct tgl_state *TLS;
 static int have_file;
 
 #define my_lua_checkstack(L,x) assert (lua_checkstack (L, x))
-void push_user (tgl_peer_t *P UU);
+void push_user (tgl_peer_t *P);
 void push_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
 void lua_add_string_field (const char *name, const char *value) {
@@ -96,7 +95,7 @@ void push_tgl_peer_type (int x) {
   }
 }
 
-void push_user (tgl_peer_t *P UU) {
+void push_user (tgl_peer_t *P) {
   my_lua_checkstack (luaState, 4);
   lua_add_string_field ("first_name", P->user.first_name);
   lua_add_string_field ("last_name", P->user.last_name);
@@ -387,7 +386,7 @@ void lua_our_id (int id) {
   }
 }
 
-void lua_new_msg (struct tgl_message *M UU) {
+void lua_new_msg (struct tgl_message *M) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);

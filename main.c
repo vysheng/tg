@@ -64,13 +64,13 @@
 #include "telegram.h"
 #include "loop.h"
 #include "interface.h"
-#include "tools.h"
+#include <tgl/tools.h>
 
 #ifdef USE_LUA
 #  include "lua-tg.h"
 #endif
 
-#include "tgl.h"
+#include <tgl/tgl.h>
 
 #define PROGNAME "telegram-cli"
 #define VERSION "0.07"

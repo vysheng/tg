@@ -38,7 +38,6 @@
 #endif
 #include <unistd.h>
 
-#include "include.h"
 //#include "queries.h"
 
 #include "interface.h"
@@ -62,7 +61,7 @@
 
 //#include "mtproto-common.h"
 
-#include "tgl.h"
+#include <tgl/tgl.h>
 #include "loop.h"
 
 #ifndef PATH_MAX
@@ -496,7 +495,7 @@ char *get_default_prompt (void) {
   return buf;
 }
 
-char *complete_none (const char *text UU, int state UU) {
+char *complete_none (const char *text, int state) {
   return 0;
 }
 
@@ -1371,7 +1370,7 @@ char *command_generator (const char *text, int state) {
   }
 }
 
-char **complete_text (char *text, int start UU, int end UU) {
+char **complete_text (char *text, int start, int end) {
   return (char **) rl_completion_matches (text, command_generator);
 }
 
@@ -2045,7 +2044,7 @@ struct tgl_update_callback upd_cb = {
 };
 
 
-void interpreter_ex (char *line UU, void *ex) {
+void interpreter_ex (char *line, void *ex) {
   force_end_mode = 1;
   assert (!in_readline);
   in_readline = 1;
@@ -2279,7 +2278,7 @@ void interpreter_ex (char *line UU, void *ex) {
   in_readline = 0;
 }
 
-void interpreter (char *line UU) {
+void interpreter (char *line) {
   interpreter_ex (line, 0);
 }
 

@@ -57,10 +57,10 @@
 #include "telegram.h"
 #include "loop.h"
 #include "lua-tg.h"
-#include "tgl.h"
-#include "binlog.h"
-#include "net.h"
-#include "tgl-timers.h"
+#include <tgl/tgl.h>
+#include <tgl/tgl-binlog.h>
+#include <tgl/tgl-net.h>
+#include <tgl/tgl-timers.h>
 
 int verbosity;
 extern int readline_disabled;
@@ -708,6 +708,7 @@ int loop (void) {
   tgl_set_ev_base (TLS, ev);
   tgl_set_net_methods (TLS, &tgl_conn_methods);
   tgl_set_timer_methods (TLS, &tgl_libevent_timers);
+  assert (TLS->timer_methods);
   tgl_set_download_directory (TLS, get_downloads_directory ());
   tgl_init (TLS);
  

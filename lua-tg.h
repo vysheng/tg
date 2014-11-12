@@ -20,8 +20,7 @@
 #define __LUA_TG_H__
 
 #include <string.h>
-#include "lua-tg.h"
-#include "tgl.h"
+#include <tgl/tgl.h>
 
 void lua_init (const char *file);
 void lua_new_msg (struct tgl_message *M);
