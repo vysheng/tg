@@ -151,7 +151,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **chat_add_user** \<chat\> \<user\> - add user to chat
 * **chat_del_user** \<chat\> \<user\> - remove user from chat
 * **rename_chat** \<chat\> \<new-name\>
-* **create_group_chat** \<chat topic\> \<user\> - creates a groupchat with user, use chat_add_user to add more users
+* **create_group_chat** \<chat topic\> \<user1\> \<user2\> \<user3\> ... - creates a groupchat with users, use chat_add_user to add more users
 * **chat_set_photo** \<chat\> \<photo-file-name\> - sets group chat photo. Same limits as for profile photos.
 
 #### Search
