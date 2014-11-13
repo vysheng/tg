@@ -862,6 +862,15 @@ void do_create_secret_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_create_secret_chat (TLS, args[0].P->id, print_secret_chat_gw, ev);
 }
 
+void do_secret_chat_rekey (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  tgl_peer_t *P = args[0].P;
+  if (P->encr_chat.state == sc_ok) {
+    vlogprintf (E_WARNING, "START REKEY\n");
+    tgl_do_request_exchange (TLS, (void *)P);
+  }
+}
+
 void do_chat_add_user (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
@@ -1110,6 +1119,7 @@ struct command commands[] = {
   {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
+  {"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat"},
   {"send_audio", {ca_peer, ca_file_name_end, ca_none}, do_send_audio, "send_audio <peer> <file>\tSends audio to peer"},
   {"send_contact", {ca_peer, ca_string, ca_string, ca_string, ca_none}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
   {"send_document", {ca_peer, ca_file_name_end, ca_none}, do_send_document, "send_document <peer> <file>\tSends document to peer"},
@@ -2641,8 +2651,21 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     mprintf (ev, " is ");
     print_typing (ev, M->action.typing);
     break;
-  default:
-    assert (0);
+  case tgl_message_action_noop:
+    mprintf (ev, " noop\n");
+    break;
+  case tgl_message_action_request_key:
+    mprintf (ev, " request rekey #%016llx\n", M->action.exchange_id);
+    break;
+  case tgl_message_action_accept_key:
+    mprintf (ev, " accept rekey #%016llx\n", M->action.exchange_id);
+    break;
+  case tgl_message_action_commit_key:
+    mprintf (ev, " commit rekey #%016llx\n", M->action.exchange_id);
+    break;
+  case tgl_message_action_abort_key:
+    mprintf (ev, " abort rekey #%016llx\n", M->action.exchange_id);
+    break;
   }
   mpop_color (ev);
   //print_end ();
