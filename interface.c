@@ -1547,6 +1547,26 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
   mprint_end (ev);
 }
 
+void print_user_status (struct tgl_user_status *S, struct in_ev *ev) {
+  if (S->online > 0) {
+    mprintf (ev, "online");
+  } else {
+    if (S->online == 0) {
+      mprintf (ev, "offline");
+    } else if (S->online == -1) {
+      mprintf (ev, "offline (was online ");
+      print_date_full (ev, S->when);
+      mprintf (ev, ")");
+    } else if (S->online == -2) {
+      mprintf (ev, "offline (was online recently)");
+    } else if (S->online == -3) {
+      mprintf (ev, "offline (was online last week)");
+    } else if (S->online == -4) {
+      mprintf (ev, "offline (was online last month)");
+    }
+  }
+}
+
 void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struct tgl_user *U) {
   assert (TLS == TLSR);
   struct in_ev *ev = extra;
@@ -1566,13 +1586,9 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
   mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
   mprintf (ev, "\treal name: %s %s\n", U->real_first_name, U->real_last_name);
   mprintf (ev, "\tphone: %s\n", U->phone);
-  if (U->status.online > 0) {
-    mprintf (ev, "\tonline\n");
-  } else {
-    mprintf (ev, "\toffline (was online ");
-    print_date_full (ev, U->status.when);
-    mprintf (ev, ")\n");
-  }
+  mprintf (ev, "\t");
+  print_user_status (&U->status, ev);
+  mprintf (ev, "\n");
   mpop_color (ev);
   mprint_end (ev);
 }
@@ -2014,11 +2030,8 @@ void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
   mpush_color (ev, COLOR_YELLOW);
   mprintf (ev, "User ");
   print_user_name (ev, U->id, (void *)U);
-  if (U->status.online > 0) {
-    mprintf (ev, " online");
-  } else {
-    mprintf (ev, " offline");
-  }
+  mprintf (ev, " ");
+  print_user_status (&U->status, ev);
   mprintf (ev, "\n");
   mpop_color (ev);
   mprint_end (ev);
