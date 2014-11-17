@@ -723,6 +723,7 @@ int loop (void) {
   tgl_set_timer_methods (TLS, &tgl_libevent_timers);
   assert (TLS->timer_methods);
   tgl_set_download_directory (TLS, get_downloads_directory ());
+  tgl_register_app_id (TLS, TELEGRAM_CLI_APP_ID, TELEGRAM_CLI_APP_HASH); 
   tgl_init (TLS);
  
   if (binlog_enabled) {
