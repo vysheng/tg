@@ -1,4 +1,4 @@
-TGL_OBJECTS=${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/tgl.o ${OBJ}/updates.o ${OBJ}/tgl-net.o ${OBJ}/tgl-timers.o
+TGL_OBJECTS=${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/tgl.o ${OBJ}/updates.o ${OBJ}/tgl-net.o ${OBJ}/tgl-timers.o ${OBJ}/tg-mime-types.o
 TLD_OBJECTS=${OBJ}/dump-tl-file.o
 GENERATE_OBJECTS=${OBJ}/generate.o
 TGL_COMMON_OBJECTS=${OBJ}/tools.o
@@ -15,10 +15,13 @@ ${OBJ}/auto/auto.o ${TGL_OBJECTS}: ${AUTO}/constants.h ${AUTO}/auto-header.h
 ${TGL_OBJ_C}: ${OBJ}/%.o: ${srcdir}/tgl/%.c | create_dirs
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -iquote ${srcdir}/tgl -c -MP -MD -MF ${DEP}/$*.d -MQ ${OBJ}/$*.o -o $@ $<
 
+${OBJ}/mime-types.o: ${srcdir}/mime.types
+	ld -r -b binary -o $@ $^
+
 ${OBJ}/auto/auto.o: ${AUTO}/auto.c
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -iquote ${srcdir}/tgl -c -MP -MD -MF ${DEP}/auto/auto.d -MQ ${OBJ}/auto/auto.o -o $@ $<
 
-${LIB}/libtgl.a: ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${OBJ}/auto/auto.o
+${LIB}/libtgl.a: ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${OBJ}/auto/auto.o ${OBJ}/mime-types.o
 	ar ruv $@ $^
 
 ${EXE}/generate: ${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS}
