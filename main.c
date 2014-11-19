@@ -29,6 +29,10 @@
 #include <termios.h>
 #include <unistd.h>
 #include <assert.h>
+#ifdef __FreeBSD__
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
 #if (READLINE == GNU)
 #include <readline/readline.h>
 #else
@@ -844,7 +848,11 @@ int main (int argc, char **argv) {
   running_for_first_time ();
   parse_config ();
 
+  #ifdef __FreeBSD__
+  tgl_set_rsa_key (TLS, "/usr/local/etc/" PROG_NAME "/server.pub");
+  #else
   tgl_set_rsa_key (TLS, "/etc/" PROG_NAME "/server.pub");
+  #endif
   tgl_set_rsa_key (TLS, "tg-server.pub");
 
 
