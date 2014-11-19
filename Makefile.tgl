@@ -16,7 +16,7 @@ ${TGL_OBJ_C}: ${OBJ}/%.o: ${srcdir}/tgl/%.c | create_dirs
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -iquote ${srcdir}/tgl -c -MP -MD -MF ${DEP}/$*.d -MQ ${OBJ}/$*.o -o $@ $<
 
 ${OBJ}/mime-types.o: ${srcdir}/mime.types
-	ld -r -b binary -o $@ $^
+	cp $^ auto/mime.types && ld -r -b binary -o $@ auto/mime.types
 
 ${OBJ}/auto/auto.o: ${AUTO}/auto.c
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -iquote ${srcdir}/tgl -c -MP -MD -MF ${DEP}/auto/auto.d -MQ ${OBJ}/auto/auto.o -o $@ $<
