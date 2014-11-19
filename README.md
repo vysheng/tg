@@ -69,6 +69,7 @@ If using [Homebrew](http://brew.sh/):
      brew install libconfig
      brew install readline
      brew install lua
+     brew install libevent
      export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
      export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
