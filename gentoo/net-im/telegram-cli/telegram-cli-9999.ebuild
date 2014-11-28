@@ -5,7 +5,8 @@
 EAPI=5
 
 EGIT_REPO_URI="https://github.com/vysheng/tg.git"
-EGIT_BRANCH="test"
+EGIT_BRANCH="master"
+EGIT_HAS_SUBMODULES=1
 inherit git-2
 IUSE="lua"
 DESCRIPTION="Command line interface client for Telegram"
@@ -20,6 +21,12 @@ DEPEND="sys-libs/zlib
 	dev-libs/openssl
 	dev-libs/libevent
 	lua? ( dev-lang/lua )"
+
+src_unpack() {
+	git-2_src_unpack
+	cd $EGIT_SOURCEDIR
+	git submodule update --init --recursive
+}
 
 src_configure() {
 	econf $(use_enable lua liblua )
