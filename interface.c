@@ -571,6 +571,7 @@ struct command {
 int offline_mode;
 void print_user_list_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_user *UL[]);
 void print_msg_list_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_message *ML[]);
+void print_msg_list_success_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_message *ML[]);
 void print_dialog_list_gw (struct tgl_state *TLS, void *extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[]);
 void print_chat_info_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_chat *C);
 void print_user_info_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_user *C);
@@ -689,6 +690,18 @@ void do_msg (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_message (TLS, args[0].P->id, args[1].str, strlen (args[1].str), print_msg_success_gw, ev);
+}
+
+void do_send_typing (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_typing, print_success_gw, ev);
+}
+
+void do_send_typing_abort (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_cancel, print_success_gw, ev);
 }
 
 void do_rename_chat (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1042,6 +1055,19 @@ void do_main_session (int arg_num, struct arg args[], struct in_ev *ev) {
   }
   notify_ev = ev;
   if (ev) { ev->refcnt ++; }
+  tgl_do_send_contact (TLS, args[0].P->id, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_gw, ev);
+}
+
+void do_broadcast (int arg_num, struct arg args[], struct in_ev *ev) {
+  vlogprintf (E_ERROR, "arg_num = %d\n", arg_num);
+  assert (arg_num >= 1 && arg_num <= 1000);
+  static tgl_peer_id_t ids[1000];
+  int i;
+  for (i = 0; i < arg_num - 1; i++) {
+    ids[i] = args[i].P->id;
+  }  
+  if (ev) { ev->refcnt ++; }
+  tgl_do_send_broadcast (TLS, arg_num - 1, ids, args[arg_num - 1].str, strlen (args[arg_num - 1].str), print_msg_list_success_gw, ev);
 }
 
 extern char *default_username;
@@ -1085,6 +1111,7 @@ void do_send_location (int arg_num, struct arg args[], struct in_ev *ev) {
 struct command commands[] = {
   {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option"},
   {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact, "add_contact <phone> <first name> <last name>\tTries to add user to contact list"},
+  {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once"}, 
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100"},
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat"},
   {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)"},
@@ -1126,6 +1153,8 @@ struct command commands[] = {
   {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location"},
   {"send_photo", {ca_peer, ca_file_name_end, ca_none}, do_send_photo, "send_photo <peer> <file>\tSends photo to peer"},
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message"},
+  {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification"},
+  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort"},
   {"send_video", {ca_peer, ca_file_name_end, ca_none}, do_send_video, "send_video <peer> <file>\tSends video to peer"},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
   {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name."},
@@ -1188,8 +1217,10 @@ enum command_argument get_complete_mode (void) {
 
   enum command_argument *flags = command->args;
   while (1) {
+    int period = 0;
     if (*flags == ca_period) {
       flags --;
+      period = 1;
     }
     enum command_argument op = (*flags) & 255;
     int opt = (*flags) & ca_optional;
@@ -1211,6 +1242,10 @@ enum command_argument get_complete_mode (void) {
         if (opt) {
           line_ptr = save;
           flags ++;
+          continue;
+        } else if (period) {
+          line_ptr = save;
+          flags += 2;
           continue;
         } else {
           return ca_none;
@@ -1245,6 +1280,11 @@ enum command_argument get_complete_mode (void) {
         if (opt && !ok) {
           line_ptr = save;
           flags ++;
+          continue;
+        }
+        if (period && !ok) {
+          line_ptr = save;
+          flags += 2;
           continue;
         }
         if (!ok) {
@@ -1424,6 +1464,11 @@ void print_success_gw (struct tgl_state *TLSR, void *extra, int success) {
 void print_msg_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_message *M) {
   write_secret_chat_file ();
   print_success_gw (TLS, extra, success);
+}
+
+void print_msg_list_success_gw (struct tgl_state *TLSR, void *extra, int success, int num, struct tgl_message *ML[]) {
+  assert (TLS == TLSR);
+  print_success_gw (TLSR, extra, success);
 }
 
 void print_encr_chat_success_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_secret_chat *E) {
@@ -2155,8 +2200,8 @@ void interpreter_ex (char *line, void *ex) {
     args[args_num].flags = 0;
     int period = 0;
     if (*flags == ca_period) {
-      period = 1;
       flags --;
+      period = 1;
     }
     enum command_argument op = (*flags) & 255;
     int opt = (*flags) & ca_optional;
@@ -2213,6 +2258,10 @@ void interpreter_ex (char *line, void *ex) {
           line_ptr = save;
           flags ++;
           continue;
+        } else if (period) {
+          line_ptr = save;
+          flags += 2;
+          continue;
         } else {
           break;
         }
@@ -2230,6 +2279,10 @@ void interpreter_ex (char *line, void *ex) {
             }
             line_ptr = save;
             flags ++;
+            continue;
+          } else if (period) {
+            line_ptr = save;
+            flags += 2;
             continue;
           } else {
             break;
@@ -2268,6 +2321,12 @@ void interpreter_ex (char *line, void *ex) {
         if (opt && !ok) {
           line_ptr = save;
           flags ++;
+          continue;
+        }
+        if (period && !ok) {
+          line_ptr = save;
+          flags += 2;
+          args_num --;
           continue;
         }
         if (!ok) {

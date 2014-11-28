@@ -1202,7 +1202,7 @@ struct lua_function functions[] = {
   {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
   {"status_online", lq_status_online, { lfp_none }},
   {"status_offline", lq_status_offline, { lfp_none }},
-  {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},
+  {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
