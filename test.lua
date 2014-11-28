@@ -88,9 +88,9 @@ function on_msg_receive (msg)
   end
   if (msg.text == 'PING') then
     if (msg.to.id == our_id) then
-      fwd_msg (msg.from.print_name, msg.id)
+      fwd_msg (msg.from.print_name, msg.id, ok_cb, false)
     else
-      fwd_msg (msg.to.print_name, msg.id)
+      fwd_msg (msg.to.print_name, msg.id, ok_cb, false)
     end
     return
   end
