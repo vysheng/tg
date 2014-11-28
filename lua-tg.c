@@ -1421,6 +1421,19 @@ static int postpone_from_lua (lua_State *L) {
   return 1;
 }
 
+extern int safe_quit;
+static int safe_quit_from_lua (lua_State *L) {
+  int n = lua_gettop (L);
+  if (n != 0) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+  safe_quit = 1;
+  
+  lua_pushboolean (L, 1);
+  return 1;
+}
+
 static int universal_from_lua (lua_State *L) {
   const char *s = lua_tostring(L, lua_upvalueindex(1));
   if (!s) {
@@ -1460,6 +1473,7 @@ void lua_init (const char *file) {
   //lua_register (luaState, "fwd_msg", fwd_msg_from_lua);
   //lua_register (luaState, "mark_read", mark_read_from_lua);
   lua_register (luaState, "postpone", postpone_from_lua);
+  lua_register (luaState, "safe_quit", safe_quit_from_lua);
   //lua_register (luaState, "get_contact_list", get_contacts_from_lua);
   /*lua_register (luaState, "get_dialog_list", get_dialog_list_from_lua);
   lua_register (luaState, "send_msg", send_msg_from_lua);
