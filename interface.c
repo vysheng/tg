@@ -1055,7 +1055,6 @@ void do_main_session (int arg_num, struct arg args[], struct in_ev *ev) {
   }
   notify_ev = ev;
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_contact (TLS, args[0].P->id, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_gw, ev);
 }
 
 void do_broadcast (int arg_num, struct arg args[], struct in_ev *ev) {
