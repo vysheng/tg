@@ -571,6 +571,7 @@ int change_user_group () {
       setenv("USER", pw->pw_name, 1);
       setenv("HOME", pw->pw_dir, 1);
       setenv("SHELL", pw->pw_shell, 1);
+    }
   }
   return 0;
 }
