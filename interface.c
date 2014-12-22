@@ -104,7 +104,11 @@ extern int usfd;
 extern int sfd;
 extern int use_ids;
 
+extern int daemonize;
+
 extern struct tgl_state *TLS;
+
+void event_incoming (struct bufferevent *bev, short what, void *_arg);
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
@@ -909,10 +913,16 @@ void do_status_offline (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_quit (int arg_num, struct arg args[], struct in_ev *ev) {
+  if (daemonize)
+	event_incoming (ev->bev, BEV_EVENT_EOF, ev);
+	//bufferevent_free(ev->bev);
   do_halt (0);
 }
 
 void do_safe_quit (int arg_num, struct arg args[], struct in_ev *ev) {
+  if (daemonize)
+	event_incoming (ev->bev, BEV_EVENT_EOF, ev);
+	//bufferevent_free(ev->bev);
   safe_quit = 1;
 }
 

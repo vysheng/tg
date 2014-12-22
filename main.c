@@ -491,7 +491,7 @@ int disable_auto_accept;
 int wait_dialog_list;
 
 char *logname;
-int daemonize;
+int daemonize=0;
 
 
 void reopen_logs (void) {
@@ -741,11 +741,14 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
 }
 
 void do_halt (int error) {
+  if (daemonize)
+       return;
+
   if (!readline_disabled) {
     rl_free_line_state ();
     rl_cleanup_after_signal ();
   }
-  
+
   if (write (1, "halt\n", 5) < 0) { 
     // Sad thing
   }
