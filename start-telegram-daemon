@@ -96,7 +96,7 @@ if(open $etchandle, $etcfile)
                 $line =~ s/\s+$//g;
                 $line =~ s/^\s+//g;
                 next unless $line;
-                next if $line =~ /^\-[dh]/;
+                next if $line =~ /^\-[h]/;
 
                 if($line =~ /^[^\-]/)
                 {
