@@ -21,9 +21,6 @@ EXE_LIST=${EXE}/telegram-cli
 
 TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o
 
-DEPENDENCE=$(subst ${OBJ}/,${DEP}/,$(patsubst %.o,%.d,${OBJ_LIST}))
-DEPENDENCE_LIST=${DEPENDENCE}
-
 INCLUDE=-I. -I${srcdir}
 CC=@CC@
 
@@ -41,6 +38,10 @@ include ${srcdir}/Makefile.tgl
 
 ${DIR_LIST}:
 	@test -d $@ || mkdir -p $@
+
+OBJ_LIST=${TG_OBJECTS} ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${GENERATE_OBJECTS} ${TL_PARSER_OBJECTS}
+DEPENDENCE=$(subst ${OBJ}/,${DEP}/,$(patsubst %.o,%.d,${OBJ_LIST}))
+DEPENDENCE_LIST=${DEPENDENCE}
 
 -include ${DEPENDENCE_LIST}
 

@@ -1603,7 +1603,9 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
 
 void print_user_status (struct tgl_user_status *S, struct in_ev *ev) {
   if (S->online > 0) {
-    mprintf (ev, "online");
+    mprintf (ev, "online (was online ");
+    print_date_full (ev, S->when);
+    mprintf (ev, ")");
   } else {
     if (S->online == 0) {
       mprintf (ev, "offline");
