@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright Vitaly Valtman 2013-2014
+    Copyright Vitaly Valtman 2013-2015
 */
 
 #ifdef HAVE_CONFIG_H
@@ -839,10 +839,11 @@ int main (int argc, char **argv) {
 
   if (!disable_output) {
     printf (
-      "Telegram-cli version " TGL_VERSION ", Copyright (C) 2013-2014 Vitaly Valtman\n"
+      "Telegram-cli version " TELEGRAM_CLI_VERSION ", Copyright (C) 2013-2015 Vitaly Valtman\n"
       "Telegram-cli comes with ABSOLUTELY NO WARRANTY; for details type `show_license'.\n"
       "This is free software, and you are welcome to redistribute it\n"
       "under certain conditions; type `show_license' for details.\n"
+      "Telegram-cli uses libtgl version " TGL_VERSION "\n"
     );
   }
   running_for_first_time ();

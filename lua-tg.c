@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright Vitaly Valtman 2013-2014
+    Copyright Vitaly Valtman 2013-2015
 */
 
 #ifdef HAVE_CONFIG_H
@@ -248,7 +248,7 @@ void push_media (struct tgl_message_media *M) {
     lua_newtable (luaState);
     lua_add_string_field ("type", "photo");
     break;
-  case tgl_message_media_video:
+  /*case tgl_message_media_video:
   case tgl_message_media_video_encr:
     lua_newtable (luaState);
     lua_add_string_field ("type", "video");
@@ -257,7 +257,7 @@ void push_media (struct tgl_message_media *M) {
   case tgl_message_media_audio_encr:
     lua_newtable (luaState);
     lua_add_string_field ("type", "audio");
-    break;
+    break;*/
   case tgl_message_media_document:
   case tgl_message_media_document_encr:
     lua_newtable (luaState);
@@ -491,6 +491,7 @@ enum lua_query_type {
   lq_create_group_chat,
   lq_send_audio,
   lq_send_document,
+  lq_send_file,
   lq_load_audio,
   lq_load_document,
   lq_load_document_thumb,
@@ -883,22 +884,27 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_send_photo:
-      tgl_do_send_photo (TLS, tgl_message_media_photo, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, -1, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_video:
-      tgl_do_send_photo (TLS, tgl_message_media_video, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_audio:
-      tgl_do_send_photo (TLS, tgl_message_media_audio, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_document:
-      tgl_do_send_photo (TLS, tgl_message_media_document, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, 0, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      free (lua_ptr[p + 2]);
+      p += 3;
+      break;
+    case lq_send_file:
+      tgl_do_send_document (TLS, -2, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
@@ -913,66 +919,24 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_load_photo:
+    case lq_load_video:
+    case lq_load_audio:
+    case lq_load_document:
       M = lua_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr)) {
+      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
         lua_file_cb (TLS, lua_ptr[p], 0, 0);
       } else {
         if (M->media.type == tgl_message_media_photo) {
           tgl_do_load_photo (TLS, &M->media.photo, lua_file_cb, lua_ptr[p]);
+        } else if (M->media.type == tgl_message_media_document) {
+          tgl_do_load_document (TLS, &M->media.document, lua_file_cb, lua_ptr[p]);
         } else {
-          tgl_do_load_encr_video (TLS, &M->media.encr_video, lua_file_cb, lua_ptr[p]);
-        }
-      }
-      p += 2;
-      break;
-    case lq_load_video:
-      M = lua_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_video && M->media.type != tgl_message_media_video_encr)) {
-        lua_file_cb (TLS, lua_ptr[p], 0, 0);
-      } else {
-        if (M->media.type == tgl_message_media_video) {
-          tgl_do_load_video (TLS, &M->media.video, lua_file_cb, lua_ptr[p]);
-        } else {
-          tgl_do_load_encr_video (TLS, &M->media.encr_video, lua_file_cb, lua_ptr[p]);
+          tgl_do_load_encr_document (TLS, &M->media.encr_document, lua_file_cb, lua_ptr[p]);
         }
       }
       p += 2;
       break;
     case lq_load_video_thumb:
-      M = lua_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_video)) {
-        lua_file_cb (TLS, lua_ptr[p], 0, 0);
-      } else {
-        tgl_do_load_video_thumb (TLS, &M->media.video, lua_file_cb, lua_ptr[p]);
-      }
-      p += 2;
-      break;
-    case lq_load_audio:
-      M = lua_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_audio && M->media.type != tgl_message_media_audio_encr)) {
-        lua_file_cb (TLS, lua_ptr[p], 0, 0);
-      } else {
-        if (M->media.type == tgl_message_media_audio) {
-          tgl_do_load_audio (TLS, &M->media.audio, lua_file_cb, lua_ptr[p]);
-        } else {
-          tgl_do_load_encr_video (TLS, &M->media.encr_video, lua_file_cb, lua_ptr[p]);
-        }
-      }
-      p += 2;
-      break;
-    case lq_load_document:
-      M = lua_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
-        lua_file_cb (TLS, lua_ptr[p], 0, 0);
-      } else {
-        if (M->media.type == tgl_message_media_document) {
-          tgl_do_load_document (TLS, &M->media.document, lua_file_cb, lua_ptr[p]);
-        } else {
-          tgl_do_load_encr_video (TLS, &M->media.encr_video, lua_file_cb, lua_ptr[p]);
-        }
-      }
-      p += 2;
-      break;
     case lq_load_document_thumb:
       M = lua_ptr[p + 1];
       if (!M || (M->media.type != tgl_message_media_document)) {
@@ -1171,6 +1135,7 @@ struct lua_function functions[] = {
   {"send_video", lq_send_video, { lfp_peer, lfp_string, lfp_none }},
   {"send_audio", lq_send_audio, { lfp_peer, lfp_string, lfp_none }},
   {"send_document", lq_send_document, { lfp_peer, lfp_string, lfp_none }},
+  {"send_file", lq_send_file, { lfp_peer, lfp_string, lfp_none }},
   {"send_text", lq_send_text, { lfp_peer, lfp_string, lfp_none }},
   {"chat_set_photo", lq_chat_set_photo, { lfp_chat, lfp_string, lfp_none }},
   {"load_photo", lq_load_photo, { lfp_msg, lfp_none }},
