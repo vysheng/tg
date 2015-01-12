@@ -934,16 +934,16 @@ void do_status_offline (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_quit (int arg_num, struct arg args[], struct in_ev *ev) {
-  if (daemonize)
-	event_incoming (ev->bev, BEV_EVENT_EOF, ev);
-	//bufferevent_free(ev->bev);
+  if (daemonize) {
+    event_incoming (ev->bev, BEV_EVENT_EOF, ev);
+  }
   do_halt (0);
 }
 
 void do_safe_quit (int arg_num, struct arg args[], struct in_ev *ev) {
-  if (daemonize)
-	event_incoming (ev->bev, BEV_EVENT_EOF, ev);
-	//bufferevent_free(ev->bev);
+  if (daemonize) {
+    event_incoming (ev->bev, BEV_EVENT_EOF, ev);
+  }
   safe_quit = 1;
 }
 

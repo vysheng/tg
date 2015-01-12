@@ -746,8 +746,9 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
 }
 
 void do_halt (int error) {
-  if (daemonize)
-       return;
+  if (daemonize) {
+    return;
+  }
 
   if (!readline_disabled) {
     rl_free_line_state ();
