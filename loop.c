@@ -217,6 +217,7 @@ void net_loop (void) {
     if (safe_quit && !TLS->active_queries) {
       printf ("All done. Exit\n");
       do_halt (0);
+      safe_quit = 0;
     }
     if (sigterm_cnt > 0) {
       do_halt (0);
@@ -601,7 +602,7 @@ static void read_incoming (struct bufferevent *bev, void *_arg) {
   }
 }
 
-static void event_incoming (struct bufferevent *bev, short what, void *_arg) {
+void event_incoming (struct bufferevent *bev, short what, void *_arg) {
   struct in_ev *ev = _arg;
   if (what & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
     vlogprintf (E_WARNING, "Closing incoming connection\n");
@@ -620,7 +621,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
 
   assert (fd >= 0);
-  struct bufferevent *bev = bufferevent_socket_new (TLS->ev_base, fd, 0);
+  struct bufferevent *bev = bufferevent_socket_new (TLS->ev_base, fd, BEV_OPT_CLOSE_ON_FREE);
   struct in_ev *e = malloc (sizeof (*e));
   e->bev = bev;
   e->refcnt = 1;

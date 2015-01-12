@@ -96,7 +96,7 @@ if(open $etchandle, $etcfile)
                 $line =~ s/\s+$//g;
                 $line =~ s/^\s+//g;
                 next unless $line;
-                next if $line =~ /^\-[dh]/;
+                next if $line =~ /^\-[h]/;
 
                 if($line =~ /^[^\-]/)
                 {
@@ -112,7 +112,7 @@ if(open $etchandle, $etcfile)
 
                 $have_l = 1 if $line =~ /^-L\s/;
                 $have_c = 1 if $line =~ /^-c\s/;
-                $have_u = 1 if $line =~ /^-u\s/;
+                $have_u = 1 if $line =~ /^-U\s/;
                 push @$params, $line;                
         }
 
@@ -120,7 +120,7 @@ if(open $etchandle, $etcfile)
         $params = [];
 }
 
-push @$params, "-u telegramd" unless($have_u);
+push @$params, "-U telegramd" unless($have_u);
 push @$params, "-L $fd_reopened" unless($have_l);
 push @$params, "-c config$idl" unless($have_c);
 $params = join " ", @$params;

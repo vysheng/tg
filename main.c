@@ -493,7 +493,7 @@ int disable_auto_accept;
 int wait_dialog_list;
 
 char *logname;
-int daemonize;
+int daemonize=0;
 
 
 void reopen_logs (void) {
@@ -568,6 +568,11 @@ int change_user_group () {
     if (setuid (pw->pw_uid) < 0) {
       fprintf (stderr, "change_user_group: failed to assume identity of user %s\n", username);
       return -1;
+    } else {
+      pw = getpwuid(getuid());
+      setenv("USER", pw->pw_name, 1);
+      setenv("HOME", pw->pw_dir, 1);
+      setenv("SHELL", pw->pw_shell, 1);
     }
   }
   return 0;
@@ -741,11 +746,14 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
 }
 
 void do_halt (int error) {
+  if (daemonize)
+       return;
+
   if (!readline_disabled) {
     rl_free_line_state ();
     rl_cleanup_after_signal ();
   }
-  
+
   if (write (1, "halt\n", 5) < 0) { 
     // Sad thing
   }
