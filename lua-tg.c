@@ -1391,7 +1391,10 @@ static int postpone_from_lua (lua_State *L) {
   t[1] = a2;
   *(void **)(t + 2) = ev;
   
-  struct timeval ts= { timeout, 0};
+  struct timeval ts= {
+    .tv_sec = (long)timeout,
+    .tv_usec = (timeout - ((long)timeout)) * 1000000
+  };
   event_add (ev, &ts);
   
   lua_pushboolean (L, 1);
