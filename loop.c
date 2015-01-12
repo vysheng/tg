@@ -97,6 +97,7 @@ extern volatile int sigterm_cnt;
 
 extern char *start_command;
 extern struct tgl_state *TLS;
+extern int ipv6_enabled;
 
 struct event *term_ev = 0;
 int read_one_string;
@@ -675,6 +676,9 @@ int loop (void) {
   tgl_set_download_directory (TLS, get_downloads_directory ());
   tgl_register_app_id (TLS, TELEGRAM_CLI_APP_ID, TELEGRAM_CLI_APP_HASH); 
   tgl_set_app_version (TLS, "Telegram-cli " TELEGRAM_CLI_VERSION);
+  if (ipv6_enabled) {
+    tgl_enable_ipv6 (TLS);
+  }
   tgl_init (TLS);
  
   if (binlog_enabled) {

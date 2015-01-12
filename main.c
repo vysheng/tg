@@ -116,6 +116,7 @@ int disable_output;
 int reset_authorization;
 int port;
 int use_ids;
+int ipv6_enabled;
 char *start_command;
 
 struct tgl_state *TLS;
@@ -473,6 +474,7 @@ void usage (void) {
   printf ("  -S <socket-name>    unix socket to create\n");
   printf ("  -e <commands>       make commands end exit\n");
   printf ("  -I                  use user and chat IDs in updates instead of names\n");
+  printf ("  -6                  use ipv6 (may be unstable)\n");
 
   exit (1);
 }
@@ -576,7 +578,7 @@ char *unix_socket;
 void args_parse (int argc, char **argv) {
   TLS = tgl_state_alloc ();
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -670,6 +672,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'I':
       use_ids ++;
+      break;
+    case '6':
+      ipv6_enabled = 1;
       break;
     case 'h':
     default:
