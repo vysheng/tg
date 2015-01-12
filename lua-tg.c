@@ -464,6 +464,8 @@ enum lua_query_type {
   lq_contact_list,
   lq_dialog_list,
   lq_msg,
+  lq_send_typing,
+  lq_send_typing_abort,
   lq_rename_chat,
   lq_send_photo,
   lq_chat_set_photo,
@@ -877,6 +879,14 @@ void lua_do_all (void) {
       free (lua_ptr[p + 2]);
       p += 3;
       break;
+    case lq_send_typing:
+      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_typing, lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
+    case lq_send_typing_abort:
+      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_cancel, lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
     case lq_rename_chat:
       tgl_do_rename_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
@@ -1167,6 +1177,8 @@ struct lua_function functions[] = {
   {"get_dialog_list", lq_dialog_list, { lfp_none }},
   {"rename_chat", lq_rename_chat, { lfp_chat, lfp_string, lfp_none }},
   {"send_msg", lq_msg, { lfp_peer, lfp_string, lfp_none }},
+  {"send_typing", lq_send_typing, { lfp_peer, lfp_none }},
+  {"send_typing_abort", lq_send_typing_abort, { lfp_peer, lfp_none }},
   {"send_photo", lq_send_photo, { lfp_peer, lfp_string, lfp_none }},
   {"send_video", lq_send_video, { lfp_peer, lfp_string, lfp_none }},
   {"send_audio", lq_send_audio, { lfp_peer, lfp_string, lfp_none }},
