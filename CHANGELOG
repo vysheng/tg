@@ -3,6 +3,9 @@ current
 * added extension to downloads
 1.2.0
 * layer 22 support
+* new authorization code
+* fixed time-related problems
+* fixed crash after hibernation
 1.0.6
 * layer 18 support
 1.0.5
