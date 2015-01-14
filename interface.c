@@ -2602,33 +2602,44 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
     case tgl_message_media_document_encr:
       mprintf (ev, "[");
       if (M->encr_document.flags & FLAG_DOCUMENT_IMAGE) {
-        mprintf (ev, "[image");
+        mprintf (ev, "image");
       } else if (M->encr_document.flags & FLAG_DOCUMENT_AUDIO) {
-        mprintf (ev, "[audio");
+        mprintf (ev, "audio");
       } else if (M->encr_document.flags & FLAG_DOCUMENT_VIDEO) {
-        mprintf (ev, "[video");
+        mprintf (ev, "video");
       } else if (M->encr_document.flags & FLAG_DOCUMENT_STICKER) {
-        mprintf (ev, "[sticker");
+        mprintf (ev, "sticker");
       } else {
-        mprintf (ev, "[document");
+        mprintf (ev, "document");
       }
 
-      if (M->encr_document.caption) {
-        mprintf (ev, "%s:", M->encr_document.caption);
+      if (M->encr_document.caption && strlen (M->encr_document.caption)) {
+        mprintf (ev, " %s:", M->encr_document.caption);
       } else {
         mprintf (ev, ":");
       }
       
       if (M->encr_document.mime_type) {
-        mprintf (ev, "type %s", M->encr_document.mime_type);
+        mprintf (ev, " type=%s", M->encr_document.mime_type);
       }
 
-      if (M->encr_document.w && M->encr_document.h) {
-        mprintf (ev, " size %d:%d", M->encr_document.w, M->encr_document.h);
+      if (M->document.w && M->document.h) {
+        mprintf (ev, " size=%dx%d", M->encr_document.w, M->encr_document.h);
       }
 
       if (M->encr_document.duration) {
-        mprintf (ev, " duration %d", M->encr_document.duration);
+        mprintf (ev, " duration=%d", M->encr_document.duration);
+      }
+      
+      mprintf (ev, " size=");
+      if (M->encr_document.size < (1 << 10)) {
+        mprintf (ev, "%dB", M->encr_document.size);
+      } else if (M->encr_document.size < (1 << 20)) {
+        mprintf (ev, "%dKiB", M->encr_document.size >> 10);
+      } else if (M->encr_document.size < (1 << 30)) {
+        mprintf (ev, "%dMiB", M->encr_document.size >> 20);
+      } else {
+        mprintf (ev, "%dGiB", M->encr_document.size >> 30);
       }
       
       mprintf (ev, "]");
