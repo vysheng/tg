@@ -621,7 +621,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
 
   assert (fd >= 0);
-  struct bufferevent *bev = bufferevent_socket_new (TLS->ev_base, fd, BEV_OPT_CLOSE_ON_FREE);
+  struct bufferevent *bev = bufferevent_socket_new (TLS->ev_base, fd, 0);
   struct in_ev *e = malloc (sizeof (*e));
   e->bev = bev;
   e->refcnt = 1;
@@ -629,7 +629,7 @@ static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   e->error = 0;
   e->fd = fd;
   bufferevent_setcb (bev, read_incoming, 0, event_incoming, e);
-  bufferevent_enable(bev, EV_READ|EV_WRITE);
+  bufferevent_enable (bev, EV_READ | EV_WRITE);
 }
 
 char *get_downloads_directory (void);
