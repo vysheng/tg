@@ -109,7 +109,7 @@ If you would like to ask a question, you can write to my telegram or to the gith
 
     bin/telegram-cli -k <public-server-key>
     
-By default public key is stored in the same folder named tg-server.pub or in /etc/telegram-cli/server.pub, if it's not, specify where to find it:
+By default, the public key is stored in tg-server.pub in the same folder or in /etc/telegram-cli/server.pub. If not, specify where to find it:
 
     bin/telegram-cli -k tg-server.pub
 
