@@ -711,9 +711,15 @@ void do_msg (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_send_typing (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 1);
+  assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_typing, print_success_gw, ev);
+  int status;
+  if (args[1].num != NOT_FOUND) {
+    status = args[1].num;
+  } else {
+    status = 1;
+  }
+  tgl_do_send_typing (TLS, args[0].P->id, status, print_success_gw, ev);
 }
 
 void do_send_typing_abort (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1192,7 +1198,7 @@ struct command commands[] = {
   {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location"},
   {"send_photo", {ca_peer, ca_file_name_end, ca_none}, do_send_photo, "send_photo <peer> <file>\tSends photo to peer"},
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message"},
-  {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification"},
+  {"send_typing", {ca_peer, ca_number | ca_optional, ca_none}, do_send_typing, "send_typing <peer> [status]\tSends typing notification, when given status is an integer in range 0-10: none, typing, cancel, record video, upload video, record audio, upload audio, upload photo, upload document, geo, choose contact."},
   {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort"},
   {"send_video", {ca_peer, ca_file_name_end, ca_none}, do_send_video, "send_video <peer> <file>\tSends video to peer"},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
