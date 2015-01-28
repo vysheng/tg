@@ -881,8 +881,8 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_send_typing:
-      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_typing, lua_empty_cb, lua_ptr[p]);
-      p += 2;
+      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, (long)lua_ptr[p + 2], lua_empty_cb, lua_ptr[p]);
+      p += 3;
       break;
     case lq_send_typing_abort:
       tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_cancel, lua_empty_cb, lua_ptr[p]);
@@ -1141,7 +1141,7 @@ struct lua_function functions[] = {
   {"get_dialog_list", lq_dialog_list, { lfp_none }},
   {"rename_chat", lq_rename_chat, { lfp_chat, lfp_string, lfp_none }},
   {"send_msg", lq_msg, { lfp_peer, lfp_string, lfp_none }},
-  {"send_typing", lq_send_typing, { lfp_peer, lfp_none }},
+  {"send_typing", lq_send_typing, { lfp_peer, lfp_nonnegative_number, lfp_none }},
   {"send_typing_abort", lq_send_typing_abort, { lfp_peer, lfp_none }},
   {"send_photo", lq_send_photo, { lfp_peer, lfp_string, lfp_none }},
   {"send_video", lq_send_video, { lfp_peer, lfp_string, lfp_none }},
