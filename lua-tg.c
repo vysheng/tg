@@ -102,6 +102,9 @@ void push_user (tgl_peer_t *P) {
   lua_add_string_field ("real_first_name", P->user.real_first_name);
   lua_add_string_field ("real_last_name", P->user.real_last_name);
   lua_add_string_field ("phone", P->user.phone);
+  if (P->user.username) {
+    lua_add_string_field ("username", P->user.username);
+  }
   if (P->user.access_hash) {
     lua_add_num_field ("access_hash", 1);
   }
