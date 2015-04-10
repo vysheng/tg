@@ -1499,6 +1499,7 @@ void do_send_typing_abort (struct command *command, int arg_num, struct arg args
 #define DO_LOAD_PHOTO(tp,act,actf) \
 void do_ ## act ## _ ## tp (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) { \
   assert (arg_num == 1);\
+  if (ev) { ev->refcnt ++; vlogprintf (E_WARNING, "refcnt+\n"); }\
   struct tgl_message *M = tgl_message_get (TLS, &args[0].msg_id);\
   if (M && !(M->flags & TGLMF_SERVICE)) {\
     if (ev) { ev->refcnt ++; } \
@@ -1525,6 +1526,7 @@ void do_ ## act ## _ ## tp (struct command *command, int arg_num, struct arg arg
 #define DO_LOAD_PHOTO_THUMB(tp,act,actf) \
 void do_ ## act ## _ ## tp ## _thumb (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) { \
   assert (arg_num == 1);\
+  if (ev) { ev->refcnt ++; vlogprintf (E_WARNING, "refcnt+\n"); }\
   struct tgl_message *M = tgl_message_get (TLS, &args[0].msg_id);\
   if (M && !(M->flags & TGLMF_SERVICE)) {\
     if (M->media.type == tgl_message_media_document) {\
