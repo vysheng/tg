@@ -2713,7 +2713,7 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
 void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   assert (tgl_get_peer_type (id) == TGL_PEER_USER);
   if (!U) {
-    mprintf (ev, "\"user\"=\"user#%d\", ", tgl_get_peer_id (id));
+    mprintf (ev, "\"user\":\"user#%d\", ", tgl_get_peer_id (id));
     int i;
     int ok = 1;
     for (i = 0; i < unknown_user_list_pos; i++) {
@@ -2729,17 +2729,17 @@ void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   } else {
 
     if ((U->flags & FLAG_DELETED)) {
-      mprintf (ev, "\"user\"=\"deleted user#%d\", ", tgl_get_peer_id (id));
+      mprintf (ev, "\"user\":\"deleted user#%d\", ", tgl_get_peer_id (id));
     } else if (!(U->flags & FLAG_CREATED)) {
-      mprintf (ev, "\"user\"=\"user#%d\", ", tgl_get_peer_id (id));
+      mprintf (ev, "\"user\":\"user#%d\", ", tgl_get_peer_id (id));
     } else if (use_ids) {
-      mprintf (ev, "\"user\"=\"user#%d\", ", tgl_get_peer_id (id));
+      mprintf (ev, "\"user\":\"user#%d\", ", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
-      mprintf (ev, "\"user\"=\"%s\", ", U->user.last_name);
+      mprintf (ev, "\"user\":\"%s\", ", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
-      mprintf (ev, "\"user\"=\"%s\", ", U->user.first_name);
+      mprintf (ev, "\"user\":\"%s\", ", U->user.first_name);
     } else {
-      mprintf (ev, "\"user\"=\"%s %s\", ", U->user.first_name, U->user.last_name); 
+      mprintf (ev, "\"user\":\"%s %s\", ", U->user.first_name, U->user.last_name); 
     }
   }
 }
@@ -2758,9 +2758,9 @@ void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
 void print_chat_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
   if (!C || use_ids) {
-    mprintf (ev, "\"chat\"=\"chat#%d\", ", tgl_get_peer_id (id));
+    mprintf (ev, "\"chat\":\"chat#%d\", ", tgl_get_peer_id (id));
   } else {
-    mprintf (ev, "\"chat\"=\"%s\",", C->chat.title);
+    mprintf (ev, "\"chat\":\"%s\",", C->chat.title);
   }
 }
 
@@ -2798,7 +2798,7 @@ void print_date (struct in_ev *ev, long t) {
 
 void print_date_json (struct in_ev *ev, long t) {
   struct tm *tm = localtime ((void *)&t);
-  mprintf (ev, "\"datetime\"=\"%04d/%02d/%02d %02d:%02d:%02d\", ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+  mprintf (ev, "\"datetime\":\"%04d/%02d/%02d %02d:%02d:%02d\", ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
 void print_date_full (struct in_ev *ev, long t) {
@@ -2996,7 +2996,11 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       }
       mprintf (ev, " ");
       mpush_color (ev, COLOR_CYAN);
-      mprintf (ev, "\"naosei\"=\"%s\", ", P->print_name);
+      if(!json_mode_enabled){
+        mprintf (ev, "\"user\":\"%s\", ", P->print_name);
+      }else{
+        mprintf (ev, " %s", P->print_name);
+      }
       mpop_color (ev);
       if(!json_mode_enabled){
 	      if (M->unread) {
@@ -3016,7 +3020,11 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       	print_date (ev, M->date);
       }
       mpush_color (ev, COLOR_CYAN);
-      mprintf (ev, "\"naosei\"=\"%s\"", P->print_name);
+      if(!json_mode_enabled){
+        mprintf (ev, "\"user\":\"%s\", ", P->print_name);
+      }else{
+        mprintf (ev, " %s", P->print_name);
+      }
       mpop_color (ev);
       if (M->unread) {
         mprintf (ev, " >>> ");
@@ -3063,17 +3071,18 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   }
   if (tgl_get_peer_type (M->fwd_from_id) == TGL_PEER_USER) {
   	if(json_mode_enabled){
-	    mprintf (ev, "\"fwd\"=");
-	    print_user_name_json (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
-	}else{
-		mprintf (ev, "[fwd from ");
-	    print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
-	    mprintf (ev, "] ");
-	}
+	    mprintf (ev, "\"fwd\":\"");
+      print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
+      mprintf (ev, "\", ");
+  	}else{
+  		mprintf (ev, "[fwd from ");
+  	    print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
+  	    mprintf (ev, "] ");
+  	}
   }
   if (M->message && strlen (M->message)) {
   	if(json_mode_enabled){
-    	mprintf (ev, "\"text\"=\"%s\"", M->message);
+    	mprintf (ev, "\"text\":\"%s\"", M->message);
     }else{
     	mprintf (ev, "%s", M->message);
     }
