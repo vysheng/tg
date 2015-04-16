@@ -51,6 +51,8 @@
 #include <event.h>
 #include "event-old.h"
 #endif
+
+#include "util.h"
 //#include "auto/constants.h"
 //#include "tools.h"
 //#include "structures.h"
@@ -2710,10 +2712,10 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   mpop_color (ev);
 }
 
-void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
+void print_fwd_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   assert (tgl_get_peer_type (id) == TGL_PEER_USER);
   if (!U) {
-    mprintf (ev, "\"user\":\"user#%d\", ", tgl_get_peer_id (id));
+    mprintf (ev, "\"fwd\":\"user#%d\", ", tgl_get_peer_id (id));
     int i;
     int ok = 1;
     for (i = 0; i < unknown_user_list_pos; i++) {
@@ -2729,19 +2731,63 @@ void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   } else {
 
     if ((U->flags & FLAG_DELETED)) {
-      mprintf (ev, "\"user\":\"deleted user#%d\", ", tgl_get_peer_id (id));
+      mprintf (ev, "\"fwd\":\"deleted user#%d\", ", tgl_get_peer_id (id));
     } else if (!(U->flags & FLAG_CREATED)) {
-      mprintf (ev, "\"user\":\"user#%d\", ", tgl_get_peer_id (id));
+      mprintf (ev, "\"fwd\":\"user#%d\", ", tgl_get_peer_id (id));
     } else if (use_ids) {
-      mprintf (ev, "\"user\":\"user#%d\", ", tgl_get_peer_id (id));
+      mprintf (ev, "\"fwd\":\"user#%d\", ", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
-      mprintf (ev, "\"user\":\"%s\", ", U->user.last_name);
+      mprintf (ev, "\"fwd\":\"%s\", ", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
-      mprintf (ev, "\"user\":\"%s\", ", U->user.first_name);
+      mprintf (ev, "\"fwd\":\"%s\", ", U->user.first_name);
     } else {
-      mprintf (ev, "\"user\":\"%s %s\", ", U->user.first_name, U->user.last_name); 
+      mprintf (ev, "\"fwd\":\"%s %s\", ", U->user.first_name, U->user.last_name); 
     }
   }
+}
+
+
+void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U, char * key) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  if (!U) {
+    mprintf (ev, "\"%s\":\"user#%d\", ",key, tgl_get_peer_id (id));
+    int i;
+    int ok = 1;
+    for (i = 0; i < unknown_user_list_pos; i++) {
+      if (unknown_user_list[i] == tgl_get_peer_id (id)) {
+        ok = 0;
+        break;
+      }
+    }
+    if (ok) {
+      assert (unknown_user_list_pos < 1000);
+      unknown_user_list[unknown_user_list_pos ++] = tgl_get_peer_id (id);
+    }
+  } else {
+
+    if ((U->flags & FLAG_DELETED)) {
+      mprintf (ev, "\"%s\":\"deleted user#%d\", ", key, tgl_get_peer_id (id));
+    } else if (!(U->flags & FLAG_CREATED)) {
+      mprintf (ev, "\"%s\":\"user#%d\", ", key,  tgl_get_peer_id (id));
+    } else if (use_ids) {
+      mprintf (ev, "\"%s\":\"user#%d\", ", key,  tgl_get_peer_id (id));
+    } else if (!U->user.first_name || !strlen (U->user.first_name)) {
+      mprintf (ev, "\"%s\":\"%s\", ", key,  U->user.last_name);
+    } else if (!U->user.last_name || !strlen (U->user.last_name)) {
+      mprintf (ev, "\"%s\":\"%s\", ", key,  U->user.first_name);
+    } else {
+      mprintf (ev, "\"%s\":\"%s %s\", ", key, U->user.first_name, U->user.last_name); 
+    }
+  }
+}
+
+void print_recipient_name_json(struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U){
+	print_user_name_json(ev, id, U, "to");
+}
+
+
+void print_sender_name_json(struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U){
+	print_user_name_json(ev, id, U, "from");
 }
 
 void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
@@ -2943,7 +2989,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mpop_color (ev);
       mprintf (ev, " ");
       if(json_mode_enabled){
-      	print_user_name_json (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
+      	print_recipient_name_json (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
       }else{
       	print_user_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
       }
@@ -2952,7 +2998,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
 	      if (M->unread) {
 	        mprintf (ev, " <<< ");
 	      } else {
-	        mprintf (ev, " Ã‚Â«Ã‚Â«Ã‚Â« ");
+	        mprintf (ev, " ««« ");
 	      }
 	  }
     } else {
@@ -2968,16 +3014,16 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mpop_color (ev);
       mprintf (ev, " ");
      if(json_mode_enabled){
-      	print_user_name_json (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
+      	print_sender_name_json (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
       }else{
-      	print_user_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
+      	print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
       }
       mpush_color (ev, COLOR_BLUE);
       if(!json_mode_enabled){
 	      if (M->unread) {
 	        mprintf (ev, " >>> ");
 	      } else {
-	        mprintf (ev, " Ã‚Â»Ã‚Â»Ã‚Â» ");
+	        mprintf (ev, " »»» ");
 	      }
 	  }
     }
@@ -2997,7 +3043,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mprintf (ev, " ");
       mpush_color (ev, COLOR_CYAN);
       if(!json_mode_enabled){
-        mprintf (ev, "\"user\":\"%s\", ", P->print_name);
+      	//tgl_peer_id_t
+        print_recipient_name_json(ev, P->id, P);
       }else{
         mprintf (ev, " %s", P->print_name);
       }
@@ -3006,7 +3053,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
 	      if (M->unread) {
 	        mprintf (ev, " <<< ");
 	      } else {
-	        mprintf (ev, " Ã‚Â«Ã‚Â«Ã‚Â« ");
+	        mprintf (ev, " «««  ");
 	      }
 	  }
     } else {
@@ -3021,7 +3068,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       }
       mpush_color (ev, COLOR_CYAN);
       if(!json_mode_enabled){
-        mprintf (ev, "\"user\":\"%s\", ", P->print_name);
+        print_recipient_name_json(ev, P->id, P);
       }else{
         mprintf (ev, " %s", P->print_name);
       }
@@ -3029,7 +3076,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->unread) {
         mprintf (ev, " >>> ");
       } else {
-        mprintf (ev, " Ã‚Â»Ã‚Â»Ã‚Â» ");
+        mprintf (ev, " »»» ");
       }
     }
   } else {
@@ -3052,7 +3099,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     }
     mprintf (ev, " ");
     if(json_mode_enabled){
-    	print_user_name_json (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
+    	print_sender_name_json(ev, M->from_id, tgl_peer_get (TLS, M->from_id));
     }else{
     	print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
     }
@@ -3065,15 +3112,13 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
 	    if (M->unread) {
 	      mprintf (ev, " >>> ");
 	    } else {
-	      mprintf (ev, " Ã‚Â»Ã‚Â»Ã‚Â» ");
+	      mprintf (ev, " »»» ");
 	    }
 	}
   }
   if (tgl_get_peer_type (M->fwd_from_id) == TGL_PEER_USER) {
   	if(json_mode_enabled){
-	    mprintf (ev, "\"fwd\":\"");
-      print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
-      mprintf (ev, "\", ");
+      print_fwd_user_name_json (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
   	}else{
   		mprintf (ev, "[fwd from ");
   	    print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
@@ -3082,7 +3127,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   }
   if (M->message && strlen (M->message)) {
   	if(json_mode_enabled){
-    	mprintf (ev, "\"text\":\"%s\"", M->message);
+    	mprintf (ev, "\"text\":\"%s\"", escape_char(M->message));
     }else{
     	mprintf (ev, "%s", M->message);
     }
