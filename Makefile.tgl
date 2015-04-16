@@ -4,6 +4,8 @@ GENERATE_OBJECTS=${OBJ}/generate.o
 TGL_COMMON_OBJECTS=${OBJ}/tools.o
 TGL_OBJ_C=${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS} ${TGL_OBJECTS} ${TLD_OBJECTS}
 
+AR?=ar
+
 .SUFFIXES:
 
 .SUFFIXES: .c .h .o
@@ -19,7 +21,7 @@ ${OBJ}/auto/auto.o: ${AUTO}/auto.c
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -iquote ${srcdir}/tgl -c -MP -MD -MF ${DEP}/auto/auto.d -MQ ${OBJ}/auto/auto.o -o $@ $<
 
 ${LIB}/libtgl.a: ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${OBJ}/auto/auto.o
-	ar ruv $@ $^
+	${AR} ruv $@ $^
 
 ${EXE}/generate: ${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS}
 	${CC} ${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS} ${LINK_FLAGS} -o $@
