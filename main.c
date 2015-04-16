@@ -583,7 +583,7 @@ char *unix_socket;
 void args_parse (int argc, char **argv) {
   TLS = tgl_state_alloc ();
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6g"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -595,6 +595,9 @@ void args_parse (int argc, char **argv) {
   
   )) != -1) {
     switch (opt) {
+    case 'g':
+      tgl_allocator = &tgl_allocator_debug;
+      break;
     case 'u':
       set_default_username (optarg);
       break;

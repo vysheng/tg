@@ -21,7 +21,7 @@ EXE_LIST=${EXE}/telegram-cli
 
 TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o
 
-INCLUDE=-I. -I${srcdir}
+INCLUDE=-I. -I${srcdir} -I${srcdir}/tgl
 CC=@CC@
 
 .SUFFIXES:
@@ -29,7 +29,7 @@ CC=@CC@
 .SUFFIXES: .c .h .o
 
 all: ${EXE_LIST} ${DIR_LIST}
-create_dirs_and_headers: ${DIR_LIST} ${AUTO}/auto.c ${AUTO}/auto-header.h ${AUTO}/constants.h
+create_dirs_and_headers: ${DIR_LIST} ${AUTO}/auto-skip.h ${AUTO}/auto-fetch.h ${AUTO}/auto-store.h ${AUTO}/auto-autocomplete.h ${AUTO}/auto-types.h
 create_dirs: ${DIR_LIST}
 dump-tl: ${EXE}/dump-tl-file
 
@@ -39,7 +39,7 @@ include ${srcdir}/Makefile.tgl
 ${DIR_LIST}:
 	@test -d $@ || mkdir -p $@
 
-OBJ_LIST=${TG_OBJECTS} ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${GENERATE_OBJECTS} ${TL_PARSER_OBJECTS}
+OBJ_LIST=${TG_OBJECTS} ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${GENERATE_OBJECTS} ${TL_PARSER_OBJECTS} ${TGL_OBJECTS_AUTO}
 DEPENDENCE=$(subst ${OBJ}/,${DEP}/,$(patsubst %.o,%.d,${OBJ_LIST}))
 DEPENDENCE_LIST=${DEPENDENCE}
 
