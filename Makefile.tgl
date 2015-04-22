@@ -26,7 +26,7 @@ ${TGL_OBJECTS_AUTO}: ${OBJ}/auto/%.o: ${AUTO}/%.c | create_dirs
 #	${CC} ${INCLUDE} ${COMPILE_FLAGS} -iquote ${srcdir}/tgl -c -MP -MD -MF ${DEP}/auto/auto.d -MQ ${OBJ}/auto/auto.o -o $@ $<
 
 ${LIB}/libtgl.a: ${TGL_OBJECTS} ${TGL_COMMON_OBJECTS} ${TGL_OBJECTS_AUTO}
-	ar ruv $@ $^
+	rm -f $@ && ar ruv $@ $^
 
 ${EXE}/generate: ${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS}
 	${CC} ${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS} ${LINK_FLAGS} -o $@

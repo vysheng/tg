@@ -344,7 +344,7 @@ void write_dc (struct tgl_dc *DC, void *extra) {
     assert (write (auth_file_fd, &x, 4) == 4);
   }
 
-  assert (DC->has_auth);
+  assert (DC->flags & TGLDCF_LOGGED_IN);
 
   assert (write (auth_file_fd, &DC->port, 4) == 4);
   int l = strlen (DC->ip);
@@ -436,7 +436,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 
   //bl_do_add_dc (id, ip, l, port, auth_key_id, auth_key);
   bl_do_dc_option (TLS, id, 2, "DC", l, ip, port);
-  bl_do_set_auth_key_id (TLS, id, auth_key);
+  bl_do_set_auth_key (TLS, id, auth_key);
   bl_do_dc_signed (TLS, id);
 }
 
@@ -519,6 +519,8 @@ void read_secret_chat (int fd, int v) {
   assert (read (fd, &key, 256) == 256);
   if (v >= 2) {
     assert (read (fd, sha, 20) == 20);
+  } else {
+    SHA1 ((void *)key, 256, sha);
   }
   int in_seq_no = 0, out_seq_no = 0, last_in_seq_no = 0;
   if (v >= 1) {
@@ -527,24 +529,24 @@ void read_secret_chat (int fd, int v) {
     assert (read (fd, &out_seq_no, 4) == 4);
   }
 
-  bl_do_encr_chat_create (TLS, id, user_id, admin_id, s, l);
-  struct tgl_secret_chat  *P = (void *)tgl_peer_get (TLS, TGL_MK_ENCR_CHAT (id));
-  assert (P && (P->flags & FLAG_CREATED));
-  bl_do_encr_chat_set_date (TLS, P, date);
-  bl_do_encr_chat_set_ttl (TLS, P, ttl);
-  bl_do_encr_chat_set_layer (TLS ,P, layer);
-  bl_do_encr_chat_set_access_hash (TLS, P, access_hash);
-  bl_do_encr_chat_set_state (TLS, P, state);
-  bl_do_encr_chat_set_key (TLS, P, key, key_fingerprint);
-  if (v >= 2) {
-    bl_do_encr_chat_set_sha (TLS, P, sha);
-  } else {
-    SHA1 ((void *)key, 256, sha);
-    bl_do_encr_chat_set_sha (TLS, P, sha);
-  }
-  if (v >= 1) {
-    bl_do_encr_chat_set_seq (TLS, P, in_seq_no, last_in_seq_no, out_seq_no);
-  }
+  bl_do_encr_chat_new (TLS, id, 
+    &access_hash,
+    &date,
+    &admin_id,
+    &user_id,
+    key,
+    NULL,
+    sha,
+    &state,
+    &ttl,
+    &layer,
+    &in_seq_no,
+    &last_in_seq_no,
+    &out_seq_no,
+    &key_fingerprint,
+    TGLECF_CREATE | TGLECF_CREATED
+  );
+    
 }
 
 void read_secret_chat_file (void) {

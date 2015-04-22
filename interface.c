@@ -732,7 +732,7 @@ void do_rename_chat (int arg_num, struct arg args[], struct in_ev *ev) {
 void do_ ## act ## _ ## tp (int arg_num, struct arg args[], struct in_ev *ev) { \
   assert (arg_num == 1);\
   struct tgl_message *M = tgl_message_get (TLS, args[0].num);\
-  if (M && !M->service) {\
+  if (M && !(M->flags & TGLMF_SERVICE)) {\
     if (M->media.type == tgl_message_media_photo) { \
       tgl_do_load_photo (TLS, &M->media.photo, actf, ev);\
     } else if (M->media.type == tgl_message_media_document) {\
@@ -747,7 +747,7 @@ void do_ ## act ## _ ## tp (int arg_num, struct arg args[], struct in_ev *ev) { 
 void do_ ## act ## _ ## tp ## _thumb (int arg_num, struct arg args[], struct in_ev *ev) { \
   assert (arg_num == 1);\
   struct tgl_message *M = tgl_message_get (TLS, args[0].num);\
-  if (M && !M->service) {\
+  if (M && !(M->flags & TGLMF_SERVICE)) {\
     if (M->media.type == tgl_message_media_document) {\
       tgl_do_load_document_thumb (TLS, &M->media.document, actf, ev);\
     }\
@@ -972,10 +972,10 @@ void do_delete_msg (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_delete_msg (TLS, args[0].num, print_success_gw, ev);
 }
 
-void do_restore_msg (int arg_num, struct arg args[], struct in_ev *ev) {
-  if (ev) { ev->refcnt ++; }
-  tgl_do_restore_msg (TLS, args[0].num, print_success_gw, ev);
-}
+//void do_restore_msg (int arg_num, struct arg args[], struct in_ev *ev) {
+//  if (ev) { ev->refcnt ++; }
+//  tgl_do_restore_msg (TLS, args[0].num, print_success_gw, ev);
+//}
     
 void do_create_group_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 1 && arg_num <= 1000);
@@ -1181,7 +1181,7 @@ struct command commands[] = {
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately"},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
-  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
+//  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
   {"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat"},
@@ -1604,10 +1604,10 @@ void open_filename_gw (struct tgl_state *TLSR, void *extra, int success, char *n
   if (snprintf (buf, sizeof (buf), OPEN_BIN, name) >= (int) sizeof (buf)) {
     logprintf ("Open image command buffer overflow\n");
   } else {
-    int x = system (buf);
-    if (x < 0) {
-      logprintf ("Can not open image viewer: %m\n");
-      logprintf ("Image is at %s\n", name);
+    int pid = fork ();
+    if (!pid) {
+      execl("/bin/sh", "sh", "-c", buf, (char *) 0);
+      exit (0);
     }
   }
 }
@@ -1792,7 +1792,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
         end_id = list[j]->to_id;
       }
       if (!tgl_cmp_peer_id (to_id, end_id)) {
-        if (list[j]->out) {
+        if (list[j]->flags & TGLMF_OUT) {
           c1 ++;
         } else {
           c2 ++;
@@ -2658,6 +2658,22 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
     case tgl_message_media_unsupported:
       mprintf (ev, "[unsupported]");
       return;
+    case tgl_message_media_webpage:
+      mprintf (ev, "[webpage:");
+      if (M->webpage.url) {
+        mprintf (ev, " url:'%s'", M->webpage.url);
+      }
+      if (M->webpage.title) {
+        mprintf (ev, " title:'%s'", M->webpage.title);
+      }
+      if (M->webpage.description) {
+        mprintf (ev, " description:'%s'", M->webpage.description);
+      }
+      if (M->webpage.author) {
+        mprintf (ev, " author:'%s'", M->webpage.author);
+      }
+      mprintf (ev, "]");
+      break;
     default:
       mprintf (ev, "x = %d\n", M->type);
       assert (0);
@@ -2685,12 +2701,12 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
       unknown_user_list[unknown_user_list_pos ++] = tgl_get_peer_id (id);
     }
   } else {
-    if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
+    if (U->flags & (TGLUF_SELF | TGLUF_CONTACT)) {
       mpush_color (ev, COLOR_REDB);
     }
-    if ((U->flags & FLAG_DELETED)) {
+    if ((U->flags & TGLUF_DELETED)) {
       mprintf (ev, "deleted user#%d", tgl_get_peer_id (id));
-    } else if (!(U->flags & FLAG_CREATED)) {
+    } else if (!(U->flags & TGLUF_CREATED)) {
       mprintf (ev, "user#%d", tgl_get_peer_id (id));
     } else if (use_ids) {
       mprintf (ev, "user#%d", tgl_get_peer_id (id));
@@ -2701,7 +2717,7 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
     } else {
       mprintf (ev, "%s %s", U->user.first_name, U->user.last_name); 
     }
-    if (U->flags & (FLAG_USER_SELF | FLAG_USER_CONTACT)) {
+    if (U->flags & (TGLUF_SELF | TGLUF_CONTACT)) {
       mpop_color (ev);
     }
   }
@@ -2860,11 +2876,11 @@ tgl_peer_id_t last_to_id;
 
 void print_message (struct in_ev *ev, struct tgl_message *M) {
   assert (M);
-  if (M->flags & (FLAG_MESSAGE_EMPTY | FLAG_DELETED)) {
+  if (M->flags & (TGLMF_EMPTY | TGLMF_DELETED)) {
     return;
   }
-  if (!(M->flags & FLAG_CREATED)) { return; }
-  if (M->service) {
+  if (!(M->flags & TGLMF_CREATED)) { return; }
+  if (M->flags & TGLMF_SERVICE) {
     print_service_message (ev, M);
     return;
   }
@@ -2878,7 +2894,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
 
   //print_start ();
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_USER) {
-    if (M->out) {
+    if (M->flags & TGLMF_OUT) {
       mpush_color (ev, COLOR_GREEN);
       if (msg_num_mode) {
         mprintf (ev, "%lld ", M->id);
@@ -2888,7 +2904,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mprintf (ev, " ");
       print_user_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
       mpush_color (ev, COLOR_GREEN);
-      if (M->unread) {
+      if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " <<< ");
       } else {
         mprintf (ev, " ««« ");
@@ -2903,7 +2919,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mprintf (ev, " ");
       print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
       mpush_color (ev, COLOR_BLUE);
-      if (M->unread) {
+      if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " >>> ");
       } else {
         mprintf (ev, " »»» ");
@@ -2912,7 +2928,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) {
     tgl_peer_t *P = tgl_peer_get (TLS, M->to_id);
     assert (P);
-    if (M->out) {
+    if (M->flags & TGLMF_UNREAD) {
       mpush_color (ev, COLOR_GREEN);
       if (msg_num_mode) {
         mprintf (ev, "%lld ", M->id);
@@ -2922,7 +2938,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mpush_color (ev, COLOR_CYAN);
       mprintf (ev, " %s", P->print_name);
       mpop_color (ev);
-      if (M->unread) {
+      if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " <<< ");
       } else {
         mprintf (ev, " ««« ");
@@ -2936,7 +2952,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mpush_color (ev, COLOR_CYAN);
       mprintf (ev, " %s", P->print_name);
       mpop_color (ev);
-      if (M->unread) {
+      if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " >>> ");
       } else {
         mprintf (ev, " »»» ");
@@ -2959,7 +2975,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     } else {
       mpush_color (ev, COLOR_BLUE);
     }
-    if (M->unread) {
+    if (M->flags & TGLMF_UNREAD) {
       mprintf (ev, " >>> ");
     } else {
       mprintf (ev, " »»» ");
@@ -2974,6 +2990,9 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     mprintf (ev, "%s", M->message);
   }
   if (M->media.type != tgl_message_media_none) {
+    if (M->message && strlen (M->message)) {
+      mprintf (ev, " ");
+    }
     print_media (ev, &M->media);
   }
   mpop_color (ev);

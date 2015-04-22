@@ -199,7 +199,7 @@ void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   lua_settable (luaState, -3);
 
 
-  if (!P || !(P->flags & FLAG_CREATED)) {
+  if (!P || !(P->flags & TGLPF_CREATED)) {
     lua_pushstring (luaState, "print_name"); 
     static char s[100];
     switch (tgl_get_peer_type (id)) {
@@ -294,7 +294,7 @@ void push_message (struct tgl_message *M) {
   static char s[30];
   snprintf (s, 30, "%lld", M->id);
   lua_add_string_field ("id", s);
-  if (!(M->flags & FLAG_CREATED)) { return; }
+  if (!(M->flags & TGLMF_CREATED)) { return; }
   lua_add_num_field ("flags", M->flags);
  
   if (tgl_get_peer_type (M->fwd_from_id)) {
@@ -314,11 +314,11 @@ void push_message (struct tgl_message *M) {
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "out");
-  lua_pushboolean (luaState, M->out);
+  lua_pushboolean (luaState, (M->flags & TGLMF_OUT) != 0);
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "unread");
-  lua_pushboolean (luaState, M->unread);
+  lua_pushboolean (luaState, (M->flags & TGLMF_UNREAD) != 0);
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "date");
@@ -326,10 +326,10 @@ void push_message (struct tgl_message *M) {
   lua_settable (luaState, -3); 
   
   lua_pushstring (luaState, "service");
-  lua_pushboolean (luaState, M->service);
+  lua_pushboolean (luaState, (M->flags & TGLMF_SERVICE) != 0);
   lua_settable (luaState, -3); 
 
-  if (!M->service) {  
+  if (!(M->flags & TGLMF_SERVICE)) {  
     if (M->message_len && M->message) {
       lua_pushstring (luaState, "text");
       lua_pushlstring (luaState, M->message, M->message_len);
@@ -600,7 +600,7 @@ void lua_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, in
       lua_settable (luaState, -3);
 
       struct tgl_message *M = tgl_message_get (TLS, msgs[i]);
-      if (M && (M->flags & FLAG_CREATED)) {
+      if (M && (M->flags & TGLMF_CREATED)) {
         lua_pushstring (luaState, "message");
         push_message (M);
         lua_settable (luaState, -3);
@@ -1311,7 +1311,7 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
 
       M = tgl_message_get (TLS, num);
 
-      if (!M || !(M->flags & FLAG_CREATED)) {
+      if (!M || !(M->flags & TGLMF_CREATED)) {
         ok = 0;
         break;
       }
