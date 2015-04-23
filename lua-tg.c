@@ -873,7 +873,7 @@ void lua_do_all (void) {
       tgl_do_update_contact_list (TLS, lua_contact_list_cb, lua_ptr[p ++]);
       break;
     case lq_dialog_list:
-      tgl_do_get_dialog_list (TLS, lua_dialog_list_cb, lua_ptr[p ++]);
+      tgl_do_get_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++]);
       break;
     case lq_msg:
       tgl_do_send_message (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], strlen (lua_ptr[p + 2]), lua_msg_cb, lua_ptr[p]);

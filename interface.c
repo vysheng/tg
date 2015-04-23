@@ -639,9 +639,9 @@ void do_history (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_dialog_list (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 0);
+  assert (arg_num <= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_get_dialog_list (TLS, print_dialog_list_gw, ev);
+  tgl_do_get_dialog_list (TLS, args[0].num != NOT_FOUND ? args[0].num : 100, args[1].num != NOT_FOUND ? args[1].num : 0, print_dialog_list_gw, ev);
 }
 
 void do_send_photo (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1160,7 +1160,7 @@ struct command commands[] = {
   {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat"},
   {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list"},
   {"delete_msg", {ca_number, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message"},
-  {"dialog_list", {ca_none}, do_dialog_list, "dialog_list\tList of last conversations"},
+  {"dialog_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_dialog_list, "dialog_list [limit=100] [offset=0]\tList of last conversations"},
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method"},
   {"fwd", {ca_peer, ca_number, ca_none}, do_fwd, "fwd <peer> <msg-id>\tForwards message to peer. Forward to secret chats is forbidden"},
   {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd"},
