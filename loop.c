@@ -435,24 +435,24 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
   assert (read (auth_file_fd, auth_key, 256) == 256);
 
   //bl_do_add_dc (id, ip, l, port, auth_key_id, auth_key);
-  bl_do_dc_option (TLS, id, 2, "DC", l, ip, port);
+  bl_do_dc_option (TLS, id, "DC", 2, ip, l, port);
   bl_do_set_auth_key (TLS, id, auth_key);
   bl_do_dc_signed (TLS, id);
 }
 
 void empty_auth_file (void) {
   if (TLS->test_mode) {
-    bl_do_dc_option (TLS, 1, 0, "", strlen (TG_SERVER_TEST_1), TG_SERVER_TEST_1, 443);
-    bl_do_dc_option (TLS, 2, 0, "", strlen (TG_SERVER_TEST_2), TG_SERVER_TEST_2, 443);
-    bl_do_dc_option (TLS, 3, 0, "", strlen (TG_SERVER_TEST_3), TG_SERVER_TEST_3, 443);
-    bl_do_set_working_dc (TLS, 2);
+    bl_do_dc_option (TLS, 1, "", 0, TG_SERVER_TEST_1, strlen (TG_SERVER_TEST_1), 443);
+    bl_do_dc_option (TLS, 2, "", 0, TG_SERVER_TEST_2, strlen (TG_SERVER_TEST_2), 443);
+    bl_do_dc_option (TLS, 3, "", 0, TG_SERVER_TEST_3, strlen (TG_SERVER_TEST_3), 443);
+    bl_do_set_working_dc (TLS, TG_SERVER_TEST_DEFAULT);
   } else {
-    bl_do_dc_option (TLS, 1, 0, "", strlen (TG_SERVER_1), TG_SERVER_1, 443);
-    bl_do_dc_option (TLS, 2, 0, "", strlen (TG_SERVER_2), TG_SERVER_2, 443);
-    bl_do_dc_option (TLS, 3, 0, "", strlen (TG_SERVER_3), TG_SERVER_3, 443);
-    bl_do_dc_option (TLS, 4, 0, "", strlen (TG_SERVER_4), TG_SERVER_4, 443);
-    bl_do_dc_option (TLS, 5, 0, "", strlen (TG_SERVER_5), TG_SERVER_5, 443);
-    bl_do_set_working_dc (TLS, 4);
+    bl_do_dc_option (TLS, 1, "", 0, TG_SERVER_1, strlen (TG_SERVER_1), 443);
+    bl_do_dc_option (TLS, 2, "", 0, TG_SERVER_2, strlen (TG_SERVER_2), 443);
+    bl_do_dc_option (TLS, 3, "", 0, TG_SERVER_3, strlen (TG_SERVER_3), 443);
+    bl_do_dc_option (TLS, 4, "", 0, TG_SERVER_4, strlen (TG_SERVER_4), 443);
+    bl_do_dc_option (TLS, 5, "", 0, TG_SERVER_5, strlen (TG_SERVER_5), 443);
+    bl_do_set_working_dc (TLS, TG_SERVER_DEFAULT);
   }
 }
 
