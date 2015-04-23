@@ -2986,6 +2986,9 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
     mprintf (ev, "] ");
   }
+  if (M->reply_id) {
+    mprintf (ev, "[reply to %d] ", M->reply_id);
+  }
   if (M->message && strlen (M->message)) {
     mprintf (ev, "%s", M->message);
   }
