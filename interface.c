@@ -693,9 +693,20 @@ void do_user_info (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_fwd (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_forward_message (TLS, args[0].P->id, args[1].num, print_msg_success_gw, ev);
+  assert (arg_num <= 1000);
+  if (arg_num == 2) {
+    tgl_do_forward_message (TLS, args[0].P->id, args[1].num, print_msg_success_gw, ev);
+  } else {
+    static int list[1000];
+    int i;
+    for (i = 0; i < arg_num - 1; i++) {
+      list[i] = args[i + 1].num;
+    }
+    tgl_do_forward_messages (TLS, args[0].P->id, arg_num - 1, list, print_msg_list_success_gw, ev);
+  }
+
 }
 
 void do_fwd_media (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -998,7 +1009,7 @@ void do_create_group_chat (int arg_num, struct arg args[], struct in_ev *ev) {
 void do_chat_set_photo (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_set_chat_photo (TLS, args[0].P->id, args[1].str, print_msg_success_gw, ev); 
+  tgl_do_set_chat_photo (TLS, args[0].P->id, args[1].str, print_success_gw, ev); 
 }
 
 void do_set_profile_photo (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1168,7 +1179,7 @@ struct command commands[] = {
   {"delete_msg", {ca_number, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message"},
   {"dialog_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_dialog_list, "dialog_list [limit=100] [offset=0]\tList of last conversations"},
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method"},
-  {"fwd", {ca_peer, ca_number, ca_none}, do_fwd, "fwd <peer> <msg-id>\tForwards message to peer. Forward to secret chats is forbidden"},
+  {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden"},
   {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd"},
   {"help", {ca_none}, do_help, "help\tPrints this help"},
   {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read"},

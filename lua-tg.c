@@ -642,7 +642,7 @@ void lua_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
 
   lua_pushnumber (luaState, success);
 
-  if (success) {
+  if (success && M && (M->flags & TGLMF_CREATED)) {
     push_message (M);
   } else {
     lua_pushboolean (luaState, 0);
@@ -924,7 +924,7 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_chat_set_photo:
-      tgl_do_set_chat_photo (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      tgl_do_set_chat_photo (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_empty_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
