@@ -756,6 +756,12 @@ void do_ ## act ## _ ## tp (int arg_num, struct arg args[], struct in_ev *ev) { 
       tgl_do_load_document (TLS, &M->media.document, actf, ev);\
     } else if (M->media.type == tgl_message_media_photo_encr || M->media.type == tgl_message_media_document_encr) {\
       tgl_do_load_encr_document (TLS, &M->media.encr_document, actf, ev); \
+    } else if (M->media.type == tgl_message_media_webpage) {\
+      actf (TLS, ev, 1, M->media.webpage.url);\
+    } else if (M->media.type == tgl_message_media_geo || M->media.type == tgl_message_media_venue) { \
+      static char s[1000]; \
+      sprintf (s, "https://maps.google.com/?q=%.6lf,%.6lf", M->media.geo.latitude, M->media.geo.longitude);\
+      actf (TLS, ev, 1, s);\
     }\
   }\
 }
@@ -787,6 +793,7 @@ DO_LOAD_PHOTO(file, open, open_filename_gw)
 DO_LOAD_PHOTO_THUMB(video, open, open_filename_gw)
 DO_LOAD_PHOTO_THUMB(document, open, open_filename_gw)
 DO_LOAD_PHOTO_THUMB(file, open, open_filename_gw)
+DO_LOAD_PHOTO(any, open, open_filename_gw)
 
 void do_add_contact (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
@@ -1139,7 +1146,7 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   logprintf ("Do_clear\n");
   free (default_username);
   free (config_filename);
-  free (prefix);
+  //free (prefix);
   free (auth_file_name);
   free (state_file_name);
   free (secret_chat_file_name);
@@ -1149,8 +1156,9 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   free (lua_file);
   clear_history ();
   event_free (term_ev);
-  event_base_free (TLS->ev_base);
+  struct event_base *ev_base = TLS->ev_base;
   tgl_free_all (TLS);
+  event_base_free (ev_base);
   do_halt (0);
 }
 
@@ -1232,6 +1240,7 @@ struct command commands[] = {
   {"view_photo", {ca_number, ca_none}, do_open_photo, "view_photo <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
   {"view_video", {ca_number, ca_none}, do_open_video, "view_video <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
   {"view_video_thumb", {ca_number, ca_none}, do_open_video_thumb, "view_video_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
+  {"view", {ca_number, ca_none}, do_open_any, "view <msg-id>\tTries to view message contents"},
   {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key, "visualize_key <secret chat>\tPrints visualization of encryption key (first 16 bytes sha1 of it in fact}"},
   {0, {ca_none}, 0, ""}
 };

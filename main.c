@@ -617,7 +617,7 @@ void args_parse (int argc, char **argv) {
       config_filename = tstrdup (optarg);
       break;
     case 'p':
-      prefix = tstrdup (optarg);
+      prefix = optarg;
       assert (strlen (prefix) <= 100);
       break;
 #else
