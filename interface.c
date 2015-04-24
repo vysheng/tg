@@ -725,7 +725,7 @@ void do_send_typing_abort (int arg_num, struct arg args[], struct in_ev *ev) {
 void do_rename_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_rename_chat (TLS, args[0].P->id, args[1].str, print_msg_success_gw, ev);
+  tgl_do_rename_chat (TLS, args[0].P->id, args[1].str, print_success_gw, ev);
 }
 
 #define DO_LOAD_PHOTO(tp,act,actf) \
@@ -912,13 +912,13 @@ void do_secret_chat_rekey (int arg_num, struct arg args[], struct in_ev *ev) {
 void do_chat_add_user (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
-  tgl_do_add_user_to_chat (TLS, args[0].P->id, args[1].P->id, args[2].num != NOT_FOUND ? args[2].num : 100, print_msg_success_gw, ev);
+  tgl_do_add_user_to_chat (TLS, args[0].P->id, args[1].P->id, args[2].num != NOT_FOUND ? args[2].num : 100, print_success_gw, ev);
 }
 
 void do_chat_del_user (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_del_user_from_chat (TLS, args[0].P->id, args[1].P->id, print_msg_success_gw, ev);
+  tgl_do_del_user_from_chat (TLS, args[0].P->id, args[1].P->id, print_success_gw, ev);
 }
 
 void do_status_online (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -986,7 +986,7 @@ void do_create_group_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 
   if (ev) { ev->refcnt ++; }
-  tgl_do_create_group_chat_ex (TLS, arg_num - 1, ids, args[0].str, print_msg_success_gw, ev);  
+  tgl_do_create_group_chat_ex (TLS, arg_num - 1, ids, args[0].str, print_success_gw, ev);  
 }
 
 void do_chat_set_photo (int arg_num, struct arg args[], struct in_ev *ev) {

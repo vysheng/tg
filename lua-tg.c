@@ -889,7 +889,7 @@ void lua_do_all (void) {
       p += 2;
       break;
     case lq_rename_chat:
-      tgl_do_rename_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
+      tgl_do_rename_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_empty_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
@@ -977,11 +977,11 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_chat_add_user:
-      tgl_do_add_user_to_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, 10, lua_msg_cb, lua_ptr[p]);
+      tgl_do_add_user_to_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, 10, lua_empty_cb, lua_ptr[p]);
       p += 3;
       break;
     case lq_chat_del_user:
-      tgl_do_del_user_from_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, lua_msg_cb, lua_ptr[p]);
+      tgl_do_del_user_from_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, lua_empty_cb, lua_ptr[p]);
       p += 3;
       break;
     case lq_add_contact:
@@ -1044,7 +1044,7 @@ void lua_do_all (void) {
       break;
     case lq_create_group_chat:
       s = lua_ptr[p + 2];
-      tgl_do_create_group_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, s, lua_msg_cb, lua_ptr[p]);
+      tgl_do_create_group_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, s, lua_empty_cb, lua_ptr[p]);
       free (s);
       p += 3;
       break;

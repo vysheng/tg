@@ -41,10 +41,10 @@ ${AUTO}/scheme2.tl: ${AUTO}/scheme.tl ${EXE}/tl-parser
 	${EXE}/tl-parser -E ${AUTO}/scheme.tl 2> $@  || ( cat $@ && rm $@ && false )
 
 ${AUTO}/auto-%.c: ${AUTO}/scheme.tlo ${EXE}/generate auto/constants.h ${AUTO}/auto-%.h | create_dirs_and_headers
-	${EXE}/generate ${AUTO}/scheme.tlo -g $(patsubst ${AUTO}/auto-%.c,%,$@) > $@ || rm $@
+	${EXE}/generate -g $(patsubst ${AUTO}/auto-%.c,%,$@) ${AUTO}/scheme.tlo > $@ || rm $@
 
 ${AUTO}/auto-%.h: ${AUTO}/scheme.tlo ${EXE}/generate
-	${EXE}/generate ${AUTO}/scheme.tlo -g $(patsubst ${AUTO}/auto-%.h,%-header,$@) > $@ || rm $@
+	${EXE}/generate -g $(patsubst ${AUTO}/auto-%.h,%-header,$@) ${AUTO}/scheme.tlo > $@ || rm $@
 
 ${AUTO}/constants.h: ${AUTO}/scheme2.tl ${srcdir}/tgl/gen_constants_h.awk
 	awk -f ${srcdir}/tgl/gen_constants_h.awk < $< > $@
