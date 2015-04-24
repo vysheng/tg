@@ -710,6 +710,12 @@ void do_msg (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_send_message (TLS, args[0].P->id, args[1].str, strlen (args[1].str), print_msg_success_gw, ev);
 }
 
+void do_reply (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_send_message_reply (TLS, args[0].num, args[1].str, strlen (args[1].str), print_msg_success_gw, ev);
+}
+
 void do_send_typing (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
@@ -1181,6 +1187,7 @@ struct command commands[] = {
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately"},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
+  {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "msg <msg-id> <text>\tSends text reply to message"},
 //  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
@@ -2762,8 +2769,10 @@ void print_date (struct in_ev *ev, long t) {
   struct tm *tm = localtime ((void *)&t);
   if (time (0) - t < 12 * 60 * 60) {
     mprintf (ev, "[%02d:%02d] ", tm->tm_hour, tm->tm_min);
-  } else {
+  } else if (time (0) - t < 24 * 60 * 60 * 180) {
     mprintf (ev, "[%02d %s]", tm->tm_mday, monthes[tm->tm_mon]);
+  } else {
+    mprintf (ev, "[%02d %s %d]", tm->tm_mday, monthes[tm->tm_mon], tm->tm_year + 1900);
   }
 }
 
