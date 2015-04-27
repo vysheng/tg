@@ -158,6 +158,9 @@
 /* use lua */
 #undef USE_LUA
 
+/* fixed for correct valgrind work */
+#undef VALGRIND_FIXES
+
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t
 

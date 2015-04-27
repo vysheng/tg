@@ -108,6 +108,16 @@ AC_ARG_WITH(progname,[--with-progname=<name>],
   ],[
     AC_MSG_RESULT([default])
   ])
+
+AC_ARG_ENABLE(valgrind,[--enable-valgrind/--disable-valgrind],
+  [ 
+  if test "x$enableval" = "xyes" ; then
+    AC_CHECK_HEADER(valgrind/memcheck.h, [AC_DEFINE([VALGRIND_FIXES], [1], [fixed for correct valgrind work])], [
+    ])
+  fi
+  ],[
+  ])
+    
     
 # Checks for header files.
 AC_CHECK_HEADERS([execinfo.h fcntl.h malloc.h netdb.h stdlib.h string.h unistd.h arpa/inet.h mach/mach.h netinet/in.h sys/file.h sys/socket.h termios.h])

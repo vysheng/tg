@@ -695,6 +695,7 @@ enable_libconfig
 enable_extf
 enable_liblua
 with_progname
+enable_valgrind
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1320,6 +1321,7 @@ Optional Features:
 --enable-libconfig/--disable-libconfig
 --enable-extf/--disable-extf
 --enable-liblua/--disable-liblua
+--enable-valgrind/--disable-valgrind
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -5890,6 +5892,24 @@ else
 $as_echo "default" >&6; }
 
 fi
+
+
+# Check whether --enable-valgrind was given.
+if test "${enable_valgrind+set}" = set; then :
+  enableval=$enable_valgrind;
+  if test "x$enableval" = "xyes" ; then
+    ac_fn_c_check_header_mongrel "$LINENO" "valgrind/memcheck.h" "ac_cv_header_valgrind_memcheck_h" "$ac_includes_default"
+if test "x$ac_cv_header_valgrind_memcheck_h" = xyes; then :
+
+$as_echo "#define VALGRIND_FIXES 1" >>confdefs.h
+
+fi
+
+
+  fi
+
+fi
+
 
 
 # Checks for header files.
