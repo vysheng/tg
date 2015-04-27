@@ -647,31 +647,61 @@ void do_dialog_list (int arg_num, struct arg args[], struct in_ev *ev) {
 void do_send_photo (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, -1, args[0].P->id, args[1].str, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, -1, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
 }
 
 void do_send_file (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, -2, args[0].P->id, args[1].str, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, -2, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
 }
 
 void do_send_audio (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].P->id, args[1].str, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
 }
 
 void do_send_video (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].P->id, args[1].str, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
 }
 
 void do_send_document (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, 0, args[0].P->id, args[1].str, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, 0, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
+}
+
+void do_reply_photo (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_document (TLS, -1, args[0].num, args[2].str, print_msg_success_gw, ev);
+}
+
+void do_reply_file (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_document (TLS, -2, args[0].num, args[1].str, print_msg_success_gw, ev);
+}
+
+void do_reply_audio (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].num, args[1].str, print_msg_success_gw, ev);
+}
+
+void do_reply_video (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].num, args[1].str, print_msg_success_gw, ev);
+}
+
+void do_reply_document (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_document (TLS, 0, args[0].num, args[1].str, print_msg_success_gw, ev);
 }
 
 void do_send_text (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1107,7 +1137,13 @@ void do_import_card (int arg_num, struct arg args[], struct in_ev *ev) {
 void do_send_contact (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 4);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_contact (TLS, args[0].P->id, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_gw, ev);
+  tgl_do_send_contact (TLS, args[0].P->id, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_success_gw, ev);
+}
+
+void do_reply_contact (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 4);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_contact (TLS, args[0].num, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_success_gw, ev);
 }
 
 void do_main_session (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1174,6 +1210,12 @@ void do_send_location (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_send_location (TLS, args[0].P->id, args[1].dval, args[2].dval, print_msg_success_gw, ev);
 }
 
+void do_reply_location (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 3);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_reply_location (TLS, args[0].num, args[1].dval, args[2].dval, print_msg_success_gw, ev);
+}
+
 
 struct command commands[] = {
   {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option"},
@@ -1214,6 +1256,14 @@ struct command commands[] = {
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
   {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "msg <msg-id> <text>\tSends text reply to message"},
+  {"reply_audio", {ca_number, ca_file_name_end, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer"},
+  {"reply_contact", {ca_number, ca_string, ca_string, ca_string, ca_none}, do_reply_contact, "reply_contact <msg-id> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
+  {"reply_document", {ca_number, ca_file_name_end, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer"},
+  {"reply_file", {ca_number, ca_file_name_end, ca_none}, do_reply_file, "reply_file <msg-id> <file>\tSends document to peer"},
+  {"reply_location", {ca_number, ca_double, ca_double, ca_none}, do_reply_location, "reply_location <msg-id> <latitude> <longitude>\tSends geo location"},
+  {"reply_photo", {ca_number, ca_file_name_end, ca_none}, do_reply_photo, "reply_photo <msg-id> <file>\tSends photo to peer"},
+  //{"reply_text", {ca_number, ca_file_name_end, ca_none}, do_reply_text, "reply_text <msg-id> <file>\tSends contents of text file as plain text message"},
+  {"reply_video", {ca_number, ca_file_name_end, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer"},
 //  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
@@ -3024,6 +3074,9 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   }
   if (M->reply_id) {
     mprintf (ev, "[reply to %d] ", M->reply_id);
+  }
+  if (M->flags & TGLMF_MENTION) {
+    mprintf (ev, "[mention] ");
   }
   if (M->message && strlen (M->message)) {
     mprintf (ev, "%s", M->message);
