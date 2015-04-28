@@ -2650,7 +2650,11 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
 
       return;
     case tgl_message_media_geo:
-      mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
+        if (json_mode_enabled){
+          mprintf (ev, "\"geo\":[%.6lf,%.6lf]", M->geo.latitude, M->geo.longitude);
+        }else{
+          mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
+        }
       return;
     case tgl_message_media_contact:
       mprintf (ev, "[contact] ");
@@ -2737,11 +2741,11 @@ void print_fwd_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U
     } else if (use_ids) {
       mprintf (ev, "\"fwd\":\"user#%d\", ", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
-      mprintf (ev, "\"fwd\":\"%s\", ", U->user.last_name);
+      mprintf (ev, "\"fwd\":\"%s\", ", escape_char(U->user.last_name));
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
-      mprintf (ev, "\"fwd\":\"%s\", ", U->user.first_name);
+      mprintf (ev, "\"fwd\":\"%s\", ", escape_char(U->user.first_name));
     } else {
-      mprintf (ev, "\"fwd\":\"%s %s\", ", U->user.first_name, U->user.last_name); 
+      mprintf (ev, "\"fwd\":\"%s %s\", ", escape_char(U->user.first_name), escape_char(U->user.last_name)); 
     }
   }
 }
@@ -2772,11 +2776,11 @@ void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U, ch
     } else if (use_ids) {
       mprintf (ev, "\"%s\":\"user#%d\", ", key,  tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
-      mprintf (ev, "\"%s\":\"%s\", ", key,  U->user.last_name);
+      mprintf (ev, "\"%s\":\"%s\", ", key,  escape_char(U->user.last_name));
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
-      mprintf (ev, "\"%s\":\"%s\", ", key,  U->user.first_name);
+      mprintf (ev, "\"%s\":\"%s\", ", key, escape_char( U->user.first_name));
     } else {
-      mprintf (ev, "\"%s\":\"%s %s\", ", key, U->user.first_name, U->user.last_name); 
+      mprintf (ev, "\"%s\":\"%s %s\", ", key, escape_char(U->user.first_name), escape_char(U->user.last_name)); 
     }
   }
 }
@@ -2806,7 +2810,7 @@ void print_chat_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   if (!C || use_ids) {
     mprintf (ev, "\"chat\":\"chat#%d\", ", tgl_get_peer_id (id));
   } else {
-    mprintf (ev, "\"chat\":\"%s\",", C->chat.title);
+    mprintf (ev, "\"chat\":\"%s\",", escape_char(C->chat.title));
   }
 }
 
