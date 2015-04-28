@@ -648,6 +648,7 @@ void on_started (struct tgl_state *TLS) {
   if (wait_dialog_list) {
     wait_dialog_list = 0;
     tgl_do_get_dialog_list (TLS, 100, 0, dlist_cb, 0);
+    return;
   }
   #ifdef USE_LUA
     lua_diff_end ();

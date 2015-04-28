@@ -1562,11 +1562,9 @@ void work_modifier (const char *s, int l) {
 }
 
 void print_fail (struct in_ev *ev) {
-  if (ev) {
-    mprint_start (ev);
-    mprintf (ev, "FAIL\n");
-    mprint_end (ev);
-  }
+  mprint_start (ev);
+  mprintf (ev, "FAIL\n");
+  mprint_end (ev);
 }
 
 void print_success (struct in_ev *ev) {
