@@ -937,9 +937,11 @@ void lua_do_all (void) {
         lua_file_cb (TLS, lua_ptr[p], 0, 0);
       } else {
         if (M->media.type == tgl_message_media_photo) {
-          tgl_do_load_photo (TLS, &M->media.photo, lua_file_cb, lua_ptr[p]);
+          assert (M->media.photo);
+          tgl_do_load_photo (TLS, M->media.photo, lua_file_cb, lua_ptr[p]);
         } else if (M->media.type == tgl_message_media_document) {
-          tgl_do_load_document (TLS, &M->media.document, lua_file_cb, lua_ptr[p]);
+          assert (M->media.document);
+          tgl_do_load_document (TLS, M->media.document, lua_file_cb, lua_ptr[p]);
         } else {
           tgl_do_load_encr_document (TLS, &M->media.encr_document, lua_file_cb, lua_ptr[p]);
         }
@@ -952,7 +954,7 @@ void lua_do_all (void) {
       if (!M || (M->media.type != tgl_message_media_document)) {
         lua_file_cb (TLS, lua_ptr[p], 0, 0);
       } else {
-        tgl_do_load_document_thumb (TLS, &M->media.document, lua_file_cb, lua_ptr[p]);
+        tgl_do_load_document_thumb (TLS, M->media.document, lua_file_cb, lua_ptr[p]);
       }
       p += 2;
       break;
