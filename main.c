@@ -477,6 +477,7 @@ void usage (void) {
   printf ("  --disable-names/-I                   use user and chat IDs in updates instead of names\n");
   printf ("  --enable-ipv6/-6                     use ipv6 (may be unstable)\n");
   printf ("  --help/-h                            prints this help\n");
+  printf ("  --accept-any-tcp                     accepts tcp connections from any src (only loopback by default)\n");
 
   exit (1);
 }
@@ -533,6 +534,7 @@ static void sighup_handler (const int sig) {
 
 char *set_user_name;
 char *set_group_name;
+int accept_any_tcp;
 
 int change_user_group () {
   char *username = set_user_name;
@@ -619,6 +621,7 @@ void args_parse (int argc, char **argv) {
     {"disable-names", no_argument, 0, 'I'},
     {"enable-ipv6", no_argument, 0, '6'},
     {"help", no_argument, 0, 'h'},
+    {"accept-any-tcp", no_argument, 0,  1001},
     {0,         0,                 0,  0 }
   };
 
@@ -639,6 +642,9 @@ void args_parse (int argc, char **argv) {
     switch (opt) {
     case 1000:
       tgl_allocator = &tgl_allocator_debug;
+      break;
+    case 1001:
+      accept_any_tcp = 1;
       break;
     case 'u':
       set_default_username (optarg);
@@ -851,7 +857,7 @@ int main (int argc, char **argv) {
     memset (&serv_addr, 0, sizeof (serv_addr));
     
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl (0x7f000001);
+    serv_addr.sin_addr.s_addr = accept_any_tcp ? INADDR_ANY : htonl (0x7f000001);
     serv_addr.sin_port = htons (port);
  
     if (bind (sfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
