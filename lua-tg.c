@@ -243,8 +243,8 @@ void push_media (struct tgl_message_media *M) {
   my_lua_checkstack (luaState, 4);
 
   switch (M->type) {
+  //case tgl_message_media_photo_encr:
   case tgl_message_media_photo:
-  case tgl_message_media_photo_encr:
     lua_newtable (luaState);
     lua_add_string_field ("type", "photo");
     break;
@@ -933,7 +933,7 @@ void lua_do_all (void) {
     case lq_load_audio:
     case lq_load_document:
       M = lua_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
+      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
         lua_file_cb (TLS, lua_ptr[p], 0, 0);
       } else {
         if (M->media.type == tgl_message_media_photo) {
@@ -943,7 +943,7 @@ void lua_do_all (void) {
           assert (M->media.document);
           tgl_do_load_document (TLS, M->media.document, lua_file_cb, lua_ptr[p]);
         } else {
-          tgl_do_load_encr_document (TLS, &M->media.encr_document, lua_file_cb, lua_ptr[p]);
+          tgl_do_load_encr_document (TLS, M->media.encr_document, lua_file_cb, lua_ptr[p]);
         }
       }
       p += 2;

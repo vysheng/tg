@@ -790,10 +790,10 @@ void do_ ## act ## _ ## tp (int arg_num, struct arg args[], struct in_ev *ev) { 
       tgl_do_load_photo (TLS, M->media.photo, actf, ev);\
     } else if (M->media.type == tgl_message_media_document) {\
       tgl_do_load_document (TLS, M->media.document, actf, ev);\
-    } else if (M->media.type == tgl_message_media_photo_encr || M->media.type == tgl_message_media_document_encr) {\
-      tgl_do_load_encr_document (TLS, &M->media.encr_document, actf, ev); \
+    } else if (M->media.type == tgl_message_media_document_encr) {\
+      tgl_do_load_encr_document (TLS, M->media.encr_document, actf, ev); \
     } else if (M->media.type == tgl_message_media_webpage) {\
-      actf (TLS, ev, 1, M->media.webpage.url);\
+      actf (TLS, ev, 1, M->media.webpage->url);\
     } else if (M->media.type == tgl_message_media_geo || M->media.type == tgl_message_media_venue) { \
       static char s[1000]; \
       sprintf (s, "https://maps.google.com/?q=%.6lf,%.6lf", M->media.geo.latitude, M->media.geo.longitude);\
@@ -2696,50 +2696,47 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       mprintf (ev, "]");
 
       return;
-    case tgl_message_media_photo_encr:
-      mprintf (ev, "[photo]");
-      return;
     case tgl_message_media_document_encr:
       mprintf (ev, "[");
-      if (M->encr_document.flags & FLAG_DOCUMENT_IMAGE) {
+      if (M->encr_document->flags & FLAG_DOCUMENT_IMAGE) {
         mprintf (ev, "image");
-      } else if (M->encr_document.flags & FLAG_DOCUMENT_AUDIO) {
+      } else if (M->encr_document->flags & FLAG_DOCUMENT_AUDIO) {
         mprintf (ev, "audio");
-      } else if (M->encr_document.flags & FLAG_DOCUMENT_VIDEO) {
+      } else if (M->encr_document->flags & FLAG_DOCUMENT_VIDEO) {
         mprintf (ev, "video");
-      } else if (M->encr_document.flags & FLAG_DOCUMENT_STICKER) {
+      } else if (M->encr_document->flags & FLAG_DOCUMENT_STICKER) {
         mprintf (ev, "sticker");
       } else {
         mprintf (ev, "document");
       }
 
-      if (M->encr_document.caption && strlen (M->encr_document.caption)) {
-        mprintf (ev, " %s:", M->encr_document.caption);
+      if (M->encr_document->caption && strlen (M->encr_document->caption)) {
+        mprintf (ev, " %s:", M->encr_document->caption);
       } else {
         mprintf (ev, ":");
       }
       
-      if (M->encr_document.mime_type) {
-        mprintf (ev, " type=%s", M->encr_document.mime_type);
+      if (M->encr_document->mime_type) {
+        mprintf (ev, " type=%s", M->encr_document->mime_type);
       }
 
-      if (M->encr_document.w && M->encr_document.h) {
-        mprintf (ev, " size=%dx%d", M->encr_document.w, M->encr_document.h);
+      if (M->encr_document->w && M->encr_document->h) {
+        mprintf (ev, " size=%dx%d", M->encr_document->w, M->encr_document->h);
       }
 
-      if (M->encr_document.duration) {
-        mprintf (ev, " duration=%d", M->encr_document.duration);
+      if (M->encr_document->duration) {
+        mprintf (ev, " duration=%d", M->encr_document->duration);
       }
       
       mprintf (ev, " size=");
-      if (M->encr_document.size < (1 << 10)) {
-        mprintf (ev, "%dB", M->encr_document.size);
-      } else if (M->encr_document.size < (1 << 20)) {
-        mprintf (ev, "%dKiB", M->encr_document.size >> 10);
-      } else if (M->encr_document.size < (1 << 30)) {
-        mprintf (ev, "%dMiB", M->encr_document.size >> 20);
+      if (M->encr_document->size < (1 << 10)) {
+        mprintf (ev, "%dB", M->encr_document->size);
+      } else if (M->encr_document->size < (1 << 20)) {
+        mprintf (ev, "%dKiB", M->encr_document->size >> 10);
+      } else if (M->encr_document->size < (1 << 30)) {
+        mprintf (ev, "%dMiB", M->encr_document->size >> 20);
       } else {
-        mprintf (ev, "%dGiB", M->encr_document.size >> 30);
+        mprintf (ev, "%dGiB", M->encr_document->size >> 30);
       }
       
       mprintf (ev, "]");
@@ -2760,17 +2757,17 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       return;
     case tgl_message_media_webpage:
       mprintf (ev, "[webpage:");
-      if (M->webpage.url) {
-        mprintf (ev, " url:'%s'", M->webpage.url);
+      if (M->webpage->url) {
+        mprintf (ev, " url:'%s'", M->webpage->url);
       }
-      if (M->webpage.title) {
-        mprintf (ev, " title:'%s'", M->webpage.title);
+      if (M->webpage->title) {
+        mprintf (ev, " title:'%s'", M->webpage->title);
       }
-      if (M->webpage.description) {
-        mprintf (ev, " description:'%s'", M->webpage.description);
+      if (M->webpage->description) {
+        mprintf (ev, " description:'%s'", M->webpage->description);
       }
-      if (M->webpage.author) {
-        mprintf (ev, " author:'%s'", M->webpage.author);
+      if (M->webpage->author) {
+        mprintf (ev, " author:'%s'", M->webpage->author);
       }
       mprintf (ev, "]");
       break;
