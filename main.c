@@ -69,6 +69,7 @@
 #include "loop.h"
 #include "interface.h"
 #include <tgl/tools.h>
+#include <getopt.h>
 
 #ifdef USE_LUA
 #  include "lua-tg.h"
@@ -446,35 +447,36 @@ void inner_main (void) {
 void usage (void) {
   printf ("%s Usage\n", PROGNAME);
     
-  printf ("  -u                  specify username (would not be asked during authorization)\n");
-  printf ("  -k                  specify location of public key (possible multiple entries)\n");
-  printf ("  -v                  increase verbosity (0-ERROR 1-WARNIN 2-NOTICE 3+-DEBUG-levels)\n");
-  printf ("  -N                  message num mode\n");
+  printf ("  --phone/-u                           specify username (would not be asked during authorization)\n");
+  printf ("  --rsa-key/-k                         specify location of public key (possible multiple entries)\n");
+  printf ("  --verbosity/-v                       increase verbosity (0-ERROR 1-WARNIN 2-NOTICE 3+-DEBUG-levels)\n");
+  printf ("  --enable-msg-id/-N                   message num mode\n");
   #ifdef HAVE_LIBCONFIG
-  printf ("  -c                  config file name\n");
-  printf ("  -p                  use specified profile\n");
+  printf ("  --config/-c                          config file name\n");
+  printf ("  --profile/-p                         use specified profile\n");
   #else
-  printf ("  -B                  enable binlog\n");
+  printf ("  --enable-binlog/-B                   enable binlog\n");
   #endif
-  printf ("  -l                  log level\n");
-  printf ("  -f                  during authorization fetch all messages since registration\n");
-  printf ("  -E                  disable auto accept of encrypted chats\n");
+  printf ("  --log-level/-l                       log level\n");
+  printf ("  --sync-from-start/-f                 during authorization fetch all messages since registration\n");
+  printf ("  --disable-auto-accept/-E             disable auto accept of encrypted chats\n");
   #ifdef USE_LUA
-  printf ("  -s                  lua script file\n");
+  printf ("  --lua-script/-s                      lua script file\n");
   #endif
-  printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
-  printf ("  -C                  disable color output\n");
-  printf ("  -R                  disable readline\n");
-  printf ("  -d                  daemon mode\n");
-  printf ("  -L <log-name>       log file name\n");
-  printf ("  -U <user-name>      change uid after start\n");
-  printf ("  -G <group-name>     change gid after start\n");
-  printf ("  -D                  disable output\n");
-  printf ("  -P <port>           port to listen for input commands\n");
-  printf ("  -S <socket-name>    unix socket to create\n");
-  printf ("  -e <commands>       make commands end exit\n");
-  printf ("  -I                  use user and chat IDs in updates instead of names\n");
-  printf ("  -6                  use ipv6 (may be unstable)\n");
+  printf ("  --wait-dialog-list/-W                send dialog_list query and wait for answer before reading input\n");
+  printf ("  --disable-colors/-C                  disable color output\n");
+  printf ("  --disable-readline/-R                disable readline\n");
+  printf ("  --daemonize/-d                       daemon mode\n");
+  printf ("  --logname/-L <log-name>              log file name\n");
+  printf ("  --username/-U <user-name>            change uid after start\n");
+  printf ("  --groupname/-G <group-name>          change gid after start\n");
+  printf ("  --disable-output/-D                  disable output\n");
+  printf ("  --tcp-port/-P <port>                 port to listen for input commands\n");
+  printf ("  --udp-socket/-S <socket-name>        unix socket to create\n");
+  printf ("  --exec/-e <commands>                 make commands end exit\n");
+  printf ("  --disable-names/-I                   use user and chat IDs in updates instead of names\n");
+  printf ("  --enable-ipv6/-6                     use ipv6 (may be unstable)\n");
+  printf ("  --help/-h                            prints this help\n");
 
   exit (1);
 }
@@ -582,8 +584,48 @@ char *unix_socket;
 
 void args_parse (int argc, char **argv) {
   TLS = tgl_state_alloc ();
+
+  static struct option long_options[] = {
+    {"debug-allocator", no_argument, 0,  1000 },
+    {"phone", required_argument, 0, 'u'}, 
+    {"rsa-key", required_argument, 0, 'k'},
+    {"verbosity", no_argument, 0, 'v'},
+    {"enable-msg-id", no_argument, 0, 'N'},
+#ifdef HAVE_LIBCONFIG
+    {"config", required_argument, 0, 'c'},
+    {"profile", required_argument, 0, 'p'},
+#else
+    {"enable-binlog", no_argument, 0, 'B'},
+#endif
+    {"log-level", required_argument, 0, 'l'},
+    {"sync-from-start", no_argument, 0, 'f'},
+    {"disable-auto-accept", no_argument, 0, 'E'},
+    {"allow-weak-random", no_argument, 0, 'w'},
+#ifdef USE_LUA
+    {"lua-script", required_argument, 0, 's'},
+#endif
+    {"wait-dialog-list", no_argument, 0, 'W'},
+    {"disable-colors", no_argument, 0, 'C'},
+    {"disable-readline", no_argument, 0, 'R'},
+    {"daemonize", no_argument, 0, 'd'},
+    {"logname", required_argument, 0, 'L'},
+    {"username", required_argument, 0, 'U'},
+    {"groupname", required_argument, 0, 'G'},
+    {"disable-output", no_argument, 0, 'D'},
+    {"reset-authorization", no_argument, 0, 'q'},
+    {"tcp-port", required_argument, 0, 'P'},
+    {"unix-socket", required_argument, 0, 'S'},
+    {"exec", required_argument, 0, 'e'},
+    {"disable-names", no_argument, 0, 'I'},
+    {"enable-ipv6", no_argument, 0, '6'},
+    {"help", no_argument, 0, 'h'},
+    {0,         0,                 0,  0 }
+  };
+
+
+
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6g"
+  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -592,10 +634,10 @@ void args_parse (int argc, char **argv) {
 #ifdef USE_LUA
   "s:"
 #endif
-  
+  , long_options, NULL
   )) != -1) {
     switch (opt) {
-    case 'g':
+    case 1000:
       tgl_allocator = &tgl_allocator_debug;
       break;
     case 'u':
