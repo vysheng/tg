@@ -2771,7 +2771,7 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
 
       return;
     case tgl_message_media_geo:
-      mprintf (ev, "[geo] https://maps.google.com/?q=%.6lf,%.6lf", M->geo.latitude, M->geo.longitude);
+      mprintf (ev, "[geo https://maps.google.com/?q=%.6lf,%.6lf]", M->geo.latitude, M->geo.longitude);
       return;
     case tgl_message_media_contact:
       mprintf (ev, "[contact] ");
@@ -2800,6 +2800,26 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       }
       mprintf (ev, "]");
       break;
+    case tgl_message_media_venue:
+      mprintf (ev, "[geo https://maps.google.com/?q=%.6lf,%.6lf", M->venue.geo.latitude, M->venue.geo.longitude);
+      
+      if (M->venue.title) {
+        mprintf (ev, " title:'%s'", M->venue.title);
+      }
+      
+      if (M->venue.address) {
+        mprintf (ev, " address:'%s'", M->venue.address);
+      }
+      if (M->venue.provider) {
+        mprintf (ev, " provider:'%s'", M->venue.provider);
+      }
+      if (M->venue.venue_id) {
+        mprintf (ev, " id:'%s'", M->venue.venue_id);
+      }
+
+      mprintf (ev, "]");
+      return;
+      
     default:
       mprintf (ev, "x = %d\n", M->type);
       assert (0);
