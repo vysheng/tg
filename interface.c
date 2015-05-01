@@ -2921,6 +2921,11 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     print_user_name (ev, tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
     mprintf (ev, "\n");
     break;
+  case tgl_message_action_chat_add_user_by_link:
+    mprintf (ev, " added by link from ");
+    print_user_name (ev, tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+    mprintf (ev, "\n");
+    break;
   case tgl_message_action_chat_delete_user:
     mprintf (ev, " deleted user ");
     print_user_name (ev, tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
