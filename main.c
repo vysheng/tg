@@ -119,6 +119,7 @@ int port;
 int use_ids;
 int ipv6_enabled;
 char *start_command;
+int disable_link_preview;
 
 struct tgl_state *TLS;
 
@@ -478,6 +479,7 @@ void usage (void) {
   printf ("  --enable-ipv6/-6                     use ipv6 (may be unstable)\n");
   printf ("  --help/-h                            prints this help\n");
   printf ("  --accept-any-tcp                     accepts tcp connections from any src (only loopback by default)\n");
+  printf ("  --disable-link-preview               disables server-side previews to links\n");
 
   exit (1);
 }
@@ -622,6 +624,7 @@ void args_parse (int argc, char **argv) {
     {"enable-ipv6", no_argument, 0, '6'},
     {"help", no_argument, 0, 'h'},
     {"accept-any-tcp", no_argument, 0,  1001},
+    {"disable-link-preview", no_argument, 0, 1002},
     {0,         0,                 0,  0 }
   };
 
@@ -731,6 +734,9 @@ void args_parse (int argc, char **argv) {
       break;
     case '6':
       ipv6_enabled = 1;
+      break;
+    case 1002:
+      disable_link_preview = 2;
       break;
     case 'h':
     default:

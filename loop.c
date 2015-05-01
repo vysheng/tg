@@ -108,6 +108,7 @@ void (*on_string_cb)(struct tgl_state *TLS, char *str, void *arg);
 void *string_cb_arg;
 char *one_string_prompt;
 int one_string_flags;
+extern int disable_link_preview;
 
 void deactivate_readline (void);
 void reactivate_readline (void);
@@ -682,6 +683,9 @@ int loop (void) {
   tgl_set_app_version (TLS, "Telegram-cli " TELEGRAM_CLI_VERSION);
   if (ipv6_enabled) {
     tgl_enable_ipv6 (TLS);
+  }
+  if (disable_link_preview) {
+    tgl_disable_link_preview (TLS);
   }
   tgl_init (TLS);
  
