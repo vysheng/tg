@@ -2757,6 +2757,7 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       return;
     case tgl_message_media_webpage:
       mprintf (ev, "[webpage:");
+      assert (M->webpage);
       if (M->webpage->url) {
         mprintf (ev, " url:'%s'", M->webpage->url);
       }
