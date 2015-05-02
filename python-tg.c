@@ -1440,11 +1440,12 @@ void py_init (const char *file) {
   if (!file) { return; }
   have_file = 1;
 
-//  PyObject *pName;//, *pModule;
+  PyObject *pName, *pModule;
   
   Py_Initialize();
 
-//  pName = PyFile_FromFile(file, "telegram.py", 'r', null);
+  pName = PyString_FromString(file);
+  pModule = PyImport_Import(pName);
 
 //  PyObject* err = PyErr_Occurred();
 //  if (err != NULL) {
