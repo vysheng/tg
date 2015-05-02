@@ -59,6 +59,10 @@
 #  include "lua-tg.h"
 #endif
 
+#ifdef USE_PYTHON
+#  include "python-tg.h"
+#endif
+
 //#include "mtproto-common.h"
 
 #include <tgl/tgl.h>
@@ -1116,6 +1120,7 @@ extern char *downloads_directory;
 extern char *config_directory;
 extern char *binlog_file_name;
 extern char *lua_file;
+extern char *python_file;
 extern struct event *term_ev;
 
 void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1130,6 +1135,7 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   free (config_directory);
   free (binlog_file_name);
   free (lua_file);
+  free (python_file);
   clear_history ();
   event_free (term_ev);
   event_base_free (TLS->ev_base);
@@ -1933,6 +1939,9 @@ void print_message_gw (struct tgl_state *TLSR, struct tgl_message *M) {
   #ifdef USE_LUA
     lua_new_msg (M);
   #endif
+  #ifdef USE_PYTHON
+    py_new_msg (M);
+  #endif
   if (!binlog_read) { return; }
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) { 
     write_secret_chat_file ();
@@ -1951,6 +1960,9 @@ void our_id_gw (struct tgl_state *TLSR, int id) {
   assert (TLSR == TLS);
   #ifdef USE_LUA
     lua_our_id (id);
+  #endif
+  #ifdef USE_PYTHON
+    py_our_id (id);
   #endif
 }
 
@@ -2004,7 +2016,10 @@ void user_update_gw (struct tgl_state *TLSR, struct tgl_user *U, unsigned flags)
   #ifdef USE_LUA
     lua_user_update (U, flags);
   #endif
-  
+  #ifdef USE_PYTHON
+    py_user_update (U, flags);
+  #endif
+ 
   if (disable_output && !notify_ev) { return; }
   if (!binlog_read) { return; }
   struct in_ev *ev = notify_ev;
@@ -2031,7 +2046,10 @@ void chat_update_gw (struct tgl_state *TLSR, struct tgl_chat *U, unsigned flags)
   #ifdef USE_LUA
     lua_chat_update (U, flags);
   #endif
-  
+  #ifdef USE_PYTHON
+    py_chat_update (U, flags);
+  #endif
+ 
   if (disable_output && !notify_ev) { return; }
   if (!binlog_read) { return; }
   struct in_ev *ev = notify_ev;
@@ -2058,7 +2076,12 @@ void secret_chat_update_gw (struct tgl_state *TLSR, struct tgl_secret_chat *U, u
   #ifdef USE_LUA
     lua_secret_chat_update (U, flags);
   #endif
+  #ifdef USE_PYTHON
+    py_secret_chat_update (U, flags);
+  #endif
   
+
+
   if ((flags & TGL_UPDATE_WORKING) || (flags & TGL_UPDATE_DELETED)) {
     write_secret_chat_file ();
   }
