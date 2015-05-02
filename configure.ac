@@ -4,6 +4,7 @@ AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
 m4_include([ax_lua.m4])
+m4_include([ax_python.m4])
 m4_include([m4_ax_check_openssl.m4])
 m4_include([m4_ax_check_zlib.m4])
 m4_include([m4-ax_gcc_builtin.m4])
@@ -93,6 +94,17 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AC_MSG_ERROR([No lua found. Try --disable-liblua])
       ])
   ])
+
+AC_ARG_ENABLE(python,[--enable-python/--disable-python],
+  [
+    dnl python checks (you can change the required python version bellow)
+    AM_PATH_PYTHON(2.7.0)
+    PY_PREFIX=`$PYTHON -c 'import sys ; print sys.prefix'`
+    PYTHON_LIBS="-lpython$PYTHON_VERSION"
+    PYTHON_CFLAGS="-I$PY_PREFIX/include/python$PYTHON_VERSION"
+    AC_SUBST([PYTHON_LIBS])
+    AC_SUBST([PYTHON_CFLAGS])
+ ])
 
 #check for custom prog name
 AC_ARG_WITH(progname,[--with-progname=<name>],
