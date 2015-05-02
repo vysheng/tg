@@ -75,6 +75,10 @@
 #  include "lua-tg.h"
 #endif
 
+#ifdef USE_PYTHON
+#  include "python-tg.h"
+#endif
+
 #include <tgl/tgl.h>
 
 #define PROGNAME "telegram-cli"
@@ -107,6 +111,7 @@ char *downloads_directory;
 char *config_directory;
 char *binlog_file_name;
 char *lua_file;
+char *python_file;
 int binlog_enabled;
 extern int log_level;
 int sync_from_start;
@@ -379,6 +384,10 @@ void parse_config (void) {
   
   if (!lua_file) {
     parse_config_val (&conf, &lua_file, "lua_script", 0, config_directory);
+  }
+  
+  if (!python_file) {
+    parse_config_val (&conf, &python_file, "python_script", 0, config_directory);
   }
   
   strcpy (buf + l, "binlog_enabled");
@@ -698,6 +707,11 @@ void args_parse (int argc, char **argv) {
       break;
 #endif
     case 'W':
+#ifdef USE_PYTHON
+    case 'Z':
+      python_file = strdup (optarg);
+      break;
+#endif
       wait_dialog_list = 1;
       break;
     case 'C':
@@ -942,6 +956,12 @@ int main (int argc, char **argv) {
     lua_init (lua_file);
   }
   #endif
+  #ifdef USE_PYTHON
+  if (python_file) {
+    py_init (python_file);
+  }
+  #endif
+
 
   inner_main ();
   
