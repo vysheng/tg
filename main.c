@@ -670,6 +670,9 @@ void args_parse (int argc, char **argv) {
 #ifdef USE_LUA
   "s:"
 #endif
+#ifdef USE_PYTHON
+  "Z:"
+#endif
   , long_options, NULL
   )) != -1) {
     switch (opt) {
