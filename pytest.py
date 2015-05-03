@@ -10,7 +10,7 @@ def on_our_id():
     pass
 
 def on_msg_receive(msg):
-    return "Got msg!"
+    return "Got msg from " + msg["from"]["peer"]["first_name"]
 
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"

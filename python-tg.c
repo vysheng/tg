@@ -422,7 +422,7 @@ void py_new_msg (struct tgl_message *M) {
 
   msg = get_message (M);
 
-  arglist = Py_BuildValue("O", msg);
+  arglist = Py_BuildValue("(O)", msg);
   result = PyEval_CallObject(_py_new_msg, arglist);
   Py_DECREF(arglist);
 
@@ -438,7 +438,7 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   peer = get_peer (C->id, (void *)C);
   types = get_update_types (flags);
 
-  arglist = Py_BuildValue("OO", peer, types);
+  arglist = Py_BuildValue("(OO)", peer, types);
   result = PyEval_CallObject(_py_secret_chat_update, arglist);
   Py_DECREF(arglist);
 
@@ -1462,11 +1462,8 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //}
 //
 //
-static void my_python_register (PyObject *dict, const char *name, PyObject *f) {
-  // Store callables for python functions 
-  f = PyDict_GetItemString(dict, name);
-  assert(PyCallable_Check(f)); // TODO handle this
-}
+#define my_python_register(dict, name, f) \
+    f = PyDict_GetItemString(dict, name); 
 
 
 
@@ -1478,6 +1475,10 @@ void py_init (const char *file) {
   PyObject *pName, *pModule, *pDict;
   
   Py_Initialize();
+
+  PyObject* sysPath = PySys_GetObject((char*)"path");
+  PyList_Append(sysPath, PyString_FromString("."));
+
 
   pName = PyString_FromString(file);
   pModule = PyImport_Import(pName);
