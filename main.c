@@ -493,6 +493,23 @@ void usage (void) {
   #ifdef USE_JSON
   printf ("  --json                               prints answers and values in json format\n");
   #endif
+  #ifdef USE_PYTHON
+  printf ("  -Z                  python script file\n");
+  #endif
+  printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
+  printf ("  -C                  disable color output\n");
+  printf ("  -R                  disable readline\n");
+  printf ("  -d                  daemon mode\n");
+  printf ("  -L <log-name>       log file name\n");
+  printf ("  -U <user-name>      change uid after start\n");
+  printf ("  -G <group-name>     change gid after start\n");
+  printf ("  -D                  disable output\n");
+  printf ("  -P <port>           port to listen for input commands\n");
+  printf ("  -S <socket-name>    unix socket to create\n");
+  printf ("  -e <commands>       make commands end exit\n");
+  printf ("  -I                  use user and chat IDs in updates instead of names\n");
+  printf ("  -6                  use ipv6 (may be unstable)\n");
+
   exit (1);
 }
 
