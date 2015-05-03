@@ -57,19 +57,6 @@ PyObject *_py_secret_chat_update;
 PyObject *_py_user_update;
 PyObject *_py_chat_update;
 
-// Python callback callables
-PyObject *_py_empty_cb;
-PyObject *_py_contact_list_cb;
-PyObject *_py_dialog_list_cb;
-PyObject *_py_msg_cb;
-PyObject *_py_msg_list_cb;
-PyObject *_py_file_cb;
-PyObject *_py_chat_cb;
-PyObject *_py_secret_chat_cb;
-PyObject *_py_user_cb;
-PyObject *_py_str_cb;
-
-
 PyObject* get_user (tgl_peer_t *P);
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
@@ -238,7 +225,9 @@ PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   if(peer == NULL)
     assert(0); // TODO handle python exception;
 
-  PyDict_SetItemString (peer, "type", get_tgl_peer_type (tgl_get_peer_type(id)));
+  PyDict_SetItemString (peer, "type_str", get_tgl_peer_type (tgl_get_peer_type(id)));
+  PyDict_SetItemString (peer, "type", PyInt_FromLong(tgl_get_peer_type(id)));
+  PyDict_SetItemString (peer, "id", PyInt_FromLong(tgl_get_peer_id(id)));
 
   if (!P || !(P->flags & FLAG_CREATED)) {
     PyObject *name;
@@ -372,47 +361,44 @@ PyObject* get_message (struct tgl_message *M) {
   return msg;
 }
 
-//void lua_binlog_end (void) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_binlog_replay_end");
-//  assert (lua_gettop (luaState) == 1);
-//
-//  int r = lua_pcall (luaState, 0, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//}
-//
-//void lua_diff_end (void) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_get_difference_end");
-//  assert (lua_gettop (luaState) == 1);
-//
-//  int r = lua_pcall (luaState, 0, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//}
-//
+void py_binlog_end (void) {
+  if (!have_file) { return; }
+
+  PyObject *arglist, *result;
+
+  arglist = Py_BuildValue("()");
+  result = PyEval_CallObject(_py_binlog_end, arglist);
+  Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
+
+}
+
+void py_diff_end (void) {
+  if (!have_file) { return; }
+
+  PyObject *arglist, *result;
+
+  arglist = Py_BuildValue("()");
+  result = PyEval_CallObject(_py_diff_end, arglist);
+  Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
+}
+
 void py_our_id (int id) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_our_id");
-//  lua_pushnumber (luaState, id);
-//  assert (lua_gettop (luaState) == 2);
-//
-//  int r = lua_pcall (luaState, 1, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
+  if (!have_file) { return; }
+
+  PyObject *arglist, *result;
+
+  arglist = Py_BuildValue("(i)", id);
+  result = PyEval_CallObject(_py_our_id, arglist);
+  Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 void py_new_msg (struct tgl_message *M) {
@@ -426,8 +412,10 @@ void py_new_msg (struct tgl_message *M) {
   result = PyEval_CallObject(_py_new_msg, arglist);
   Py_DECREF(arglist);
 
-  assert(result && PyString_Check(result)); // TODO handle python exception
-  logprintf ("python: %s\n", PyString_AsString(result));
+  if(result == NULL)  
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
@@ -442,43 +430,50 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   result = PyEval_CallObject(_py_secret_chat_update, arglist);
   Py_DECREF(arglist);
 
-  assert(result && PyString_Check(result)); // TODO handle python exception
-  logprintf ("python: %s\n", PyString_AsString(result));
+  if(result == NULL)
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 
 void py_user_update (struct tgl_user *U, unsigned flags) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_user_update");
-//  push_peer (U->id, (void *)U);
-//  push_update_types (flags);
-//  assert (lua_gettop (luaState) == 3);
-//
-//  int r = lua_pcall (luaState, 2, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
+  if (!have_file) { return; }
+  PyObject *peer, *types;
+  PyObject *arglist, *result;
+
+  peer = get_peer (U->id, (void *)U);
+  types = get_update_types (flags);
+
+  arglist = Py_BuildValue("(OO)", peer, types);
+  result = PyEval_CallObject(_py_user_update, arglist);
+  Py_DECREF(arglist);
+
+  if(result == NULL)
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 void py_chat_update (struct tgl_chat *C, unsigned flags) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_chat_update");
-//  push_peer (C->id, (void *)C);
-//  push_update_types (flags);
-//  assert (lua_gettop (luaState) == 3);
-//
-//  int r = lua_pcall (luaState, 2, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
+  if (!have_file) { return; }
+
+  PyObject *peer, *types;
+  PyObject *arglist, *result;
+
+  peer = get_peer (C->id, (void *)C);
+  types = get_update_types (flags);
+
+  arglist = Py_BuildValue("(OO)", peer, types);
+  result = PyEval_CallObject(_py_chat_update, arglist);
+  Py_DECREF(arglist);
+
+  if(result == NULL)
+    PyErr_Print();
+  else
+    logprintf ("python: %s\n", PyString_AsString(result));
 }
-//
+
 ////extern tgl_peer_t *Peers[];
 ////extern int peer_num;
 //
@@ -537,12 +532,12 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  lq_extf
 //};
 //
-//struct lua_query_extra {
+//struct py_query_extra {
 //  int func;
 //  int param;
 //};
 //
-//void lua_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
+//void py_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -660,8 +655,8 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  free (cb);
 //}
 //
-//void lua_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_message *M) {
-//  assert (TLSR == TLS);
+void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_message *M) {
+  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
 //  //lua_checkstack (luaState, 20);
@@ -690,8 +685,8 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  }
 //
 //  free (cb);
-//}
-//
+}
+
 //void lua_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_message *M[]) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
@@ -1166,13 +1161,27 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  enum lua_function_param params[10];
 //};
 //
-//struct lua_function functions[] = {
-//  {"get_contact_list", lq_contact_list, { lfp_none }},
-//  {"get_dialog_list", lq_dialog_list, { lfp_none }},
-//  {"rename_chat", lq_rename_chat, { lfp_chat, lfp_string, lfp_none }},
-//  {"send_msg", lq_msg, { lfp_peer, lfp_string, lfp_none }},
-//  {"send_typing", lq_send_typing, { lfp_peer, lfp_none }},
-//  {"send_typing_abort", lq_send_typing_abort, { lfp_peer, lfp_none }},
+
+PyObject* py_send_msg(PyObject *self, PyObject *args) {
+  const char *msg;
+  tgl_peer_id_t id;
+
+  if (!PyArg_ParseTuple(args, "iis", &id.type, &id.id, &msg))
+    return NULL;
+
+  tgl_do_send_message (TLS, (tgl_peer_id_t) id, msg, strlen (msg), py_msg_cb, args);  
+
+  return PyString_FromString("sent!");
+} 
+
+
+static PyMethodDef py_tgl_methods[] = {
+//  {"get_contact_list", lq_contact_list, METH_VARARGS},
+//  {"get_dialog_list", lq_dialog_list, METH_VARARGS},
+//  {"rename_chat", lq_rename_chat, METH_VARARGS},
+  {"send_msg", py_send_msg, METH_VARARGS, "send message to user or chat"},
+//  {"send_typing", lq_send_typing, METH_VARARGS},
+//  {"send_typing_abort", lq_send_typing_abort, METH_VARARGS},
 //  {"send_photo", lq_send_photo, { lfp_peer, lfp_string, lfp_none }},
 //  {"send_video", lq_send_video, { lfp_peer, lfp_string, lfp_none }},
 //  {"send_audio", lq_send_audio, { lfp_peer, lfp_string, lfp_none }},
@@ -1211,9 +1220,9 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  {"status_offline", lq_status_offline, { lfp_none }},
 //  {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
 //  {"ext_function", lq_extf, { lfp_string, lfp_none }},
-//  { 0, 0, { lfp_none}}
-//};
-//
+  { NULL, NULL, 0, NULL }
+};
+
 //static int parse_lua_function (lua_State *L, struct lua_function *F) {
 //  int p = 0;
 //  while (F->params[p] != lfp_none) { p ++; }
@@ -1466,7 +1475,10 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
     f = PyDict_GetItemString(dict, name); 
 
 
-
+void inittgl()
+{
+  (void) Py_InitModule("tgl", py_tgl_methods);    
+}
 
 void py_init (const char *file) {
   if (!file) { return; }
@@ -1475,6 +1487,8 @@ void py_init (const char *file) {
   PyObject *pName, *pModule, *pDict;
   
   Py_Initialize();
+  inittgl();
+
 
   PyObject* sysPath = PySys_GetObject((char*)"path");
   PyList_Append(sysPath, PyString_FromString("."));
@@ -1483,6 +1497,7 @@ void py_init (const char *file) {
   pName = PyString_FromString(file);
   pModule = PyImport_Import(pName);
   pDict = PyModule_GetDict(pModule);
+
 
   // Store callables for python functions
   my_python_register(pDict, "on_binlog_replay_end", _py_binlog_end);
