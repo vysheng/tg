@@ -471,6 +471,9 @@ void usage (void) {
   #ifdef USE_LUA
   printf ("  -s                  lua script file\n");
   #endif
+  #ifdef USE_PYTHON
+  printf ("  -Z                  python script file\n");
+  #endif
   printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
   printf ("  -C                  disable color output\n");
   printf ("  -R                  disable readline\n");

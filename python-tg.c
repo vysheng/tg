@@ -47,299 +47,331 @@ extern int verbosity;
 extern struct tgl_state *TLS;
 
 static int have_file;
-//
-//void push_user (tgl_peer_t *P);
-//void push_peer (tgl_peer_id_t id, tgl_peer_t *P);
-//
-//void lua_add_string_field (const char *name, const char *value) {
-//  assert (name && strlen (name));
-//  if (!value || !strlen (value)) { return; }
-//  my_lua_checkstack (luaState, 3);
-//  lua_pushstring (luaState, name);
-//  lua_pushstring (luaState, value);
-//  lua_settable (luaState, -3);
-//}
-//
-//void lua_add_string_field_arr (int num, const char *value) {
-//  if (!value || !strlen (value)) { return; }
-//  my_lua_checkstack (luaState, 3);
-//  lua_pushnumber (luaState, num);
-//  lua_pushstring (luaState, value);
-//  lua_settable (luaState, -3);
-//}
-//
-//void lua_add_num_field (const char *name, double value) {
-//  assert (name && strlen (name));
-//  my_lua_checkstack (luaState, 3);
-//  lua_pushstring (luaState, name);
-//  lua_pushnumber (luaState, value);
-//  lua_settable (luaState, -3);
-//}
-//
-//void push_tgl_peer_type (int x) {
-//  switch (x) {
-//  case TGL_PEER_USER:
-//    lua_pushstring (luaState, "user");
-//    break;
-//  case TGL_PEER_CHAT:
-//    lua_pushstring (luaState, "chat");
-//    break;
-//  case TGL_PEER_ENCR_CHAT:
-//    lua_pushstring (luaState, "encr_chat");
-//    break;
-//  default:
-//    assert (0);
-//  }
-//}
-//
-//void push_user (tgl_peer_t *P) {
-//  my_lua_checkstack (luaState, 4);
-//  lua_add_string_field ("first_name", P->user.first_name);
-//  lua_add_string_field ("last_name", P->user.last_name);
-//  lua_add_string_field ("real_first_name", P->user.real_first_name);
-//  lua_add_string_field ("real_last_name", P->user.real_last_name);
-//  lua_add_string_field ("phone", P->user.phone);
-//  if (P->user.access_hash) {
-//    lua_add_num_field ("access_hash", 1);
-//  }
-//}
-//
-//void push_chat (tgl_peer_t *P) {
-//  my_lua_checkstack (luaState, 4);
-//  assert (P->chat.title);
-//  lua_add_string_field ("title", P->chat.title);
-//  lua_add_num_field ("members_num", P->chat.users_num);
-//  if (P->chat.user_list) {
-//    lua_pushstring (luaState, "members");
-//    lua_newtable (luaState);
-//    int i;
-//    for (i = 0; i < P->chat.users_num; i++) {
-//      lua_pushnumber (luaState, i);
-//      tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
-//      push_peer (id, tgl_peer_get (TLS, id));
-//      lua_settable (luaState, -3);
-//    }
-//    lua_settable (luaState, -3);
-//  }
-//}
-//
-//void push_encr_chat (tgl_peer_t *P) {
-//  my_lua_checkstack (luaState, 4);
-//  lua_pushstring (luaState, "user");
-//  push_peer (TGL_MK_USER (P->encr_chat.user_id), tgl_peer_get (TLS, TGL_MK_USER (P->encr_chat.user_id)));
-//  lua_settable (luaState, -3);
-//}
-//
-//void push_update_types (unsigned flags) {
-//  my_lua_checkstack (luaState, 4);
-//  lua_newtable (luaState);
-//  int cc = 0;
-//  
-//  
-//  if (flags & TGL_UPDATE_CREATED) {
-//    lua_add_string_field_arr (cc++, "created");
-//  }  
-//  if (flags & TGL_UPDATE_DELETED) {
-//    lua_add_string_field_arr (cc++, "deleted");
-//  }  
-//  if (flags & TGL_UPDATE_PHONE) {
-//    lua_add_string_field_arr (cc++, "phone");
-//  }
-//  if (flags & TGL_UPDATE_CONTACT) {
-//    lua_add_string_field_arr (cc++, "contact");
-//  }
-//  if (flags & TGL_UPDATE_PHOTO) {
-//    lua_add_string_field_arr (cc++, "photo");
-//  }
-//  if (flags & TGL_UPDATE_BLOCKED) {
-//    lua_add_string_field_arr (cc++, "blocked");
-//  }
-//  if (flags & TGL_UPDATE_REAL_NAME) {
-//    lua_add_string_field_arr (cc++, "real_name");
-//  }
-//  if (flags & TGL_UPDATE_NAME) {
-//    lua_add_string_field_arr (cc++, "name");
-//  }
-//  if (flags & TGL_UPDATE_REQUESTED) {
-//    lua_add_string_field_arr (cc++, "requested");
-//  }
-//  if (flags & TGL_UPDATE_WORKING) {
-//    lua_add_string_field_arr (cc++, "working");
-//  }
-//  if (flags & TGL_UPDATE_FLAGS) {
-//    lua_add_string_field_arr (cc++, "flags");
-//  }
-//  if (flags & TGL_UPDATE_TITLE) {
-//    lua_add_string_field_arr (cc++, "title");
-//  }
-//  if (flags & TGL_UPDATE_ADMIN) {
-//    lua_add_string_field_arr (cc++, "admin");
-//  }
-//  if (flags & TGL_UPDATE_MEMBERS) {
-//    lua_add_string_field_arr (cc++, "members");
-//  }
-//  if (flags & TGL_UPDATE_ACCESS_HASH) {
-//    lua_add_string_field_arr (cc++, "access_hash");
-//  }
-//  if (flags & TGL_UPDATE_USERNAME) {
-//    lua_add_string_field_arr (cc++, "username");
-//  }
-//
-//}
-//
-//void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
-//  lua_newtable (luaState);
-// 
-//  lua_add_num_field ("id", tgl_get_peer_id (id));
-//  lua_pushstring (luaState, "type");
-//  push_tgl_peer_type (tgl_get_peer_type (id));
-//  lua_settable (luaState, -3);
-//
-//
-//  if (!P || !(P->flags & FLAG_CREATED)) {
-//    lua_pushstring (luaState, "print_name"); 
-//    static char s[100];
-//    switch (tgl_get_peer_type (id)) {
-//    case TGL_PEER_USER:
-//      sprintf (s, "user#%d", tgl_get_peer_id (id));
-//      break;
-//    case TGL_PEER_CHAT:
-//      sprintf (s, "chat#%d", tgl_get_peer_id (id));
-//      break;
-//    case TGL_PEER_ENCR_CHAT:
-//      sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
-//      break;
-//    default:
-//      assert (0);
-//    }
-//    lua_pushstring (luaState, s); 
-//    lua_settable (luaState, -3); // flags
-//  
-//    return;
-//  }
-//  
-//  lua_add_string_field ("print_name", P->print_name);
-//  lua_add_num_field ("flags", P->flags);
-//  
-//  switch (tgl_get_peer_type (id)) {
-//  case TGL_PEER_USER:
-//    push_user (P);
-//    break;
-//  case TGL_PEER_CHAT:
-//    push_chat (P);
-//    break;
-//  case TGL_PEER_ENCR_CHAT:
-//    push_encr_chat (P);
-//    break;
-//  default:
-//    assert (0);
-//  }
-//}
-//
-//void push_media (struct tgl_message_media *M) {
-//  my_lua_checkstack (luaState, 4);
-//
-//  switch (M->type) {
-//  case tgl_message_media_photo:
-//  case tgl_message_media_photo_encr:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "photo");
-//    break;
-//  /*case tgl_message_media_video:
-//  case tgl_message_media_video_encr:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "video");
-//    break;
-//  case tgl_message_media_audio:
-//  case tgl_message_media_audio_encr:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "audio");
-//    break;*/
-//  case tgl_message_media_document:
-//  case tgl_message_media_document_encr:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "document");
-//    break;
-//  case tgl_message_media_unsupported:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "unsupported");
-//    break;
-//  case tgl_message_media_geo:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "geo");
-//    lua_add_num_field ("longitude", M->geo.longitude);
-//    lua_add_num_field ("latitude", M->geo.latitude);
-//    break;
-//  case tgl_message_media_contact:
-//    lua_newtable (luaState);
-//    lua_add_string_field ("type", "contact");
-//    lua_add_string_field ("phone", M->phone);
-//    lua_add_string_field ("first_name", M->first_name);
-//    lua_add_string_field ("last_name", M->last_name);
-//    lua_add_num_field ("user_id", M->user_id);
-//    break;
-//  default:
-//    lua_pushstring (luaState, "???");
-//  }
-//}
-//
-//void push_message (struct tgl_message *M) {  
-//  assert (M);
-//  my_lua_checkstack (luaState, 10);
-//  lua_newtable (luaState);
-//
-//  static char s[30];
-//  snprintf (s, 30, "%lld", M->id);
-//  lua_add_string_field ("id", s);
-//  if (!(M->flags & FLAG_CREATED)) { return; }
-//  lua_add_num_field ("flags", M->flags);
-// 
-//  if (tgl_get_peer_type (M->fwd_from_id)) {
-//    lua_pushstring (luaState, "fwd_from");
-//    push_peer (M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
-//    lua_settable (luaState, -3); // fwd_from
-//
-//    lua_add_num_field ("fwd_date", M->fwd_date);
-//  }
-// 
-//  lua_pushstring (luaState, "from");
-//  push_peer (M->from_id, tgl_peer_get (TLS, M->from_id));
-//  lua_settable (luaState, -3); 
-//  
-//  lua_pushstring (luaState, "to");
-//  push_peer (M->to_id, tgl_peer_get (TLS, M->to_id));
-//  lua_settable (luaState, -3); 
-//  
-//  lua_pushstring (luaState, "out");
-//  lua_pushboolean (luaState, M->out);
-//  lua_settable (luaState, -3); 
-//  
-//  lua_pushstring (luaState, "unread");
-//  lua_pushboolean (luaState, M->unread);
-//  lua_settable (luaState, -3); 
-//  
-//  lua_pushstring (luaState, "date");
-//  lua_pushnumber (luaState, M->date);
-//  lua_settable (luaState, -3); 
-//  
-//  lua_pushstring (luaState, "service");
-//  lua_pushboolean (luaState, M->service);
-//  lua_settable (luaState, -3); 
-//
-//  if (!M->service) {  
-//    if (M->message_len && M->message) {
-//      lua_pushstring (luaState, "text");
-//      lua_pushlstring (luaState, M->message, M->message_len);
-//      lua_settable (luaState, -3); 
-//    }
-//    if (M->media.type && M->media.type != tgl_message_media_none) {
-//      lua_pushstring (luaState, "media");
-//      push_media (&M->media);
-//      lua_settable (luaState, -3); 
-//    }
-//  }
-//}
-//
+
+// Python update function callables
+PyObject *_py_binlog_end;
+PyObject *_py_diff_end;
+PyObject *_py_our_id;
+PyObject *_py_new_msg;
+PyObject *_py_secret_chat_update;
+PyObject *_py_user_update;
+PyObject *_py_chat_update;
+
+// Python callback callables
+PyObject *_py_empty_cb;
+PyObject *_py_contact_list_cb;
+PyObject *_py_dialog_list_cb;
+PyObject *_py_msg_cb;
+PyObject *_py_msg_list_cb;
+PyObject *_py_file_cb;
+PyObject *_py_chat_cb;
+PyObject *_py_secret_chat_cb;
+PyObject *_py_user_cb;
+PyObject *_py_str_cb;
+
+
+PyObject* get_user (tgl_peer_t *P);
+PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
+
+void py_add_string_field (PyObject* dict, char *name, const char *value) {
+  assert (PyDict_Check(dict));
+  assert (name && strlen (name));
+  if (!value || !strlen (value)) { return; }
+  PyDict_SetItemString (dict, name, PyString_FromString(value));
+}
+
+void py_add_string_field_arr (PyObject* list, int num, const char *value) {
+  assert(PyList_Check(list));
+  if (!value || !strlen (value)) { return; }
+  if(num >= 0)
+    PyList_SetItem (list, num, PyString_FromString (value));
+  else // Append
+    PyList_Append  (list, PyString_FromString (value));
+}
+
+void py_add_num_field (PyObject* dict, const char *name, double value) {
+  assert (PyDict_Check(dict));
+  assert (name && strlen (name));
+  PyDict_SetItemString (dict, name, PyFloat_FromDouble(value));
+}
+
+PyObject* get_tgl_peer_type (int x) {
+  PyObject *type;
+
+  switch (x) {
+  case TGL_PEER_USER:
+    type = PyString_FromString("user");
+    break;
+  case TGL_PEER_CHAT:
+    type = PyString_FromString("chat");
+    break;
+  case TGL_PEER_ENCR_CHAT:
+    type = PyString_FromString("encr_chat");
+    break;
+  default:
+    assert (0);
+  }
+
+  return type;
+}
+
+PyObject* get_user (tgl_peer_t *P) {
+  PyObject *user;
+  
+  user = PyDict_New();
+  if(user == NULL)
+    assert(0); // TODO handle python exception
+
+  py_add_string_field (user, "first_name",      P->user.first_name);
+  py_add_string_field (user, "last_name",       P->user.last_name);
+  py_add_string_field (user, "real_first_name", P->user.real_first_name);
+  py_add_string_field (user, "real_last_name",  P->user.real_last_name);
+  py_add_string_field (user, "phone",           P->user.phone);
+  if (P->user.access_hash) {
+    py_add_num_field (user, "access_hash",   1);
+  }
+
+  return user;
+}
+
+PyObject* get_chat (tgl_peer_t *P) {
+  PyObject *chat, *members;
+
+  chat = PyDict_New();
+  if(chat == NULL)
+    assert(0); // TODO handle python exception
+
+  assert (P->chat.title);
+
+  py_add_string_field (chat, "title",       P->chat.title);
+  py_add_num_field (chat, "members_num", P->chat.users_num);
+  if (P->chat.user_list) {
+    members = PyList_New(P->chat.users_num);
+    if(members == NULL)
+      assert(0); // TODO handle python exception
+
+    int i;
+    for (i = 0; i < P->chat.users_num; i++) {
+      tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
+      PyList_SetItem (members, i, get_peer(id, tgl_peer_get (TLS, id)));
+    }
+    PyDict_SetItemString (chat, "members", members);
+  }
+
+  return chat;
+}
+
+PyObject* get_encr_chat (tgl_peer_t *P) {
+  PyObject *encr_chat, *user;
+
+  encr_chat = PyDict_New();
+  if(encr_chat == NULL)
+    assert(0); // TODO handle python exception
+
+  user = get_peer (TGL_MK_USER (P->encr_chat.user_id), tgl_peer_get (TLS, TGL_MK_USER (P->encr_chat.user_id)));
+  PyDict_SetItemString (encr_chat, "user", user);
+  
+  return encr_chat;
+}
+
+PyObject* get_update_types (unsigned flags) {
+  PyObject* types;
+  types = PyList_New(0); 
+  if(types == NULL)
+    assert(0); // TODO handle python exception
+  
+  if (flags & TGL_UPDATE_CREATED) {
+    py_add_string_field_arr(types, -1, "created");
+  }  
+  if (flags & TGL_UPDATE_DELETED) {
+    py_add_string_field_arr(types, -1, "deleted");
+  }  
+  if (flags & TGL_UPDATE_PHONE) {
+    py_add_string_field_arr(types, -1, "phone");
+  }
+  if (flags & TGL_UPDATE_CONTACT) {
+    py_add_string_field_arr(types, -1, "contact");
+  }
+  if (flags & TGL_UPDATE_PHOTO) {
+    py_add_string_field_arr(types, -1, "photo");
+  }
+  if (flags & TGL_UPDATE_BLOCKED) {
+    py_add_string_field_arr(types, -1, "blocked");
+  }
+  if (flags & TGL_UPDATE_REAL_NAME) {
+    py_add_string_field_arr(types, -1, "real_name");
+  }
+  if (flags & TGL_UPDATE_NAME) {
+    py_add_string_field_arr(types, -1, "name");
+  }
+  if (flags & TGL_UPDATE_REQUESTED) {
+    py_add_string_field_arr(types, -1, "requested");
+  }
+  if (flags & TGL_UPDATE_WORKING) {
+    py_add_string_field_arr(types, -1, "working");
+  }
+  if (flags & TGL_UPDATE_FLAGS) {
+    py_add_string_field_arr(types, -1, "flags");
+  }
+  if (flags & TGL_UPDATE_TITLE) {
+    py_add_string_field_arr(types, -1, "title");
+  }
+  if (flags & TGL_UPDATE_ADMIN) {
+    py_add_string_field_arr(types, -1, "admin");
+  }
+  if (flags & TGL_UPDATE_MEMBERS) {
+    py_add_string_field_arr(types, -1, "members");
+  }
+  if (flags & TGL_UPDATE_ACCESS_HASH) {
+    py_add_string_field_arr(types, -1, "access_hash");
+  }
+  if (flags & TGL_UPDATE_USERNAME) {
+    py_add_string_field_arr(types, -1, "username");
+  }
+  return types;
+}
+
+PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
+  PyObject *peer;
+
+  peer = PyDict_New();
+  if(peer == NULL)
+    assert(0); // TODO handle python exception;
+
+  PyDict_SetItemString (peer, "type", get_tgl_peer_type (tgl_get_peer_type(id)));
+
+  if (!P || !(P->flags & FLAG_CREATED)) {
+    PyObject *name;
+
+    static char s[100];
+    switch (tgl_get_peer_type (id)) {
+    case TGL_PEER_USER:
+      sprintf (s, "user#%d", tgl_get_peer_id (id));
+      break;
+    case TGL_PEER_CHAT:
+      sprintf (s, "chat#%d", tgl_get_peer_id (id));
+      break;
+    case TGL_PEER_ENCR_CHAT:
+      sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
+      break;
+    default:
+      assert (0);
+    }
+    
+    name = PyDict_New();
+    if(name == NULL)
+      assert(0); // TODO handle python exception;
+
+    PyDict_SetItemString (name, "print_name", PyString_FromString(s));
+    PyDict_SetItemString (peer, "peer", name);
+  } else {
+    PyObject *peer_obj;
+    
+    switch (tgl_get_peer_type (id)) {
+    case TGL_PEER_USER:
+      peer_obj = get_user (P);
+      break;
+    case TGL_PEER_CHAT:
+      peer_obj = get_chat (P);
+      break;
+    case TGL_PEER_ENCR_CHAT:
+      peer_obj = get_encr_chat (P);
+      break;
+    default:
+      assert (0);
+    }
+    PyDict_SetItemString (peer, "peer", peer_obj);
+  }
+
+  return peer;
+}
+
+PyObject* get_media (struct tgl_message_media *M) {
+  PyObject *media;
+
+  media = PyDict_New();
+  if(media == NULL)
+    assert(0); // TODO handle python exception
+
+  switch (M->type) {
+  case tgl_message_media_photo:
+  case tgl_message_media_photo_encr:
+    py_add_string_field (media, "type", "photo");
+    break;
+  /*case tgl_message_media_video:
+  case tgl_message_media_video_encr:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "video");
+    break;
+  case tgl_message_media_audio:
+  case tgl_message_media_audio_encr:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "audio");
+    break;*/
+  case tgl_message_media_document:
+  case tgl_message_media_document_encr:
+    py_add_string_field (media, "type", "document");
+    break;
+  case tgl_message_media_unsupported:
+    py_add_string_field (media, "type", "unsupported");
+    break;
+  case tgl_message_media_geo:
+    py_add_string_field (media, "type", "geo");
+    py_add_num_field (media, "longitude", M->geo.longitude);
+    py_add_num_field (media, "latitude", M->geo.latitude);
+    break;
+  case tgl_message_media_contact:
+    py_add_string_field (media, "type", "contact");
+    py_add_string_field (media, "phone", M->phone);
+    py_add_string_field (media, "first_name", M->first_name);
+    py_add_string_field (media, "last_name", M->last_name);
+    py_add_num_field (media, "user_id", M->user_id);
+    break;
+  default:
+    py_add_string_field (media, "type", "unknown");
+  }
+
+  return media;
+}
+
+PyObject* get_message (struct tgl_message *M) {  
+  assert (M);
+  PyObject *msg;
+
+  msg = PyDict_New();
+  if(msg == NULL)
+    assert(0); // TODO handle python exception
+
+  static char s[30];
+  snprintf (s, 30, "%lld", M->id);
+  py_add_string_field (msg, "id", s);
+  if (!(M->flags & FLAG_CREATED)) { return msg; }
+  py_add_num_field (msg, "flags", M->flags);
+
+  if (tgl_get_peer_type (M->fwd_from_id)) {
+    PyDict_SetItemString(msg, "fwd_from", get_peer(M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id)));
+    py_add_num_field (msg, "fwd_date", M->fwd_date);
+  }
+ 
+  PyDict_SetItemString(msg, "from",    get_peer(M->from_id, tgl_peer_get (TLS, M->from_id)));
+  PyDict_SetItemString(msg, "to",      get_peer(M->to_id, tgl_peer_get (TLS, M->to_id)));
+  PyDict_SetItemString(msg, "out",     (M->out ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "unread",  (M->unread ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "service", (M->service ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "date",    PyLong_FromLong(M->date)); // TODO put this into PyDate object
+
+  if (!M->service) { 
+    if (M->message_len && M->message) {
+      PyDict_SetItemString(msg, "text", PyString_FromStringAndSize(M->message, M->message_len));
+    }
+    if (M->media.type && M->media.type != tgl_message_media_none) {
+      PyDict_SetItemString(msg, "media", get_media(&M->media));  
+    }
+  }
+
+  return msg;
+}
+
 //void lua_binlog_end (void) {
 //  if (!have_file) { return; }
 //  lua_settop (luaState, 0);
@@ -384,35 +416,36 @@ void py_our_id (int id) {
 }
 
 void py_new_msg (struct tgl_message *M) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_msg_receive");
-//  push_message (M);
-//  assert (lua_gettop (luaState) == 2);
-//
-//  int r = lua_pcall (luaState, 1, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
+  if (!have_file) { return; }
+  PyObject *msg;
+  PyObject *arglist, *result;
+
+  msg = get_message (M);
+
+  arglist = Py_BuildValue("O", msg);
+  result = PyEval_CallObject(_py_new_msg, arglist);
+  Py_DECREF(arglist);
+
+  assert(result && PyString_Check(result)); // TODO handle python exception
+  logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
-//  if (!have_file) { return; }
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//  lua_getglobal (luaState, "on_secret_chat_update");
-//  push_peer (C->id, (void *)C);
-//  push_update_types (flags);
-//  assert (lua_gettop (luaState) == 3);
-//
-//  int r = lua_pcall (luaState, 2, 0, 0);
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
+  if (!have_file) { return; }
+  PyObject *peer, *types;
+  PyObject *arglist, *result; 
+
+  peer = get_peer (C->id, (void *)C);
+  types = get_update_types (flags);
+
+  arglist = Py_BuildValue("OO", peer, types);
+  result = PyEval_CallObject(_py_secret_chat_update, arglist);
+  Py_DECREF(arglist);
+
+  assert(result && PyString_Check(result)); // TODO handle python exception
+  logprintf ("python: %s\n", PyString_AsString(result));
 }
+
 
 void py_user_update (struct tgl_user *U, unsigned flags) {
 //  if (!have_file) { return; }
@@ -1429,23 +1462,36 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //}
 //
 //
-//static void my_python_register (const char *name, lua_CFunction f) {
-//  lua_pushstring(L, name);
-//  lua_pushcclosure(L, f, 1);
-//  lua_setglobal(L, name);
-//}
-//
-//
+static void my_python_register (PyObject *dict, const char *name, PyObject *f) {
+  // Store callables for python functions 
+  f = PyDict_GetItemString(dict, name);
+  assert(PyCallable_Check(f)); // TODO handle this
+}
+
+
+
+
 void py_init (const char *file) {
   if (!file) { return; }
   have_file = 1;
 
-  PyObject *pName, *pModule;
+  PyObject *pName, *pModule, *pDict;
   
   Py_Initialize();
 
   pName = PyString_FromString(file);
   pModule = PyImport_Import(pName);
+  pDict = PyModule_GetDict(pModule);
+
+  // Store callables for python functions
+  my_python_register(pDict, "on_binlog_replay_end", _py_binlog_end);
+  my_python_register(pDict, "on_get_difference_end", _py_diff_end);
+  my_python_register(pDict, "on_our_id", _py_our_id);
+  my_python_register(pDict, "on_msg_receive", _py_new_msg);
+  my_python_register(pDict, "on_secret_chat_update", _py_secret_chat_update);
+  my_python_register(pDict, "on_user_update", _py_user_update);
+  my_python_register(pDict, "on_chat_update", _py_chat_update);
+
 
 //  PyObject* err = PyErr_Occurred();
 //  if (err != NULL) {
