@@ -57,6 +57,7 @@
 #include "telegram.h"
 #include "loop.h"
 #include "lua-tg.h"
+#include "python-tg.h"
 #include <tgl/tgl.h>
 #include <tgl/tgl-binlog.h>
 #include <tgl/tgl-net.h>
@@ -214,6 +215,10 @@ void net_loop (void) {
       lua_do_all ();
     #endif
     
+    #ifdef USE_PYTHON
+      py_do_all ();
+    #endif
+
     if (safe_quit && !TLS->active_queries) {
       printf ("All done. Exit\n");
       do_halt (0);

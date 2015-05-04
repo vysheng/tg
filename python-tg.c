@@ -24,6 +24,7 @@
 
 #ifdef USE_PYTHON
 #include "python-tg.h"
+#endif
 
 #include <string.h>
 #include <stdlib.h>
@@ -477,67 +478,67 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 ////extern tgl_peer_t *Peers[];
 ////extern int peer_num;
 //
-//#define MAX_LUA_COMMANDS 1000
-//void *lua_ptr[MAX_LUA_COMMANDS];
-//static int pos;
+#define MAX_PY_COMMANDS 1000
+void *py_ptr[MAX_PY_COMMANDS];
+static int pos;
 //
 //static inline tgl_peer_t *get_peer (const char *s) { 
 //  return tgl_peer_get_by_name (TLS, s);
 //}
-//  
-//enum lua_query_type {
-//  lq_contact_list,
-//  lq_dialog_list,
-//  lq_msg,
-//  lq_send_typing,
-//  lq_send_typing_abort,
-//  lq_rename_chat,
-//  lq_send_photo,
-//  lq_chat_set_photo,
-//  lq_set_profile_photo,
-//  lq_set_profile_name,
-//  lq_send_video,
-//  lq_send_text,
-//  lq_fwd,
-//  lq_fwd_media,
-//  lq_load_photo,
-//  lq_load_video_thumb,
-//  lq_load_video,
-//  lq_chat_info,
-//  lq_user_info,
-//  lq_history,
-//  lq_chat_add_user,
-//  lq_chat_del_user,
-//  lq_add_contact,
-//  lq_del_contact,
-//  lq_rename_contact,
-//  lq_search,
-//  lq_global_search,
-//  lq_mark_read,
-//  lq_create_secret_chat,
-//  lq_create_group_chat,
-//  lq_send_audio,
-//  lq_send_document,
-//  lq_send_file,
-//  lq_load_audio,
-//  lq_load_document,
-//  lq_load_document_thumb,
-//  lq_delete_msg,
-//  lq_restore_msg,
-//  lq_accept_secret_chat,
-//  lq_send_contact,
-//  lq_status_online,
-//  lq_status_offline,
-//  lq_send_location,
-//  lq_extf
-//};
-//
-//struct py_query_extra {
-//  int func;
-//  int param;
-//};
-//
-//void py_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
+  
+enum py_query_type {
+  pq_contact_list,
+  pq_dialog_list,
+  pq_msg,
+  pq_send_typing,
+  pq_send_typing_abort,
+  pq_rename_chat,
+  pq_send_photo,
+  pq_chat_set_photo,
+  pq_set_profile_photo,
+  pq_set_profile_name,
+  pq_send_video,
+  pq_send_text,
+  pq_fwd,
+  pq_fwd_media,
+  pq_load_photo,
+  pq_load_video_thumb,
+  pq_load_video,
+  pq_chat_info,
+  pq_user_info,
+  pq_history,
+  pq_chat_add_user,
+  pq_chat_del_user,
+  pq_add_contact,
+  pq_del_contact,
+  pq_rename_contact,
+  pq_search,
+  pq_global_search,
+  pq_mark_read,
+  pq_create_secret_chat,
+  pq_create_group_chat,
+  pq_send_audio,
+  pq_send_document,
+  pq_send_file,
+  pq_load_audio,
+  pq_load_document,
+  pq_load_document_thumb,
+  pq_delete_msg,
+  pq_restore_msg,
+  pq_accept_secret_chat,
+  pq_send_contact,
+  pq_status_online,
+  pq_status_offline,
+  pq_send_location,
+  pq_extf
+};
+
+struct py_query_extra {
+  int func;
+  int param;
+};
+
+void py_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -561,9 +562,9 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_user **UL) {
+}
+
+void py_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_user **UL) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -599,9 +600,9 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], int msgs[], int unread[]) {
+}
+
+void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], int msgs[], int unread[]) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -653,8 +654,8 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 //  }
 //
 //  free (cb);
-//}
-//
+}
+
 void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_message *M) {
   assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
@@ -687,7 +688,7 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  free (cb);
 }
 
-//void lua_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_message *M[]) {
+void py_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_message *M[]) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -723,9 +724,9 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *file_name) {
+}
+
+void py_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *file_name) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -755,9 +756,9 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_chat *C) {
+}
+
+void py_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_chat *C) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -787,9 +788,9 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_secret_chat *C) {
+}
+
+void py_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_secret_chat *C) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -819,9 +820,9 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_user *C) {
+}
+
+void py_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_user *C) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -851,9 +852,9 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *data) {
+}
+
+void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *data) {
 //  assert (TLSR == TLS);
 //  struct lua_query_extra *cb = cb_extra;
 //  lua_settop (luaState, 0);
@@ -883,506 +884,295 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
 //  }
 //
 //  free (cb);
-//}
-//
-//void lua_do_all (void) {
-//  int p = 0;
-//  while (p < pos) {
-//    int l = (long)lua_ptr[p ++];
-//    assert (p + l + 1 <= pos);
-//    enum lua_query_type f = (long)lua_ptr[p ++];
-//    struct tgl_message *M;
-//    char *s, *s1, *s2, *s3;
-//    switch (f) {
-//    case lq_contact_list:
-//      tgl_do_update_contact_list (TLS, lua_contact_list_cb, lua_ptr[p ++]);
-//      break;
-//    case lq_dialog_list:
-//      tgl_do_get_dialog_list (TLS, lua_dialog_list_cb, lua_ptr[p ++]);
-//      break;
-//    case lq_msg:
-//      tgl_do_send_message (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], strlen (lua_ptr[p + 2]), lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_typing:
-//      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_typing, lua_empty_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_send_typing_abort:
-//      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_cancel, lua_empty_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_rename_chat:
-//      tgl_do_rename_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_photo:
-//      tgl_do_send_document (TLS, -1, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_video:
-//      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_audio:
-//      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_document:
-//      tgl_do_send_document (TLS, 0, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_file:
-//      tgl_do_send_document (TLS, -2, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_send_text:
-//      tgl_do_send_text (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_chat_set_photo:
-//      tgl_do_set_chat_photo (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_msg_cb, lua_ptr[p]);
-//      free (lua_ptr[p + 2]);
-//      p += 3;
-//      break;
-//    case lq_load_photo:
-//    case lq_load_video:
-//    case lq_load_audio:
-//    case lq_load_document:
-//      M = lua_ptr[p + 1];
-//      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
-//        lua_file_cb (TLS, lua_ptr[p], 0, 0);
-//      } else {
-//        if (M->media.type == tgl_message_media_photo) {
-//          tgl_do_load_photo (TLS, &M->media.photo, lua_file_cb, lua_ptr[p]);
-//        } else if (M->media.type == tgl_message_media_document) {
-//          tgl_do_load_document (TLS, &M->media.document, lua_file_cb, lua_ptr[p]);
-//        } else {
-//          tgl_do_load_encr_document (TLS, &M->media.encr_document, lua_file_cb, lua_ptr[p]);
-//        }
-//      }
-//      p += 2;
-//      break;
-//    case lq_load_video_thumb:
-//    case lq_load_document_thumb:
-//      M = lua_ptr[p + 1];
-//      if (!M || (M->media.type != tgl_message_media_document)) {
-//        lua_file_cb (TLS, lua_ptr[p], 0, 0);
-//      } else {
-//        tgl_do_load_document_thumb (TLS, &M->media.document, lua_file_cb, lua_ptr[p]);
-//      }
-//      p += 2;
-//      break;
-//    case lq_fwd:
-//      tgl_do_forward_message (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((struct tgl_message *)lua_ptr[p + 2])->id, lua_msg_cb, lua_ptr[p]);
-//      p += 3;
-//      break;
-//    case lq_fwd_media:
-//      tgl_do_forward_media (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((struct tgl_message *)lua_ptr[p + 2])->id, lua_msg_cb, lua_ptr[p]);
-//      p += 3;
-//      break;
-//    case lq_chat_info:
-//      tgl_do_get_chat_info (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, lua_chat_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_user_info:
-//      tgl_do_get_user_info (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, lua_user_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_history:
-//      tgl_do_get_history (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, (long)lua_ptr[p + 2], 0, lua_msg_list_cb, lua_ptr[p]);
-//      p += 3;
-//      break;
-//    case lq_chat_add_user:
-//      tgl_do_add_user_to_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, 10, lua_msg_cb, lua_ptr[p]);
-//      p += 3;
-//      break;
-//    case lq_chat_del_user:
-//      tgl_do_del_user_from_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, lua_msg_cb, lua_ptr[p]);
-//      p += 3;
-//      break;
-//    case lq_add_contact:
-//      s1 = lua_ptr[p + 1];
-//      s2 = lua_ptr[p + 2];
-//      s3 = lua_ptr[p + 3];
-//      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, lua_contact_list_cb, lua_ptr[p]);
-//      free (s1);
-//      free (s2);
-//      free (s3);
-//      p += 4;
-//      break;
-//    case lq_del_contact:
-//      tgl_do_del_contact (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_rename_contact:
-//      s1 = lua_ptr[p + 1];
-//      s2 = lua_ptr[p + 2];
-//      s3 = lua_ptr[p + 3];
-//      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 1, lua_contact_list_cb, lua_ptr[p]);
-//      free (s1);
-//      free (s2);
-//      free (s3);
-//      p += 4;
-//      break;
-//    case lq_search:
-//      s = lua_ptr[p + 2];
-//      tgl_do_msg_search (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, 0, 40, 0, s, lua_msg_list_cb, lua_ptr[p]);
-//      free (s);
-//      p += 3;
-//      break;
-//    case lq_global_search:
-//      s = lua_ptr[p + 1];
-//      tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, s, lua_msg_list_cb, lua_ptr[p]);
-//      free (s);
-//      p += 2;
-//      break;
-//    case lq_mark_read:
-//      tgl_do_mark_read (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_set_profile_photo:
-//      s = lua_ptr[p + 1];
-//      tgl_do_set_profile_photo (TLS, s, lua_empty_cb, lua_ptr[p]);
-//      free (s);
-//      p += 2;
-//      break;
-//    case lq_set_profile_name:
-//      s1 = lua_ptr[p + 1];
-//      s2 = lua_ptr[p + 1];
-//      tgl_do_set_profile_name (TLS, s1, s2, lua_user_cb, lua_ptr[p]);
-//      free (s1);
-//      free (s2);
-//      p += 3;
-//      break;
-//    case lq_create_secret_chat:
-//      tgl_do_create_secret_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_secret_chat_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_create_group_chat:
-//      s = lua_ptr[p + 2];
-//      tgl_do_create_group_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, s, lua_msg_cb, lua_ptr[p]);
-//      free (s);
-//      p += 3;
-//      break;
-//    case lq_delete_msg:
-//      tgl_do_delete_msg (TLS, ((struct tgl_message *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_restore_msg:
-//      tgl_do_delete_msg (TLS, (long)lua_ptr[p + 1], lua_empty_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_accept_secret_chat:
-//      tgl_do_accept_encr_chat_request (TLS, lua_ptr[p + 1], lua_secret_chat_cb, lua_ptr[p]);
-//      p += 2;
-//      break;
-//    case lq_send_contact:
-//      s1 = lua_ptr[p + 2];
-//      s2 = lua_ptr[p + 3];
-//      s3 = lua_ptr[p + 4];
-//      tgl_do_send_contact (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), lua_msg_cb, lua_ptr[p]);
-//      free (s1);
-//      free (s2);
-//      free (s3);
-//      p += 5;
-//      break;
-//    case lq_status_online:
-//      tgl_do_update_status (TLS, 1, lua_empty_cb, lua_ptr[p]);
-//      p ++;
-//      break;
-//    case lq_status_offline:
-//      tgl_do_update_status (TLS, 0, lua_empty_cb, lua_ptr[p]);
-//      p ++;
-//      break;
-//    case lq_extf:
-//      s = lua_ptr[p + 1];
-//      tgl_do_send_extf (TLS, s, strlen (s), lua_str_cb, lua_ptr[p]);
-//      free (s);
-//      p += 2;
-//      break;
-//    case lq_send_location:
-//      if (sizeof (void *) == 4) {
-//        tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(float *)(lua_ptr + p + 2), *(float *)(lua_ptr + p + 3), lua_msg_cb, lua_ptr[p]);
-//      } else {
-//        tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(double *)(lua_ptr + p + 2), *(double *)(lua_ptr + p + 3), lua_msg_cb, lua_ptr[p]);
-//      }
-//      p += 4;
-//      break;
-//  /*
-//  lq_delete_msg,
-//  lq_restore_msg,
-//    case 0:
-//      tgl_do_send_message (((tgl_peer_t *)lua_ptr[p])->id, lua_ptr[p + 1], strlen (lua_ptr[p + 1]), 0, 0);
-//      free (lua_ptr[p + 1]);
-//      p += 2;
-//      break;
-//    case 1:
-//      tgl_do_forward_message (((tgl_peer_t *)lua_ptr[p])->id, (long)lua_ptr[p + 1], 0, 0);
-//      p += 2;
-//      break;
-//    case 2:
-//      tgl_do_mark_read (((tgl_peer_t *)lua_ptr[p])->id, 0, 0);
-//      p += 1;
-//      break;*/
-//    default:
-//      assert (0);
-//    }
-//  }
-//  pos = 0;
-//}
-//
-//
-//enum lua_function_param {
-//  lfp_none,
-//  lfp_peer,
-//  lfp_chat,
-//  lfp_user,
-//  lfp_secret_chat,
-//  lfp_string,
-//  lfp_number,
-//  lfp_positive_number,
-//  lfp_nonnegative_number,
-//  lfp_msg,
-//  lfp_double
-//};
-//
-//struct lua_function {
-//  char *name;
-//  enum lua_query_type type;
-//  enum lua_function_param params[10];
-//};
-//
+}
 
-PyObject* py_send_msg(PyObject *self, PyObject *args) {
-  const char *msg;
-  tgl_peer_id_t id;
+void py_do_all (void) {
+  int p = 0;
+  while (p < pos) {
+    assert (p + 1 <= pos);
 
-  if (!PyArg_ParseTuple(args, "iis", &id.type, &id.id, &msg))
-    return NULL;
+    enum py_query_type f = (long)py_ptr[p ++];
+    PyObject *args = (PyObject *)py_ptr[p ++];
+    char *s, *s1, *s2, *s3, *s4;
+    struct tgl_message *M;
+    tgl_peer_id_t peer;
 
-  tgl_do_send_message (TLS, (tgl_peer_id_t) id, msg, strlen (msg), py_msg_cb, args);  
+    switch (f) {
+    case pq_contact_list:
+      tgl_do_update_contact_list (TLS, py_contact_list_cb, NULL);
+      break;
+    case pq_dialog_list:
+      tgl_do_get_dialog_list (TLS, py_dialog_list_cb, NULL);
+      break;
+    case pq_msg:
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s1);
+      
+      tgl_do_send_message (TLS, peer, s1, strlen (s1), py_msg_cb, NULL);
+      break;
+    case pq_send_typing:
+      tgl_do_send_typing (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, tgl_typing_typing, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_send_typing_abort:
+      tgl_do_send_typing (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, tgl_typing_cancel, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_rename_chat:
+      tgl_do_rename_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_send_photo:
+      tgl_do_send_document (TLS, -1, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_send_video:
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_send_audio:
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_send_document:
+      tgl_do_send_document (TLS, 0, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_send_file:
+      tgl_do_send_document (TLS, -2, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_send_text:
+      tgl_do_send_text (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_chat_set_photo:
+      tgl_do_set_chat_photo (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      break;
+    case pq_load_photo:
+    case pq_load_video:
+    case pq_load_audio:
+    case pq_load_document:
+      M = py_ptr[p + 1];
+      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
+        py_file_cb (TLS, py_ptr[p], 0, 0);
+      } else {
+        if (M->media.type == tgl_message_media_photo) {
+          tgl_do_load_photo (TLS, &M->media.photo, py_file_cb, py_ptr[p]);
+        } else if (M->media.type == tgl_message_media_document) {
+          tgl_do_load_document (TLS, &M->media.document, py_file_cb, py_ptr[p]);
+        } else {
+          tgl_do_load_encr_document (TLS, &M->media.encr_document, py_file_cb, py_ptr[p]);
+        }
+      }
+      break;
+    case pq_load_video_thumb:
+    case pq_load_document_thumb:
+      M = py_ptr[p + 1];
+      if (!M || (M->media.type != tgl_message_media_document)) {
+        py_file_cb (TLS, py_ptr[p], 0, 0);
+      } else {
+        tgl_do_load_document_thumb (TLS, &M->media.document, py_file_cb, py_ptr[p]);
+      }
+      break;
+    case pq_fwd:
+      tgl_do_forward_message (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((struct tgl_message *)py_ptr[p + 2])->id, py_msg_cb, py_ptr[p]);
+      break;
+    case pq_fwd_media:
+      tgl_do_forward_media (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((struct tgl_message *)py_ptr[p + 2])->id, py_msg_cb, py_ptr[p]);
+      break;
+    case pq_chat_info:
+      tgl_do_get_chat_info (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, py_chat_cb, py_ptr[p]);
+      break;
+    case pq_user_info:
+      tgl_do_get_user_info (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, py_user_cb, py_ptr[p]);
+      break;
+    case pq_history:
+      tgl_do_get_history (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, (long)py_ptr[p + 2], 0, py_msg_list_cb, py_ptr[p]);
+      break;
+    case pq_chat_add_user:
+      tgl_do_add_user_to_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((tgl_peer_t *)py_ptr[p + 2])->id, 10, py_msg_cb, py_ptr[p]);
+      break;
+    case pq_chat_del_user:
+      tgl_do_del_user_from_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((tgl_peer_t *)py_ptr[p + 2])->id, py_msg_cb, py_ptr[p]);
+      break;
+    case pq_add_contact:
+      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, py_contact_list_cb, py_ptr[p]);
+      break;
+    case pq_del_contact:
+      tgl_do_del_contact (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_rename_contact:
+      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 1, py_contact_list_cb, py_ptr[p]);
+      break;
+    case pq_search:
+      tgl_do_msg_search (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, 0, 40, 0, s, py_msg_list_cb, py_ptr[p]);
+      break;
+    case pq_global_search:
+      tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, s, py_msg_list_cb, py_ptr[p]);
+      break;
+    case pq_mark_read:
+      tgl_do_mark_read (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_set_profile_photo:
+      tgl_do_set_profile_photo (TLS, s, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_set_profile_name:
+      tgl_do_set_profile_name (TLS, s1, s2, py_user_cb, py_ptr[p]);
+      break;
+    case pq_create_secret_chat:
+      tgl_do_create_secret_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_secret_chat_cb, py_ptr[p]);
+      break;
+    case pq_create_group_chat:
+      tgl_do_create_group_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, s, py_msg_cb, py_ptr[p]);
+      break;
+    case pq_delete_msg:
+      tgl_do_delete_msg (TLS, ((struct tgl_message *)py_ptr[p + 1])->id, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_restore_msg:
+      tgl_do_delete_msg (TLS, (long)py_ptr[p + 1], py_empty_cb, py_ptr[p]);
+      break;
+    case pq_accept_secret_chat:
+      tgl_do_accept_encr_chat_request (TLS, py_ptr[p + 1], py_secret_chat_cb, py_ptr[p]);
+      break;
+    case pq_send_contact:
+      tgl_do_send_contact (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), py_msg_cb, py_ptr[p]);
+      break;
+    case pq_status_online:
+      tgl_do_update_status (TLS, 1, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_status_offline:
+      tgl_do_update_status (TLS, 0, py_empty_cb, py_ptr[p]);
+      break;
+    case pq_extf:
+      tgl_do_send_extf (TLS, s, strlen (s), py_str_cb, py_ptr[p]);
+      break;
+    case pq_send_location:
+      if (sizeof (void *) == 4) {
+        tgl_do_send_location (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id , *(float *)(py_ptr + p + 2), *(float *)(py_ptr + p + 3), py_msg_cb, py_ptr[p]);
+      } else {
+        tgl_do_send_location (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id , *(double *)(py_ptr + p + 2), *(double *)(py_ptr + p + 3), py_msg_cb, py_ptr[p]);
+      }
+      break;
+  /*
+  pq_delete_msg,
+  pq_restore_msg,
+    case 0:
+      tgl_do_send_message (((tgl_peer_t *)py_ptr[p])->id, py_ptr[p + 1], strlen (py_ptr[p + 1]), 0, 0);
+      free (py_ptr[p + 1]);
+      p += 2;
+      break;
+    case 1:
+      tgl_do_forward_message (((tgl_peer_t *)py_ptr[p])->id, (long)py_ptr[p + 1], 0, 0);
+      p += 2;
+      break;
+    case 2:
+      tgl_do_mark_read (((tgl_peer_t *)py_ptr[p])->id, 0, 0);
+      p += 1;
+      break;*/
+    default:
+      assert (0);
+    }
+    Py_DECREF(args);
+  }
+  pos = 0;
+}
 
-  return PyString_FromString("sent!");
-} 
+PyObject* push_py_func(enum py_query_type type, PyObject *args) {
+  assert(pos + 2 < MAX_PY_COMMANDS);
 
+  py_ptr[pos ++] = (void *)(long)type;
+  py_ptr[pos ++] = (void *)args;
+
+  Py_INCREF(args);
+  Py_RETURN_TRUE;
+}
+
+// Register functions to push commands on the queue
+PyObject* py_contact_list(PyObject *self, PyObject *args) { return push_py_func(pq_contact_list, args); }
+PyObject* py_dialog_list(PyObject *self, PyObject *args) { return push_py_func(pq_dialog_list, args); }
+PyObject* py_rename_chat(PyObject *self, PyObject *args) { return push_py_func(pq_rename_chat, args); }
+PyObject* py_send_msg(PyObject *self, PyObject *args) { return push_py_func(pq_msg, args); }
+PyObject* py_send_typing(PyObject *self, PyObject *args) { return push_py_func(pq_send_typing, args); }
+PyObject* py_send_typing_abort(PyObject *self, PyObject *args) { return push_py_func(pq_send_typing_abort, args); }
+PyObject* py_send_photo(PyObject *self, PyObject *args) { return push_py_func(pq_send_photo, args); }
+PyObject* py_send_video(PyObject *self, PyObject *args) { return push_py_func(pq_send_video, args); }
+PyObject* py_send_audio(PyObject *self, PyObject *args) { return push_py_func(pq_send_audio, args); }
+PyObject* py_send_document(PyObject *self, PyObject *args) { return push_py_func(pq_send_document, args); }
+PyObject* py_send_file(PyObject *self, PyObject *args) { return push_py_func(pq_send_file, args); }
+PyObject* py_send_text(PyObject *self, PyObject *args) { return push_py_func(pq_send_text, args); }
+PyObject* py_chat_set_photo(PyObject *self, PyObject *args) { return push_py_func(pq_chat_set_photo, args); }
+PyObject* py_load_photo(PyObject *self, PyObject *args) { return push_py_func(pq_load_photo, args); }
+PyObject* py_load_video(PyObject *self, PyObject *args) { return push_py_func(pq_load_video, args); }
+PyObject* py_load_video_thumb(PyObject *self, PyObject *args) { return push_py_func(pq_load_video_thumb, args); }
+PyObject* py_load_audio(PyObject *self, PyObject *args) { return push_py_func(pq_load_audio, args); }
+PyObject* py_load_document(PyObject *self, PyObject *args) { return push_py_func(pq_load_document, args); }
+PyObject* py_load_document_thumb(PyObject *self, PyObject *args) { return push_py_func(pq_load_document_thumb, args); }
+PyObject* py_fwd(PyObject *self, PyObject *args) { return push_py_func(pq_fwd, args); }
+PyObject* py_fwd_media(PyObject *self, PyObject *args) { return push_py_func(pq_fwd_media, args); }
+PyObject* py_chat_info(PyObject *self, PyObject *args) { return push_py_func(pq_chat_info, args); }
+PyObject* py_user_info(PyObject *self, PyObject *args) { return push_py_func(pq_chat_info, args); }
+PyObject* py_history(PyObject *self, PyObject *args) { return push_py_func(pq_history, args); }
+PyObject* py_chat_add_user(PyObject *self, PyObject *args) { return push_py_func(pq_chat_add_user, args); }
+PyObject* py_chat_del_user(PyObject *self, PyObject *args) { return push_py_func(pq_chat_del_user, args); }
+PyObject* py_add_contact(PyObject *self, PyObject *args) { return push_py_func(pq_add_contact, args); }
+PyObject* py_del_contact(PyObject *self, PyObject *args) { return push_py_func(pq_del_contact, args); }
+PyObject* py_rename_contact(PyObject *self, PyObject *args) { return push_py_func(pq_rename_contact, args); }
+PyObject* py_search(PyObject *self, PyObject *args) { return push_py_func(pq_search, args); }
+PyObject* py_global_search(PyObject *self, PyObject *args) { return push_py_func(pq_global_search, args); }
+PyObject* py_mark_read(PyObject *self, PyObject *args) { return push_py_func(pq_mark_read, args); }
+PyObject* py_set_profile_photo(PyObject *self, PyObject *args) { return push_py_func(pq_set_profile_photo, args); }
+PyObject* py_set_profile_name(PyObject *self, PyObject *args) { return push_py_func(pq_set_profile_name, args); }
+PyObject* py_create_secret_chat(PyObject *self, PyObject *args) { return push_py_func(pq_create_secret_chat, args); }
+PyObject* py_create_group_chat(PyObject *self, PyObject *args) { return push_py_func(pq_create_group_chat, args); }
+PyObject* py_delete_msg(PyObject *self, PyObject *args) { return push_py_func(pq_delete_msg, args); }
+PyObject* py_restore_msg(PyObject *self, PyObject *args) { return push_py_func(pq_restore_msg, args); }
+PyObject* py_accept_secret_chat(PyObject *self, PyObject *args) { return push_py_func(pq_accept_secret_chat, args); }
+PyObject* py_send_contact(PyObject *self, PyObject *args) { return push_py_func(pq_send_contact, args); }
+PyObject* py_status_online(PyObject *self, PyObject *args) { return push_py_func(pq_status_online, args); }
+PyObject* py_status_offline(PyObject *self, PyObject *args) { return push_py_func(pq_status_offline, args); }
+PyObject* py_send_location(PyObject *self, PyObject *args) { return push_py_func(pq_send_location, args); }
+PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf, args); }
 
 static PyMethodDef py_tgl_methods[] = {
-//  {"get_contact_list", lq_contact_list, METH_VARARGS},
-//  {"get_dialog_list", lq_dialog_list, METH_VARARGS},
-//  {"rename_chat", lq_rename_chat, METH_VARARGS},
+  {"get_contact_list", py_contact_list, METH_VARARGS, "retrieve contact list"},
+  {"get_dialog_list", py_dialog_list, METH_VARARGS, ""},
+  {"rename_chat", py_rename_chat, METH_VARARGS, ""},
   {"send_msg", py_send_msg, METH_VARARGS, "send message to user or chat"},
-//  {"send_typing", lq_send_typing, METH_VARARGS},
-//  {"send_typing_abort", lq_send_typing_abort, METH_VARARGS},
-//  {"send_photo", lq_send_photo, { lfp_peer, lfp_string, lfp_none }},
-//  {"send_video", lq_send_video, { lfp_peer, lfp_string, lfp_none }},
-//  {"send_audio", lq_send_audio, { lfp_peer, lfp_string, lfp_none }},
-//  {"send_document", lq_send_document, { lfp_peer, lfp_string, lfp_none }},
-//  {"send_file", lq_send_file, { lfp_peer, lfp_string, lfp_none }},
-//  {"send_text", lq_send_text, { lfp_peer, lfp_string, lfp_none }},
-//  {"chat_set_photo", lq_chat_set_photo, { lfp_chat, lfp_string, lfp_none }},
-//  {"load_photo", lq_load_photo, { lfp_msg, lfp_none }},
-//  {"load_video", lq_load_video, { lfp_msg, lfp_none }},
-//  {"load_video_thumb", lq_load_video_thumb, { lfp_msg, lfp_none }},
-//  {"load_audio", lq_load_audio, { lfp_msg, lfp_none }},
-//  {"load_document", lq_load_document, { lfp_msg, lfp_none }},
-//  {"load_document_thumb", lq_load_document_thumb, { lfp_msg, lfp_none }},
-//  {"fwd_msg", lq_fwd, { lfp_peer, lfp_msg, lfp_none }},
-//  {"fwd_media", lq_fwd_media, { lfp_peer, lfp_msg, lfp_none }},
-//  {"chat_info", lq_chat_info, { lfp_chat, lfp_none }},
-//  {"user_info", lq_user_info, { lfp_user, lfp_none }},
-//  {"get_history", lq_history, { lfp_peer, lfp_nonnegative_number, lfp_none }},
-//  {"chat_add_user", lq_chat_add_user, { lfp_chat, lfp_user, lfp_none }},
-//  {"chat_del_user", lq_chat_del_user, { lfp_chat, lfp_user, lfp_none }},
-//  {"add_contact", lq_add_contact, { lfp_string, lfp_string, lfp_string, lfp_none }},
-//  {"del_contact", lq_del_contact, { lfp_user, lfp_none }},
-//  {"rename_contact", lq_rename_contact, { lfp_string, lfp_string, lfp_string, lfp_none }},
-//  {"msg_search", lq_search, { lfp_peer, lfp_string, lfp_none }},
-//  {"msg_global_search", lq_global_search, { lfp_string, lfp_none }},
-//  {"mark_read", lq_mark_read, { lfp_peer, lfp_none }},
-//  {"set_profile_photo", lq_set_profile_photo, { lfp_string, lfp_none }},
-//  {"set_profile_name", lq_set_profile_name, { lfp_string, lfp_none }},
-//  {"create_secret_chat", lq_create_secret_chat, { lfp_user, lfp_none }},
-//  {"create_group_chat", lq_create_group_chat, { lfp_user, lfp_string, lfp_none }},
-//  {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
-//  {"restore_msg", lq_restore_msg, { lfp_positive_number, lfp_none }},
-//  {"accept_secret_chat", lq_accept_secret_chat, { lfp_secret_chat, lfp_none }},
-//  {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
-//  {"status_online", lq_status_online, { lfp_none }},
-//  {"status_offline", lq_status_offline, { lfp_none }},
-//  {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
-//  {"ext_function", lq_extf, { lfp_string, lfp_none }},
+  {"send_typing", py_send_typing, METH_VARARGS, ""},
+  {"send_typing_abort", py_send_typing_abort, METH_VARARGS, ""},
+  {"send_photo", py_send_photo, METH_VARARGS, ""},
+  {"send_video", py_send_video, METH_VARARGS, ""},
+  {"send_audio", py_send_audio, METH_VARARGS, ""},
+  {"send_document", py_send_document, METH_VARARGS, ""},
+  {"send_file", py_send_file, METH_VARARGS, ""},
+  {"send_text", py_send_text, METH_VARARGS, ""},
+  {"chat_set_photo", py_chat_set_photo, METH_VARARGS, ""},
+  {"load_photo", py_load_photo, METH_VARARGS, ""},
+  {"load_video", py_load_video, METH_VARARGS, ""},
+  {"load_video_thumb", py_load_video_thumb, METH_VARARGS, ""},
+  {"load_audio", py_load_audio, METH_VARARGS, ""},
+  {"load_document", py_load_document, METH_VARARGS, ""},
+  {"load_document_thumb", py_load_document_thumb, METH_VARARGS, ""},
+  {"fwd_msg", py_fwd, METH_VARARGS, ""},
+  {"fwd_media", py_fwd_media, METH_VARARGS, ""},
+  {"chat_info", py_chat_info, METH_VARARGS, ""},
+  {"user_info", py_user_info, METH_VARARGS, ""},
+  {"get_history", py_history, METH_VARARGS, ""},
+  {"chat_add_user", py_chat_add_user, METH_VARARGS, ""},
+  {"chat_del_user", py_chat_del_user, METH_VARARGS, ""},
+  {"add_contact", py_add_contact, METH_VARARGS, ""},
+  {"del_contact", py_del_contact, METH_VARARGS, ""},
+  {"rename_contact", py_rename_contact, METH_VARARGS, ""},
+  {"msg_search", py_search, METH_VARARGS, ""},
+  {"msg_global_search", py_global_search, METH_VARARGS, ""},
+  {"mark_read", py_mark_read, METH_VARARGS, ""},
+  {"set_profile_photo", py_set_profile_photo, METH_VARARGS, ""},
+  {"set_profile_name", py_set_profile_name, METH_VARARGS, ""},
+  {"create_secret_chat", py_create_secret_chat, METH_VARARGS, ""},
+  {"create_group_chat", py_create_group_chat, METH_VARARGS, ""},
+  {"delete_msg", py_delete_msg, METH_VARARGS, ""},
+  {"restore_msg", py_restore_msg, METH_VARARGS, ""},
+  {"accept_secret_chat", py_accept_secret_chat, METH_VARARGS, ""},
+  {"send_contact", py_send_contact, METH_VARARGS, ""},
+  {"status_online", py_status_online, METH_VARARGS, ""},
+  {"status_offline", py_status_offline, METH_VARARGS, ""},
+  {"send_location", py_send_location, METH_VARARGS, ""},  
+  {"ext_function", py_extf, METH_VARARGS, ""},
   { NULL, NULL, 0, NULL }
 };
 
-//static int parse_lua_function (lua_State *L, struct lua_function *F) {
-//  int p = 0;
-//  while (F->params[p] != lfp_none) { p ++; }
-//  if (lua_gettop (L) != p + 2) {
-//    lua_pushboolean (L, 0);
-//    return 1;
-//  }
-//  
-//  int a1 = luaL_ref (L, LUA_REGISTRYINDEX);
-//  int a2 = luaL_ref (L, LUA_REGISTRYINDEX);
-//  
-//  struct lua_query_extra *e = malloc (sizeof (*e));
-//  assert (e);
-//  e->func = a2;
-//  e->param = a1;
-//
-//  assert (pos + 3 + p < MAX_LUA_COMMANDS);
-//
-//  lua_ptr[pos ++] = (void *)(long)(p + 1);
-//  lua_ptr[pos ++] = (void *)(long)F->type;
-//  lua_ptr[pos ++] = e;
-//
-//  int sp = p;
-//  int ok = 1;
-//  int cc = 0;
-//  while (p > 0) {
-//    p --;
-//    cc ++;
-//    const char *s;
-//    tgl_peer_t *P;
-//    long long num;
-//    double dval;
-//    struct tgl_message *M;
-//    switch (F->params[p]) {
-//    case lfp_none:
-//      assert (0);
-//      break;
-//    case lfp_peer:
-//    case lfp_user:
-//    case lfp_chat:
-//    case lfp_secret_chat:
-//      s = lua_tostring (L, -cc);
-//      if (!s) {
-//        ok = 0;
-//        break;
-//      }
-//      if (sscanf (s, "user#id%lld", &num) == 1 && num > 0) {
-//        tgl_insert_empty_user (TLS, num);
-//        P = tgl_peer_get (TLS, TGL_MK_USER (num));
-//      } else if (sscanf (s, "chat#id%lld", &num) == 1 && num > 0) {
-//        tgl_insert_empty_chat (TLS, num);
-//        P = tgl_peer_get (TLS, TGL_MK_CHAT (num));
-//      } else {
-//        P = get_peer (s);
-//      }
-//      if (!P/* || !(P->flags & FLAG_CREATED)*/) {
-//        ok = 0;
-//        break;
-//      }
-//      if (F->params[p] != lfp_peer) {
-//        if ((tgl_get_peer_type (P->id) == TGL_PEER_USER && F->params[p] != lfp_user) || 
-//            (tgl_get_peer_type (P->id) == TGL_PEER_CHAT && F->params[p] != lfp_chat) || 
-//            (tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT && F->params[p] != lfp_secret_chat)) {
-//          ok = 0;
-//          break;
-//        }
-//      }
-//      lua_ptr[pos + p] = P;
-//      break;
-//
-//    case lfp_string:
-//      s = lua_tostring (L, -cc);
-//      if (!s) {
-//        ok = 0;
-//        break;
-//      }
-//      lua_ptr[pos + p] = (void *)s;
-//      break;
-//
-//    case lfp_number:
-//      num = lua_tonumber (L, -cc);
-//      
-//      lua_ptr[pos + p] = (void *)(long)num;
-//      break;
-//    
-//    case lfp_double:
-//      dval  = lua_tonumber (L, -cc);
-//    
-//      if (sizeof (void *) == 4) {
-//        *(float *)(lua_ptr + pos + p) = dval;
-//      } else {
-//        assert (sizeof (void *) >= 8);
-//        *(double *)(lua_ptr + pos + p) = dval;
-//      }
-//      break;
-//    
-//    case lfp_positive_number:
-//      num = lua_tonumber (L, -cc);
-//      if (num <= 0) {
-//        ok = 0;
-//        break;
-//      }
-//      
-//      lua_ptr[pos + p] = (void *)(long)num;
-//      break;
-//    
-//    case lfp_nonnegative_number:
-//      num = lua_tonumber (L, -cc);
-//      if (num < 0) {
-//        ok = 0;
-//        break;
-//      }
-//      
-//      lua_ptr[pos + p] = (void *)(long)num;
-//      break;
-//
-//    case lfp_msg:
-//      s = lua_tostring (L, -cc);
-//      if (!s || !strlen (s)) {
-//        ok = 0;
-//        break;
-//      }
-//
-//      num = atoll (s);
-//
-//      M = tgl_message_get (TLS, num);
-//
-//      if (!M || !(M->flags & FLAG_CREATED)) {
-//        ok = 0;
-//        break;
-//      }
-//      
-//      lua_ptr[pos + p] = M;
-//      break;
-//    
-//    default:
-//      assert (0);
-//    }
-//  }
-//  if (!ok) {
-//    luaL_unref (luaState, LUA_REGISTRYINDEX, a1);
-//    luaL_unref (luaState, LUA_REGISTRYINDEX, a2);
-//    free (e);
-//    pos -= 3;
-//    lua_pushboolean (L, 0);
-//    return 1;
-//  }
-//  
-//  for (p = 0; p < sp; p++) {
-//    if (F->params[p] == lfp_string) {
-//      lua_ptr[pos + p] = strdup (lua_ptr[pos + p]);
-//    }
-//  }
-//  pos += p;
-//
-//  lua_pushboolean (L, 1);
-//  return 1;
-//}
-//
-//
+
 //static void lua_postpone_alarm (evutil_socket_t fd, short what, void *arg) {
 //  int *t = arg;
 //  
@@ -1439,7 +1229,7 @@ static PyMethodDef py_tgl_methods[] = {
 //  lua_pushboolean (L, 1);
 //  return 1;
 //}
-//
+
 //extern int safe_quit;
 //static int safe_quit_from_lua (lua_State *L) {
 //  int n = lua_gettop (L);
@@ -1453,24 +1243,7 @@ static PyMethodDef py_tgl_methods[] = {
 //  return 1;
 //}
 //
-//static int universal_from_lua (lua_State *L) {
-//  const char *s = lua_tostring(L, lua_upvalueindex(1));
-//  if (!s) {
-//    lua_pushboolean (L, 0);
-//    return 1;
-//  }
-//  int i = 0;
-//  while (functions[i].name) {
-//    if (!strcmp (functions[i].name, s)) {
-//      return parse_lua_function (L, &functions[i]);
-//    }
-//    i ++;
-//  }
-//  lua_pushboolean (L, 0);
-//  return 1;
-//}
-//
-//
+
 #define my_python_register(dict, name, f) \
     f = PyDict_GetItemString(dict, name); 
 
@@ -1507,48 +1280,5 @@ void py_init (const char *file) {
   my_python_register(pDict, "on_secret_chat_update", _py_secret_chat_update);
   my_python_register(pDict, "on_user_update", _py_user_update);
   my_python_register(pDict, "on_chat_update", _py_chat_update);
-
-
-//  PyObject* err = PyErr_Occurred();
-//  if (err != NULL) {
-//    logprintf("python error occurred"); // TODO: implement the backtrace
-//    exit(1);
-//  }
-
-//  int i = 0;
-//  while (functions[i].name) {
-//    my_lua_register (luaState, functions[i].name, universal_from_lua);
-//    i ++;
-//  }
-  //lua_register (luaState, "fwd_msg", fwd_msg_from_lua);
-  //lua_register (luaState, "mark_read", mark_read_from_lua);
-//  lua_register (luaState, "postpone", postpone_from_lua);
-//  lua_register (luaState, "safe_quit", safe_quit_from_lua);
-  //lua_register (luaState, "get_contact_list", get_contacts_from_lua);
-  /*lua_register (luaState, "get_dialog_list", get_dialog_list_from_lua);
-  lua_register (luaState, "send_msg", send_msg_from_lua);
-  lua_register (luaState, "rename_chat", rename_chat_from_lua);
-  lua_register (luaState, "send_photo", send_photo_from_lua);
-  lua_register (luaState, "send_video", send_video_from_lua);
-  lua_register (luaState, "send_audio", send_audio_from_lua);
-  lua_register (luaState, "send_document", send_document_from_lua);
-  lua_register (luaState, "send_text", send_text_from_lua);
-  lua_register (luaState, "chat_set_photo", chat_set_photo_from_lua);
-  lua_register (luaState, "load_photo", load_photo_from_lua);
-  lua_register (luaState, "load_video", load_video_from_lua);
-  lua_register (luaState, "load_video_thumb", load_video_thumb_from_lua);
-  lua_register (luaState, "load_audio", load_audio_from_lua);
-  lua_register (luaState, "load_document", load_document_from_lua);
-  lua_register (luaState, "load_document_thumb", load_document_thumb_from_lua);
-  lua_register (luaState, "fwd_msg", message_forward_from_lua);
-  lua_register (luaState, "chat_info", chat_info_from_lua);
-  lua_register (luaState, "user_info", user_info_from_lua);
-  lua_register (luaState, "get_history", get_history_from_lua);
-  lua_register (luaState, "chat_add_user", chat_add_user_from_lua);
-  lua_register (luaState, "chat_del_user", chat_del_user_from_lua);
-  lua_register (luaState, "add_contact", add_contact_from_lua);
-  lua_register (luaState, "rename_contact", rename_contact_from_lua);*/
-
 }
 
-#endif
