@@ -895,27 +895,27 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_send_photo:
-      tgl_do_send_document (TLS, -1, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, -1, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, NULL, lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_video:
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, NULL, lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_audio:
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, NULL, lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_document:
-      tgl_do_send_document (TLS, 0, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, 0, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, NULL, lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;
     case lq_send_file:
-      tgl_do_send_document (TLS, -2, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, lua_msg_cb, lua_ptr[p]);
+      tgl_do_send_document (TLS, -2, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, NULL, lua_msg_cb, lua_ptr[p]);
       free (lua_ptr[p + 2]);
       p += 3;
       break;

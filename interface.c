@@ -646,63 +646,63 @@ void do_dialog_list (int arg_num, struct arg args[], struct in_ev *ev) {
 }
 
 void do_send_photo (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, -1, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, -1, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_send_file (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, -2, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, -2, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_send_audio (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_send_video (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_send_document (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_document (TLS, 0, args[0].P->id, args[1].str, 0, print_msg_success_gw, ev);
+  tgl_do_send_document (TLS, 0, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_reply_photo (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_document (TLS, -1, args[0].num, args[2].str, print_msg_success_gw, ev);
+  tgl_do_reply_document (TLS, -1, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_reply_file (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_document (TLS, -2, args[0].num, args[1].str, print_msg_success_gw, ev);
+  tgl_do_reply_document (TLS, -2, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_reply_audio (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].num, args[1].str, print_msg_success_gw, ev);
+  tgl_do_reply_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_reply_video (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].num, args[1].str, print_msg_success_gw, ev);
+  tgl_do_reply_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_reply_document (int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 2);
+  assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_document (TLS, 0, args[0].num, args[1].str, print_msg_success_gw, ev);
+  tgl_do_reply_document (TLS, 0, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
 void do_send_text (int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1285,28 +1285,28 @@ struct command commands[] = {
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
   {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "msg <msg-id> <text>\tSends text reply to message"},
-  {"reply_audio", {ca_number, ca_file_name_end, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer"},
+  {"reply_audio", {ca_number, ca_file_name, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer"},
   {"reply_contact", {ca_number, ca_string, ca_string, ca_string, ca_none}, do_reply_contact, "reply_contact <msg-id> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
-  {"reply_document", {ca_number, ca_file_name_end, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer"},
-  {"reply_file", {ca_number, ca_file_name_end, ca_none}, do_reply_file, "reply_file <msg-id> <file>\tSends document to peer"},
+  {"reply_document", {ca_number, ca_file_name, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer"},
+  {"reply_file", {ca_number, ca_file_name, ca_none}, do_reply_file, "reply_file <msg-id> <file>\tSends document to peer"},
   {"reply_location", {ca_number, ca_double, ca_double, ca_none}, do_reply_location, "reply_location <msg-id> <latitude> <longitude>\tSends geo location"},
-  {"reply_photo", {ca_number, ca_file_name_end, ca_none}, do_reply_photo, "reply_photo <msg-id> <file>\tSends photo to peer"},
+  {"reply_photo", {ca_number, ca_file_name, ca_string_end | ca_optional, ca_none}, do_reply_photo, "reply_photo <msg-id> <file> [caption]\tSends photo to peer"},
   //{"reply_text", {ca_number, ca_file_name_end, ca_none}, do_reply_text, "reply_text <msg-id> <file>\tSends contents of text file as plain text message"},
-  {"reply_video", {ca_number, ca_file_name_end, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer"},
+  {"reply_video", {ca_number, ca_file_name, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer"},
 //  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
   {"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat"},
-  {"send_audio", {ca_peer, ca_file_name_end, ca_none}, do_send_audio, "send_audio <peer> <file>\tSends audio to peer"},
+  {"send_audio", {ca_peer, ca_file_name, ca_none}, do_send_audio, "send_audio <peer> <file>\tSends audio to peer"},
   {"send_contact", {ca_peer, ca_string, ca_string, ca_string, ca_none}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
-  {"send_document", {ca_peer, ca_file_name_end, ca_none}, do_send_document, "send_document <peer> <file>\tSends document to peer"},
-  {"send_file", {ca_peer, ca_file_name_end, ca_none}, do_send_file, "send_file <peer> <file>\tSends document to peer"},
+  {"send_document", {ca_peer, ca_file_name, ca_none}, do_send_document, "send_document <peer> <file>\tSends document to peer"},
+  {"send_file", {ca_peer, ca_file_name, ca_none}, do_send_file, "send_file <peer> <file>\tSends document to peer"},
   {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location"},
-  {"send_photo", {ca_peer, ca_file_name_end, ca_none}, do_send_photo, "send_photo <peer> <file>\tSends photo to peer"},
+  {"send_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_photo, "send_photo <peer> <file> [caption]\tSends photo to peer"},
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message"},
   {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification"},
   {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort"},
-  {"send_video", {ca_peer, ca_file_name_end, ca_none}, do_send_video, "send_video <peer> <file>\tSends video to peer"},
+  {"send_video", {ca_peer, ca_file_name, ca_string | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer"},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
   {"set_password", {ca_string | ca_optional, ca_none}, do_set_password, "set_password <hint>\tSets password"},
   {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name."},
@@ -2676,6 +2676,9 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       } else {
         mprintf (ev, "[photo]");
       }
+      if (M->caption) {
+        mprintf (ev, " %s", M->caption);
+      }
       return;
     case tgl_message_media_document:
       mprintf (ev, "[");
@@ -2722,6 +2725,10 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       }
       
       mprintf (ev, "]");
+      
+      if (M->caption) {
+        mprintf (ev, " %s", M->caption);
+      }
 
       return;
     case tgl_message_media_document_encr:
