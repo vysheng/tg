@@ -117,6 +117,7 @@ int reset_authorization;
 int port;
 int use_ids;
 int ipv6_enabled;
+int json_mode_enabled = 0;
 char *start_command;
 
 struct tgl_state *TLS;
@@ -583,7 +584,7 @@ char *unix_socket;
 void args_parse (int argc, char **argv) {
   TLS = tgl_state_alloc ();
   int opt = 0;
-  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6"
+  while ((opt = getopt (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6J"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -680,6 +681,10 @@ void args_parse (int argc, char **argv) {
       break;
     case '6':
       ipv6_enabled = 1;
+      break;
+    case 'J':
+      json_mode_enabled = 1;
+      disable_colors ++;
       break;
     case 'h':
     default:
