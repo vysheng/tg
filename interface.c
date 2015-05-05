@@ -2753,6 +2753,7 @@ void print_fwd_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U
 
 void print_user_name_json (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U, char * key) {
   assert (tgl_get_peer_type (id) == TGL_PEER_USER);
+  mprintf (ev, "\"peer\":\"user#%d\", ", tgl_get_peer_id (id));
   if (!U) {
     mprintf (ev, "\"%s\":\"user#%d\", ",key, tgl_get_peer_id (id));
     int i;
