@@ -1525,7 +1525,7 @@ char *command_generator (const char *text, int state) {
     command_pos = cur_token;
     command_len = cur_token_len;
   } else {
-    if (index == -1) { return 0; }
+    if (mode != ca_file_name && mode != ca_file_name_end && index == -1) { return 0; }
   }
   
   if (mode == ca_none || mode == ca_string || mode == ca_string_end || mode == ca_number || mode == ca_double) { 
@@ -1575,10 +1575,6 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return 0;
   }
-}
-
-char **complete_text (char *text, int start, int end) {
-  return (char **) rl_completion_matches (text, command_generator);
 }
 
 int count = 1;
@@ -3174,7 +3170,10 @@ void play_sound (void) {
 void set_interface_callbacks (void) {
   if (readline_disabled) { return; }
   readline_active = 1;
+  rl_filename_quote_characters = strdup (" ");
+  rl_basic_word_break_characters = strdup (" ");
+  
+  
   rl_callback_handler_install (get_default_prompt (), interpreter);
-  //rl_attempted_completion_function = (void *) complete_text;
   rl_completion_entry_function = command_generator;
 }

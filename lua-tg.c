@@ -244,21 +244,11 @@ void push_media (struct tgl_message_media *M) {
   my_lua_checkstack (luaState, 4);
 
   switch (M->type) {
-  //case tgl_message_media_photo_encr:
   case tgl_message_media_photo:
     lua_newtable (luaState);
     lua_add_string_field ("type", "photo");
+    lua_add_string_field ("caption", M->caption);
     break;
-  /*case tgl_message_media_video:
-  case tgl_message_media_video_encr:
-    lua_newtable (luaState);
-    lua_add_string_field ("type", "video");
-    break;
-  case tgl_message_media_audio:
-  case tgl_message_media_audio_encr:
-    lua_newtable (luaState);
-    lua_add_string_field ("type", "audio");
-    break;*/
   case tgl_message_media_document:
   case tgl_message_media_document_encr:
     lua_newtable (luaState);
@@ -282,8 +272,142 @@ void push_media (struct tgl_message_media *M) {
     lua_add_string_field ("last_name", M->last_name);
     lua_add_num_field ("user_id", M->user_id);
     break;
+  case tgl_message_media_webpage:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "webpage");
+    lua_add_string_field ("url", M->webpage->url);
+    lua_add_string_field ("title", M->webpage->title);
+    lua_add_string_field ("description", M->webpage->description);
+    lua_add_string_field ("author", M->webpage->author);
+    break;
+  case tgl_message_media_venue:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "venue");
+    lua_add_num_field ("longitude", M->venue.geo.longitude);
+    lua_add_num_field ("latitude", M->venue.geo.latitude);
+    lua_add_string_field ("title", M->venue.title);
+    lua_add_string_field ("address", M->venue.address);
+    lua_add_string_field ("provider", M->venue.provider);
+    lua_add_string_field ("venue_id", M->venue.venue_id);
+    break;
   default:
     lua_pushstring (luaState, "???");
+  }
+}
+
+void push_service (struct tgl_message *M) {
+  my_lua_checkstack (luaState, 4);
+  switch (M->action.type) {
+  case tgl_message_action_geo_chat_create:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "geo_created");
+    break;
+  case tgl_message_action_geo_chat_checkin:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "geo_checkin");
+    break;
+  case tgl_message_action_chat_create:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_created");
+    lua_add_string_field ("title", M->action.title);
+    break;
+  case tgl_message_action_chat_edit_title:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_rename");
+    lua_add_string_field ("title", M->action.title);
+    break;
+  case tgl_message_action_chat_edit_photo:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_change_photo");
+    break;
+  case tgl_message_action_chat_delete_photo:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_delete_photo");
+    break;
+  case tgl_message_action_chat_add_user:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_add_user");
+    
+    lua_pushstring (luaState, "user");
+    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+    lua_settable (luaState, -3);
+    break;
+  case tgl_message_action_chat_add_user_by_link:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_add_user_link");
+    
+    lua_pushstring (luaState, "link_issuer");
+    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+    lua_settable (luaState, -3);
+    break;
+  case tgl_message_action_chat_delete_user:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "chat_del_user");
+    
+    lua_pushstring (luaState, "user");
+    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+    lua_settable (luaState, -3);
+    break;
+  case tgl_message_action_set_message_ttl:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "set_ttl");
+    lua_add_num_field ("ttl", M->action.ttl);
+    break;
+  case tgl_message_action_read_messages:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "read");
+    lua_add_num_field ("count", M->action.read_cnt);
+    break;
+  case tgl_message_action_delete_messages:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "delete");
+    lua_add_num_field ("count", M->action.delete_cnt);
+    break;
+  case tgl_message_action_screenshot_messages:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "screenshot");
+    lua_add_num_field ("count", M->action.screenshot_cnt);
+    break;
+  case tgl_message_action_flush_history:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "flush");
+    break;
+  case tgl_message_action_resend:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "resend");
+    break;
+  case tgl_message_action_notify_layer:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "set_layer");
+    lua_add_num_field ("layer", M->action.layer);
+    break;
+  case tgl_message_action_typing:    
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "typing");
+    break;
+  case tgl_message_action_noop:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "nop");
+    break;
+  case tgl_message_action_request_key:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "request_rekey");
+    break;
+  case tgl_message_action_accept_key:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "accept_rekey");
+    break;
+  case tgl_message_action_commit_key:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "commit_rekey");
+    break;
+  case tgl_message_action_abort_key:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "abort_rekey");
+    break;
+  default:
+    lua_pushstring (luaState, "???");
+    break;
   }
 }
 
@@ -304,6 +428,14 @@ void push_message (struct tgl_message *M) {
     lua_settable (luaState, -3); // fwd_from
 
     lua_add_num_field ("fwd_date", M->fwd_date);
+  }
+
+  if (M->reply_id) {
+    lua_add_num_field ("reply_id", M->reply_id);
+  }
+
+  if (M->flags & TGLMF_MENTION) {
+    lua_add_num_field ("mention", 1);
   }
  
   lua_pushstring (luaState, "from");
@@ -341,6 +473,10 @@ void push_message (struct tgl_message *M) {
       push_media (&M->media);
       lua_settable (luaState, -3); 
     }
+  } else {
+    lua_pushstring (luaState, "action");
+    push_service (M);
+    lua_settable (luaState, -3); 
   }
 }
 
@@ -1459,34 +1595,9 @@ void lua_init (const char *file) {
     my_lua_register (luaState, functions[i].name, universal_from_lua);
     i ++;
   }
-  //lua_register (luaState, "fwd_msg", fwd_msg_from_lua);
-  //lua_register (luaState, "mark_read", mark_read_from_lua);
+  
   lua_register (luaState, "postpone", postpone_from_lua);
   lua_register (luaState, "safe_quit", safe_quit_from_lua);
-  //lua_register (luaState, "get_contact_list", get_contacts_from_lua);
-  /*lua_register (luaState, "get_dialog_list", get_dialog_list_from_lua);
-  lua_register (luaState, "send_msg", send_msg_from_lua);
-  lua_register (luaState, "rename_chat", rename_chat_from_lua);
-  lua_register (luaState, "send_photo", send_photo_from_lua);
-  lua_register (luaState, "send_video", send_video_from_lua);
-  lua_register (luaState, "send_audio", send_audio_from_lua);
-  lua_register (luaState, "send_document", send_document_from_lua);
-  lua_register (luaState, "send_text", send_text_from_lua);
-  lua_register (luaState, "chat_set_photo", chat_set_photo_from_lua);
-  lua_register (luaState, "load_photo", load_photo_from_lua);
-  lua_register (luaState, "load_video", load_video_from_lua);
-  lua_register (luaState, "load_video_thumb", load_video_thumb_from_lua);
-  lua_register (luaState, "load_audio", load_audio_from_lua);
-  lua_register (luaState, "load_document", load_document_from_lua);
-  lua_register (luaState, "load_document_thumb", load_document_thumb_from_lua);
-  lua_register (luaState, "fwd_msg", message_forward_from_lua);
-  lua_register (luaState, "chat_info", chat_info_from_lua);
-  lua_register (luaState, "user_info", user_info_from_lua);
-  lua_register (luaState, "get_history", get_history_from_lua);
-  lua_register (luaState, "chat_add_user", chat_add_user_from_lua);
-  lua_register (luaState, "chat_del_user", chat_del_user_from_lua);
-  lua_register (luaState, "add_contact", add_contact_from_lua);
-  lua_register (luaState, "rename_contact", rename_contact_from_lua);*/
 
   int ret = luaL_dofile (luaState, file);
   if (ret) {
