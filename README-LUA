@@ -81,3 +81,4 @@ Function_list (arguments are listed aside from cb_function and cb_extra, :
 
 Also, you have function 
   postpone (cb_function, cb_extra, timeout). It will call your cb_function in specified number of seconds (number of seconds may be double).
+  register_interface_function (name, cb_function, cb_arg, description, arg1_type, arg2_type, ...) adds function to CLI interface
