@@ -1696,10 +1696,6 @@ static void do_interface_from_lua (struct command *command, int arg_num, struct 
       }
       break;
     }
-    
-    if (args[i].flags & 1) {
-      free (args[i].str);
-    }
   }
   
 
