@@ -50,6 +50,16 @@ extern struct tgl_state *TLS;
 
 static int have_file;
 
+void print_start (void);
+void print_end (void);
+
+int ps_lua_pcall (lua_State *l, int a, int b, int c) {
+  print_start ();
+  int r = lua_pcall (l, a, b, c);
+  print_end ();
+  return r;
+}
+
 #define my_lua_checkstack(L,x) assert (lua_checkstack (L, x))
 void push_user (tgl_peer_t *P);
 void push_peer (tgl_peer_id_t id, tgl_peer_t *P);
@@ -488,7 +498,7 @@ void lua_binlog_end (void) {
   lua_getglobal (luaState, "on_binlog_replay_end");
   assert (lua_gettop (luaState) == 1);
 
-  int r = lua_pcall (luaState, 0, 0, 0);
+  int r = ps_lua_pcall (luaState, 0, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -502,7 +512,7 @@ void lua_diff_end (void) {
   lua_getglobal (luaState, "on_get_difference_end");
   assert (lua_gettop (luaState) == 1);
 
-  int r = lua_pcall (luaState, 0, 0, 0);
+  int r = ps_lua_pcall (luaState, 0, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -517,7 +527,7 @@ void lua_our_id (int id) {
   lua_pushnumber (luaState, id);
   assert (lua_gettop (luaState) == 2);
 
-  int r = lua_pcall (luaState, 1, 0, 0);
+  int r = ps_lua_pcall (luaState, 1, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -532,7 +542,7 @@ void lua_new_msg (struct tgl_message *M) {
   push_message (M);
   assert (lua_gettop (luaState) == 2);
 
-  int r = lua_pcall (luaState, 1, 0, 0);
+  int r = ps_lua_pcall (luaState, 1, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -548,7 +558,7 @@ void lua_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   push_update_types (flags);
   assert (lua_gettop (luaState) == 3);
 
-  int r = lua_pcall (luaState, 2, 0, 0);
+  int r = ps_lua_pcall (luaState, 2, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -564,7 +574,7 @@ void lua_user_update (struct tgl_user *U, unsigned flags) {
   push_update_types (flags);
   assert (lua_gettop (luaState) == 3);
 
-  int r = lua_pcall (luaState, 2, 0, 0);
+  int r = ps_lua_pcall (luaState, 2, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -580,7 +590,7 @@ void lua_chat_update (struct tgl_chat *C, unsigned flags) {
   push_update_types (flags);
   assert (lua_gettop (luaState) == 3);
 
-  int r = lua_pcall (luaState, 2, 0, 0);
+  int r = ps_lua_pcall (luaState, 2, 0, 0);
   if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
   }
@@ -663,7 +673,7 @@ void lua_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
 
   assert (lua_gettop (luaState) == 3);
 
-  int r = lua_pcall (luaState, 2, 0, 0);
+  int r = ps_lua_pcall (luaState, 2, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -701,7 +711,7 @@ void lua_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, i
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -755,7 +765,7 @@ void lua_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, in
   assert (lua_gettop (luaState) == 4);
 
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -787,7 +797,7 @@ void lua_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -825,7 +835,7 @@ void lua_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int n
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -857,7 +867,7 @@ void lua_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *fil
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -889,7 +899,7 @@ void lua_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tg
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -921,7 +931,7 @@ void lua_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, st
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -953,7 +963,7 @@ void lua_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tg
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -985,7 +995,7 @@ void lua_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *data
 
   assert (lua_gettop (luaState) == 4);
 
-  int r = lua_pcall (luaState, 3, 0, 0);
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
   luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
@@ -1500,7 +1510,7 @@ static void lua_postpone_alarm (evutil_socket_t fd, short what, void *arg) {
   lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[0]);
   assert (lua_gettop (luaState) == 2);
   
-  int r = lua_pcall (luaState, 1, 0, 0);
+  int r = ps_lua_pcall (luaState, 1, 0, 0);
 
   luaL_unref (luaState, LUA_REGISTRYINDEX, t[0]);
   luaL_unref (luaState, LUA_REGISTRYINDEX, t[1]);
@@ -1583,6 +1593,207 @@ static void my_lua_register (lua_State *L, const char *name, lua_CFunction f) {
   lua_setglobal(L, name);
 }
 
+enum command_argument {
+  ca_none,
+  ca_user,
+  ca_chat,
+  ca_secret_chat,
+  ca_peer,
+  ca_file_name,
+  ca_file_name_end,
+  ca_period,
+  ca_number,
+  ca_double,
+  ca_string_end,
+  ca_string,
+  ca_modifier,
+  ca_command,
+  ca_extf,
+
+
+  ca_optional = 256
+};
+
+
+struct arg {
+  int flags;
+  struct {
+    tgl_peer_t *P;
+    struct tgl_message *M;
+    char *str;
+    long long num;
+    double dval;
+  };
+};
+
+struct in_ev;
+struct command {
+  char *name;
+  enum command_argument args[10];
+  void (*fun)(struct command *command, int arg_num, struct arg args[], struct in_ev *ev);
+  char *desc;
+  void *arg;
+};
+
+#define NOT_FOUND (int)0x80000000
+
+static void do_interface_from_lua (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  lua_settop (luaState, 0);
+  my_lua_checkstack (luaState, 20);
+  
+  struct lua_query_extra *e = command->arg;  
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, e->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, e->param);
+ 
+  int i;
+  for (i = 0; i < arg_num; i ++) {
+    int j = i;
+    if (j > 9) { j = 9; }
+    while (j >= 0) {
+      if (command->args[j] == ca_period) { j --; continue; }
+      if (command->args[j] == ca_none) { j --; continue; }
+      break;
+    }
+    assert (j >= 0);
+
+    switch (command->args[j] & 0xff) {
+    case ca_none:
+    case ca_period:
+      assert (0);      
+      break;
+    case ca_user:
+    case ca_chat:
+    case ca_secret_chat:
+    case ca_peer:
+      if (args[i].P) {
+        push_peer (args[i].P->id, args[i].P);
+      } else {
+        lua_pushnil (luaState);
+      }
+      break;
+    case ca_file_name:
+    case ca_file_name_end:
+    case ca_string_end:
+    case ca_string:
+      if (args[i].str) {
+        lua_pushstring (luaState, args[i].str);
+      } else {
+        lua_pushnil (luaState);
+      }
+      break;
+    case ca_number:
+      if (args[i].num != NOT_FOUND) {
+        lua_pushnumber (luaState, args[i].num);
+      } else {
+        lua_pushnil (luaState);
+      }
+      break;
+    case ca_double:
+      if (args[i].dval != NOT_FOUND) {
+        lua_pushnumber (luaState, args[i].dval);
+      } else {
+        lua_pushnil (luaState);
+      }
+      break;
+    }
+    
+    if (args[i].flags & 1) {
+      free (args[i].str);
+    }
+  }
+  
+
+  
+  int r = ps_lua_pcall (luaState, 1 + arg_num, 0, 0);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+}
+
+void register_new_command (struct command *cmd);
+static int register_interface_from_lua (lua_State *L) {
+  int n = lua_gettop (L);
+  if (n <= 4 || n >= 13) {
+    lua_pushboolean (L, 0);
+    return 1;
+  }
+
+  static struct command cmd;
+  memset (&cmd, 0, sizeof (struct command));
+
+  int i;
+  for (i = 0; i < n - 4; i++) {
+    char *s = lua_tostring (L, -1);
+    lua_pop (L, 1);
+    
+    if (!s || !strlen (s)) {
+      lua_pushboolean (L, 0);
+      return 1;
+    }
+
+    int len = strlen (s);
+    int optional = 0;
+    if (len > 9 && !strcmp (s + len - 9, " optional")) {
+      optional = ca_optional;
+      len -= 9;
+    }
+
+    int ok = 0;
+    #define VARIANT(name) \
+      if (len == strlen (#name) && !strncmp (s, #name, len)) {\
+        cmd.args[n - 5 - i] = ca_ ## name | optional; \
+        ok = 1; \
+      }
+
+    VARIANT (user)
+    VARIANT (chat)
+    VARIANT (secret_chat)
+    VARIANT (peer)
+    VARIANT (file_name)
+    VARIANT (file_name_end)
+    VARIANT (period)
+    VARIANT (number)
+    VARIANT (double)
+    VARIANT (string_end)
+    VARIANT (string)
+    
+    #undef VARTIANT
+
+    if (!ok) {
+      lua_pushboolean (L, 0);
+      return 1;
+    }
+  }
+  
+  const char *s = lua_tostring (L, -1);
+  lua_pop (L, 1);
+  
+  cmd.desc = s ? tstrdup (s) : tstrdup ("no help provided");
+  
+  int a1 = luaL_ref (L, LUA_REGISTRYINDEX);
+  int a2 = luaL_ref (L, LUA_REGISTRYINDEX);
+
+  struct lua_query_extra *e = malloc (sizeof (*e));
+  assert (e);
+  e->func = a2;
+  e->param = a1;
+
+  cmd.arg = e;
+    
+  cmd.fun = do_interface_from_lua;
+  
+  s = lua_tostring (L, -1);
+  lua_pop (L, 1);
+
+  cmd.name = tstrdup (s ? s : "none");
+
+  register_new_command (&cmd);
+
+  lua_pushboolean (L, 1);
+  return 1;
+}
+
 
 void lua_init (const char *file) {
   if (!file) { return; }
@@ -1598,9 +1809,13 @@ void lua_init (const char *file) {
   
   lua_register (luaState, "postpone", postpone_from_lua);
   lua_register (luaState, "safe_quit", safe_quit_from_lua);
+  lua_register (luaState, "register_interface_function", register_interface_from_lua);
 
-  int ret = luaL_dofile (luaState, file);
-  if (ret) {
+  print_start ();
+  int r = luaL_dofile (luaState, file);
+  print_end ();
+
+  if (r) {
     logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
     exit (1);
   }

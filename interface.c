@@ -575,8 +575,9 @@ struct arg {
 struct command {
   char *name;
   enum command_argument args[10];
-  void (*fun)(int arg_num, struct arg args[], struct in_ev *ev);
+  void (*fun)(struct command *command, int arg_num, struct arg args[], struct in_ev *ev);
   char *desc;
+  void *arg;
 };
 
 
@@ -599,7 +600,7 @@ void print_encr_chat_success_gw (struct tgl_state *TLS, void *extra, int success
 void print_success_gw (struct tgl_state *TLS, void *extra, int success);
 
 struct command commands[];
-void do_help (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_help (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   if (ev) { mprint_start (ev); }
   mpush_color (ev, COLOR_YELLOW);
@@ -615,13 +616,13 @@ void do_help (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_contact_list (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_contact_list (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   if (ev) { ev->refcnt ++; }
   tgl_do_update_contact_list (TLS, print_user_list_gw, ev);  
 }
 
-void do_stats (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_stats (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   static char stat_buf[1 << 15];
   tgl_print_stat (TLS, stat_buf, (1 << 15) - 1);
@@ -633,97 +634,97 @@ void do_stats (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_history (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_history (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
   tgl_do_get_history_ext (TLS, args[0].P->id, args[2].num != NOT_FOUND ? args[2].num : 0, args[1].num != NOT_FOUND ? args[1].num : 40, offline_mode, print_msg_list_gw, ev);
 }
 
-void do_dialog_list (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_dialog_list (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num <= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_get_dialog_list (TLS, args[0].num != NOT_FOUND ? args[0].num : 100, args[1].num != NOT_FOUND ? args[1].num : 0, print_dialog_list_gw, ev);
 }
 
-void do_send_photo (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_document (TLS, -1, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_send_file (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_file (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_document (TLS, -2, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_send_audio (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_audio (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_send_video (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_video (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_send_document (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_document (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_document (TLS, 0, args[0].P->id, args[1].str, 0, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_reply_photo (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_document (TLS, -1, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_reply_file (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_file (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_document (TLS, -2, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_reply_audio (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_audio (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_document (TLS, FLAG_DOCUMENT_AUDIO, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_reply_video (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_video (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_document (TLS, FLAG_DOCUMENT_VIDEO, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_reply_document (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_document (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_document (TLS, 0, args[0].num, args[1].str, arg_num == 2 ? NULL : args[2].str, print_msg_success_gw, ev);
 }
 
-void do_send_text (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_text (TLS, args[0].P->id, args[1].str, print_msg_success_gw, ev);
 }
 
-void do_chat_info (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_chat_info (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_get_chat_info (TLS, args[0].P->id, offline_mode, print_chat_info_gw, ev);
 }
 
-void do_user_info (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_user_info (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_get_user_info (TLS, args[0].P->id, offline_mode, print_user_info_gw, ev);
 }
 
-void do_fwd (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_fwd (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2);
   if (ev) { ev->refcnt ++; }
   assert (arg_num <= 1000);
@@ -740,56 +741,56 @@ void do_fwd (int arg_num, struct arg args[], struct in_ev *ev) {
 
 }
 
-void do_fwd_media (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_fwd_media (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_forward_message (TLS, args[0].P->id, args[1].num, print_msg_success_gw, ev);
 }
 
-void do_get_message (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_get_message (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_get_message (TLS, args[0].num, print_msg_gw, ev);
 }
 
-void do_msg (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_msg (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_message (TLS, args[0].P->id, args[1].str, strlen (args[1].str), print_msg_success_gw, ev);
 }
 
-void do_reply (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_message_reply (TLS, args[0].num, args[1].str, strlen (args[1].str), print_msg_success_gw, ev);
 }
 
-void do_send_typing (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_typing (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_typing, print_success_gw, ev);
 }
 
-void do_send_typing_abort (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_typing_abort (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_cancel, print_success_gw, ev);
 }
 
-void do_rename_chat (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_rename_chat (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_rename_chat (TLS, args[0].P->id, args[1].str, print_success_gw, ev);
 }
 
-void do_import_chat_link (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_import_chat_link (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_import_chat_link (TLS, args[0].str, strlen (args[0].str), print_success_gw, ev);
 }
 
 #define DO_LOAD_PHOTO(tp,act,actf) \
-void do_ ## act ## _ ## tp (int arg_num, struct arg args[], struct in_ev *ev) { \
+void do_ ## act ## _ ## tp (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) { \
   assert (arg_num == 1);\
   struct tgl_message *M = tgl_message_get (TLS, args[0].num);\
   if (M && !(M->flags & TGLMF_SERVICE)) {\
@@ -810,7 +811,7 @@ void do_ ## act ## _ ## tp (int arg_num, struct arg args[], struct in_ev *ev) { 
 }
 
 #define DO_LOAD_PHOTO_THUMB(tp,act,actf) \
-void do_ ## act ## _ ## tp ## _thumb (int arg_num, struct arg args[], struct in_ev *ev) { \
+void do_ ## act ## _ ## tp ## _thumb (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) { \
   assert (arg_num == 1);\
   struct tgl_message *M = tgl_message_get (TLS, args[0].num);\
   if (M && !(M->flags & TGLMF_SERVICE)) {\
@@ -838,19 +839,19 @@ DO_LOAD_PHOTO_THUMB(document, open, open_filename_gw)
 DO_LOAD_PHOTO_THUMB(file, open, open_filename_gw)
 DO_LOAD_PHOTO(any, open, open_filename_gw)
 
-void do_add_contact (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_add_contact (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
   tgl_do_add_contact (TLS, args[0].str, strlen (args[0].str), args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), 0, print_user_list_gw, ev);
 }
 
-void do_del_contact (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_del_contact (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_del_contact (TLS, args[0].P->id, print_success_gw, ev);
 }
 
-void do_rename_contact (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_rename_contact (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (args[0].P->user.phone) {
     if (ev) { ev->refcnt ++; }
@@ -861,7 +862,7 @@ void do_rename_contact (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_show_license (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_show_license (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   static char *b = 
 #include "LICENSE.h"
@@ -871,7 +872,7 @@ void do_show_license (int arg_num, struct arg args[], struct in_ev *ev) {
   if (ev) { mprint_end (ev); }
 }
 
-void do_search (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_search (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 6);
   tgl_peer_id_t id;
   if (args[0].P) {
@@ -907,13 +908,13 @@ void do_search (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_msg_search (TLS, id, from, to, limit, offset, args[5].str, print_msg_list_gw, ev);
 }
 
-void do_mark_read (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_mark_read (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_mark_read (TLS, args[0].P->id, print_success_gw, ev);
 }
 
-void do_visualize_key (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_visualize_key (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   static char *colors[4] = {COLOR_GREY, COLOR_CYAN, COLOR_BLUE, COLOR_GREEN};
   static unsigned char buf[16];
@@ -961,13 +962,13 @@ void do_visualize_key (int arg_num, struct arg args[], struct in_ev *ev) {
   mprint_end (ev);
 }
 
-void do_create_secret_chat (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_create_secret_chat (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_create_secret_chat (TLS, args[0].P->id, print_secret_chat_gw, ev);
 }
 
-void do_secret_chat_rekey (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_secret_chat_rekey (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   tgl_peer_t *P = args[0].P;
   if (P->encr_chat.state == sc_ok) {
@@ -976,45 +977,45 @@ void do_secret_chat_rekey (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_chat_add_user (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_chat_add_user (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
   tgl_do_add_user_to_chat (TLS, args[0].P->id, args[1].P->id, args[2].num != NOT_FOUND ? args[2].num : 100, print_success_gw, ev);
 }
 
-void do_chat_del_user (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_chat_del_user (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_del_user_from_chat (TLS, args[0].P->id, args[1].P->id, print_success_gw, ev);
 }
 
-void do_status_online (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_status_online (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   if (ev) { ev->refcnt ++; }
   tgl_do_update_status (TLS, 1, print_success_gw, ev);
 }
 
-void do_status_offline (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_status_offline (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   if (ev) { ev->refcnt ++; }
   tgl_do_update_status (TLS, 0, print_success_gw, ev);
 }
 
-void do_quit (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_quit (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   if (daemonize) {
     event_incoming (ev->bev, BEV_EVENT_EOF, ev);
   }
   do_halt (0);
 }
 
-void do_safe_quit (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_safe_quit (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   if (daemonize) {
     event_incoming (ev->bev, BEV_EVENT_EOF, ev);
   }
   safe_quit = 1;
 }
 
-void do_set (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_set (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   int num = args[1].num;
   if (!strcmp (args[0].str, "debug_verbosity")) {
     tgl_set_verbosity (TLS, num); 
@@ -1027,24 +1028,24 @@ void do_set (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_chat_with_peer (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_chat_with_peer (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   if (!ev) {
     in_chat_mode = 1;
     chat_mode_id = args[0].P->id;
   }
 }
 
-void do_delete_msg (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_delete_msg (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   if (ev) { ev->refcnt ++; }
   tgl_do_delete_msg (TLS, args[0].num, print_success_gw, ev);
 }
 
-//void do_restore_msg (int arg_num, struct arg args[], struct in_ev *ev) {
+//void do_restore_msg (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
 //  if (ev) { ev->refcnt ++; }
 //  tgl_do_restore_msg (TLS, args[0].num, print_success_gw, ev);
 //}
     
-void do_create_group_chat (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_create_group_chat (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 1 && arg_num <= 1000);
   static tgl_peer_id_t ids[1000];
   int i;
@@ -1056,55 +1057,55 @@ void do_create_group_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_create_group_chat_ex (TLS, arg_num - 1, ids, args[0].str, print_success_gw, ev);  
 }
 
-void do_chat_set_photo (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_chat_set_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_set_chat_photo (TLS, args[0].P->id, args[1].str, print_success_gw, ev); 
 }
 
-void do_set_profile_photo (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_set_profile_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_set_profile_photo (TLS, args[0].str, print_success_gw, ev);
 }
 
-void do_set_profile_name (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_set_profile_name (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_set_profile_name (TLS, args[0].str, args[1].str, print_user_gw, ev);
 }
 
-void do_set_username (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_set_username (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_set_username (TLS, args[0].str, print_user_gw, ev);
 }
 
-void do_load_user_photo  (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_load_user_photo  (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_load_file_location (TLS, &args[0].P->user.photo_big, print_filename_gw, ev);
 }
 
-void do_view_user_photo  (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_view_user_photo  (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_load_file_location (TLS, &args[0].P->user.photo_big, open_filename_gw, ev);
 }
 
-void do_contact_search (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_contact_search (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_contact_search (TLS, args[0].str, args[1].num == NOT_FOUND ? args[1].num : 10, print_user_list_gw, ev);
 }
 
-void do_accept_secret_chat (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_accept_secret_chat (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_accept_encr_chat_request (TLS, &args[0].P->encr_chat, print_encr_chat_success_gw, ev);
 }
 
-void do_set_ttl (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_set_ttl (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (args[0].P->encr_chat.state == sc_ok) {
     if (ev) { ev->refcnt ++; }
@@ -1115,19 +1116,19 @@ void do_set_ttl (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_export_card (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_export_card (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   if (ev) { ev->refcnt ++; }
   tgl_do_export_card (TLS, print_card_gw, ev);
 }
 
-void do_export_chat_link (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_export_chat_link (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_export_chat_link (TLS, args[0].P->id, print_string_gw, ev);
 }
 
-void do_import_card (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_import_card (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   char *s = args[0].str;
   int l = strlen (s);
@@ -1159,19 +1160,19 @@ void do_import_card (int arg_num, struct arg args[], struct in_ev *ev) {
   }
 }
 
-void do_send_contact (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_contact (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 4);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_contact (TLS, args[0].P->id, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_success_gw, ev);
 }
 
-void do_reply_contact (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_contact (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 4);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_contact (TLS, args[0].num, args[1].str, strlen (args[1].str), args[2].str, strlen (args[2].str), args[3].str, strlen (args[3].str), print_msg_success_gw, ev);
 }
 
-void do_main_session (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_main_session (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   if (notify_ev && !--notify_ev->refcnt) {
     free (notify_ev);
   }
@@ -1179,7 +1180,7 @@ void do_main_session (int arg_num, struct arg args[], struct in_ev *ev) {
   if (ev) { ev->refcnt ++; }
 }
 
-void do_broadcast (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_broadcast (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   vlogprintf (E_ERROR, "arg_num = %d\n", arg_num);
   assert (arg_num >= 1 && arg_num <= 1000);
   static tgl_peer_id_t ids[1000];
@@ -1191,7 +1192,7 @@ void do_broadcast (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_send_broadcast (TLS, arg_num - 1, ids, args[arg_num - 1].str, strlen (args[arg_num - 1].str), print_msg_list_success_gw, ev);
 }
 
-void do_set_password (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_set_password (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
   tgl_do_set_password (TLS, args[0].str ? args[0].str : "empty", print_success_gw, ev);
@@ -1209,7 +1210,7 @@ extern char *binlog_file_name;
 extern char *lua_file;
 extern struct event *term_ev;
 
-void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_clear (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   logprintf ("Do_clear\n");
   free (default_username);
   free (config_filename);
@@ -1229,110 +1230,118 @@ void do_clear (int arg_num, struct arg args[], struct in_ev *ev) {
   do_halt (0);
 }
 
-void do_send_location (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_location (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_location (TLS, args[0].P->id, args[1].dval, args[2].dval, print_msg_success_gw, ev);
 }
 
-void do_reply_location (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_reply_location (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_location (TLS, args[0].num, args[1].dval, args[2].dval, print_msg_success_gw, ev);
 }
 
 
-struct command commands[] = {
-  {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option"},
-  {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact, "add_contact <phone> <first name> <last name>\tTries to add user to contact list"},
-  {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once"}, 
-  {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100"},
-  {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat"},
-  {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)"},
-  {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo, "chat_set_photo <chat> <filename>\tSets chat photo. Photo will be cropped to square"},
-  {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer, "chat_with_peer <peer>\tInterface option. All input will be treated as messages to this peer. Type /quit to end this mode"},
-  {"clear", {ca_none}, do_clear, "clear\tClears all data and exits. For debug."},
-  {"contact_list", {ca_none}, do_contact_list, "contact_list\tPrints contact list"},
-  {"contact_search", {ca_string, ca_number | ca_optional, ca_none}, do_contact_search, "contact_search username [limit]\tSearches contacts by username"},
-  {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat, "create_group_chat <name> <user>+\tCreates group chat with users"},
-  {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat"},
-  {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list"},
-  {"delete_msg", {ca_number, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message"},
-  {"dialog_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_dialog_list, "dialog_list [limit=100] [offset=0]\tList of last conversations"},
-  {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method"},
-  {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat"},
-  {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden"},
-  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd"},
-  {"get_message", {ca_number, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id"},
-  {"help", {ca_none}, do_help, "help\tPrints this help"},
-  {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read"},
-  {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual"},
-  {"import_chat_link", {ca_string, ca_none}, do_import_chat_link, "impoty_chat_link <hash>\tJoins to chat by link"},
-  {"load_audio", {ca_number, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_chat_photo", {ca_chat, ca_none}, do_load_user_photo, "load_chat_photo <chat>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_document", {ca_number, ca_none}, do_load_document, "load_document <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_document_thumb", {ca_number, ca_none}, do_load_document_thumb, "load_document_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_file", {ca_number, ca_none}, do_load_file, "load_file <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_file_thumb", {ca_number, ca_none}, do_load_file_thumb, "load_file_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_photo", {ca_number, ca_none}, do_load_photo, "load_photo <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_user_photo", {ca_user, ca_none}, do_load_user_photo, "load_user_photo <user>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_video", {ca_number, ca_none}, do_load_video, "load_video <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"load_video_thumb", {ca_number, ca_none}, do_load_video_thumb, "load_video_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
-  {"main_session", {ca_none}, do_main_session, "main_session\tSends updates to this connection (or terminal). Useful only with listening socket"},
-  {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read"},
-  {"msg", {ca_peer, ca_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer"},
-  {"quit", {ca_none}, do_quit, "quit\tQuits immediately"},
-  {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
-  {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact"},
-  {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "msg <msg-id> <text>\tSends text reply to message"},
-  {"reply_audio", {ca_number, ca_file_name, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer"},
-  {"reply_contact", {ca_number, ca_string, ca_string, ca_string, ca_none}, do_reply_contact, "reply_contact <msg-id> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
-  {"reply_document", {ca_number, ca_file_name, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer"},
-  {"reply_file", {ca_number, ca_file_name, ca_none}, do_reply_file, "reply_file <msg-id> <file>\tSends document to peer"},
-  {"reply_location", {ca_number, ca_double, ca_double, ca_none}, do_reply_location, "reply_location <msg-id> <latitude> <longitude>\tSends geo location"},
-  {"reply_photo", {ca_number, ca_file_name, ca_string_end | ca_optional, ca_none}, do_reply_photo, "reply_photo <msg-id> <file> [caption]\tSends photo to peer"},
-  //{"reply_text", {ca_number, ca_file_name_end, ca_none}, do_reply_text, "reply_text <msg-id> <file>\tSends contents of text file as plain text message"},
-  {"reply_video", {ca_number, ca_file_name, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer"},
-//  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion"},
-  {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
-  {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
-  {"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat"},
-  {"send_audio", {ca_peer, ca_file_name, ca_none}, do_send_audio, "send_audio <peer> <file>\tSends audio to peer"},
-  {"send_contact", {ca_peer, ca_string, ca_string, ca_string, ca_none}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)"},
-  {"send_document", {ca_peer, ca_file_name, ca_none}, do_send_document, "send_document <peer> <file>\tSends document to peer"},
-  {"send_file", {ca_peer, ca_file_name, ca_none}, do_send_file, "send_file <peer> <file>\tSends document to peer"},
-  {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location"},
-  {"send_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_photo, "send_photo <peer> <file> [caption]\tSends photo to peer"},
-  {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message"},
-  {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification"},
-  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort"},
-  {"send_video", {ca_peer, ca_file_name, ca_string | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer"},
-  {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
-  {"set_password", {ca_string | ca_optional, ca_none}, do_set_password, "set_password <hint>\tSets password"},
-  {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name."},
-  {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo, "set_profile_photo <filename>\tSets profile photo. Photo will be cropped to square"},
-  {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl"},
-  {"set_username", {ca_string, ca_none}, do_set_username, "set_username <name>\tSets username."},
-  {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license"},
-  {"stats", {ca_none}, do_stats, "stats\tFor debug purpose"},
-  {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online"},
-  {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline"},
-  {"user_info", {ca_user, ca_none}, do_user_info, "user_info <user>\tPrints info about user (id, last online, phone)"},
-  {"view_audio", {ca_number, ca_none}, do_open_audio, "view_audio <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_chat_photo", {ca_chat, ca_none}, do_view_user_photo, "view_chat_photo <chat>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_document", {ca_number, ca_none}, do_open_document, "view_document <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_document_thumb", {ca_number, ca_none}, do_open_document_thumb, "view_document_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_file", {ca_number, ca_none}, do_open_file, "view_file <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_file_thumb", {ca_number, ca_none}, do_open_file_thumb, "view_file_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_photo", {ca_number, ca_none}, do_open_photo, "view_photo <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_user_photo", {ca_user, ca_none}, do_view_user_photo, "view_user_photo <user>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_video", {ca_number, ca_none}, do_open_video, "view_video <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view_video_thumb", {ca_number, ca_none}, do_open_video_thumb, "view_video_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action"},
-  {"view", {ca_number, ca_none}, do_open_any, "view <msg-id>\tTries to view message contents"},
-  {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key, "visualize_key <secret chat>\tPrints visualization of encryption key (first 16 bytes sha1 of it in fact}"},
-  {0, {ca_none}, 0, ""}
+#define MAX_COMMANDS_SIZE 1000
+struct command commands[MAX_COMMANDS_SIZE] = {
+  {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option", NULL},
+  {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact, "add_contact <phone> <first name> <last name>\tTries to add user to contact list", NULL},
+  {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once", NULL},
+  {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100", NULL},
+  {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat", NULL},
+  {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)", NULL},
+  {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo, "chat_set_photo <chat> <filename>\tSets chat photo. Photo will be cropped to square", NULL},
+  {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer, "chat_with_peer <peer>\tInterface option. All input will be treated as messages to this peer. Type /quit to end this mode", NULL},
+  {"clear", {ca_none}, do_clear, "clear\tClears all data and exits. For debug.", NULL},
+  {"contact_list", {ca_none}, do_contact_list, "contact_list\tPrints contact list", NULL},
+  {"contact_search", {ca_string, ca_number | ca_optional, ca_none}, do_contact_search, "contact_search username [limit]\tSearches contacts by username", NULL},
+  {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat, "create_group_chat <name> <user>+\tCreates group chat with users", NULL},
+  {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat", NULL},
+  {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list", NULL},
+  {"delete_msg", {ca_number, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message", NULL},
+  {"dialog_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_dialog_list, "dialog_list [limit=100] [offset=0]\tList of last conversations", NULL},
+  {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method", NULL},
+  {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat", NULL},
+  {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
+  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
+  {"get_message", {ca_number, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id", NULL},
+  {"help", {ca_none}, do_help, "help\tPrints this help", NULL},
+  {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read", NULL},
+  {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual", NULL},
+  {"import_chat_link", {ca_string, ca_none}, do_import_chat_link, "impoty_chat_link <hash>\tJoins to chat by link", NULL},
+  {"load_audio", {ca_number, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_chat_photo", {ca_chat, ca_none}, do_load_user_photo, "load_chat_photo <chat>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_document", {ca_number, ca_none}, do_load_document, "load_document <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_document_thumb", {ca_number, ca_none}, do_load_document_thumb, "load_document_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_file", {ca_number, ca_none}, do_load_file, "load_file <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_file_thumb", {ca_number, ca_none}, do_load_file_thumb, "load_file_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_photo", {ca_number, ca_none}, do_load_photo, "load_photo <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_user_photo", {ca_user, ca_none}, do_load_user_photo, "load_user_photo <user>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_video", {ca_number, ca_none}, do_load_video, "load_video <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_video_thumb", {ca_number, ca_none}, do_load_video_thumb, "load_video_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"main_session", {ca_none}, do_main_session, "main_session\tSends updates to this connection (or terminal). Useful only with listening socket", NULL},
+  {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read", NULL},
+  {"msg", {ca_peer, ca_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer", NULL},
+  {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
+  {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
+  {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
+  {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "msg <msg-id> <text>\tSends text reply to message", NULL},
+  {"reply_audio", {ca_number, ca_file_name, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer", NULL},
+  {"reply_contact", {ca_number, ca_string, ca_string, ca_string, ca_none}, do_reply_contact, "reply_contact <msg-id> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)", NULL},
+  {"reply_document", {ca_number, ca_file_name, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer", NULL},
+  {"reply_file", {ca_number, ca_file_name, ca_none}, do_reply_file, "reply_file <msg-id> <file>\tSends document to peer", NULL},
+  {"reply_location", {ca_number, ca_double, ca_double, ca_none}, do_reply_location, "reply_location <msg-id> <latitude> <longitude>\tSends geo location", NULL},
+  {"reply_photo", {ca_number, ca_file_name, ca_string_end | ca_optional, ca_none}, do_reply_photo, "reply_photo <msg-id> <file> [caption]\tSends photo to peer", NULL},
+  //{"reply_text", {ca_number, ca_file_name_end, ca_none}, do_reply_text, "reply_text <msg-id> <file>\tSends contents of text file as plain text message", NULL},
+  {"reply_video", {ca_number, ca_file_name, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer", NULL},
+//  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion", NULL},
+  {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits", NULL},
+  {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)", NULL},
+  {"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat", NULL},
+  {"send_audio", {ca_peer, ca_file_name, ca_none}, do_send_audio, "send_audio <peer> <file>\tSends audio to peer", NULL},
+  {"send_contact", {ca_peer, ca_string, ca_string, ca_string, ca_none}, do_send_contact, "send_contact <peer> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)", NULL},
+  {"send_document", {ca_peer, ca_file_name, ca_none}, do_send_document, "send_document <peer> <file>\tSends document to peer", NULL},
+  {"send_file", {ca_peer, ca_file_name, ca_none}, do_send_file, "send_file <peer> <file>\tSends document to peer", NULL},
+  {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location", NULL},
+  {"send_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_photo, "send_photo <peer> <file> [caption]\tSends photo to peer", NULL},
+  {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message", NULL},
+  {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification", NULL},
+  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort", NULL},
+  {"send_video", {ca_peer, ca_file_name, ca_string | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer", NULL},
+  {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num", NULL},
+  {"set_password", {ca_string | ca_optional, ca_none}, do_set_password, "set_password <hint>\tSets password", NULL},
+  {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name.", NULL},
+  {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo, "set_profile_photo <filename>\tSets profile photo. Photo will be cropped to square", NULL},
+  {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl", NULL},
+  {"set_username", {ca_string, ca_none}, do_set_username, "set_username <name>\tSets username.", NULL},
+  {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license", NULL},
+  {"stats", {ca_none}, do_stats, "stats\tFor debug purpose", NULL},
+  {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online", NULL},
+  {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline", NULL},
+  {"user_info", {ca_user, ca_none}, do_user_info, "user_info <user>\tPrints info about user (id, last online, phone)", NULL},
+  {"view_audio", {ca_number, ca_none}, do_open_audio, "view_audio <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_chat_photo", {ca_chat, ca_none}, do_view_user_photo, "view_chat_photo <chat>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_document", {ca_number, ca_none}, do_open_document, "view_document <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_document_thumb", {ca_number, ca_none}, do_open_document_thumb, "view_document_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_file", {ca_number, ca_none}, do_open_file, "view_file <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_file_thumb", {ca_number, ca_none}, do_open_file_thumb, "view_file_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_photo", {ca_number, ca_none}, do_open_photo, "view_photo <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_user_photo", {ca_user, ca_none}, do_view_user_photo, "view_user_photo <user>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_video", {ca_number, ca_none}, do_open_video, "view_video <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_video_thumb", {ca_number, ca_none}, do_open_video_thumb, "view_video_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view", {ca_number, ca_none}, do_open_any, "view <msg-id>\tTries to view message contents", NULL},
+  {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key, "visualize_key <secret chat>\tPrints visualization of encryption key (first 16 bytes sha1 of it in fact}", NULL}
 };
 
+void register_new_command (struct command *cmd) {
+  int i = 0;
+  while (commands[i].name) {
+    i ++;
+  }
+  assert (i < MAX_COMMANDS_SIZE - 1);
+  commands[i] = *cmd;
+}
 
 enum command_argument get_complete_mode (void) {
   force_end_mode = 0;
@@ -2299,7 +2308,7 @@ void interpreter_ex (char *line, void *ex) {
   offline_mode = 0;
   count = 1;
   if (!line) { 
-    do_safe_quit (0, NULL, NULL);
+    do_safe_quit (NULL, 0, NULL, NULL);
     in_readline = 0;
     return; 
   }
@@ -2365,7 +2374,7 @@ void interpreter_ex (char *line, void *ex) {
   }
 
   enum command_argument *flags = command->args;
-  void (*fun)(int, struct arg[], struct in_ev *) = command->fun;
+  void (*fun)(struct command *, int, struct arg[], struct in_ev *) = command->fun;
   int args_num = 0;
   static struct arg args[1000];
   while (1) {
@@ -2384,7 +2393,7 @@ void interpreter_ex (char *line, void *ex) {
       if (cur_token_end_str) {
         int z;
         for (z = 0; z < count; z ++) {
-          fun (args_num, args, ex);
+          fun (command, args_num, args, ex);
         }
       }
       break;
@@ -2399,7 +2408,7 @@ void interpreter_ex (char *line, void *ex) {
         args[args_num ++].str = strndup (cur_token, cur_token_len);
         int z;
         for (z = 0; z < count; z ++) {
-          fun (args_num, args, ex);
+          fun (command, args_num, args, ex);
         }
         break;
       }
@@ -2411,7 +2420,7 @@ void interpreter_ex (char *line, void *ex) {
     if (period && cur_token_end_str) {
       int z;
       for (z = 0; z < count; z ++) {
-        fun (args_num, args, ex);
+        fun (command, args_num, args, ex);
       }
       break;
     }
