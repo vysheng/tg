@@ -28,7 +28,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-
+#include <libgen.h>
 
 #include <Python.h>
 #ifdef EVENT_V2
@@ -1271,18 +1271,26 @@ void inittgl()
 void py_init (const char *file) {
   if (!file) { return; }
   python_loaded = 0;
-  PyObject *pModule, *pDict;
   
+  PyObject *pModule, *pDict;
+
+  // Get a copy of the filename for dirname, which may modify the string.
+  char filename[100];
+  strncpy(filename, file, 100);
+   
   Py_Initialize();
   inittgl();
 
-
   PyObject* sysPath = PySys_GetObject((char*)"path");
-  PyList_Append(sysPath, PyString_FromString("."));
-
-
+  PyList_Append(sysPath, PyString_FromString(dirname(filename)));
+  
+  // remove .py extension from file, if any
+  char* dot = strrchr(file, '.');
+  if (dot && strcmp(dot, ".py") == 0) 
+    *dot = 0;
   pModule = PyImport_Import(PyString_FromString(file));
-  if(PyErr_Occurred()) { // Error loading script
+
+  if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
     PyErr_Print();
     exit(1);
