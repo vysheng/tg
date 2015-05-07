@@ -660,6 +660,10 @@ void on_started (struct tgl_state *TLS) {
     lua_diff_end ();
   #endif
 
+  #ifdef USE_PYTHON
+    py_diff_end ();
+  #endif
+  
   if (start_command) {
     safe_quit = 1;
     while (*start_command) {
@@ -713,6 +717,10 @@ int loop (void) {
   binlog_read = 1;
   #ifdef USE_LUA
     lua_binlog_end ();
+  #endif
+  
+  #ifdef USE_PYTHON
+    py_binlog_end ();
   #endif
   
   if (sfd >= 0) {

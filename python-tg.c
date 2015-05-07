@@ -47,7 +47,7 @@
 extern int verbosity;
 extern struct tgl_state *TLS;
 
-static int have_file;
+static int python_loaded;
 
 // Python update function callables
 PyObject *_py_binlog_end;
@@ -363,7 +363,7 @@ PyObject* get_message (struct tgl_message *M) {
 }
 
 void py_binlog_end (void) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
 
   PyObject *arglist, *result;
 
@@ -371,13 +371,13 @@ void py_binlog_end (void) {
   result = PyEval_CallObject(_py_binlog_end, arglist);
   Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
 }
 
 void py_diff_end (void) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
 
   PyObject *arglist, *result;
 
@@ -385,12 +385,12 @@ void py_diff_end (void) {
   result = PyEval_CallObject(_py_diff_end, arglist);
   Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 void py_our_id (int id) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
 
   PyObject *arglist, *result;
 
@@ -398,12 +398,12 @@ void py_our_id (int id) {
   result = PyEval_CallObject(_py_our_id, arglist);
   Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 }
 
 void py_new_msg (struct tgl_message *M) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
   PyObject *msg;
   PyObject *arglist, *result;
 
@@ -415,12 +415,13 @@ void py_new_msg (struct tgl_message *M) {
 
   if(result == NULL)  
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
+
 }
 
 void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
   PyObject *peer, *types;
   PyObject *arglist, *result; 
 
@@ -433,13 +434,14 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
 
   if(result == NULL)
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
+
 }
 
 
 void py_user_update (struct tgl_user *U, unsigned flags) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
   PyObject *peer, *types;
   PyObject *arglist, *result;
 
@@ -452,12 +454,13 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
 
   if(result == NULL)
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
+
 }
 
 void py_chat_update (struct tgl_chat *C, unsigned flags) {
-  if (!have_file) { return; }
+  if (!python_loaded) { return; }
 
   PyObject *peer, *types;
   PyObject *arglist, *result;
@@ -471,7 +474,7 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 
   if(result == NULL)
     PyErr_Print();
-  else
+  else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 }
 
@@ -893,9 +896,10 @@ void py_do_all (void) {
 
     enum py_query_type f = (long)py_ptr[p ++];
     PyObject *args = (PyObject *)py_ptr[p ++];
-    char *s, *s1, *s2, *s3, *s4;
-    struct tgl_message *M;
-    tgl_peer_id_t peer;
+    PyObject *pyObj1, *pyObj2;
+    char *s;
+    //struct tgl_message *M;
+    tgl_peer_id_t peer, peer1;
 
     switch (f) {
     case pq_contact_list:
@@ -905,41 +909,50 @@ void py_do_all (void) {
       tgl_do_get_dialog_list (TLS, py_dialog_list_cb, NULL);
       break;
     case pq_msg:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s1);
-      
-      tgl_do_send_message (TLS, peer, s1, strlen (s1), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_message (TLS, peer, s, strlen (s), py_msg_cb, NULL);
       break;
     case pq_send_typing:
-      tgl_do_send_typing (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, tgl_typing_typing, py_empty_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "ii", &peer.type, &peer.id);
+      tgl_do_send_typing (TLS, peer, tgl_typing_typing, py_empty_cb, NULL);
       break;
     case pq_send_typing_abort:
-      tgl_do_send_typing (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, tgl_typing_cancel, py_empty_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "ii", &peer.type, &peer.id);
+      tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, NULL);
       break;
     case pq_rename_chat:
-      tgl_do_rename_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_rename_chat (TLS, peer, s, py_msg_cb, NULL);
       break;
     case pq_send_photo:
-      tgl_do_send_document (TLS, -1, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_document (TLS, -1, peer, s, py_msg_cb, NULL);
       break;
     case pq_send_video:
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, s, py_msg_cb, NULL);
       break;
     case pq_send_audio:
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, s, py_msg_cb, NULL);
       break;
     case pq_send_document:
-      tgl_do_send_document (TLS, 0, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_document (TLS, 0, peer, s, py_msg_cb, NULL);
       break;
     case pq_send_file:
-      tgl_do_send_document (TLS, -2, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_document (TLS, -2, peer, s, py_msg_cb, NULL);
       break;
     case pq_send_text:
-      tgl_do_send_text (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_send_text (TLS, peer, s, py_msg_cb, NULL);
       break;
     case pq_chat_set_photo:
-      tgl_do_set_chat_photo (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_ptr[p + 2], py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
+      tgl_do_set_chat_photo (TLS, peer, s, py_msg_cb, NULL);
       break;
-    case pq_load_photo:
+/*  case pq_load_photo:
     case pq_load_video:
     case pq_load_audio:
     case pq_load_document:
@@ -980,13 +993,16 @@ void py_do_all (void) {
     case pq_history:
       tgl_do_get_history (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, (long)py_ptr[p + 2], 0, py_msg_list_cb, py_ptr[p]);
       break;
+*/
     case pq_chat_add_user:
-      tgl_do_add_user_to_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((tgl_peer_t *)py_ptr[p + 2])->id, 10, py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iiii", &peer.type, &peer.id, &peer1.type, &peer1.id);
+      tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_msg_cb, NULL);
       break;
     case pq_chat_del_user:
-      tgl_do_del_user_from_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((tgl_peer_t *)py_ptr[p + 2])->id, py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iiii", &peer.type, &peer.id, &peer.type, &peer.id);
+      tgl_do_del_user_from_chat (TLS, peer, peer1, py_msg_cb, NULL);
       break;
-    case pq_add_contact:
+/*  case pq_add_contact:
       tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, py_contact_list_cb, py_ptr[p]);
       break;
     case pq_del_contact:
@@ -1028,21 +1044,20 @@ void py_do_all (void) {
     case pq_send_contact:
       tgl_do_send_contact (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), py_msg_cb, py_ptr[p]);
       break;
+*/
     case pq_status_online:
-      tgl_do_update_status (TLS, 1, py_empty_cb, py_ptr[p]);
+      tgl_do_update_status (TLS, 1, py_empty_cb, NULL);
       break;
     case pq_status_offline:
-      tgl_do_update_status (TLS, 0, py_empty_cb, py_ptr[p]);
+      tgl_do_update_status (TLS, 0, py_empty_cb, NULL);
       break;
-    case pq_extf:
+/*  case pq_extf:
       tgl_do_send_extf (TLS, s, strlen (s), py_str_cb, py_ptr[p]);
       break;
+*/
     case pq_send_location:
-      if (sizeof (void *) == 4) {
-        tgl_do_send_location (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id , *(float *)(py_ptr + p + 2), *(float *)(py_ptr + p + 3), py_msg_cb, py_ptr[p]);
-      } else {
-        tgl_do_send_location (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id , *(double *)(py_ptr + p + 2), *(double *)(py_ptr + p + 3), py_msg_cb, py_ptr[p]);
-      }
+      PyArg_ParseTuple(args, "iiOO", &peer.type, &peer.id, &pyObj1, &pyObj2);
+      tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), py_msg_cb, NULL);
       break;
   /*
   pq_delete_msg,
@@ -1255,9 +1270,8 @@ void inittgl()
 
 void py_init (const char *file) {
   if (!file) { return; }
-  have_file = 1;
-
-  PyObject *pName, *pModule, *pDict;
+  python_loaded = 0;
+  PyObject *pModule, *pDict;
   
   Py_Initialize();
   inittgl();
@@ -1267,18 +1281,23 @@ void py_init (const char *file) {
   PyList_Append(sysPath, PyString_FromString("."));
 
 
-  pName = PyString_FromString(file);
-  pModule = PyImport_Import(pName);
-  pDict = PyModule_GetDict(pModule);
+  pModule = PyImport_Import(PyString_FromString(file));
+  if(PyErr_Occurred()) { // Error loading script
+    logprintf("Failed to load python script\n");
+    PyErr_Print();
+    exit(1);
+  } else {
+    python_loaded = 1;
+    pDict = PyModule_GetDict(pModule);
 
-
-  // Store callables for python functions
-  my_python_register(pDict, "on_binlog_replay_end", _py_binlog_end);
-  my_python_register(pDict, "on_get_difference_end", _py_diff_end);
-  my_python_register(pDict, "on_our_id", _py_our_id);
-  my_python_register(pDict, "on_msg_receive", _py_new_msg);
-  my_python_register(pDict, "on_secret_chat_update", _py_secret_chat_update);
-  my_python_register(pDict, "on_user_update", _py_user_update);
-  my_python_register(pDict, "on_chat_update", _py_chat_update);
+    // Store callables for python functions
+    my_python_register(pDict, "on_binlog_replay_end", _py_binlog_end);
+    my_python_register(pDict, "on_get_difference_end", _py_diff_end);
+    my_python_register(pDict, "on_our_id", _py_our_id);
+    my_python_register(pDict, "on_msg_receive", _py_new_msg);
+    my_python_register(pDict, "on_secret_chat_update", _py_secret_chat_update);
+    my_python_register(pDict, "on_user_update", _py_user_update);
+    my_python_register(pDict, "on_chat_update", _py_chat_update);
+  }
 }
 
