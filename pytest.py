@@ -30,6 +30,8 @@ def on_msg_receive(msg):
       ptype = msg["to"]["type"]
       pid   = msg["to"]["id"]
 
+    pp.pprint(msg)
+
     text = msg["text"]
 
     if text.startswith("!ping"):
