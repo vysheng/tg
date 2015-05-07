@@ -128,7 +128,9 @@ PyObject* get_user (tgl_peer_t *P) {
   if (P->user.access_hash) {
     py_add_num_field (user, "access_hash",   1);
   }
-
+  if (P->user.username) {
+    py_add_string_field ( user, "username", P->user.username);
+  }
   return user;
 }
 
