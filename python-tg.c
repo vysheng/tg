@@ -38,6 +38,9 @@
 #include "event-old.h"
 #endif
 
+// Python Imports
+#include "datetime.h"
+
 //#include "interface.h"
 //#include "auto/constants.h"
 #include <tgl/tgl.h>
@@ -46,6 +49,7 @@
 #include <assert.h>
 extern int verbosity;
 extern struct tgl_state *TLS;
+
 
 static int python_loaded;
 
@@ -60,6 +64,12 @@ PyObject *_py_chat_update;
 
 PyObject* get_user (tgl_peer_t *P);
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
+
+// Utility functions
+PyObject* get_datetime(long datetime)
+{
+   return PyDateTime_FromTimestamp(Py_BuildValue("(O)", PyLong_FromLong(datetime)));
+}
 
 void py_add_string_field (PyObject* dict, char *name, const char *value) {
   assert (PyDict_Check(dict));
@@ -340,7 +350,7 @@ PyObject* get_message (struct tgl_message *M) {
 
   if (tgl_get_peer_type (M->fwd_from_id)) {
     PyDict_SetItemString(msg, "fwd_from", get_peer(M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id)));
-    py_add_num_field (msg, "fwd_date", M->fwd_date);
+    PyDict_SetItemString (msg, "fwd_date", get_datetime(M->fwd_date));
   }
  
   PyDict_SetItemString(msg, "from",    get_peer(M->from_id, tgl_peer_get (TLS, M->from_id)));
@@ -348,7 +358,7 @@ PyObject* get_message (struct tgl_message *M) {
   PyDict_SetItemString(msg, "out",     (M->out ? Py_True : Py_False));
   PyDict_SetItemString(msg, "unread",  (M->unread ? Py_True : Py_False));
   PyDict_SetItemString(msg, "service", (M->service ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "date",    PyLong_FromLong(M->date)); // TODO put this into PyDate object
+  PyDict_SetItemString(msg, "date",    get_datetime(M->date));
 
   if (!M->service) { 
     if (M->message_len && M->message) {
@@ -374,7 +384,7 @@ void py_binlog_end (void) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 void py_diff_end (void) {
@@ -389,7 +399,7 @@ void py_diff_end (void) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 void py_our_id (int id) {
@@ -404,7 +414,7 @@ void py_our_id (int id) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 void py_new_msg (struct tgl_message *M) {
@@ -423,7 +433,7 @@ void py_new_msg (struct tgl_message *M) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
@@ -443,7 +453,7 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 
@@ -464,7 +474,7 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 void py_chat_update (struct tgl_chat *C, unsigned flags) {
@@ -485,7 +495,7 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
-  Py_DECREF(result);
+  Py_XDECREF(result);
 }
 
 ////extern tgl_peer_t *Peers[];
@@ -1306,8 +1316,9 @@ void py_init (const char *file) {
     exit(1);
   } else {
     python_loaded = 1;
+    PyDateTime_IMPORT;
     pDict = PyModule_GetDict(pModule);
-
+  
     // Store callables for python functions
     my_python_register(pDict, "on_binlog_replay_end", _py_binlog_end);
     my_python_register(pDict, "on_get_difference_end", _py_diff_end);
