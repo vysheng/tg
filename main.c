@@ -655,13 +655,13 @@ void args_parse (int argc, char **argv) {
       break;
 #endif
     case 'W':
+      wait_dialog_list = 1;
+      break;
 #ifdef USE_PYTHON
     case 'Z':
       python_file = strdup (optarg);
       break;
 #endif
-      wait_dialog_list = 1;
-      break;
     case 'C':
       disable_colors ++;
       break;
