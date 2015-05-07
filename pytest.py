@@ -34,7 +34,6 @@ def on_msg_receive(msg):
 
     if text.startswith("!ping"):
       tgl.send_msg(ptype, pid, "PONG!")
-d
 
     if text.startswith("!location"):
       geolocator = Nominatim()
