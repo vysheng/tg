@@ -445,7 +445,9 @@ void push_message (struct tgl_message *M) {
   }
 
   if (M->flags & TGLMF_MENTION) {
-    lua_add_num_field ("mention", 1);
+    lua_pushstring (luaState, "mention");
+    lua_pushboolean (luaState, 1);
+    lua_settable (luaState, -3); 
   }
  
   lua_pushstring (luaState, "from");
