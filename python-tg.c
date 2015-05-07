@@ -374,6 +374,7 @@ void py_binlog_end (void) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
+  Py_DECREF(result);
 }
 
 void py_diff_end (void) {
@@ -387,6 +388,8 @@ void py_diff_end (void) {
     PyErr_Print();
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
+
+  Py_DECREF(result);
 }
 
 void py_our_id (int id) {
@@ -400,6 +403,8 @@ void py_our_id (int id) {
     PyErr_Print();
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
+
+  Py_DECREF(result);
 }
 
 void py_new_msg (struct tgl_message *M) {
@@ -418,6 +423,7 @@ void py_new_msg (struct tgl_message *M) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
+  Py_DECREF(result);
 }
 
 void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
@@ -437,6 +443,7 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
+  Py_DECREF(result);
 }
 
 
@@ -457,6 +464,7 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
 
+  Py_DECREF(result);
 }
 
 void py_chat_update (struct tgl_chat *C, unsigned flags) {
@@ -476,6 +484,8 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
     PyErr_Print();
   else if(PyString_Check(result))
     logprintf ("python: %s\n", PyString_AsString(result));
+
+  Py_DECREF(result);
 }
 
 ////extern tgl_peer_t *Peers[];
