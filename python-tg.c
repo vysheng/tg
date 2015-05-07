@@ -352,7 +352,17 @@ PyObject* get_message (struct tgl_message *M) {
     PyDict_SetItemString(msg, "fwd_from", get_peer(M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id)));
     PyDict_SetItemString (msg, "fwd_date", get_datetime(M->fwd_date));
   }
- 
+
+/*  Need reply_id from https://github.com/vysheng/tgl/blob/master/tgl-layout.h#L471
+  if (M->reply_id) {
+    py_add_num_field ("reply_to_id", M->reply_id);
+    struct tgl_message *MR = tgl_message_get (TLS, M->reply_id);
+    // Message details available only within session for now
+    if (MR) {
+      PyDict_SetItemString(msg, "reply_to", get_message(MR));
+    }
+  }
+*/ 
   PyDict_SetItemString(msg, "from",    get_peer(M->from_id, tgl_peer_get (TLS, M->from_id)));
   PyDict_SetItemString(msg, "to",      get_peer(M->to_id, tgl_peer_get (TLS, M->to_id)));
   PyDict_SetItemString(msg, "out",     (M->out ? Py_True : Py_False));
