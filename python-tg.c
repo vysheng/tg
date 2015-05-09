@@ -1290,29 +1290,11 @@ PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf,
 // Store callables for python functions
 TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
 TGL_PYTHON_CALLBACK("on_get_difference_end", _py_diff_end);
-//TGL_PYTHON_CALLBACK("on_our_id", _py_our_id);
+TGL_PYTHON_CALLBACK("on_our_id", _py_our_id);
 TGL_PYTHON_CALLBACK("on_msg_receive", _py_new_msg);
 TGL_PYTHON_CALLBACK("on_secret_chat_update", _py_secret_chat_update);
 TGL_PYTHON_CALLBACK("on_user_update", _py_user_update);
 TGL_PYTHON_CALLBACK("on_chat_update", _py_chat_update);
-
-PyObject *set_py_our_id(PyObject *dummy, PyObject *args) {
-      PyObject *result = NULL;
-      PyObject *temp;
-      if (PyArg_ParseTuple(args, "O:set_on_our_id", &temp)) {
-        if (!PyCallable_Check(temp)) {
-          PyErr_SetString(PyExc_TypeError, "parameter must be callable");
-          return NULL;
-        }
-        Py_XINCREF(temp);
-        Py_XDECREF(_py_our_id);
-        _py_our_id = temp;
-        Py_INCREF(Py_None);
-        result = Py_None;
-        }
-        return result;
-}
-
 
 static PyMethodDef py_tgl_methods[] = {
   {"get_contact_list", py_contact_list, METH_VARARGS, "retrieve contact list"},
