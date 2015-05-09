@@ -3,7 +3,6 @@ import geopy
 import pprint
 from geopy.geocoders import Nominatim
 
-
 our_id = 0
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -51,4 +50,14 @@ def on_user_update():
 
 def on_chat_update():
     pass
+
+
+# Set callbacks
+tgl.set_on_binlog_replay_end(on_binlog_replay_end)
+tgl.set_on_get_difference_end(on_get_difference_end)
+tgl.set_on_our_id(on_our_id)
+tgl.set_on_msg_receive(on_msg_receive)
+tgl.set_on_secret_chat_update(on_secret_chat_update)
+tgl.set_on_user_update(on_user_update)
+tgl.set_on_chat_update(on_chat_update)
 
