@@ -31,12 +31,44 @@
 #include <libgen.h>
 
 #include <Python.h>
-#ifdef EVENT_V2
-#include <event2/event.h>
+#include "bytesobject.h"
+
+// Python 2/3 compat macros
+#if PY_MAJOR_VERSION >= 3
+  #define MOD_ERROR_VAL NULL
+  #define MOD_SUCCESS_VAL(val) val
+  #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+          static struct PyModuleDef moduledef = { \
+          PyModuleDef_HEAD_INIT, name, doc, -1, methods, NULL, NULL, NULL, NULL,}; \
+          ob = PyModule_Create(&moduledef);
+  #define PyInt_FromLong PyLong_FromLong
 #else
-#include <event.h>
-#include "event-old.h"
+  #define MOD_ERROR_VAL
+  #define MOD_SUCCESS_VAL(val)
+  #define MOD_INIT(name) void init##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+          ob = Py_InitModule3(name, methods, doc);
 #endif
+
+#define TGL_PYTHON_CALLBACK(name, func) \
+      PyObject *set##func(PyObject *dummy, PyObject *args) { \
+      PyObject *result = NULL; \
+      PyObject *temp; \
+      if (PyArg_ParseTuple(args, "O:set_##name", &temp)) { \
+        if (!PyCallable_Check(temp)) { \
+          PyErr_SetString(PyExc_TypeError, "parameter must be callable");\
+          return NULL;\
+        }\
+        Py_XINCREF(temp);\
+        Py_XDECREF(func);\
+        func = temp;\
+        Py_INCREF(Py_None);\
+        result = Py_None;\
+        }\
+        return result;\
+      }
+
 
 // Python Imports
 #include "datetime.h"
@@ -75,16 +107,16 @@ void py_add_string_field (PyObject* dict, char *name, const char *value) {
   assert (PyDict_Check(dict));
   assert (name && strlen (name));
   if (!value || !strlen (value)) { return; }
-  PyDict_SetItemString (dict, name, PyString_FromString(value));
+  PyDict_SetItemString (dict, name, PyUnicode_FromString(value));
 }
 
 void py_add_string_field_arr (PyObject* list, int num, const char *value) {
   assert(PyList_Check(list));
   if (!value || !strlen (value)) { return; }
   if(num >= 0)
-    PyList_SetItem (list, num, PyString_FromString (value));
+    PyList_SetItem (list, num, PyUnicode_FromString (value));
   else // Append
-    PyList_Append  (list, PyString_FromString (value));
+    PyList_Append  (list, PyUnicode_FromString (value));
 }
 
 void py_add_num_field (PyObject* dict, const char *name, double value) {
@@ -98,13 +130,13 @@ PyObject* get_tgl_peer_type (int x) {
 
   switch (x) {
   case TGL_PEER_USER:
-    type = PyString_FromString("user");
+    type = PyUnicode_FromString("user");
     break;
   case TGL_PEER_CHAT:
-    type = PyString_FromString("chat");
+    type = PyUnicode_FromString("chat");
     break;
   case TGL_PEER_ENCR_CHAT:
-    type = PyString_FromString("encr_chat");
+    type = PyUnicode_FromString("encr_chat");
     break;
   default:
     assert (0);
@@ -264,7 +296,7 @@ PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
     if(name == NULL)
       assert(0); // TODO handle python exception;
 
-    PyDict_SetItemString (name, "print_name", PyString_FromString(s));
+    PyDict_SetItemString (name, "print_name", PyUnicode_FromString(s));
     PyDict_SetItemString (peer, "peer", name);
   } else {
     PyObject *peer_obj;
@@ -374,7 +406,7 @@ PyObject* get_message (struct tgl_message *M) {
 
   if (!M->service) { 
     if (M->message_len && M->message) {
-      PyDict_SetItemString(msg, "text", PyString_FromStringAndSize(M->message, M->message_len));
+      PyDict_SetItemString(msg, "text", PyUnicode_FromStringAndSize(M->message, M->message_len));
     }
     if (M->media.type && M->media.type != tgl_message_media_none) {
       PyDict_SetItemString(msg, "media", get_media(&M->media));  
@@ -389,12 +421,19 @@ void py_binlog_end (void) {
 
   PyObject *arglist, *result;
 
+  if(_py_binlog_end == NULL) {
+    logprintf("Callback not set for on_binlog_end");
+    return;
+  }
+ 
   arglist = Py_BuildValue("()");
   result = PyEval_CallObject(_py_binlog_end, arglist);
-  Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
+  Py_DECREF(arglist);
+  
+  if(result == NULL)
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -404,12 +443,18 @@ void py_diff_end (void) {
 
   PyObject *arglist, *result;
 
+  if(_py_diff_end == NULL) {
+    logprintf("Callback not set for on_diff_end");
+    return;
+  }
+ 
   arglist = Py_BuildValue("()");
   result = PyEval_CallObject(_py_diff_end, arglist);
-  Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
+  Py_DECREF(arglist);
+  if(result == NULL)
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -419,12 +464,17 @@ void py_our_id (int id) {
 
   PyObject *arglist, *result;
 
+  if(_py_our_id == NULL) {
+    logprintf("Callback not set for on_our_id");
+    return;
+  }
+
   arglist = Py_BuildValue("(i)", id);
   result = PyEval_CallObject(_py_our_id, arglist);
   Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -434,6 +484,11 @@ void py_new_msg (struct tgl_message *M) {
   PyObject *msg;
   PyObject *arglist, *result;
 
+  if(_py_new_msg == NULL) {
+    logprintf("Callback not set for on_new_msg");
+    return;
+  }
+
   msg = get_message (M);
 
   arglist = Py_BuildValue("(O)", msg);
@@ -442,8 +497,8 @@ void py_new_msg (struct tgl_message *M) {
 
   if(result == NULL)  
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -452,6 +507,11 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   if (!python_loaded) { return; }
   PyObject *peer, *types;
   PyObject *arglist, *result; 
+
+  if(_py_secret_chat_update == NULL) {
+    logprintf("Callback not set for on_secret_chat_update");
+    return;
+  }
 
   peer = get_peer (C->id, (void *)C);
   types = get_update_types (flags);
@@ -462,8 +522,8 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
 
   if(result == NULL)
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -474,6 +534,11 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
   PyObject *peer, *types;
   PyObject *arglist, *result;
 
+  if(_py_user_update == NULL) {
+    logprintf("Callback not set for on_user_update");
+    return;
+  }
+
   peer = get_peer (U->id, (void *)U);
   types = get_update_types (flags);
 
@@ -483,8 +548,8 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
 
   if(result == NULL)
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -495,6 +560,11 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
   PyObject *peer, *types;
   PyObject *arglist, *result;
 
+  if(_py_chat_update == NULL) {
+    logprintf("Callback not set for on_chat_update");
+    return;
+  }
+
   peer = get_peer (C->id, (void *)C);
   types = get_update_types (flags);
 
@@ -504,8 +574,8 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 
   if(result == NULL)
     PyErr_Print();
-  else if(PyString_Check(result))
-    logprintf ("python: %s\n", PyString_AsString(result));
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
 
   Py_XDECREF(result);
 }
@@ -929,7 +999,9 @@ void py_do_all (void) {
     enum py_query_type f = (long)py_ptr[p ++];
     PyObject *args = (PyObject *)py_ptr[p ++];
     PyObject *pyObj1, *pyObj2;
-    char *s;
+    PyObject *ustr, *str;
+    str = NULL;
+
     //struct tgl_message *M;
     tgl_peer_id_t peer, peer1;
 
@@ -941,8 +1013,12 @@ void py_do_all (void) {
       tgl_do_get_dialog_list (TLS, py_dialog_list_cb, NULL);
       break;
     case pq_msg:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_message (TLS, peer, s, strlen (s), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_message (TLS, peer, PyBytes_AsString(str), PyBytes_Size (str), py_msg_cb, NULL);
       break;
     case pq_send_typing:
       PyArg_ParseTuple(args, "ii", &peer.type, &peer.id);
@@ -953,36 +1029,68 @@ void py_do_all (void) {
       tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, NULL);
       break;
     case pq_rename_chat:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_rename_chat (TLS, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_rename_chat (TLS, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_send_photo:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_document (TLS, -1, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_document (TLS, -1, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_send_video:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_send_audio:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_send_document:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_document (TLS, 0, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_document (TLS, 0, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_send_file:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_document (TLS, -2, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_document (TLS, -2, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_send_text:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_send_text (TLS, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_send_text (TLS, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
     case pq_chat_set_photo:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &s);
-      tgl_do_set_chat_photo (TLS, peer, s, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
+      str = PyUnicode_AsUnicodeEscapeString(ustr);
+      if(str == NULL)
+        PyErr_Print();
+      else
+        tgl_do_set_chat_photo (TLS, peer, PyBytes_AsString(str), py_msg_cb, NULL);
       break;
 /*  case pq_load_photo:
     case pq_load_video:
@@ -1110,7 +1218,14 @@ void py_do_all (void) {
     default:
       assert (0);
     }
-    Py_DECREF(args);
+
+    // Clean up any arg variables we could have used.
+    Py_XDECREF(args);
+    Py_XDECREF(pyObj1);
+    Py_XDECREF(pyObj2);
+    Py_XDECREF(str);
+    Py_XDECREF(ustr);
+
   }
   pos = 0;
 }
@@ -1171,6 +1286,34 @@ PyObject* py_status_offline(PyObject *self, PyObject *args) { return push_py_fun
 PyObject* py_send_location(PyObject *self, PyObject *args) { return push_py_func(pq_send_location, args); }
 PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf, args); }
 
+
+// Store callables for python functions
+TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
+TGL_PYTHON_CALLBACK("on_get_difference_end", _py_diff_end);
+//TGL_PYTHON_CALLBACK("on_our_id", _py_our_id);
+TGL_PYTHON_CALLBACK("on_msg_receive", _py_new_msg);
+TGL_PYTHON_CALLBACK("on_secret_chat_update", _py_secret_chat_update);
+TGL_PYTHON_CALLBACK("on_user_update", _py_user_update);
+TGL_PYTHON_CALLBACK("on_chat_update", _py_chat_update);
+
+PyObject *set_py_our_id(PyObject *dummy, PyObject *args) {
+      PyObject *result = NULL;
+      PyObject *temp;
+      if (PyArg_ParseTuple(args, "O:set_on_our_id", &temp)) {
+        if (!PyCallable_Check(temp)) {
+          PyErr_SetString(PyExc_TypeError, "parameter must be callable");
+          return NULL;
+        }
+        Py_XINCREF(temp);
+        Py_XDECREF(_py_our_id);
+        _py_our_id = temp;
+        Py_INCREF(Py_None);
+        result = Py_None;
+        }
+        return result;
+}
+
+
 static PyMethodDef py_tgl_methods[] = {
   {"get_contact_list", py_contact_list, METH_VARARGS, "retrieve contact list"},
   {"get_dialog_list", py_dialog_list, METH_VARARGS, ""},
@@ -1216,8 +1359,27 @@ static PyMethodDef py_tgl_methods[] = {
   {"status_offline", py_status_offline, METH_VARARGS, ""},
   {"send_location", py_send_location, METH_VARARGS, ""},  
   {"ext_function", py_extf, METH_VARARGS, ""},
+  {"set_on_binlog_replay_end", set_py_binlog_end, METH_VARARGS, ""},
+  {"set_on_get_difference_end", set_py_diff_end, METH_VARARGS, ""},
+  {"set_on_our_id", set_py_our_id, METH_VARARGS, ""},
+  {"set_on_msg_receive", set_py_new_msg, METH_VARARGS, ""},
+  {"set_on_secret_chat_update", set_py_secret_chat_update, METH_VARARGS, ""},
+  {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
+  {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
   { NULL, NULL, 0, NULL }
 };
+
+MOD_INIT(tgl)
+{
+  PyObject *m;
+
+  MOD_DEF(m, "tgl", NULL, py_tgl_methods)
+
+  if (m == NULL)
+    return MOD_ERROR_VAL;
+
+  return MOD_SUCCESS_VAL(m);  
+}
 
 
 //static void lua_postpone_alarm (evutil_socket_t fd, short what, void *arg) {
@@ -1291,54 +1453,42 @@ static PyMethodDef py_tgl_methods[] = {
 //}
 //
 
-#define my_python_register(dict, name, f) \
-    f = PyDict_GetItemString(dict, name); 
-
-
-void inittgl()
-{
-  (void) Py_InitModule("tgl", py_tgl_methods);    
-}
-
 void py_init (const char *file) {
   if (!file) { return; }
   python_loaded = 0;
   
-  PyObject *pModule, *pDict;
+  PyObject *pModule;
 
   // Get a copy of the filename for dirname, which may modify the string.
   char filename[100];
   strncpy(filename, file, 100);
    
-  Py_Initialize();
+#if PY_MAJOR_VERSION >= 3
+  PyImport_AppendInittab("tgl", &PyInit_tgl);
+#else
   inittgl();
+#endif
+
+  Py_Initialize();
 
   PyObject* sysPath = PySys_GetObject((char*)"path");
-  PyList_Append(sysPath, PyString_FromString(dirname(filename)));
+  PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
   // remove .py extension from file, if any
   char* dot = strrchr(file, '.');
   if (dot && strcmp(dot, ".py") == 0) 
     *dot = 0;
-  pModule = PyImport_Import(PyString_FromString(basename(file)));
-
+  pModule = PyImport_Import(PyUnicode_FromString(basename(file)));
+  
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
     PyErr_Print();
     exit(1);
-  } else {
-    python_loaded = 1;
-    PyDateTime_IMPORT;
-    pDict = PyModule_GetDict(pModule);
-  
-    // Store callables for python functions
-    my_python_register(pDict, "on_binlog_replay_end", _py_binlog_end);
-    my_python_register(pDict, "on_get_difference_end", _py_diff_end);
-    my_python_register(pDict, "on_our_id", _py_our_id);
-    my_python_register(pDict, "on_msg_receive", _py_new_msg);
-    my_python_register(pDict, "on_secret_chat_update", _py_secret_chat_update);
-    my_python_register(pDict, "on_user_update", _py_user_update);
-    my_python_register(pDict, "on_chat_update", _py_chat_update);
   }
+
+
+  python_loaded = 1;
+  PyDateTime_IMPORT;
+  logprintf("Python Initialized");
 }
 
