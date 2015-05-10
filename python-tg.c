@@ -100,14 +100,17 @@ PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
 // Utility functions
 PyObject* get_datetime(long datetime)
 {
-   return PyDateTime_FromTimestamp(Py_BuildValue("(O)", PyLong_FromLong(datetime)));
+  return PyDateTime_FromTimestamp(Py_BuildValue("(O)", PyLong_FromLong(datetime)));
 }
 
 void py_add_string_field (PyObject* dict, char *name, const char *value) {
   assert (PyDict_Check(dict));
   assert (name && strlen (name));
   if (!value || !strlen (value)) { return; }
-  PyDict_SetItemString (dict, name, PyUnicode_FromString(value));
+  PyObject *str = PyUnicode_FromString(value);
+
+  if(PyUnicode_Check(str))
+    PyDict_SetItemString (dict, name, str);
 }
 
 void py_add_string_field_arr (PyObject* list, int num, const char *value) {
@@ -998,9 +1001,10 @@ void py_do_all (void) {
 
     enum py_query_type f = (long)py_ptr[p ++];
     PyObject *args = (PyObject *)py_ptr[p ++];
-    PyObject *pyObj1, *pyObj2;
-    PyObject *ustr, *str;
-    str = NULL;
+    const char *str;
+    int len;
+    PyObject *pyObj1 = NULL;
+    PyObject *pyObj2 = NULL;
 
     //struct tgl_message *M;
     tgl_peer_id_t peer, peer1;
@@ -1013,12 +1017,8 @@ void py_do_all (void) {
       tgl_do_get_dialog_list (TLS, py_dialog_list_cb, NULL);
       break;
     case pq_msg:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_message (TLS, peer, PyBytes_AsString(str), PyBytes_Size (str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis#", &peer.type, &peer.id, &str, &len);
+      tgl_do_send_message (TLS, peer, str, len, py_msg_cb, NULL);
       break;
     case pq_send_typing:
       PyArg_ParseTuple(args, "ii", &peer.type, &peer.id);
@@ -1029,68 +1029,36 @@ void py_do_all (void) {
       tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, NULL);
       break;
     case pq_rename_chat:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_rename_chat (TLS, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_rename_chat (TLS, peer, str, py_msg_cb, NULL);
       break;
     case pq_send_photo:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_document (TLS, -1, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_send_document (TLS, -1, peer, str, py_msg_cb, NULL);
       break;
     case pq_send_video:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, str, py_msg_cb, NULL);
       break;
     case pq_send_audio:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, str, py_msg_cb, NULL);
       break;
     case pq_send_document:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_document (TLS, 0, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_send_document (TLS, 0, peer, str, py_msg_cb, NULL);
       break;
     case pq_send_file:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_document (TLS, -2, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_send_document (TLS, -2, peer, str, py_msg_cb, NULL);
       break;
     case pq_send_text:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_send_text (TLS, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_send_text (TLS, peer, str, py_msg_cb, NULL);
       break;
     case pq_chat_set_photo:
-      PyArg_ParseTuple(args, "iiU", &peer.type, &peer.id, &ustr);
-      str = PyUnicode_AsUnicodeEscapeString(ustr);
-      if(str == NULL)
-        PyErr_Print();
-      else
-        tgl_do_set_chat_photo (TLS, peer, PyBytes_AsString(str), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
+      tgl_do_set_chat_photo (TLS, peer, str, py_msg_cb, NULL);
       break;
 /*  case pq_load_photo:
     case pq_load_video:
@@ -1198,6 +1166,8 @@ void py_do_all (void) {
     case pq_send_location:
       PyArg_ParseTuple(args, "iiOO", &peer.type, &peer.id, &pyObj1, &pyObj2);
       tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), py_msg_cb, NULL);
+      Py_XDECREF(pyObj1);
+      Py_XDECREF(pyObj2);
       break;
   /*
   pq_delete_msg,
@@ -1220,11 +1190,7 @@ void py_do_all (void) {
     }
 
     // Clean up any arg variables we could have used.
-    Py_XDECREF(args);
-    Py_XDECREF(pyObj1);
-    Py_XDECREF(pyObj2);
-    Py_XDECREF(str);
-    Py_XDECREF(ustr);
+    //Py_XDECREF(args); // TODO: this is going negative ref and causing segfaults
 
   }
   pos = 0;
@@ -1447,11 +1413,12 @@ void py_init (const char *file) {
    
 #if PY_MAJOR_VERSION >= 3
   PyImport_AppendInittab("tgl", &PyInit_tgl);
+  Py_Initialize();
 #else
+  Py_Initialize();
   inittgl();
 #endif
 
-  Py_Initialize();
 
   PyObject* sysPath = PySys_GetObject((char*)"path");
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));

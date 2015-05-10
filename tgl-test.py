@@ -1,7 +1,5 @@
 import tgl
-import geopy
 import pprint
-from geopy.geocoders import Nominatim
 
 our_id = 0
 pp = pprint.PrettyPrinter(indent=4)
@@ -34,13 +32,8 @@ def on_msg_receive(msg):
     text = msg["text"]
 
     if text.startswith("!ping"):
+      print("SENDING PONG")
       tgl.send_msg(ptype, pid, "PONG!")
-
-    if text.startswith("!location"):
-      geolocator = Nominatim()
-      location = geolocator.geocode(msg["text"][9:])
-      pp.pprint(location)
-      tgl.send_location(ptype, pid, location.latitude, location.longitude)
 
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"
