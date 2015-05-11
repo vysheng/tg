@@ -1722,7 +1722,7 @@ static int register_interface_from_lua (lua_State *L) {
 
   int i;
   for (i = 0; i < n - 4; i++) {
-    char *s = lua_tostring (L, -1);
+    const char *s = lua_tostring (L, -1);
     lua_pop (L, 1);
     
     if (!s || !strlen (s)) {
