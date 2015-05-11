@@ -19,7 +19,7 @@ DIR_LIST=${DEP} ${AUTO} ${EXE} ${OBJ} ${LIB} ${DEP}/auto ${OBJ}/auto
 
 EXE_LIST=${EXE}/telegram-cli
 
-TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o
+TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o ${OBJ}/json-tg.o
 
 INCLUDE=-I. -I${srcdir} -I${srcdir}/tgl
 CC=@CC@

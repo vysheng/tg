@@ -694,6 +694,7 @@ with_zlib
 enable_libconfig
 enable_extf
 enable_liblua
+enable_json
 with_progname
 enable_valgrind
 '
@@ -1321,6 +1322,7 @@ Optional Features:
 --enable-libconfig/--disable-libconfig
 --enable-extf/--disable-extf
 --enable-liblua/--disable-liblua
+--enable-json/--disable-json
 --enable-valgrind/--disable-valgrind
 
 Optional Packages:
@@ -5865,7 +5867,130 @@ fi
 fi
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libjansson" >&5
+$as_echo_n "checking for libjansson... " >&6; }
+# Check whether --enable-json was given.
+if test "${enable_json+set}" = set; then :
+  enableval=$enable_json;
+  if test "x$enableval" = "xno" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5
+$as_echo "disabled" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: enabled" >&5
+$as_echo "enabled" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for json_array_set_new in -ljansson" >&5
+$as_echo_n "checking for json_array_set_new in -ljansson... " >&6; }
+if ${ac_cv_lib_jansson_json_array_set_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ljansson  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char json_array_set_new ();
+int
+main ()
+{
+return json_array_set_new ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_jansson_json_array_set_new=yes
+else
+  ac_cv_lib_jansson_json_array_set_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jansson_json_array_set_new" >&5
+$as_echo "$ac_cv_lib_jansson_json_array_set_new" >&6; }
+if test "x$ac_cv_lib_jansson_json_array_set_new" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBJANSSON 1
+_ACEOF
+
+  LIBS="-ljansson $LIBS"
+
+else
+  as_fn_error $? "No libjansson found. Try --disable-json" "$LINENO" 5
+fi
+
+
+$as_echo "#define USE_JSON 1" >>confdefs.h
+
+  fi
+
+else
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: enabled" >&5
+$as_echo "enabled" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for json_array_set_new in -ljansson" >&5
+$as_echo_n "checking for json_array_set_new in -ljansson... " >&6; }
+if ${ac_cv_lib_jansson_json_array_set_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ljansson  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char json_array_set_new ();
+int
+main ()
+{
+return json_array_set_new ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_jansson_json_array_set_new=yes
+else
+  ac_cv_lib_jansson_json_array_set_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jansson_json_array_set_new" >&5
+$as_echo "$ac_cv_lib_jansson_json_array_set_new" >&6; }
+if test "x$ac_cv_lib_jansson_json_array_set_new" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBJANSSON 1
+_ACEOF
+
+  LIBS="-ljansson $LIBS"
+
+else
+  as_fn_error $? "No libjansson found. Try --disable-json" "$LINENO" 5
+fi
+
+
+$as_echo "#define USE_JSON 1" >>confdefs.h
+
+
+fi
+
+
 #check for custom prog name
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking progname" >&5
+$as_echo_n "checking progname... " >&6; }
 
 # Check whether --with-progname was given.
 if test "${with_progname+set}" = set; then :

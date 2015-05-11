@@ -74,6 +74,11 @@
 #define OPEN_BIN "xdg-open %s"
 #endif
 
+#ifdef USE_JSON
+#  include "jansson.h"
+#  include "json-tg.h"
+#endif
+
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
@@ -82,7 +87,7 @@ extern char one_string[];
 extern int one_string_len;
 extern char *one_string_prompt;
 extern int one_string_flags;
-
+extern int enable_json;
 int disable_auto_accept;
 int msg_num_mode;
 int disable_colors;
@@ -1599,17 +1604,40 @@ void work_modifier (const char *s, int l) {
 
 void print_fail (struct in_ev *ev) {
   mprint_start (ev);
-  mprintf (ev, "FAIL\n");
+  if (!enable_json) {
+    mprintf (ev, "FAIL\n");
+  } else {
+  #ifdef USE_JSON
+    json_t *res = json_object ();
+    assert (json_object_set (res, "result", json_string ("FAIL")) >= 0);
+    char *s = json_dumps (res, 0);
+    mprintf (ev, "%s\n", s);
+    json_decref (res);
+    free (s);
+  #endif
+  }
   mprint_end (ev);
 }
 
 void print_success (struct in_ev *ev) {
-  if (ev) {
+  if (ev || enable_json) {
     mprint_start (ev);
-    mprintf (ev, "SUCCESS\n");
+    if (!enable_json) {
+      mprintf (ev, "SUCCESS\n");
+    } else {
+      #ifdef USE_JSON
+        json_t *res = json_object ();
+        assert (json_object_set (res, "result", json_string ("SUCCESS")) >= 0);
+        char *s = json_dumps (res, 0);
+        mprintf (ev, "%s\n", s);
+        json_decref (res);
+        free (s);
+      #endif
+    }
     mprint_end (ev);
   }
 }
+
 void print_success_gw (struct tgl_state *TLSR, void *extra, int success) {
   assert (TLS == TLSR);
   struct in_ev *ev = extra;
@@ -1644,10 +1672,26 @@ void print_msg_list_gw (struct tgl_state *TLSR, void *extra, int success, int nu
     return;
   }
   if (!success) { print_fail (ev); return; }
+
   mprint_start (ev);
-  int i;
-  for (i = num - 1; i >= 0; i--) {
-    print_message (ev, ML[i]);
+  if (!enable_json) {
+    int i;
+    for (i = num - 1; i >= 0; i--) {
+      print_message (ev, ML[i]);
+    }
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_array ();
+      int i;
+      for (i = num - 1; i >= 0; i--) {
+        json_t *a = json_pack_message (ML[i]);
+        assert (json_array_append (res, a) >= 0);        
+      }
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
   }
   mprint_end (ev);
 }
@@ -1661,7 +1705,17 @@ void print_msg_gw (struct tgl_state *TLSR, void *extra, int success, struct tgl_
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  print_message (ev, M);
+  if (!enable_json) {
+    print_message (ev, M);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_message (M);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -1674,10 +1728,25 @@ void print_user_list_gw (struct tgl_state *TLSR, void *extra, int success, int n
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  int i;
-  for (i = num - 1; i >= 0; i--) {
-    print_user_name (ev, UL[i]->id, (void *)UL[i]);
-    mprintf (ev, "\n");
+  if (!enable_json) {
+    int i;
+    for (i = num - 1; i >= 0; i--) {
+      print_user_name (ev, UL[i]->id, (void *)UL[i]);
+      mprintf (ev, "\n");
+    }
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_array ();
+      int i;
+      for (i = num - 1; i >= 0; i--) {
+        json_t *a = json_pack_peer (UL[i]->id, (void *)UL[i]);
+        assert (json_array_append (res, a) >= 0);
+      }
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
   }
   mprint_end (ev);
 }
@@ -1691,8 +1760,18 @@ void print_user_gw (struct tgl_state *TLSR, void *extra, int success, struct tgl
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  print_user_name (ev, U->id, (void *)U);
-  mprintf (ev, "\n");
+  if (!enable_json) {
+    print_user_name (ev, U->id, (void *)U);
+    mprintf (ev, "\n");
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_peer (U->id, (void *)U);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -1705,7 +1784,18 @@ void print_filename_gw (struct tgl_state *TLSR, void *extra, int success, char *
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mprintf (ev, "Saved to %s\n", name);
+  if (!enable_json) {
+    mprintf (ev, "Saved to %s\n", name);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_object ();
+      assert (json_object_set (res, "result", json_string (name)) >= 0);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -1718,7 +1808,19 @@ void print_string_gw (struct tgl_state *TLSR, void *extra, int success, const ch
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mprintf (ev, "%s\n", name);
+  mprint_start (ev);
+  if (!enable_json) {
+    mprintf (ev, "%s\n", name);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_object ();
+      assert (json_object_set (res, "result", json_string (name)) >= 0);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -1752,30 +1854,42 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-
-  tgl_peer_t *U = (void *)C;
-  mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "Chat ");
-  print_chat_name (ev, U->id, U);
-  mprintf (ev, " (id %d) members:\n", tgl_get_peer_id (U->id));
-  int i;
-  for (i = 0; i < C->user_list_size; i++) {
-    mprintf (ev, "\t\t");
-    print_user_name (ev, TGL_MK_USER (C->user_list[i].user_id), tgl_peer_get (TLS, TGL_MK_USER (C->user_list[i].user_id)));
-    mprintf (ev, " invited by ");
-    print_user_name (ev, TGL_MK_USER (C->user_list[i].inviter_id), tgl_peer_get (TLS, TGL_MK_USER (C->user_list[i].inviter_id)));
-    mprintf (ev, " at ");
-    print_date_full (ev, C->user_list[i].date);
-    if (C->user_list[i].user_id == C->admin_id) {
-      mprintf (ev, " admin");
+  
+  if (!enable_json) {
+    tgl_peer_t *U = (void *)C;
+    mpush_color (ev, COLOR_YELLOW);
+    mprintf (ev, "Chat ");
+    print_chat_name (ev, U->id, U);
+    mprintf (ev, " (id %d) members:\n", tgl_get_peer_id (U->id));
+    int i;
+    for (i = 0; i < C->user_list_size; i++) {
+      mprintf (ev, "\t\t");
+      print_user_name (ev, TGL_MK_USER (C->user_list[i].user_id), tgl_peer_get (TLS, TGL_MK_USER (C->user_list[i].user_id)));
+      mprintf (ev, " invited by ");
+      print_user_name (ev, TGL_MK_USER (C->user_list[i].inviter_id), tgl_peer_get (TLS, TGL_MK_USER (C->user_list[i].inviter_id)));
+      mprintf (ev, " at ");
+      print_date_full (ev, C->user_list[i].date);
+      if (C->user_list[i].user_id == C->admin_id) {
+        mprintf (ev, " admin");
+      }
+      mprintf (ev, "\n");
     }
-    mprintf (ev, "\n");
+    mpop_color (ev);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_peer (C->id, (void *)C);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
   }
-  mpop_color (ev);
+
   mprint_end (ev);
 }
 
 void print_user_status (struct tgl_user_status *S, struct in_ev *ev) {
+  if (enable_json) { return; }
   if (S->online > 0) {
     mprintf (ev, "online (was online ");
     print_date_full (ev, S->when);
@@ -1805,21 +1919,31 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
     return;
   }
   if (!success) { print_fail (ev); return; }
-  tgl_peer_t *C = (void *)U;
   mprint_start (ev);
-  mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "User ");
-  print_user_name (ev, U->id, C);
-  if (U->username) {
-    mprintf (ev, " @%s", U->username);
+  tgl_peer_t *C = (void *)U;
+  if (!enable_json) {
+    mpush_color (ev, COLOR_YELLOW);
+    mprintf (ev, "User ");
+    print_user_name (ev, U->id, C);
+    if (U->username) {
+      mprintf (ev, " @%s", U->username);
+    }
+    mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
+    mprintf (ev, "\treal name: %s %s\n", U->real_first_name, U->real_last_name);
+    mprintf (ev, "\tphone: %s\n", U->phone);
+    mprintf (ev, "\t");
+    print_user_status (&U->status, ev);
+    mprintf (ev, "\n");
+    mpop_color (ev);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_peer (U->id, (void *)U);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
   }
-  mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
-  mprintf (ev, "\treal name: %s %s\n", U->real_first_name, U->real_last_name);
-  mprintf (ev, "\tphone: %s\n", U->phone);
-  mprintf (ev, "\t");
-  print_user_status (&U->status, ev);
-  mprintf (ev, "\n");
-  mpop_color (ev);
   mprint_end (ev);
 }
 
@@ -1832,11 +1956,21 @@ void print_secret_chat_gw (struct tgl_state *TLSR, void *extra, int success, str
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, " Encrypted chat ");
-  print_encr_chat_name (ev, E->id, (void *)E);
-  mprintf (ev, " is now in wait state\n");
-  mpop_color (ev);
+  if (!enable_json) {
+    mpush_color (ev, COLOR_YELLOW);
+    mprintf (ev, " Encrypted chat ");
+    print_encr_chat_name (ev, E->id, (void *)E);
+    mprintf (ev, " is now in wait state\n");
+    mpop_color (ev);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_peer (E->id, (void *)E);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -1849,26 +1983,41 @@ void print_dialog_list_gw (struct tgl_state *TLSR, void *extra, int success, int
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mpush_color (ev, COLOR_YELLOW);
-  int i;
-  for (i = size - 1; i >= 0; i--) {
-    tgl_peer_t *UC;
-    switch (tgl_get_peer_type (peers[i])) {
-    case TGL_PEER_USER:
-      UC = tgl_peer_get (TLS, peers[i]);
-      mprintf (ev, "User ");
-      print_user_name (ev, peers[i], UC);
-      mprintf (ev, ": %d unread\n", unread_count[i]);
-      break;
-    case TGL_PEER_CHAT:
-      UC = tgl_peer_get (TLS, peers[i]);
-      mprintf (ev, "Chat ");
-      print_chat_name (ev, peers[i], UC);
-      mprintf (ev, ": %d unread\n", unread_count[i]);
-      break;
+  if (!enable_json)  {
+    mpush_color (ev, COLOR_YELLOW);
+    int i;
+    for (i = size - 1; i >= 0; i--) {
+      tgl_peer_t *UC;
+      switch (tgl_get_peer_type (peers[i])) {
+        case TGL_PEER_USER:
+          UC = tgl_peer_get (TLS, peers[i]);
+          mprintf (ev, "User ");
+          print_user_name (ev, peers[i], UC);
+          mprintf (ev, ": %d unread\n", unread_count[i]);
+          break;
+        case TGL_PEER_CHAT:
+          UC = tgl_peer_get (TLS, peers[i]);
+          mprintf (ev, "Chat ");
+          print_chat_name (ev, peers[i], UC);
+          mprintf (ev, ": %d unread\n", unread_count[i]);
+          break;
+      }
     }
+    mpop_color (ev);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_array ();
+      int i;
+      for (i = size - 1; i >= 0; i--) {
+        json_t *a = json_pack_peer (peers[i], tgl_peer_get (TLS, peers[i]));
+        assert (json_array_append (res, a) >= 0);
+      }
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
   }
-  mpop_color (ev);
   mprint_end (ev);
 }
 
@@ -2029,6 +2178,7 @@ void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
 void type_notification_upd (struct tgl_state *TLSR, struct tgl_user *U, enum tgl_typing_status status) {
   assert (TLSR == TLS);
   if (log_level < 2 || (disable_output && !notify_ev)) { return; }
+  if (enable_json) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
@@ -2044,6 +2194,7 @@ void type_notification_upd (struct tgl_state *TLSR, struct tgl_user *U, enum tgl
 void type_in_chat_notification_upd (struct tgl_state *TLSR, struct tgl_user *U, struct tgl_chat *C, enum tgl_typing_status status) {
   assert (TLSR == TLS);
   if (log_level < 2 || (disable_output && !notify_ev)) { return; }
+  if (enable_json) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
@@ -2074,7 +2225,17 @@ void print_message_gw (struct tgl_state *TLSR, struct tgl_message *M) {
   if (disable_output && !notify_ev) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
-  print_message (ev, M);
+  if (!enable_json) {
+    print_message (ev, M);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_message (M);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -2130,6 +2291,18 @@ void print_peer_updates (struct in_ev *ev, int flags) {
   }
 }
 
+void json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
+  #ifdef USE_JSON
+    json_t *res = json_object ();
+    assert (json_object_set (res, "peer", json_pack_peer (P->id, P)) >= 0);
+    assert (json_object_set (res, "updates", json_pack_updates (flags)) >= 0);
+    char *s = json_dumps (res, 0);
+    mprintf (ev, "%s\n", s);
+    json_decref (res);
+    free (s);
+  #endif
+}
+
 void user_update_gw (struct tgl_state *TLSR, struct tgl_user *U, unsigned flags) {
   assert (TLSR == TLS);
   #ifdef USE_LUA
@@ -2142,17 +2315,21 @@ void user_update_gw (struct tgl_state *TLSR, struct tgl_user *U, unsigned flags)
 
   if (!(flags & TGL_UPDATE_CREATED)) {
     mprint_start (ev);
-    mpush_color (ev, COLOR_YELLOW);
-    mprintf (ev, "User ");
-    print_user_name (ev, U->id, (void *)U);
-    if (!(flags & TGL_UPDATE_DELETED)) {
-      mprintf (ev, " updated");
-      print_peer_updates (ev, flags);
+    if (!enable_json) {
+      mpush_color (ev, COLOR_YELLOW);
+      mprintf (ev, "User ");
+      print_user_name (ev, U->id, (void *)U);
+      if (!(flags & TGL_UPDATE_DELETED)) {
+        mprintf (ev, " updated");
+        print_peer_updates (ev, flags);
+      } else {
+        mprintf (ev, " deleted");
+      }
+      mprintf (ev, "\n");
+      mpop_color (ev);
     } else {
-      mprintf (ev, " deleted");
+      json_peer_update (ev, (void *)U, flags);
     }
-    mprintf (ev, "\n");
-    mpop_color (ev);
     mprint_end (ev);
   }
 }
@@ -2169,17 +2346,21 @@ void chat_update_gw (struct tgl_state *TLSR, struct tgl_chat *U, unsigned flags)
 
   if (!(flags & TGL_UPDATE_CREATED)) {
     mprint_start (ev);
-    mpush_color (ev, COLOR_YELLOW);
-    mprintf (ev, "Chat ");
-    print_chat_name (ev, U->id, (void *)U);
-    if (!(flags & TGL_UPDATE_DELETED)) {
-      mprintf (ev, " updated");
-      print_peer_updates (ev, flags);
+    if (!enable_json) {
+      mpush_color (ev, COLOR_YELLOW);
+      mprintf (ev, "Chat ");
+      print_chat_name (ev, U->id, (void *)U);
+      if (!(flags & TGL_UPDATE_DELETED)) {
+        mprintf (ev, " updated");
+        print_peer_updates (ev, flags);
+      } else {
+        mprintf (ev, " deleted");
+      }
+      mprintf (ev, "\n");
+      mpop_color (ev);
     } else {
-      mprintf (ev, " deleted");
+      json_peer_update (ev, (void *)U, flags);
     }
-    mprintf (ev, "\n");
-    mpop_color (ev);
     mprint_end (ev);
   }
 }
@@ -2207,17 +2388,21 @@ void secret_chat_update_gw (struct tgl_state *TLSR, struct tgl_secret_chat *U, u
 
   if (!(flags & TGL_UPDATE_CREATED)) {
     mprint_start (ev);
-    mpush_color (ev, COLOR_YELLOW);
-    mprintf (ev, "Secret chat ");
-    print_encr_chat_name (ev, U->id, (void *)U);
-    if (!(flags & TGL_UPDATE_DELETED)) {
-      mprintf (ev, " updated");
-      print_peer_updates (ev, flags);
+    if (!enable_json) {
+      mpush_color (ev, COLOR_YELLOW);
+      mprintf (ev, "Secret chat ");
+      print_encr_chat_name (ev, U->id, (void *)U);
+      if (!(flags & TGL_UPDATE_DELETED)) {
+        mprintf (ev, " updated");
+        print_peer_updates (ev, flags);
+      } else {
+        mprintf (ev, " deleted");
+      }
+      mprintf (ev, "\n");
+      mpop_color (ev);
     } else {
-      mprintf (ev, " deleted");
+      json_peer_update (ev, (void *)U, flags);
     }
-    mprintf (ev, "\n");
-    mpop_color (ev);
     mprint_end (ev);
   }
 }
@@ -2231,10 +2416,27 @@ void print_card_gw (struct tgl_state *TLSR, void *extra, int success, int size, 
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mprintf (ev, "Card: ");
-  int i;
-  for (i = 0; i < size; i++) {
-    mprintf (ev, "%08x%c", card[i], i == size - 1 ? '\n' : ':');
+  if (!enable_json) {
+    mprintf (ev, "Card: ");
+    int i;
+    for (i = 0; i < size; i++) {
+      mprintf (ev, "%08x%c", card[i], i == size - 1 ? '\n' : ':');
+    }
+  } else {
+    #ifdef USE_JSON
+    static char q[1000];
+    int pos = 0;
+    int i;
+    for (i = 0; i < size; i++) {
+      pos += sprintf (q + pos, "%08x%s", card[i], i == size - 1 ? "" : ":");
+    }
+    json_t *res = json_object ();
+    assert (json_object_set (res, "result", json_string (q)) >= 0);
+    char *s = json_dumps (res, 0);
+    mprintf (ev, "%s\n", s);
+    json_decref (res);
+    free (s);
+    #endif
   }
   mprint_end (ev);
 }
@@ -2247,7 +2449,18 @@ void callback_extf (struct tgl_state *TLS, void *extra, int success, char *buf) 
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mprintf (ev, "%s\n", buf);
+  if (!enable_json) {
+    mprintf (ev, "%s\n", buf);
+  } else {
+    #ifdef USE_JSON
+    json_t *res = json_object ();
+    assert (json_object_set (res, "result", json_string (buf)) >= 0);
+    char *s = json_dumps (res, 0);
+    mprintf (ev, "%s\n", s);
+    json_decref (res);
+    free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 
@@ -2255,6 +2468,7 @@ void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
   if (disable_output && !notify_ev) { return; }
   if (!binlog_read) { return; }
   if (log_level < 3) { return; }
+  if (enable_json) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);

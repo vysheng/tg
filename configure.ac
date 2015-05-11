@@ -94,7 +94,24 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
       ])
   ])
 
+AC_MSG_CHECKING([for libjansson])
+AC_ARG_ENABLE(json,[--enable-json/--disable-json],
+  [ 
+  if test "x$enableval" = "xno" ; then
+    AC_MSG_RESULT([disabled])
+  else
+    AC_MSG_RESULT([enabled])
+    AC_CHECK_LIB([jansson],[json_array_set_new],[],AC_MSG_ERROR([No libjansson found. Try --disable-json]))
+    AC_DEFINE(USE_JSON,1,[use json])
+  fi 
+  ],[
+    AC_MSG_RESULT([enabled])
+    AC_CHECK_LIB([jansson],[json_array_set_new],[],AC_MSG_ERROR([No libjansson found. Try --disable-json]))
+    AC_DEFINE(USE_JSON,1,[use json])
+  ])
+
 #check for custom prog name
+AC_MSG_CHECKING([progname])
 AC_ARG_WITH(progname,[--with-progname=<name>],
   [ 
   if test "x$with_progname" = "xno" ; then

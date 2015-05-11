@@ -120,6 +120,7 @@ int use_ids;
 int ipv6_enabled;
 char *start_command;
 int disable_link_preview;
+int enable_json;
 
 struct tgl_state *TLS;
 
@@ -480,7 +481,9 @@ void usage (void) {
   printf ("  --help/-h                            prints this help\n");
   printf ("  --accept-any-tcp                     accepts tcp connections from any src (only loopback by default)\n");
   printf ("  --disable-link-preview               disables server-side previews to links\n");
-
+  #ifdef USE_JSON
+  printf ("  --json                               prints answers and values in json format\n");
+  #endif
   exit (1);
 }
 
@@ -625,6 +628,7 @@ void args_parse (int argc, char **argv) {
     {"help", no_argument, 0, 'h'},
     {"accept-any-tcp", no_argument, 0,  1001},
     {"disable-link-preview", no_argument, 0, 1002},
+    {"json", no_argument, 0, 1003},
     {0,         0,                 0,  0 }
   };
 
@@ -737,6 +741,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 1002:
       disable_link_preview = 2;
+      break;
+    case 1003:
+      enable_json = 1;
       break;
     case 'h':
     default:
