@@ -75,7 +75,7 @@
 #endif
 
 #ifdef USE_JSON
-#  include "jansson.h"
+#  include <jansson.h>
 #  include "json-tg.h"
 #endif
 
