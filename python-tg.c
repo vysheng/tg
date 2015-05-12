@@ -615,6 +615,7 @@ enum py_query_type {
   pq_chat_info,
   pq_user_info,
   pq_history,
+  pq_history_ext,
   pq_chat_add_user,
   pq_chat_del_user,
   pq_add_contact,
@@ -937,7 +938,7 @@ void py_do_all (void) {
     
     
     const char *str;
-    int len;
+    int len, limit, offset;
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
     PyObject *cb_extra;
@@ -1006,7 +1007,7 @@ void py_do_all (void) {
       if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
         py_file_cb (TLS, py_ptr[p], 0, 0);
       } else {
-        if (M->media.type == tgl_message_media_photo) {
+        , limit, offse, limit, offsettif (M->media.type == tgl_message_media_photo) {
           tgl_do_load_photo (TLS, &M->media.photo, py_file_cb, py_ptr[p]);
         } else if (M->media.type == tgl_message_media_document) {
           tgl_do_load_document (TLS, &M->media.document, py_file_cb, py_ptr[p]);
@@ -1036,10 +1037,15 @@ void py_do_all (void) {
     case pq_user_info:
       tgl_do_get_user_info (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, py_user_cb, py_ptr[p]);
       break;
-    case pq_history:
-      tgl_do_get_history (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, (long)py_ptr[p + 2], 0, py_msg_list_cb, py_ptr[p]);
-      break;
 */
+    case pq_history:
+      PyArg_ParseTuple(args, "iiiO", &peer.type, &peer.id, &limit, &cb_extra);
+      tgl_do_get_history (TLS, peer, limit, 0, py_msg_list_cb, cb_extra);
+      break;
+    case pq_history_ext:
+      PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &offset, &limit, &cb_extra);
+      tgl_do_get_history_ext (TLS, peer, offset, limit, 0, py_msg_list_cb, cb_extra);
+      break;
     case pq_chat_add_user:
       PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &peer1.type, &peer1.id, &cb_extra);
       tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_msg_cb, cb_extra);
@@ -1174,6 +1180,7 @@ PyObject* py_fwd_media(PyObject *self, PyObject *args) { return push_py_func(pq_
 PyObject* py_chat_info(PyObject *self, PyObject *args) { return push_py_func(pq_chat_info, args); }
 PyObject* py_user_info(PyObject *self, PyObject *args) { return push_py_func(pq_chat_info, args); }
 PyObject* py_history(PyObject *self, PyObject *args) { return push_py_func(pq_history, args); }
+PyObject* py_history_ext(PyObject *self, PyObject *args) { return push_py_func(pq_history_ext, args); }
 PyObject* py_chat_add_user(PyObject *self, PyObject *args) { return push_py_func(pq_chat_add_user, args); }
 PyObject* py_chat_del_user(PyObject *self, PyObject *args) { return push_py_func(pq_chat_del_user, args); }
 PyObject* py_add_contact(PyObject *self, PyObject *args) { return push_py_func(pq_add_contact, args); }
@@ -1230,6 +1237,7 @@ static PyMethodDef py_tgl_methods[] = {
   {"chat_info", py_chat_info, METH_VARARGS, ""},
   {"user_info", py_user_info, METH_VARARGS, ""},
   {"get_history", py_history, METH_VARARGS, ""},
+  {"get_history_ext", py_history_ext, METH_VARARGS, ""},
   {"chat_add_user", py_chat_add_user, METH_VARARGS, ""},
   {"chat_del_user", py_chat_del_user, METH_VARARGS, ""},
   {"add_contact", py_add_contact, METH_VARARGS, ""},
@@ -1272,13 +1280,14 @@ MOD_INIT(tgl)
   return MOD_SUCCESS_VAL(m);  
 }
 
-
+/*
 extern int safe_quit;
 static int safe_quit_from_py() {
   Py_Finalize();
   safe_quit = 1;
   return 1;
 }
+*/
 
 void py_init (const char *file) {
   if (!file) { return; }

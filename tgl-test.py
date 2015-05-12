@@ -1,5 +1,7 @@
 import tgl
 import pprint
+from functools import partial
+
 
 our_id = 0
 pp = pprint.PrettyPrinter(indent=4)
@@ -20,6 +22,15 @@ def msg_cb(success, msg):
     pp.pprint(success)
     pp.pprint(msg)
 
+HISTORY_QUERY_SIZE = 100
+
+def history_cb(msg_list, ptype, pid, success, msgs):
+  print(len(msgs))
+  msg_list.extend(msgs)
+  print(len(msg_list))
+  if len(msgs) == HISTORY_QUERY_SIZE:
+    tgl.get_history_ext(ptype, pid, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
+
 def on_msg_receive(msg):
     if msg["out"] and not binlog_done:
       return;
@@ -39,6 +50,10 @@ def on_msg_receive(msg):
       print("SENDING PONG")
       tgl.send_msg(ptype, pid, "PONG!", msg_cb)
 
+    if text.startswith("!loadhistory"):
+      msg_list = []
+      tgl.get_history_ext(ptype, pid, 0, HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
+
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"
 
@@ -47,7 +62,6 @@ def on_user_update():
 
 def on_chat_update():
     pass
-
 
 # Set callbacks
 tgl.set_on_binlog_replay_end(on_binlog_replay_end)
