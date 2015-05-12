@@ -641,424 +641,362 @@ enum py_query_type {
   pq_extf
 };
 
-struct py_query_extra {
-  int func;
-  int param;
-};
-
 void py_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  assert (lua_gettop (luaState) == 3);
-//
-//  int r = lua_pcall (luaState, 2, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *result = NULL;
+
+  if(PyCallable_Check(callable)) {
+    arglist = Py_BuildValue("(O)", success ? Py_True : Py_False);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+  
+  Py_XDECREF(callable);
 }
 
 void py_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_user **UL) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    lua_newtable (luaState);
-//    int i;
-//    for (i = 0; i < num; i++) {
-//      lua_pushnumber (luaState, i);
-//      push_peer (UL[i]->id, (void *)UL[i]);
-//      lua_settable (luaState, -3);
-//    }
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *peers = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    peers = PyList_New(0);
+    if (success) {
+      int i;
+      for (i = 0; i < num; i++) {
+        PyList_Append(peers, get_peer (UL[i]->id, (void *)UL[i]));
+      }
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peers);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], int msgs[], int unread[]) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//  if (success) {
-//    lua_newtable (luaState);
-//    int i;
-//    for (i = 0; i < num; i++) {
-//      lua_pushnumber (luaState, i);
-//
-//      lua_newtable (luaState);
-//
-//      lua_pushstring (luaState, "peer");
-//      push_peer (peers[i], tgl_peer_get (TLS, peers[i]));
-//      lua_settable (luaState, -3);
-//
-//      struct tgl_message *M = tgl_message_get (TLS, msgs[i]);
-//      if (M && (M->flags & FLAG_CREATED)) {
-//        lua_pushstring (luaState, "message");
-//        push_message (M);
-//        lua_settable (luaState, -3);
-//      }
-//
-//      lua_pushstring (luaState, "unread");
-//      lua_pushnumber (luaState, unread[i]);
-//      lua_settable (luaState, -3);
-//
-//      lua_settable (luaState, -3);
-//    }
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//  assert (lua_gettop (luaState) == 4);
-//
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *dialog_list = NULL; 
+  PyObject *dialog = NULL;
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    dialog_list = PyList_New(0);
+    if (success) {
+      int i;
+      for (i = 0; i < num; i++) {
+        dialog = PyDict_New();
+        PyDict_SetItemString(dialog, "peer", get_peer(peers[i], tgl_peer_get (TLS, peers[i])));
+                
+        struct tgl_message *M = tgl_message_get (TLS, msgs[i]);
+        if (M && (M->flags & FLAG_CREATED)) {
+          PyDict_SetItemString(dialog, "message", get_message(M));
+        }
+        PyDict_SetItemString(dialog, "unread", unread[i] ? Py_True : Py_False);
+
+        PyList_Append(dialog_list, dialog);
+      }
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, dialog_list);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_message *M) {
   assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    push_message (M);
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *msg = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    if (success) {
+      msg = get_message(M);
+    } else {
+      Py_INCREF(Py_None);
+      msg = Py_None;
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, msg);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, struct tgl_message *M[]) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    lua_newtable (luaState);
-//    int i;
-//    for (i = 0; i < num; i++) {
-//      lua_pushnumber (luaState, i);
-//      push_message (M[i]);
-//      lua_settable (luaState, -3);
-//    }
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *msgs = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    msgs = PyList_New(0);
+    if (success) {
+      int i;
+      for (i = 0; i < num; i++) {
+        PyList_Append(msgs, get_message (M[i]));
+      }
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, msgs);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *file_name) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    lua_pushstring (luaState, file_name);
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *filename = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    if(success)
+      filename = PyUnicode_FromString(file_name);
+    else {
+      Py_INCREF(Py_None);
+      filename = Py_None;
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, filename);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_chat *C) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    push_peer (C->id, (void *)C);
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *peer = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    if (success) {
+      peer = get_peer(C->id, (void *)C);
+    } else {
+      Py_INCREF(Py_None);
+      peer = Py_None;
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peer);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_secret_chat *C) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    push_peer (C->id, (void *)C);
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *peer = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    if (success) {
+      peer = get_peer(C->id, (void *)C);
+    } else {
+      Py_INCREF(Py_None);
+      peer = Py_None;
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peer);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_user *C) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    push_peer (C->id, (void *)C);
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *peer = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    if (success) {
+      peer = get_peer(C->id, (void *)C);
+    } else {
+      Py_INCREF(Py_None);
+      peer = Py_None;
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peer);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *data) {
-//  assert (TLSR == TLS);
-//  struct lua_query_extra *cb = cb_extra;
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  lua_pushnumber (luaState, success);
-//
-//  if (success) {
-//    lua_pushstring (luaState, data);
-//  } else {
-//    lua_pushboolean (luaState, 0);
-//  }
-//
-//  assert (lua_gettop (luaState) == 4);
-//
-//  int r = lua_pcall (luaState, 3, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//  free (cb);
+  assert (TLSR == TLS);
+  PyObject *callable = cb_extra;
+  PyObject *arglist = NULL;
+  PyObject *str = NULL; 
+  PyObject *result = NULL;
+   
+  if(PyCallable_Check(callable)) {
+    if(success)
+      str = PyUnicode_FromString(data);
+    else {
+      Py_INCREF(Py_None);
+      str = Py_None;
+    }
+
+    arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, str);
+    result = PyEval_CallObject(callable, arglist);
+    Py_DECREF(arglist);
+    
+    if(result == NULL)
+      PyErr_Print();
+    
+    Py_XDECREF(result);
+  }
+
+  Py_XDECREF(callable);
 }
 
 void py_do_all (void) {
   int p = 0;
   while (p < pos) {
-    assert (p + 1 <= pos);
+    assert (p + 2 <= pos);
 
     enum py_query_type f = (long)py_ptr[p ++];
     PyObject *args = (PyObject *)py_ptr[p ++];
+
+    
+    
     const char *str;
     int len;
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
+    PyObject *cb_extra;
 
     //struct tgl_message *M;
     tgl_peer_id_t peer, peer1;
 
     switch (f) {
     case pq_contact_list:
-      tgl_do_update_contact_list (TLS, py_contact_list_cb, NULL);
+      PyArg_ParseTuple(args, "O", &cb_extra);
+      tgl_do_update_contact_list (TLS, py_contact_list_cb, cb_extra);
       break;
     case pq_dialog_list:
-      tgl_do_get_dialog_list (TLS, py_dialog_list_cb, NULL);
+      PyArg_ParseTuple(args, "O", &cb_extra);
+      tgl_do_get_dialog_list (TLS, py_dialog_list_cb, cb_extra);
       break;
     case pq_msg:
-      PyArg_ParseTuple(args, "iis#", &peer.type, &peer.id, &str, &len);
-      tgl_do_send_message (TLS, peer, str, len, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iis#O", &peer.type, &peer.id, &str, &len, &cb_extra);
+      tgl_do_send_message (TLS, peer, str, len, py_msg_cb, cb_extra);
       break;
     case pq_send_typing:
-      PyArg_ParseTuple(args, "ii", &peer.type, &peer.id);
-      tgl_do_send_typing (TLS, peer, tgl_typing_typing, py_empty_cb, NULL);
+      PyArg_ParseTuple(args, "iiO", &peer.type, &peer.id, &cb_extra);
+      tgl_do_send_typing (TLS, peer, tgl_typing_typing, py_empty_cb, cb_extra);
       break;
     case pq_send_typing_abort:
-      PyArg_ParseTuple(args, "ii", &peer.type, &peer.id);
-      tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, NULL);
+      PyArg_ParseTuple(args, "iiO", &peer.type, &peer.id, &cb_extra);
+      tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, cb_extra);
       break;
     case pq_rename_chat:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_rename_chat (TLS, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_rename_chat (TLS, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_photo:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_send_document (TLS, -1, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_send_document (TLS, -1, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_video:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_audio:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_document:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_send_document (TLS, 0, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_send_document (TLS, 0, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_file:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_send_document (TLS, -2, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_send_document (TLS, -2, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_text:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_send_text (TLS, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_send_text (TLS, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_chat_set_photo:
-      PyArg_ParseTuple(args, "iis", &peer.type, &peer.id, &str);
-      tgl_do_set_chat_photo (TLS, peer, str, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      tgl_do_set_chat_photo (TLS, peer, str, py_msg_cb, cb_extra);
       break;
 /*  case pq_load_photo:
     case pq_load_video:
@@ -1103,12 +1041,12 @@ void py_do_all (void) {
       break;
 */
     case pq_chat_add_user:
-      PyArg_ParseTuple(args, "iiii", &peer.type, &peer.id, &peer1.type, &peer1.id);
-      tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &peer1.type, &peer1.id, &cb_extra);
+      tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_msg_cb, cb_extra);
       break;
     case pq_chat_del_user:
-      PyArg_ParseTuple(args, "iiii", &peer.type, &peer.id, &peer.type, &peer.id);
-      tgl_do_del_user_from_chat (TLS, peer, peer1, py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &peer.type, &peer.id, &cb_extra);
+      tgl_do_del_user_from_chat (TLS, peer, peer1, py_msg_cb, cb_extra);
       break;
 /*  case pq_add_contact:
       tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, py_contact_list_cb, py_ptr[p]);
@@ -1154,18 +1092,20 @@ void py_do_all (void) {
       break;
 */
     case pq_status_online:
-      tgl_do_update_status (TLS, 1, py_empty_cb, NULL);
+      PyArg_ParseTuple(args, "O", &cb_extra);
+      tgl_do_update_status (TLS, 1, py_empty_cb, cb_extra);
       break;
     case pq_status_offline:
-      tgl_do_update_status (TLS, 0, py_empty_cb, NULL);
+      PyArg_ParseTuple(args, "O", &cb_extra);
+      tgl_do_update_status (TLS, 0, py_empty_cb, cb_extra);
       break;
 /*  case pq_extf:
       tgl_do_send_extf (TLS, s, strlen (s), py_str_cb, py_ptr[p]);
       break;
 */
     case pq_send_location:
-      PyArg_ParseTuple(args, "iiOO", &peer.type, &peer.id, &pyObj1, &pyObj2);
-      tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), py_msg_cb, NULL);
+      PyArg_ParseTuple(args, "iiOOO", &peer.type, &peer.id, &pyObj1, &pyObj2, &cb_extra);
+      tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), py_msg_cb, cb_extra);
       Py_XDECREF(pyObj1);
       Py_XDECREF(pyObj2);
       break;
@@ -1188,6 +1128,9 @@ void py_do_all (void) {
     default:
       assert (0);
     }
+
+    // Increment reference on cb_extra as it is passed on to the callback to use
+    Py_XINCREF(cb_extra);
 
     // Clean up any arg variables we could have used.
     //Py_XDECREF(args); // TODO: this is going negative ref and causing segfaults
@@ -1330,76 +1273,12 @@ MOD_INIT(tgl)
 }
 
 
-//static void lua_postpone_alarm (evutil_socket_t fd, short what, void *arg) {
-//  int *t = arg;
-//  
-//  lua_settop (luaState, 0);
-//  //lua_checkstack (luaState, 20);
-//  my_lua_checkstack (luaState, 20);
-//
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[1]);
-//  lua_rawgeti (luaState, LUA_REGISTRYINDEX, t[0]);
-//  assert (lua_gettop (luaState) == 2);
-//  
-//  int r = lua_pcall (luaState, 1, 0, 0);
-//
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, t[0]);
-//  luaL_unref (luaState, LUA_REGISTRYINDEX, t[1]);
-//
-//  if (r) {
-//    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
-//  }
-//
-//}
-//
-//static int postpone_from_lua (lua_State *L) {
-//  int n = lua_gettop (L);
-//  if (n != 3) {
-//    lua_pushboolean (L, 0);
-//    return 1;
-//  }
-//
-//  double timeout = lua_tonumber (L, -1);
-//  if (timeout < 0) {
-//    lua_pushboolean (L, 0);
-//    return 1;
-//  }
-//
-//  lua_pop (L, 1);
-//  int a1 = luaL_ref (L, LUA_REGISTRYINDEX);
-//  int a2 = luaL_ref (L, LUA_REGISTRYINDEX);
-//
-//
-//  int *t = malloc (16);
-//  assert (t);
-//  struct event *ev = evtimer_new (TLS->ev_base, lua_postpone_alarm, t);
-//  t[0] = a1;
-//  t[1] = a2;
-//  *(void **)(t + 2) = ev;
-//  
-//  struct timeval ts= {
-//    .tv_sec = (long)timeout,
-//    .tv_usec = (timeout - ((long)timeout)) * 1000000
-//  };
-//  event_add (ev, &ts);
-//  
-//  lua_pushboolean (L, 1);
-//  return 1;
-//}
-
-//extern int safe_quit;
-//static int safe_quit_from_lua (lua_State *L) {
-//  int n = lua_gettop (L);
-//  if (n != 0) {
-//    lua_pushboolean (L, 0);
-//    return 1;
-//  }
-//  safe_quit = 1;
-//  
-//  lua_pushboolean (L, 1);
-//  return 1;
-//}
-//
+extern int safe_quit;
+static int safe_quit_from_py() {
+  Py_Finalize();
+  safe_quit = 1;
+  return 1;
+}
 
 void py_init (const char *file) {
   if (!file) { return; }

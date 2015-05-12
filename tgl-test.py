@@ -16,6 +16,10 @@ def on_our_id(id):
     our_id = id
     return "Set ID: " + str(our_id) 
 
+def msg_cb(success, msg):
+    pp.pprint(success)
+    pp.pprint(msg)
+
 def on_msg_receive(msg):
     if msg["out"] and not binlog_done:
       return;
@@ -33,7 +37,7 @@ def on_msg_receive(msg):
 
     if text.startswith("!ping"):
       print("SENDING PONG")
-      tgl.send_msg(ptype, pid, "PONG!")
+      tgl.send_msg(ptype, pid, "PONG!", msg_cb)
 
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"
