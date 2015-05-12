@@ -1407,9 +1407,11 @@ void py_init (const char *file) {
   
   PyObject *pModule;
 
-  // Get a copy of the filename for dirname, which may modify the string.
-  char filename[100];
-  strncpy(filename, file, 100);
+  // Get a copy of the filename for dirname/basename, which may modify the string, and break const correctness
+  char filename[1024];
+  strncpy(filename, file, 1024);
+
+
    
 #if PY_MAJOR_VERSION >= 3
   PyImport_AppendInittab("tgl", &PyInit_tgl);
@@ -1424,10 +1426,10 @@ void py_init (const char *file) {
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
   // remove .py extension from file, if any
-  char* dot = strrchr(file, '.');
+  char* dot = strrchr(filename, '.');
   if (dot && strcmp(dot, ".py") == 0) 
     *dot = 0;
-  pModule = PyImport_Import(PyUnicode_FromString(basename(file)));
+  pModule = PyImport_Import(PyUnicode_FromString(basename(filename)));
   
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
