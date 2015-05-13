@@ -799,6 +799,7 @@ void do_ ## act ## _ ## tp (struct command *command, int arg_num, struct arg arg
   assert (arg_num == 1);\
   struct tgl_message *M = tgl_message_get (TLS, args[0].num);\
   if (M && !(M->flags & TGLMF_SERVICE)) {\
+    if (ev) { ev->refcnt ++; } \
     if (M->media.type == tgl_message_media_photo) { \
       tgl_do_load_photo (TLS, M->media.photo, actf, ev);\
     } else if (M->media.type == tgl_message_media_document) {\
@@ -821,6 +822,7 @@ void do_ ## act ## _ ## tp ## _thumb (struct command *command, int arg_num, stru
   struct tgl_message *M = tgl_message_get (TLS, args[0].num);\
   if (M && !(M->flags & TGLMF_SERVICE)) {\
     if (M->media.type == tgl_message_media_document) {\
+      if (ev) { ev->refcnt ++; } \
       tgl_do_load_document_thumb (TLS, M->media.document, actf, ev);\
     }\
   }\
