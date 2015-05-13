@@ -331,7 +331,7 @@ json_t *json_pack_message (struct tgl_message *M) {
   assert (json_object_set (res, "id", json_integer (M->id)) >= 0);
   if (!(M->flags & TGLMF_CREATED)) { return res; }
 
-  assert (json_object_set (res, "id", json_integer (M->flags)) >= 0);
+  assert (json_object_set (res, "flags", json_integer (M->flags)) >= 0);
  
   if (tgl_get_peer_type (M->fwd_from_id)) {
     assert (json_object_set (res, "fwd_from", json_pack_peer (M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id))) >= 0);
