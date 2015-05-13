@@ -1069,9 +1069,12 @@ void py_do_all (void) {
     case pq_global_search:
       tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, s, py_msg_list_cb, py_ptr[p]);
       break;
+*/
     case pq_mark_read:
-      tgl_do_mark_read (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_empty_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iiO", &peer.type, &peer.id, &cb_extra);
+      tgl_do_mark_read (TLS, peer, py_empty_cb, cb_extra);
       break;
+/*
     case pq_set_profile_photo:
       tgl_do_set_profile_photo (TLS, s, py_empty_cb, py_ptr[p]);
       break;
@@ -1314,10 +1317,10 @@ void py_init (const char *file) {
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
   // remove .py extension from file, if any
-  char* dot = strrchr(filename, '.');
+  char* dot = strrchr(file, '.');
   if (dot && strcmp(dot, ".py") == 0) 
     *dot = 0;
-  pModule = PyImport_Import(PyUnicode_FromString(basename(filename)));
+  pModule = PyImport_Import(PyUnicode_FromString(basename(file)));
   
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
