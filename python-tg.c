@@ -1317,10 +1317,10 @@ void py_init (const char *file) {
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
   // remove .py extension from file, if any
-  char* dot = strrchr(filename, '.');
+  char* dot = strrchr(file, '.');
   if (dot && strcmp(dot, ".py") == 0) 
     *dot = 0;
-  pModule = PyImport_Import(PyUnicode_FromString(basename(filename)));
+  pModule = PyImport_Import(PyUnicode_FromString(basename(file)));
   
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
