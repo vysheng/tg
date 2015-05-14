@@ -3,6 +3,8 @@
 * output in json format
 * support for lua functions in CLI mode (register_interface_function)
 * bugfixes
+* output error codes to socket
+* allow [reply=<num>], [disable_preview] and [enable_preview] prefixes to query
 1.2.1
 * fixed registration/login problem
 * added extension to downloads
