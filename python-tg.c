@@ -277,7 +277,7 @@ PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   PyDict_SetItemString (peer, "type", PyInt_FromLong(tgl_get_peer_type(id)));
   PyDict_SetItemString (peer, "id", PyInt_FromLong(tgl_get_peer_id(id)));
 
-  if (!P || !(P->flags & FLAG_CREATED)) {
+  if (!P || !(P->flags & TGLPF_CREATED)) {
     PyObject *name;
 
     static char s[100];
@@ -332,19 +332,9 @@ PyObject* get_media (struct tgl_message_media *M) {
 
   switch (M->type) {
   case tgl_message_media_photo:
-  case tgl_message_media_photo_encr:
     py_add_string_field (media, "type", "photo");
+    py_add_string_field (media, "caption", M->caption);
     break;
-  /*case tgl_message_media_video:
-  case tgl_message_media_video_encr:
-    lua_newtable (luaState);
-    lua_add_string_field ("type", "video");
-    break;
-  case tgl_message_media_audio:
-  case tgl_message_media_audio_encr:
-    lua_newtable (luaState);
-    lua_add_string_field ("type", "audio");
-    break;*/
   case tgl_message_media_document:
   case tgl_message_media_document_encr:
     py_add_string_field (media, "type", "document");
@@ -364,6 +354,23 @@ PyObject* get_media (struct tgl_message_media *M) {
     py_add_string_field (media, "last_name", M->last_name);
     py_add_num_field (media, "user_id", M->user_id);
     break;
+  case tgl_message_media_webpage:
+    py_add_string_field (media, "type", "webpage");
+    py_add_string_field (media, "type", "webpage");
+    py_add_string_field (media, "url", M->webpage->url);
+    py_add_string_field (media, "title", M->webpage->title);
+    py_add_string_field (media, "description", M->webpage->description);
+    py_add_string_field (media, "author", M->webpage->author);
+    break;
+  case tgl_message_media_venue:
+    py_add_string_field (media, "type", "venue");
+    py_add_num_field (media, "longitude", M->venue.geo.longitude);
+    py_add_num_field (media, "latitude", M->venue.geo.latitude);
+    py_add_string_field (media, "title", M->venue.title);
+    py_add_string_field (media, "address", M->venue.address);
+    py_add_string_field (media, "provider", M->venue.provider);
+    py_add_string_field (media, "venue_id", M->venue.venue_id);
+    break;  
   default:
     py_add_string_field (media, "type", "unknown");
   }
@@ -382,7 +389,9 @@ PyObject* get_message (struct tgl_message *M) {
   static char s[30];
   snprintf (s, 30, "%lld", M->id);
   py_add_string_field (msg, "id", s);
-  if (!(M->flags & FLAG_CREATED)) { return msg; }
+  if (!(M->flags & TGLMF_CREATED)) {
+    Py_RETURN_NONE;
+  }
   py_add_num_field (msg, "flags", M->flags);
 
   if (tgl_get_peer_type (M->fwd_from_id)) {
@@ -390,24 +399,24 @@ PyObject* get_message (struct tgl_message *M) {
     PyDict_SetItemString (msg, "fwd_date", get_datetime(M->fwd_date));
   }
 
-/*  Need reply_id from https://github.com/vysheng/tgl/blob/master/tgl-layout.h#L471
   if (M->reply_id) {
-    py_add_num_field ("reply_to_id", M->reply_id);
+    py_add_num_field (msg, "reply_to_id", M->reply_id);
     struct tgl_message *MR = tgl_message_get (TLS, M->reply_id);
     // Message details available only within session for now
     if (MR) {
       PyDict_SetItemString(msg, "reply_to", get_message(MR));
     }
   }
-*/ 
+ 
   PyDict_SetItemString(msg, "from",    get_peer(M->from_id, tgl_peer_get (TLS, M->from_id)));
   PyDict_SetItemString(msg, "to",      get_peer(M->to_id, tgl_peer_get (TLS, M->to_id)));
-  PyDict_SetItemString(msg, "out",     (M->out ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "unread",  (M->unread ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "service", (M->service ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "mention", ((M->flags & TGLMF_MENTION) ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "out",     ((M->flags & TGLMF_OUT) ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "unread",  ((M->flags & TGLMF_UNREAD) ? Py_True : Py_False));
+  PyDict_SetItemString(msg, "service", ((M->flags & TGLMF_SERVICE) ? Py_True : Py_False));
   PyDict_SetItemString(msg, "date",    get_datetime(M->date));
 
-  if (!M->service) { 
+  if (!(M->flags & TGLMF_SERVICE)) { 
     if (M->message_len && M->message) {
       PyDict_SetItemString(msg, "text", PyUnicode_FromStringAndSize(M->message, M->message_len));
     }
@@ -615,7 +624,6 @@ enum py_query_type {
   pq_chat_info,
   pq_user_info,
   pq_history,
-  pq_history_ext,
   pq_chat_add_user,
   pq_chat_del_user,
   pq_add_contact,
@@ -708,7 +716,7 @@ void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int
         PyDict_SetItemString(dialog, "peer", get_peer(peers[i], tgl_peer_get (TLS, peers[i])));
                 
         struct tgl_message *M = tgl_message_get (TLS, msgs[i]);
-        if (M && (M->flags & FLAG_CREATED)) {
+        if (M && (M->flags & TGLMF_CREATED)) {
           PyDict_SetItemString(dialog, "message", get_message(M));
         }
         PyDict_SetItemString(dialog, "unread", unread[i] ? Py_True : Py_False);
@@ -738,7 +746,7 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
   PyObject *result = NULL;
    
   if(PyCallable_Check(callable)) {
-    if (success) {
+    if (success && M && (M->flags & TGLMF_CREATED)) {
       msg = get_message(M);
     } else {
       Py_INCREF(Py_None);
@@ -787,7 +795,7 @@ void py_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int nu
   Py_XDECREF(callable);
 }
 
-void py_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *file_name) {
+void py_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char *file_name) {
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
@@ -899,7 +907,7 @@ void py_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
   Py_XDECREF(callable);
 }
 
-void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, char *data) {
+void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char *data) {
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
@@ -953,11 +961,11 @@ void py_do_all (void) {
       break;
     case pq_dialog_list:
       PyArg_ParseTuple(args, "|O", &cb_extra);
-      tgl_do_get_dialog_list (TLS, py_dialog_list_cb, cb_extra);
+      tgl_do_get_dialog_list (TLS, 100, 0, py_dialog_list_cb, cb_extra);
       break;
     case pq_msg:
       PyArg_ParseTuple(args, "iis#|O", &peer.type, &peer.id, &str, &len, &cb_extra);
-      tgl_do_send_message (TLS, peer, str, len, py_msg_cb, cb_extra);
+      tgl_do_send_message (TLS, peer, str, len, 0, py_msg_cb, cb_extra);
       break;
     case pq_send_typing:
       PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
@@ -968,32 +976,32 @@ void py_do_all (void) {
       tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, cb_extra);
       break;
     case pq_rename_chat:
-      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_rename_chat (TLS, peer, str, py_msg_cb, cb_extra);
+      PyArg_ParseTuple(args, "iis#|O", &peer.type, &peer.id, &str, &len, &cb_extra);
+      tgl_do_rename_chat (TLS, peer, str, len, py_msg_cb, cb_extra);
       break;
     case pq_send_photo:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_send_document (TLS, -1, peer, str, py_msg_cb, cb_extra);
+      tgl_do_send_document (TLS, peer, str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_PHOTO, py_msg_cb, cb_extra);
       break;
     case pq_send_video:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, str, py_msg_cb, cb_extra);
+      tgl_do_send_document (TLS, peer, str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_VIDEO, py_msg_cb, cb_extra);
       break;
     case pq_send_audio:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, str, py_msg_cb, cb_extra);
+      tgl_do_send_document (TLS, peer, str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_AUDIO, py_msg_cb, cb_extra);
       break;
     case pq_send_document:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_send_document (TLS, 0, peer, str, py_msg_cb, cb_extra);
+      tgl_do_send_document (TLS, peer, str, NULL, 0, 0, py_msg_cb, cb_extra);
       break;
     case pq_send_file:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_send_document (TLS, -2, peer, str, py_msg_cb, cb_extra);
+      tgl_do_send_document (TLS, peer, str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_AUTO, py_msg_cb, cb_extra);
       break;
     case pq_send_text:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_send_text (TLS, peer, str, py_msg_cb, cb_extra);
+      tgl_do_send_text (TLS, peer, str, 0, py_msg_cb, cb_extra);
       break;
     case pq_chat_set_photo:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
@@ -1040,11 +1048,7 @@ void py_do_all (void) {
 */
     case pq_history:
       PyArg_ParseTuple(args, "iii|O", &peer.type, &peer.id, &limit, &cb_extra);
-      tgl_do_get_history (TLS, peer, limit, 0, py_msg_list_cb, cb_extra);
-      break;
-    case pq_history_ext:
-      PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &offset, &limit, &cb_extra);
-      tgl_do_get_history_ext (TLS, peer, offset, limit, 0, py_msg_list_cb, cb_extra);
+      tgl_do_get_history (TLS, peer, offset, limit, 0, py_msg_list_cb, cb_extra);
       break;
     case pq_chat_add_user:
       PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &peer1.type, &peer1.id, &cb_extra);
@@ -1114,7 +1118,7 @@ void py_do_all (void) {
 */
     case pq_send_location:
       PyArg_ParseTuple(args, "iiOO|O", &peer.type, &peer.id, &pyObj1, &pyObj2, &cb_extra);
-      tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), py_msg_cb, cb_extra);
+      tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), 0, py_msg_cb, cb_extra);
       Py_XDECREF(pyObj1);
       Py_XDECREF(pyObj2);
       break;
@@ -1183,7 +1187,6 @@ PyObject* py_fwd_media(PyObject *self, PyObject *args) { return push_py_func(pq_
 PyObject* py_chat_info(PyObject *self, PyObject *args) { return push_py_func(pq_chat_info, args); }
 PyObject* py_user_info(PyObject *self, PyObject *args) { return push_py_func(pq_chat_info, args); }
 PyObject* py_history(PyObject *self, PyObject *args) { return push_py_func(pq_history, args); }
-PyObject* py_history_ext(PyObject *self, PyObject *args) { return push_py_func(pq_history_ext, args); }
 PyObject* py_chat_add_user(PyObject *self, PyObject *args) { return push_py_func(pq_chat_add_user, args); }
 PyObject* py_chat_del_user(PyObject *self, PyObject *args) { return push_py_func(pq_chat_del_user, args); }
 PyObject* py_add_contact(PyObject *self, PyObject *args) { return push_py_func(pq_add_contact, args); }
@@ -1240,7 +1243,6 @@ static PyMethodDef py_tgl_methods[] = {
   {"chat_info", py_chat_info, METH_VARARGS, ""},
   {"user_info", py_user_info, METH_VARARGS, ""},
   {"get_history", py_history, METH_VARARGS, ""},
-  {"get_history_ext", py_history_ext, METH_VARARGS, ""},
   {"chat_add_user", py_chat_add_user, METH_VARARGS, ""},
   {"chat_del_user", py_chat_del_user, METH_VARARGS, ""},
   {"add_contact", py_add_contact, METH_VARARGS, ""},

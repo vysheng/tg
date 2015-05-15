@@ -29,7 +29,7 @@ def history_cb(msg_list, ptype, pid, success, msgs):
   msg_list.extend(msgs)
   print(len(msg_list))
   if len(msgs) == HISTORY_QUERY_SIZE:
-    tgl.get_history_ext(ptype, pid, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
+    tgl.get_history(ptype, pid, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
 
 def on_msg_receive(msg):
     if msg["out"] and not binlog_done:
