@@ -7,6 +7,10 @@
 #include <tgl-layout.h>
 #include <assert.h>
 
+#ifndef json_boolean
+#define json_boolean(val)      ((val) ? json_true() : json_false())
+#endif
+
 extern struct tgl_state *TLS;
 
 void json_pack_peer_type (json_t *res, tgl_peer_id_t id) {
