@@ -1047,7 +1047,7 @@ void py_do_all (void) {
       break;
 */
     case pq_history:
-      PyArg_ParseTuple(args, "iii|O", &peer.type, &peer.id, &limit, &cb_extra);
+      PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &offset, &limit, &cb_extra);
       tgl_do_get_history (TLS, peer, offset, limit, 0, py_msg_list_cb, cb_extra);
       break;
     case pq_chat_add_user:
