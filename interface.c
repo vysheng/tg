@@ -2192,7 +2192,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
       }
       mprintf (ev, " marked read %d outbox and %d inbox messages\n", c1, c2);
       mpop_color (ev);
-	}
+    }
   }
   mprint_end (ev);
 }
@@ -2383,7 +2383,7 @@ void print_peer_updates (struct in_ev *ev, int flags) {
   }
 }
 
-void  json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
+void json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
   #ifdef USE_JSON
     json_t *res = json_object ();
     assert (json_object_set (res, "event", json_string ("updates")) >= 0);
