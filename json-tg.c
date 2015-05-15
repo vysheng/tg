@@ -3,8 +3,8 @@
 
 #include <jansson.h>
 #include "json-tg.h"
-#include <tgl.h>
-#include <tgl-layout.h>
+#include <tgl/tgl.h>
+#include <tgl/tgl-layout.h>
 #include <assert.h>
 
 #ifndef json_boolean
@@ -331,6 +331,8 @@ json_t *json_pack_service (struct tgl_message *M) {
 
 json_t *json_pack_message (struct tgl_message *M) {  
   json_t *res = json_object ();
+  assert (json_object_set (res, "event", json_string ("message")) >= 0);
+  //will overwriten to service, if service.
 
   assert (json_object_set (res, "id", json_integer (M->id)) >= 0);
   if (!(M->flags & TGLMF_CREATED)) { return res; }
@@ -366,8 +368,17 @@ json_t *json_pack_message (struct tgl_message *M) {
       assert (json_object_set (res, "media", json_pack_media (&M->media)) >= 0);
     }
   } else {
+    assert (json_object_set (res, "event", json_string ("service")) >= 0);
     assert (json_object_set (res, "action", json_pack_service (M)) >= 0);
   }
   return res;
 }
+
+json_t *json_pack_read (struct tgl_message *M) {
+  json_t *res = json_pack_message (M);
+  assert (json_object_set (res, "event", json_string ("read")) >= 0);
+  //this will overwrite "event":"message" to "event":"read".
+  return res;
+}
+
 #endif

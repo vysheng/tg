@@ -1870,6 +1870,7 @@ void print_filename_gw (struct tgl_state *TLSR, void *extra, int success, const 
     #ifdef USE_JSON
       json_t *res = json_object ();
       assert (json_object_set (res, "result", json_string (name)) >= 0);
+      assert (json_object_set (res, "event", json_string ("download")) >= 0);
       char *s = json_dumps (res, 0);
       mprintf (ev, "%s\n", s);
       json_decref (res);
@@ -2135,6 +2136,15 @@ void print_read_list (int num, struct tgl_message *list[]) {
   int i;
   mprint_start (ev);
   for (i = 0; i < num; i++) if (list[i]) {
+    if (enable_json) {
+      #ifdef USE_JSON
+        json_t *res = json_pack_read (list[i]);
+        char *s = json_dumps (res, 0);
+        mprintf (ev, "%s\n", s);
+        json_decref (res);
+        free (s);
+      #endif
+    }
     tgl_peer_id_t to_id;
     if (tgl_get_peer_type (list[i]->to_id) == TGL_PEER_USER && tgl_get_peer_id (list[i]->to_id) == TLS->our_id) {
       to_id = list[i]->from_id;
@@ -2162,25 +2172,27 @@ void print_read_list (int num, struct tgl_message *list[]) {
     }
 
     assert (c1 + c2 > 0);
-    mpush_color (ev, COLOR_YELLOW);
-    switch (tgl_get_peer_type (to_id)) {
-    case TGL_PEER_USER:
-      mprintf (ev, "User ");
-      print_user_name (ev, to_id, tgl_peer_get (TLS, to_id));    
-      break;
-    case TGL_PEER_CHAT:
-      mprintf (ev, "Chat ");
-      print_chat_name (ev, to_id, tgl_peer_get (TLS, to_id));    
-      break;
-    case TGL_PEER_ENCR_CHAT:
-      mprintf (ev, "Secret chat ");
-      print_encr_chat_name (ev, to_id, tgl_peer_get (TLS, to_id));    
-      break;
-    default:
-      assert (0);
-    }
-    mprintf (ev, " marked read %d outbox and %d inbox messages\n", c1, c2);
-    mpop_color (ev);
+    if (!enable_json)  {
+      mpush_color (ev, COLOR_YELLOW);
+      switch (tgl_get_peer_type (to_id)) {
+      case TGL_PEER_USER:
+        mprintf (ev, "User ");
+        print_user_name (ev, to_id, tgl_peer_get (TLS, to_id));
+        break;
+      case TGL_PEER_CHAT:
+        mprintf (ev, "Chat ");
+        print_chat_name (ev, to_id, tgl_peer_get (TLS, to_id));
+        break;
+      case TGL_PEER_ENCR_CHAT:
+        mprintf (ev, "Secret chat ");
+        print_encr_chat_name (ev, to_id, tgl_peer_get (TLS, to_id));
+        break;
+      default:
+        assert (0);
+      }
+      mprintf (ev, " marked read %d outbox and %d inbox messages\n", c1, c2);
+      mpop_color (ev);
+	}
   }
   mprint_end (ev);
 }
@@ -2371,9 +2383,10 @@ void print_peer_updates (struct in_ev *ev, int flags) {
   }
 }
 
-void json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
+void  json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
   #ifdef USE_JSON
     json_t *res = json_object ();
+    assert (json_object_set (res, "event", json_string ("updates")) >= 0);
     assert (json_object_set (res, "peer", json_pack_peer (P->id, P)) >= 0);
     assert (json_object_set (res, "updates", json_pack_updates (flags)) >= 0);
     char *s = json_dumps (res, 0);
