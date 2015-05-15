@@ -941,62 +941,62 @@ void py_do_all (void) {
     int len, limit, offset;
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
-    PyObject *cb_extra;
+    PyObject *cb_extra = NULL;
 
     //struct tgl_message *M;
     tgl_peer_id_t peer, peer1;
 
     switch (f) {
     case pq_contact_list:
-      PyArg_ParseTuple(args, "O", &cb_extra);
+      PyArg_ParseTuple(args, "|O", &cb_extra);
       tgl_do_update_contact_list (TLS, py_contact_list_cb, cb_extra);
       break;
     case pq_dialog_list:
-      PyArg_ParseTuple(args, "O", &cb_extra);
+      PyArg_ParseTuple(args, "|O", &cb_extra);
       tgl_do_get_dialog_list (TLS, py_dialog_list_cb, cb_extra);
       break;
     case pq_msg:
-      PyArg_ParseTuple(args, "iis#O", &peer.type, &peer.id, &str, &len, &cb_extra);
+      PyArg_ParseTuple(args, "iis#|O", &peer.type, &peer.id, &str, &len, &cb_extra);
       tgl_do_send_message (TLS, peer, str, len, py_msg_cb, cb_extra);
       break;
     case pq_send_typing:
-      PyArg_ParseTuple(args, "iiO", &peer.type, &peer.id, &cb_extra);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
       tgl_do_send_typing (TLS, peer, tgl_typing_typing, py_empty_cb, cb_extra);
       break;
     case pq_send_typing_abort:
-      PyArg_ParseTuple(args, "iiO", &peer.type, &peer.id, &cb_extra);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
       tgl_do_send_typing (TLS, peer, tgl_typing_cancel, py_empty_cb, cb_extra);
       break;
     case pq_rename_chat:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_rename_chat (TLS, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_photo:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_send_document (TLS, -1, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_video:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_send_document (TLS, FLAG_DOCUMENT_VIDEO, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_audio:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_send_document (TLS, FLAG_DOCUMENT_AUDIO, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_document:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_send_document (TLS, 0, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_file:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_send_document (TLS, -2, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_send_text:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_send_text (TLS, peer, str, py_msg_cb, cb_extra);
       break;
     case pq_chat_set_photo:
-      PyArg_ParseTuple(args, "iisO", &peer.type, &peer.id, &str, &cb_extra);
+      PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
       tgl_do_set_chat_photo (TLS, peer, str, py_msg_cb, cb_extra);
       break;
 /*  case pq_load_photo:
@@ -1039,19 +1039,19 @@ void py_do_all (void) {
       break;
 */
     case pq_history:
-      PyArg_ParseTuple(args, "iiiO", &peer.type, &peer.id, &limit, &cb_extra);
+      PyArg_ParseTuple(args, "iii|O", &peer.type, &peer.id, &limit, &cb_extra);
       tgl_do_get_history (TLS, peer, limit, 0, py_msg_list_cb, cb_extra);
       break;
     case pq_history_ext:
-      PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &offset, &limit, &cb_extra);
+      PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &offset, &limit, &cb_extra);
       tgl_do_get_history_ext (TLS, peer, offset, limit, 0, py_msg_list_cb, cb_extra);
       break;
     case pq_chat_add_user:
-      PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &peer1.type, &peer1.id, &cb_extra);
+      PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &peer1.type, &peer1.id, &cb_extra);
       tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_msg_cb, cb_extra);
       break;
     case pq_chat_del_user:
-      PyArg_ParseTuple(args, "iiiiO", &peer.type, &peer.id, &peer.type, &peer.id, &cb_extra);
+      PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &peer.type, &peer.id, &cb_extra);
       tgl_do_del_user_from_chat (TLS, peer, peer1, py_msg_cb, cb_extra);
       break;
 /*  case pq_add_contact:
@@ -1071,7 +1071,7 @@ void py_do_all (void) {
       break;
 */
     case pq_mark_read:
-      PyArg_ParseTuple(args, "iiO", &peer.type, &peer.id, &cb_extra);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
       tgl_do_mark_read (TLS, peer, py_empty_cb, cb_extra);
       break;
 /*
@@ -1101,11 +1101,11 @@ void py_do_all (void) {
       break;
 */
     case pq_status_online:
-      PyArg_ParseTuple(args, "O", &cb_extra);
+      PyArg_ParseTuple(args, "|O", &cb_extra);
       tgl_do_update_status (TLS, 1, py_empty_cb, cb_extra);
       break;
     case pq_status_offline:
-      PyArg_ParseTuple(args, "O", &cb_extra);
+      PyArg_ParseTuple(args, "|O", &cb_extra);
       tgl_do_update_status (TLS, 0, py_empty_cb, cb_extra);
       break;
 /*  case pq_extf:
@@ -1113,7 +1113,7 @@ void py_do_all (void) {
       break;
 */
     case pq_send_location:
-      PyArg_ParseTuple(args, "iiOOO", &peer.type, &peer.id, &pyObj1, &pyObj2, &cb_extra);
+      PyArg_ParseTuple(args, "iiOO|O", &peer.type, &peer.id, &pyObj1, &pyObj2, &cb_extra);
       tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), py_msg_cb, cb_extra);
       Py_XDECREF(pyObj1);
       Py_XDECREF(pyObj2);
@@ -1317,10 +1317,10 @@ void py_init (const char *file) {
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
   // remove .py extension from file, if any
-  char* dot = strrchr(filename, '.');
+  char* dot = strrchr(file, '.');
   if (dot && strcmp(dot, ".py") == 0) 
     *dot = 0;
-  pModule = PyImport_Import(PyUnicode_FromString(basename(filename)));
+  pModule = PyImport_Import(PyUnicode_FromString(basename(file)));
   
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
