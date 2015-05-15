@@ -26,16 +26,16 @@ Clone GitHub Repository
 
 #### Linux and BSDs
 
-Install libs: readline or libedit, openssl and (if you want to use config) libconfig and liblua.
-If you do not want to use them pass options --disable-libconfig and --disable-liblua respectively.
+Install libs: readline, openssl and (if you want to use config) libconfig, liblua and libjansson.
+If you do not want to use them pass options --disable-libconfig, --disable-liblua and --disable-json respectively.
 
 On Ubuntu/Debian use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev make
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev make
 
 On gentoo:
 
-     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent
+     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent dev-libs/jansson
 
 On Fedora:
 
