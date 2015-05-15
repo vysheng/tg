@@ -1338,7 +1338,6 @@ Optional Features:
 --enable-libconfig/--disable-libconfig
 --enable-extf/--disable-extf
 --enable-liblua/--disable-liblua
-<<<<<<< HEAD
 --enable-json/--disable-json
 --enable-valgrind/--disable-valgrind
 --enable-python/--disable-python
@@ -6380,6 +6379,7 @@ $as_echo "#define USE_PYTHON 1" >>confdefs.h
 
 fi
 
+<<<<<<< HEAD
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libjansson" >&5
 $as_echo_n "checking for libjansson... " >&6; }
@@ -6501,6 +6501,8 @@ $as_echo "#define USE_JSON 1" >>confdefs.h
 
 fi
 
+=======
+>>>>>>> 1b3cdff3fde9a12d9251fa388fc86a94a905db2a
 
 #check for custom prog name
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking progname" >&5

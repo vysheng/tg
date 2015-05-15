@@ -94,6 +94,19 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AC_MSG_ERROR([No lua found. Try --disable-liblua])
       ])
   ])
+AC_ARG_ENABLE(python,[--enable-python/--disable-python],
+  [
+    AX_PYTHON()
+    dnl python checks (you can change the required python version bellow)
+    AM_PATH_PYTHON(2.7.0)
+    PY_PREFIX=`$PYTHON -c 'import sys ; print sys.prefix'`
+    AC_SUBST([PYTHON_LIBS])
+    AC_SUBST([PYTHON_CFLAGS])
+    EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
+    CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
+
+    AC_DEFINE(USE_PYTHON,1,[use python])
+  ])
 
 AC_MSG_CHECKING([for libjansson])
 AC_ARG_ENABLE(json,[--enable-json/--disable-json],

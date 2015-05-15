@@ -496,6 +496,9 @@ void usage (void) {
   #ifdef USE_PYTHON
   printf ("  -Z                  python script file\n");
   #endif
+  #ifdef USE_PYTHON
+  printf ("  -Z                  python script file\n");
+  #endif
   printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
   printf ("  -C                  disable color output\n");
   printf ("  -R                  disable readline\n");
@@ -674,6 +677,7 @@ void args_parse (int argc, char **argv) {
   "Z:"
 #endif
   , long_options, NULL
+  
   )) != -1) {
     switch (opt) {
     case 1000:
