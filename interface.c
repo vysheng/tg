@@ -1670,6 +1670,35 @@ void print_fail (struct in_ev *ev) {
   mprint_end (ev);
 }
 
+void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
+void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) {
+  static char error[1001];
+  
+  va_list ap;
+  va_start (ap, format);
+  int error_len = vsnprintf (error, 1000, format, ap);
+  va_end (ap);
+  if (error_len > 1000) { error_len = 1000; }
+  error[error_len] = 0;
+  
+  mprint_start (ev);
+  if (!enable_json) {
+    mprintf (ev, "FAIL: %d: %s\n", error_code, error);
+  } else {
+  #ifdef USE_JSON
+    json_t *res = json_object ();
+    assert (json_object_set (res, "result", json_string ("FAIL")) >= 0);
+    assert (json_object_set (res, "error_code", json_integer (error_code)) >= 0);
+    assert (json_object_set (res, "error", json_string (error)) >= 0);
+    char *s = json_dumps (res, 0);
+    mprintf (ev, "%s\n", s);
+    json_decref (res);
+    free (s);
+  #endif
+  }
+  mprint_end (ev);
+}
+
 void print_success (struct in_ev *ev) {
   if (ev || enable_json) {
     mprint_start (ev);
@@ -2595,21 +2624,25 @@ void interpreter_ex (char *line, void *ex) {
     next_token ();
     if (cur_token_quoted) { 
       in_readline = 0;
+      fail_interface (TLS, ex, ENOSYS, "can not parse modifier");
       return; 
     }
 
     if (cur_token_len <= 0) { 
       in_readline = 0;
+      fail_interface (TLS, ex, ENOSYS, "can not parse modifier");
       return; 
     }
     
     if (*cur_token == '[') {
       if (cur_token_end_str) {
         in_readline = 0;
+        fail_interface (TLS, ex, ENOSYS, "can not parse modifier");
         return; 
       }
       if (cur_token[cur_token_len - 1] != ']') {
         in_readline = 0;
+        fail_interface (TLS, ex, ENOSYS, "can not parse modifier");
         return; 
       }
       work_modifier (cur_token, cur_token_len);
@@ -2618,6 +2651,7 @@ void interpreter_ex (char *line, void *ex) {
     break;
   }
   if (cur_token_quoted || cur_token_end_str) { 
+    fail_interface (TLS, ex, ENOSYS, "can not parse command name");
     in_readline = 0;
     return; 
   }
@@ -2636,6 +2670,7 @@ void interpreter_ex (char *line, void *ex) {
   }
   
   if (!command->name) {
+    fail_interface (TLS, ex, ENOSYS, "can not find comamnd '%.*s'", cur_token_len, cur_token);
     in_readline = 0;
     return; 
   }
@@ -2662,6 +2697,8 @@ void interpreter_ex (char *line, void *ex) {
         for (z = 0; z < count; z ++) {
           fun (command, args_num, args, ex);
         }
+      } else {
+        fail_interface (TLS, ex, ENOSYS, "too many args #%d", args_num);
       }
       break;
     }
@@ -2669,6 +2706,7 @@ void interpreter_ex (char *line, void *ex) {
     if (op == ca_string_end || op == ca_file_name_end) {
       next_token_end ();
       if (cur_token_len < 0) { 
+        fail_interface (TLS, ex, ENOSYS, "can not parse string_end arg #%d", args_num);
         break;
       } else {
         args[args_num].flags = 1;
@@ -2779,6 +2817,7 @@ void interpreter_ex (char *line, void *ex) {
           continue;
         }
         if (!ok) {
+          fail_interface (TLS, ex, ENOSYS, "can not parse arg #%d", args_num);
           break;
         }
 
@@ -2788,6 +2827,7 @@ void interpreter_ex (char *line, void *ex) {
     }
     if (op == ca_string || op == ca_file_name) {
       if (cur_token_end_str || cur_token_len < 0) {
+        fail_interface (TLS, ex, ENOSYS, "can not parse string arg #%d", args_num);
         break;
       } else {
         args[args_num].flags = 1;
