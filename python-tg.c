@@ -943,10 +943,10 @@ void py_do_all (void) {
     enum py_query_type f = (long)py_ptr[p ++];
     PyObject *args = (PyObject *)py_ptr[p ++];
 
-    
-    
-    const char *str;
-    int len, limit, offset;
+    const char *str, *str1, *str2, *str3;
+    int len, len1, len2, len3;
+    int limit, offset;
+    long msg_id;
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
     PyObject *cb_extra = NULL;
@@ -1033,19 +1033,23 @@ void py_do_all (void) {
         tgl_do_load_document_thumb (TLS, &M->media.document, py_file_cb, py_ptr[p]);
       }
       break;
+*/
     case pq_fwd:
-      tgl_do_forward_message (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((struct tgl_message *)py_ptr[p + 2])->id, py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iil|O", &peer.type, &peer.id, &msg_id, &cb_extra);
+      tgl_do_forward_message (TLS, peer, msg_id, 0, py_msg_cb, cb_extra);
       break;
     case pq_fwd_media:
-      tgl_do_forward_media (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, ((struct tgl_message *)py_ptr[p + 2])->id, py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iil|O", &peer.type, &peer.id, &msg_id, &cb_extra);
+      tgl_do_forward_media (TLS, peer, msg_id, 0, py_msg_cb, cb_extra);
       break;
     case pq_chat_info:
-      tgl_do_get_chat_info (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, py_chat_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
+      tgl_do_get_chat_info (TLS, peer, 0, py_chat_cb, cb_extra);
       break;
     case pq_user_info:
-      tgl_do_get_user_info (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, py_user_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
+      tgl_do_get_user_info (TLS, peer, 0, py_user_cb, cb_extra);
       break;
-*/
     case pq_history:
       PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &offset, &limit, &cb_extra);
       tgl_do_get_history (TLS, peer, offset, limit, 0, py_msg_list_cb, cb_extra);
@@ -1058,52 +1062,66 @@ void py_do_all (void) {
       PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &peer.type, &peer.id, &cb_extra);
       tgl_do_del_user_from_chat (TLS, peer, peer1, py_empty_cb, cb_extra);
       break;
-/*  case pq_add_contact:
-      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, py_contact_list_cb, py_ptr[p]);
+    case pq_add_contact:
+      PyArg_ParseTuple(args, "s#s#s#|O", &str1, &len1, &str2, &len2, &str3, &len3, &cb_extra);
+      tgl_do_add_contact (TLS, str1, len1, str2, len2, str3, len3, 0, py_contact_list_cb, cb_extra);
       break;
     case pq_del_contact:
-      tgl_do_del_contact (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_empty_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
+      tgl_do_del_contact (TLS, peer, py_empty_cb, cb_extra);
       break;
     case pq_rename_contact:
-      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 1, py_contact_list_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "s#s#s#|O", &str1, &len1, &str2, &len2, &str3, &len3, &cb_extra);
+      tgl_do_add_contact (TLS, str1, len1, str2, len2, str3, len3, 1, py_contact_list_cb, cb_extra);
       break;
     case pq_search:
-      tgl_do_msg_search (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, 0, 0, 40, 0, s, py_msg_list_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "iis#|O", &peer.type, &peer.id, &str, &len, &cb_extra);
+      tgl_do_msg_search (TLS, peer, 0, 0, 40, 0, str, len, py_msg_list_cb, cb_extra);
       break;
     case pq_global_search:
-      tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, s, py_msg_list_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "s#|O", &str, &len, &cb_extra);                                 
+      tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, str, len, py_msg_list_cb, cb_extra);
       break;
-*/
     case pq_mark_read:
       PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
       tgl_do_mark_read (TLS, peer, py_empty_cb, cb_extra);
       break;
-/*
     case pq_set_profile_photo:
-      tgl_do_set_profile_photo (TLS, s, py_empty_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "s|O", &str, &cb_extra);
+      tgl_do_set_profile_photo (TLS, str, py_empty_cb, cb_extra);
       break;
     case pq_set_profile_name:
-      tgl_do_set_profile_name (TLS, s1, s2, py_user_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "s#s#|O", &str1, &len1, &str2, len2, &cb_extra);
+      tgl_do_set_profile_name (TLS, str1, len1, str2, len2, py_user_cb, cb_extra);
       break;
     case pq_create_secret_chat:
-      tgl_do_create_secret_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, py_secret_chat_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "ii|O", &peer.type, &peer.id, &cb_extra);
+      tgl_do_create_secret_chat (TLS, peer, py_secret_chat_cb, cb_extra);
       break;
+/*
     case pq_create_group_chat:
-      tgl_do_create_group_chat (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, s, py_msg_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "Os|O", &pyObj1, str, &cb_extra);
+      if(PyList_Check(pyObj1) {
+        tgl_do_create_group_chat (TLS, peer, str, py_msg_cb, cb_extra);
+      } else {
+          logprintf("create_group_chat: Argument 1 must be a list of peers"
+      }
       break;
+*/
     case pq_delete_msg:
-      tgl_do_delete_msg (TLS, ((struct tgl_message *)py_ptr[p + 1])->id, py_empty_cb, py_ptr[p]);
-      break;
     case pq_restore_msg:
-      tgl_do_delete_msg (TLS, (long)py_ptr[p + 1], py_empty_cb, py_ptr[p]);
+      PyArg_ParseTuple(args, "l|O", msg_id, &cb_extra);
+      tgl_do_delete_msg (TLS, msg_id, py_empty_cb, cb_extra);
       break;
+/*
     case pq_accept_secret_chat:
       tgl_do_accept_encr_chat_request (TLS, py_ptr[p + 1], py_secret_chat_cb, py_ptr[p]);
       break;
-    case pq_send_contact:
-      tgl_do_send_contact (TLS, ((tgl_peer_t *)py_ptr[p + 1])->id, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), py_msg_cb, py_ptr[p]);
-      break;
 */
+    case pq_send_contact:
+      PyArg_ParseTuple(args, "iis#s#s#|O", &peer.type, &peer.id, &str1, &len1, &str2, &len2, &str3, &len3, &cb_extra);
+      tgl_do_send_contact (TLS, peer, str1, len1, str2, len2, str3, len3, 0, py_msg_cb, cb_extra);
+      break;
     case pq_status_online:
       PyArg_ParseTuple(args, "|O", &cb_extra);
       tgl_do_update_status (TLS, 1, py_empty_cb, cb_extra);
@@ -1112,32 +1130,16 @@ void py_do_all (void) {
       PyArg_ParseTuple(args, "|O", &cb_extra);
       tgl_do_update_status (TLS, 0, py_empty_cb, cb_extra);
       break;
-/*  case pq_extf:
-      tgl_do_send_extf (TLS, s, strlen (s), py_str_cb, py_ptr[p]);
+    case pq_extf:
+      PyArg_ParseTuple(args, "s#|O", &str, &len, &cb_extra);
+      tgl_do_send_extf (TLS, str, len, py_str_cb, &cb_extra);
       break;
-*/
     case pq_send_location:
       PyArg_ParseTuple(args, "iiOO|O", &peer.type, &peer.id, &pyObj1, &pyObj2, &cb_extra);
       tgl_do_send_location (TLS, peer, PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), 0, py_msg_cb, cb_extra);
       Py_XDECREF(pyObj1);
       Py_XDECREF(pyObj2);
       break;
-  /*
-  pq_delete_msg,
-  pq_restore_msg,
-    case 0:
-      tgl_do_send_message (((tgl_peer_t *)py_ptr[p])->id, py_ptr[p + 1], strlen (py_ptr[p + 1]), 0, 0);
-      free (py_ptr[p + 1]);
-      p += 2;
-      break;
-    case 1:
-      tgl_do_forward_message (((tgl_peer_t *)py_ptr[p])->id, (long)py_ptr[p + 1], 0, 0);
-      p += 2;
-      break;
-    case 2:
-      tgl_do_mark_read (((tgl_peer_t *)py_ptr[p])->id, 0, 0);
-      p += 1;
-      break;*/
     default:
       assert (0);
     }
