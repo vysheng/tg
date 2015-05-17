@@ -977,7 +977,7 @@ void py_do_all (void) {
       break;
     case pq_rename_chat:
       PyArg_ParseTuple(args, "iis#|O", &peer.type, &peer.id, &str, &len, &cb_extra);
-      tgl_do_rename_chat (TLS, peer, str, len, py_msg_cb, cb_extra);
+      tgl_do_rename_chat (TLS, peer, str, len, py_empty_cb, cb_extra);
       break;
     case pq_send_photo:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
@@ -1005,7 +1005,7 @@ void py_do_all (void) {
       break;
     case pq_chat_set_photo:
       PyArg_ParseTuple(args, "iis|O", &peer.type, &peer.id, &str, &cb_extra);
-      tgl_do_set_chat_photo (TLS, peer, str, py_msg_cb, cb_extra);
+      tgl_do_set_chat_photo (TLS, peer, str, py_empty_cb, cb_extra);
       break;
 /*  case pq_load_photo:
     case pq_load_video:
@@ -1052,11 +1052,11 @@ void py_do_all (void) {
       break;
     case pq_chat_add_user:
       PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &peer1.type, &peer1.id, &cb_extra);
-      tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_msg_cb, cb_extra);
+      tgl_do_add_user_to_chat (TLS, peer, peer1, 100, py_empty_cb, cb_extra);
       break;
     case pq_chat_del_user:
       PyArg_ParseTuple(args, "iiii|O", &peer.type, &peer.id, &peer.type, &peer.id, &cb_extra);
-      tgl_do_del_user_from_chat (TLS, peer, peer1, py_msg_cb, cb_extra);
+      tgl_do_del_user_from_chat (TLS, peer, peer1, py_empty_cb, cb_extra);
       break;
 /*  case pq_add_contact:
       tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, py_contact_list_cb, py_ptr[p]);
@@ -1319,10 +1319,10 @@ void py_init (const char *file) {
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
   // remove .py extension from file, if any
-  char* dot = strrchr(file, '.');
+  char* dot = strrchr(filename, '.');
   if (dot && strcmp(dot, ".py") == 0) 
     *dot = 0;
-  pModule = PyImport_Import(PyUnicode_FromString(basename(file)));
+  pModule = PyImport_Import(PyUnicode_FromString(basename(filename)));
   
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
