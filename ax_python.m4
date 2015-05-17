@@ -56,7 +56,8 @@
 AC_DEFUN([AX_PYTHON],
 [AC_MSG_CHECKING(for python build information)
 AC_MSG_RESULT([])
-for python in python3.4 python3.3 python3.2 python3.1 python3.0 python2.7 python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python; do
+for python in python3.4 python3.3 python3.2 python3.1 python2.7 python2.6 python3, python2, python; do
+
 AC_CHECK_PROGS(PYTHON_BIN, [$python])
 ax_python_bin=$PYTHON_BIN
 if test x$ax_python_bin != x; then
@@ -87,12 +88,21 @@ AC_MSG_RESULT([    Binary:      $ax_python_bin])
 AC_MSG_RESULT([    Library:     $ax_python_lib])
 AC_MSG_RESULT([    Include Dir: $ax_python_header])
 
+
+PYTHON_FOUND=yes
 if test x$ax_python_header != xno; then
   PYTHON_INCLUDE_DIR=$ax_python_header
   AC_SUBST(PYTHON_INCLUDE_DIR)
+else 
+  PYTHON_FOUND=no
 fi
+
 if test x$ax_python_lib != xno; then
   PYTHON_LIB=$ax_python_lib
   AC_SUBST(PYTHON_LIB)
+else
+  PYTHON_FOUND=no
 fi
+AC_SUBST(PYTHON_FOUND)
+
 ])dnl

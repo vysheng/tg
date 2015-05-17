@@ -94,19 +94,44 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AC_MSG_ERROR([No lua found. Try --disable-liblua])
       ])
   ])
+
+AC_MSG_CHECKING([for python])
 AC_ARG_ENABLE(python,[--enable-python/--disable-python],
   [
-    AX_PYTHON()
-    dnl python checks (you can change the required python version bellow)
-    AM_PATH_PYTHON(2.7.0)
-    PY_PREFIX=`$PYTHON -c 'import sys ; print sys.prefix'`
-    AC_SUBST([PYTHON_LIBS])
-    AC_SUBST([PYTHON_CFLAGS])
-    EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
-    CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
+    if test "x$enableval" = "xno" ; then
+      AC_MSG_RESULT([disabled])
+    else
+      AC_MSG_RESULT([enabled])
 
-    AC_DEFINE(USE_PYTHON,1,[use python])
+      AX_PYTHON()
+      AC_SUBST([PYTHON_FOUND])
+      if test $PYTHON_FOUND = no ; then
+        AC_MSG_ERROR([No supported python lib version found. Try --disable-python])
+      else
+        AC_SUBST([PYTHON_LIBS])
+        AC_SUBST([PYTHON_CFLAGS])
+        EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
+        CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
+        AC_DEFINE(USE_PYTHON,1,[use python])
+      fi
+    fi
+  ],[
+      AC_MSG_RESULT([enabled])
+
+      AX_PYTHON()
+      AC_SUBST([PYTHON_FOUND])
+      if test $PYTHON_FOUND = no ; then
+        AC_MSG_ERROR([No supported python lib version found. Try --disable-python])
+      else
+        AC_SUBST([PYTHON_LIBS])
+        AC_SUBST([PYTHON_CFLAGS])
+        EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
+        CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
+        AC_DEFINE(USE_PYTHON,1,[use python])
+      fi
   ])
+
+
 
 AC_MSG_CHECKING([for libjansson])
 AC_ARG_ENABLE(json,[--enable-json/--disable-json],
@@ -122,20 +147,6 @@ AC_ARG_ENABLE(json,[--enable-json/--disable-json],
     AC_MSG_RESULT([enabled])
     AC_CHECK_LIB([jansson],[json_array_set_new],[],AC_MSG_ERROR([No libjansson found. Try --disable-json]))
     AC_DEFINE(USE_JSON,1,[use json])
-  ])
-
-AC_ARG_ENABLE(python,[--enable-python/--disable-python],
-  [
-    AX_PYTHON()
-    dnl python checks (you can change the required python version bellow)
-    AM_PATH_PYTHON(2.7.0)
-    PY_PREFIX=`$PYTHON -c 'import sys ; print sys.prefix'`
-    AC_SUBST([PYTHON_LIBS])
-    AC_SUBST([PYTHON_CFLAGS])
-    EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
-    CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
-
-    AC_DEFINE(USE_PYTHON,1,[use python])
   ])
 
 #check for custom prog name
