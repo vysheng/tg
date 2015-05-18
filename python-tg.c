@@ -1320,6 +1320,9 @@ void py_init (const char *file) {
   PyObject* sysPath = PySys_GetObject((char*)"path");
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
   
+  // Recopy the string in, since dirname modified it.
+  strncpy(filename, file, 1024);
+  
   // remove .py extension from file, if any
   char* dot = strrchr(filename, '.');
   if (dot && strcmp(dot, ".py") == 0) 
