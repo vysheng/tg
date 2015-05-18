@@ -483,7 +483,8 @@ void py_our_id (int id) {
 
   arglist = Py_BuildValue("(i)", id);
   result = PyEval_CallObject(_py_our_id, arglist);
-  Py_DECREF(arglist);                                                                                                                                                                                                                       if(result == NULL)
+  Py_DECREF(arglist);
+  if(result == NULL)
     PyErr_Print();
   else if(PyUnicode_Check(result))
     logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
@@ -1338,6 +1339,6 @@ void py_init (const char *file) {
 
   python_loaded = 1;
   PyDateTime_IMPORT;
-  logprintf("Python Initialized");
+  logprintf("Python Initialized\n");
 }
 
