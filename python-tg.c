@@ -24,6 +24,7 @@
 
 #ifdef USE_PYTHON
 #include "python-tg.h"
+#include "python-types.h"
 #endif
 
 #include <string.h>
@@ -1285,6 +1286,12 @@ MOD_INIT(tgl)
 
   if (m == NULL)
     return MOD_ERROR_VAL;
+
+  if (PyType_Ready(&tgl_PeerType) < 0)
+    return MOD_ERROR_VAL;
+
+  Py_INCREF(&tgl_PeerType);
+  PyModule_AddObject(m, "Peer", (PyObject *)&tgl_PeerType);
 
   return MOD_SUCCESS_VAL(m);  
 }
