@@ -33,6 +33,13 @@ def history_cb(msg_list, ptype, pid, success, msgs):
 
 def on_msg_receive(msg):
     if msg["out"] and not binlog_done:
+        return;
+
+    print(msg["to"].user_id)
+
+"""
+def on_msg_receive(msg):
+    if msg["out"] and not binlog_done:
       return;
 
     if msg["to"]["id"] == our_id: # direct message
@@ -53,7 +60,7 @@ def on_msg_receive(msg):
     if text.startswith("!loadhistory"):
       msg_list = []
       tgl.get_history_ext(ptype, pid, 0, HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
-
+"""
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"
 

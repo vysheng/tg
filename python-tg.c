@@ -24,7 +24,6 @@
 
 #ifdef USE_PYTHON
 #include "python-tg.h"
-#include "python-types.h"
 #endif
 
 #include <string.h>
@@ -73,6 +72,11 @@
 
 // Python Imports
 #include "datetime.h"
+
+// Custom Types
+#include "python-types.h"
+
+
 
 //#include "interface.h"
 //#include "auto/constants.h"
@@ -269,7 +273,7 @@ PyObject* get_update_types (unsigned flags) {
 
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   PyObject *peer;
-
+/*
   peer = PyDict_New();
   if(peer == NULL)
     assert(0); // TODO handle python exception;
@@ -320,7 +324,9 @@ PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
     }
     PyDict_SetItemString (peer, "peer", peer_obj);
   }
+*/
 
+  peer = tgl_Peer_FromTglPeer(P);
   return peer;
 }
 
