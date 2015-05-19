@@ -389,8 +389,13 @@ int str_format_time(long when, char* string)
   return sprintf (string, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
-json_t *json_pack_user_status (struct tgl_user_status *S) {
+json_t *json_pack_user_status (struct tgl_user *U) {
   json_t *res = json_object ();
+  struct tgl_user_status *S = &U->status;
+  json_object ();
+  json_t *user_res = json_object ();
+  json_pack_user(user_res, (void *) U);
+  assert (json_object_set (res, "user",  user_res) >= 0);
   assert (json_object_set (res, "online", json_boolean (S->online == 1)) >= 0);
   assert (json_object_set (res, "state", json_integer (S->online)) >= 0);
   if (S->online > 0 || S->online == -1) {

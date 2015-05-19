@@ -2574,7 +2574,7 @@ void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
     mpop_color (ev);
   } else {
     #ifdef USE_JSON
-      json_t *res = json_pack_user_status(&U->status);
+      json_t *res = json_pack_user_status(U);
       char *s = json_dumps (res, 0);
       mprintf (ev, "%s\n", s);
       json_decref (res);
