@@ -77,6 +77,8 @@
 #include "python-types.h"
 
 
+extern PyTypeObject tgl_PeerType;
+
 
 //#include "interface.h"
 //#include "auto/constants.h"
