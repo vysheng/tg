@@ -400,7 +400,8 @@ PyObject* get_message (struct tgl_message *M) {
   }
 
   if (M->reply_id) {
-    py_add_num_field (msg, "reply_to_id", M->reply_id);
+    snprintf (s, 30, "%lld", M->id);
+    py_add_string_field (msg, "reply_id", s);
     struct tgl_message *MR = tgl_message_get (TLS, M->reply_id);
     // Message details available only within session for now
     if (MR) {
