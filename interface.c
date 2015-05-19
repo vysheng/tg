@@ -1970,7 +1970,7 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
 }
 
 void print_user_status (struct tgl_user_status *S, struct in_ev *ev) {
-  if (enable_json) { return; }
+  assert(!enable_json); //calling functions print_user_info_gw() and user_status_upd() already check.
   if (S->online > 0) {
     mprintf (ev, "online (was online ");
     print_date_full (ev, S->when);
@@ -2561,16 +2561,26 @@ void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
   if (disable_output && !notify_ev) { return; }
   if (!binlog_read) { return; }
   if (log_level < 3) { return; }
-  if (enable_json) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
-  mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "User ");
-  print_user_name (ev, U->id, (void *)U);
-  mprintf (ev, " ");
-  print_user_status (&U->status, ev);
-  mprintf (ev, "\n");
-  mpop_color (ev);
+  if (!enable_json)
+  {
+    mpush_color (ev, COLOR_YELLOW);
+    mprintf (ev, "User ");
+    print_user_name(ev, U->id, (void *) U);
+    mprintf (ev, " ");
+    print_user_status(&U->status, ev);
+    mprintf (ev, "\n");
+    mpop_color (ev);
+  } else {
+    #ifdef USE_JSON
+      json_t *res = json_pack_user_status(&U->status);
+      char *s = json_dumps (res, 0);
+      mprintf (ev, "%s\n", s);
+      json_decref (res);
+      free (s);
+    #endif
+  }
   mprint_end (ev);
 }
 

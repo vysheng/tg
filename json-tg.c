@@ -6,6 +6,8 @@
 #include <tgl/tgl.h>
 #include <tgl/tgl-layout.h>
 #include <assert.h>
+//format time:
+#include <time.h>
 
 #ifndef json_boolean
 #define json_boolean(val)      ((val) ? json_true() : json_false())
@@ -377,6 +379,34 @@ json_t *json_pack_message (struct tgl_message *M) {
 json_t *json_pack_read (struct tgl_message *M) {
   json_t *res = json_pack_message (M);
   assert (json_object_set (res, "event", json_string ("read")) >= 0);
+  //this will overwrite "event":"message" to "event":"read".
+  return res;
+}
+
+int str_format_time(long when, char* string)
+{
+  struct tm *tm = localtime ((void *)&when);
+  return sprintf (string, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+}
+
+json_t *json_pack_user_status (struct tgl_user_status *S) {
+  json_t *res = json_object ();
+  assert (json_object_set (res, "online", json_boolean (S->online == 1)) >= 0);
+  assert (json_object_set (res, "state", json_integer (S->online)) >= 0);
+  if (S->online > 0 || S->online == -1) {
+    static char s[20];
+    str_format_time(S->when, s);
+    assert (json_object_set (res, "when", json_string (s)) >= 0);
+  } else if (S->online == 0) {
+    assert (json_object_set(res, "when", json_string("long time ago")) >= 0);
+  } else if (S->online == -2) {
+    assert (json_object_set(res, "when", json_string("recently")) >= 0);
+  } else if (S->online == -3) {
+    assert (json_object_set(res, "when", json_string("last week")) >= 0);
+  } else if (S->online == -4) {
+    assert (json_object_set (res, "when", json_string ("last month")) >= 0);
+  }
+  assert (json_object_set (res, "event", json_string ("online-status")) >= 0);
   //this will overwrite "event":"message" to "event":"read".
   return res;
 }
