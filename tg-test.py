@@ -31,11 +31,13 @@ def history_cb(msg_list, ptype, pid, success, msgs):
   if len(msgs) == HISTORY_QUERY_SIZE:
     tgl.get_history(ptype, pid, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
 
+  
+
 def on_msg_receive(msg):
     if msg.out and not binlog_done:
         return;
-
-    print("From: {0}, To: {1}".format(msg.src.id, msg.dest.user))
+    tgl.send_msg(tgl.Peer(97704886), "Test")
+    print("Peers {0}".format(msg.src.id))
 
 """
 def on_msg_receive(msg):

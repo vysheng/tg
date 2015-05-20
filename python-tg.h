@@ -24,6 +24,7 @@
 #include <Python.h>
 #include <tgl/tgl.h>
 
+// Python functions
 void py_init (const char *file);
 void py_new_msg (struct tgl_message *M);
 void py_our_id (int id);
@@ -34,7 +35,54 @@ void py_binlog_end (void);
 void py_diff_end (void);
 void py_do_all (void);
 
+// Binding functions
+PyObject* py_contact_list(PyObject *self, PyObject *args);
+PyObject* py_dialog_list(PyObject *self, PyObject *args);
+PyObject* py_rename_chat(PyObject *self, PyObject *args);
+PyObject* py_send_msg(PyObject *self, PyObject *args);
+PyObject* py_send_typing(PyObject *self, PyObject *args);
+PyObject* py_send_typing_abort(PyObject *self, PyObject *args);
+PyObject* py_send_photo(PyObject *self, PyObject *args);
+PyObject* py_send_video(PyObject *self, PyObject *args);
+PyObject* py_send_audio(PyObject *self, PyObject *args);
+PyObject* py_send_document(PyObject *self, PyObject *args);
+PyObject* py_send_file(PyObject *self, PyObject *args);
+PyObject* py_send_text(PyObject *self, PyObject *args);
+PyObject* py_chat_set_photo(PyObject *self, PyObject *args);
+PyObject* py_load_photo(PyObject *self, PyObject *args);
+PyObject* py_load_video(PyObject *self, PyObject *args);
+PyObject* py_load_video_thumb(PyObject *self, PyObject *args);
+PyObject* py_load_audio(PyObject *self, PyObject *args);
+PyObject* py_load_document(PyObject *self, PyObject *args);
+PyObject* py_load_document_thumb(PyObject *self, PyObject *args);
+PyObject* py_fwd(PyObject *self, PyObject *args);
+PyObject* py_fwd_media(PyObject *self, PyObject *args);
+PyObject* py_chat_info(PyObject *self, PyObject *args);
+PyObject* py_user_info(PyObject *self, PyObject *args);
+PyObject* py_history(PyObject *self, PyObject *args);
+PyObject* py_chat_add_user(PyObject *self, PyObject *args);
+PyObject* py_chat_del_user(PyObject *self, PyObject *args);
+PyObject* py_add_contact(PyObject *self, PyObject *args);
+PyObject* py_del_contact(PyObject *self, PyObject *args);
+PyObject* py_rename_contact(PyObject *self, PyObject *args);
+PyObject* py_search(PyObject *self, PyObject *args);
+PyObject* py_global_search(PyObject *self, PyObject *args);
+PyObject* py_mark_read(PyObject *self, PyObject *args);
+PyObject* py_set_profile_photo(PyObject *self, PyObject *args);
+PyObject* py_set_profile_name(PyObject *self, PyObject *args);
+PyObject* py_create_secret_chat(PyObject *self, PyObject *args);
+PyObject* py_create_group_chat(PyObject *self, PyObject *args);
+PyObject* py_delete_msg(PyObject *self, PyObject *args);
+PyObject* py_restore_msg(PyObject *self, PyObject *args);
+PyObject* py_accept_secret_chat(PyObject *self, PyObject *args);
+PyObject* py_send_contact(PyObject *self, PyObject *args);
+PyObject* py_status_online(PyObject *self, PyObject *args);
+PyObject* py_status_offline(PyObject *self, PyObject *args);
+PyObject* py_send_location(PyObject *self, PyObject *args);
+PyObject* py_extf(PyObject *self, PyObject *args);
 
+
+// Util Functions
 void py_add_string_field (PyObject* dict, char *name, const char *value);
 void py_add_string_field_arr (PyObject* list, int num, const char *value);
 void py_add_num_field (PyObject* dict, const char *name, double value);
