@@ -21,6 +21,7 @@
 #define __PYTHON_TG_H__
 
 #include <string.h>
+#include <Python.h>
 #include <tgl/tgl.h>
 
 void py_init (const char *file);
@@ -32,4 +33,9 @@ void py_chat_update (struct tgl_chat *C, unsigned flags);
 void py_binlog_end (void);
 void py_diff_end (void);
 void py_do_all (void);
+
+
+void py_add_string_field (PyObject* dict, char *name, const char *value);
+void py_add_string_field_arr (PyObject* list, int num, const char *value);
+void py_add_num_field (PyObject* dict, const char *name, double value);
 #endif

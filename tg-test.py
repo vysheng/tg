@@ -35,7 +35,7 @@ def on_msg_receive(msg):
     if msg["out"] and not binlog_done:
         return;
 
-    print(msg["to"].user_id)
+    print(msg["to"].id)
 
 """
 def on_msg_receive(msg):
