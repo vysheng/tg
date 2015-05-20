@@ -15,6 +15,11 @@
 
 extern struct tgl_state *TLS;
 
+// TGL Python Exceptions
+extern PyObject *TglError;
+extern PyObject *PeerError;
+extern PyObject *MsgError;
+
 //
 // tgl_peer_t wrapper
 //
@@ -42,7 +47,7 @@ tgl_Peer_init(tgl_Peer *self, PyObject *args, PyObject *kwds)
                                   &peer_id.type,
                                   &peer_id.id))
   {
-    PyErr_Format(PyErr_NewException("tgl.PeerInvalid", NULL, NULL), "Peer must specify type and id");
+    PyErr_Format(PeerError, "Peer must specify type and id");
     return -1;
   }
   self->peer = tgl_peer_get(TLS, peer_id);
@@ -68,7 +73,7 @@ tgl_Peer_getname (tgl_Peer *self, void *closure)
       ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -87,7 +92,7 @@ tgl_Peer_getuser_id (tgl_Peer *self, void *closure)
       ret = PyLong_FromLong(self->peer->id.id);
       break;
     case TGL_PEER_CHAT:
-      PyErr_SetString(PyExc_TypeError, "peer.type_name == 'chat' has no user_id");
+      PyErr_SetString(PeerError, "peer.type_name == 'chat' has no user_id");
       Py_RETURN_NONE;
  
       break;
@@ -95,7 +100,7 @@ tgl_Peer_getuser_id (tgl_Peer *self, void *closure)
       ret = PyLong_FromLong(self->peer->encr_chat.user_id);
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -122,11 +127,11 @@ tgl_Peer_getuser_list (tgl_Peer *self, void *closure)
       break;
     case TGL_PEER_ENCR_CHAT:
     case TGL_PEER_USER:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'chat' has user_list");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'chat' has user_list");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -149,11 +154,11 @@ tgl_Peer_getuser_status(tgl_Peer *self, void *closure)
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'user' has user_status");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'user' has user_status");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -172,11 +177,11 @@ tgl_Peer_getphone (tgl_Peer *self, void *closure)
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'user' has phone");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'user' has phone");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -195,11 +200,11 @@ tgl_Peer_getusername (tgl_Peer *self, void *closure)
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'user' has username");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'user' has username");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -218,11 +223,11 @@ tgl_Peer_getfirst_name (tgl_Peer *self, void *closure)
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'user' has first_name");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'user' has first_name");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -241,11 +246,11 @@ tgl_Peer_getlast_name (tgl_Peer *self, void *closure)
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'user' has last_name");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'user' has last_name");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -266,11 +271,11 @@ tgl_Peer_getuser (tgl_Peer *self, void *closure)
       ret = (PyObject*)self;
       break;
     case TGL_PEER_CHAT:
-      PyErr_SetString(PyExc_TypeError, "Only peer.type_name == 'chat' does not have user");
+      PyErr_SetString(PeerError, "Only peer.type_name == 'chat' does not have user");
       Py_RETURN_NONE;
       break;
     default:
-     PyErr_SetString(PyExc_TypeError, "peer.type_name not supported!");
+     PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
 
@@ -448,7 +453,8 @@ tgl_Msg_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 tgl_Msg_init(tgl_Msg *self, PyObject *args, PyObject *kwds)
 {
-  return 0;
+  PyErr_SetString(MsgError, "You cannot instantiate a tgl.Msg object, only the API can send them.");
+  return -1;
 }
 
 static PyObject *

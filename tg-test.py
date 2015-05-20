@@ -24,45 +24,33 @@ def msg_cb(success, msg):
 
 HISTORY_QUERY_SIZE = 100
 
-def history_cb(msg_list, ptype, pid, success, msgs):
+def history_cb(msg_list, peer, success, msgs):
   print(len(msgs))
   msg_list.extend(msgs)
   print(len(msg_list))
   if len(msgs) == HISTORY_QUERY_SIZE:
-    tgl.get_history(ptype, pid, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
+    tgl.get_history(peer, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, peer));
 
   
 
 def on_msg_receive(msg):
     if msg.out and not binlog_done:
-        return;
-    tgl.send_msg(tgl.Peer(97704886), "Test")
-    print("Peers {0}".format(msg.src.id))
-
-"""
-def on_msg_receive(msg):
-    if msg["out"] and not binlog_done:
       return;
 
-    if msg["to"]["id"] == our_id: # direct message
-      ptype = msg["from"]["type"]
-      pid   = msg["from"]["id"]
+    if msg.dest.id == our_id: # direct message
+      peer = msg.src
     else: # chatroom
-      ptype = msg["to"]["type"]
-      pid   = msg["to"]["id"]
+      peer = msg.dest
 
-    pp.pprint(msg)
-
-    text = msg["text"]
-
-    if text.startswith("!ping"):
+    if msg.text.startswith("!ping"):
       print("SENDING PONG")
-      tgl.send_msg(ptype, pid, "PONG!", msg_cb)
+      tgl.send_msg(peer, "PONG!", msg_cb)
 
-    if text.startswith("!loadhistory"):
+    if msg.text.startswith("!loadhistory"):
       msg_list = []
-      tgl.get_history_ext(ptype, pid, 0, HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
-"""
+      tgl.get_history(peer, 0, HISTORY_QUERY_SIZE, partial(history_cb, msg_list, peer));
+
+
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"
 

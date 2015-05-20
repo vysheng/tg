@@ -80,7 +80,6 @@
 extern PyTypeObject tgl_PeerType;
 extern PyTypeObject tgl_MsgType;
 
-
 //#include "interface.h"
 //#include "auto/constants.h"
 #include <tgl/tgl.h>
@@ -92,6 +91,12 @@ extern struct tgl_state *TLS;
 
 
 static int python_loaded;
+
+// TGL Python Exceptions
+PyObject *TglError;
+PyObject *PeerError;
+PyObject *MsgError;
+
 
 // Python update function callables
 PyObject *_py_binlog_end;
@@ -1182,6 +1187,18 @@ MOD_INIT(tgl)
   
   Py_INCREF(&tgl_MsgType);
   PyModule_AddObject(m, "Msg", (PyObject *)&tgl_MsgType);
+
+  TglError = PyErr_NewException("tgl.Error", NULL, NULL);
+  Py_INCREF(TglError);
+  PyModule_AddObject(m, "TglError", TglError);
+  
+  PeerError = PyErr_NewException("tgl.PeerError", NULL, NULL);
+  Py_INCREF(PeerError);
+  PyModule_AddObject(m, "PeerError", PeerError);
+  
+  MsgError = PyErr_NewException("tgl.MsgError", NULL, NULL);
+  Py_INCREF(MsgError);
+  PyModule_AddObject(m, "MsgError", MsgError);
   
   return MOD_SUCCESS_VAL(m);  
 }
