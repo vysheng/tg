@@ -1,4 +1,9 @@
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef USE_PYTHON
 #include <Python.h>
 #include <tgl/tgl.h>
 #include <tgl/tools.h>
@@ -120,10 +125,9 @@ tgl_Peer_getuser_id (tgl_Peer *self, void *closure)
 static PyObject *
 tgl_Peer_getuser_list (tgl_Peer *self, void *closure)
 {
-  PyObject *ret, *peer;
+  PyObject *ret;
   int i;
   struct tgl_chat_user *user_list;
-  struct tgl_user *user;
 
   switch(self->peer->id.type) {
     case TGL_PEER_CHAT:
@@ -382,7 +386,7 @@ tgl_Peer_send_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
     else
       api_call = Py_BuildValue("Os", (PyObject*) self, message);
 
-    Py_XINCREF(Py_None);
+    Py_INCREF(Py_None);
     Py_XINCREF(api_call);
 
     return py_send_msg(Py_None, api_call);
@@ -868,3 +872,5 @@ tgl_Msg_FromTglMsg(struct tgl_message *msg) {
   self->msg = msg;
   return (PyObject *) self;
 }
+
+#endif

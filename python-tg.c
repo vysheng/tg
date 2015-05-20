@@ -24,7 +24,6 @@
 
 #ifdef USE_PYTHON
 #include "python-tg.h"
-#endif
 
 #include <string.h>
 #include <stdlib.h>
@@ -1251,3 +1250,4 @@ void py_init (const char *file) {
   logprintf("Python Initialized\n");
 }
 
+#endif

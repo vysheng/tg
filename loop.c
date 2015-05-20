@@ -56,8 +56,12 @@
 #include "interface.h"
 #include "telegram.h"
 #include "loop.h"
+#if USE_LUA
 #include "lua-tg.h"
+#endif
+#if USE_PYTHON
 #include "python-tg.h"
+#endif
 #include <tgl/tgl.h>
 #include <tgl/tgl-binlog.h>
 #include <tgl/tgl-net.h>
