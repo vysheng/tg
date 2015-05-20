@@ -588,7 +588,14 @@ tgl_Msg_getsrc (tgl_Msg *self, void *closure)
   PyObject *ret;
 
   if(tgl_get_peer_type (self->msg->from_id)) {
-    ret = tgl_Peer_FromTglPeer(tgl_peer_get (TLS, self->msg->from_id));
+    tgl_peer_t *peer = tgl_peer_get (TLS, self->msg->from_id);
+    if(peer)
+      ret = tgl_Peer_FromTglPeer(peer);
+    else {
+      PyErr_SetString(PeerError, "Cannot Retrieve Peer. Internal tgl error");
+      Py_RETURN_NONE;
+    }
+
   } else {
     Py_RETURN_NONE;
   }
@@ -603,7 +610,13 @@ tgl_Msg_getdest (tgl_Msg *self, void *closure)
   PyObject *ret;
 
   if(tgl_get_peer_type (self->msg->to_id)) {
-    ret = tgl_Peer_FromTglPeer(tgl_peer_get (TLS, self->msg->to_id));
+    tgl_peer_t *peer = tgl_peer_get (TLS, self->msg->to_id);
+    if(peer)
+      ret = tgl_Peer_FromTglPeer(peer);
+    else {
+      PyErr_SetString(PeerError, "Cannot Retrieve Peer. Internal tgl error");
+      Py_RETURN_NONE;
+    }
   } else {
     Py_RETURN_NONE;
   }
@@ -709,7 +722,13 @@ tgl_Msg_getfwd_src (tgl_Msg *self, void *closure)
   PyObject *ret;
 
   if(tgl_get_peer_type (self->msg->fwd_from_id)) {
-    ret = tgl_Peer_FromTglPeer(tgl_peer_get (TLS, self->msg->fwd_from_id));
+    tgl_peer_t *peer = tgl_peer_get (TLS, self->msg->fwd_from_id);
+    if(peer)
+      ret = tgl_Peer_FromTglPeer(peer);
+    else {
+      PyErr_SetString(PeerError, "Cannot Retrieve Peer. Internal tgl error");
+      Py_RETURN_NONE;
+    }
   } else {
     Py_RETURN_NONE;
   }
