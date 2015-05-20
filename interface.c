@@ -1123,9 +1123,13 @@ void do_history (struct command *command, int arg_num, struct arg args[], struct
 }
 
 void do_send_typing (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 1);
+  assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_typing, print_success_gw, ev);
+  enum tgl_typing_status status = tgl_typing_typing; //de
+  if (args[1].num != NOT_FOUND && args[1].num >= 0 && args[1].num <= 10) {
+    status =  (enum tgl_typing_status) args[1].num;  // if the status parameter is given, and is in range.
+  }
+  tgl_do_send_typing (TLS, args[0].P->id, status, print_success_gw, ev);
 }
 
 void do_send_typing_abort (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1351,7 +1355,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location", NULL},
   {"send_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_photo, "send_photo <peer> <file> [caption]\tSends photo to peer", NULL},
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message", NULL},
-  {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification", NULL},
+  {"send_typing", {ca_peer, ca_number | ca_optional, ca_none}, do_send_typing, "send_typing <peer> [status]\tSends typing notification. You can supply a custom status (range 0-10): none, typing, cancel, record video, upload video, record audio, upload audio, upload photo, upload document, geo, choose contact.", NULL},
   {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort", NULL},
   {"send_video", {ca_peer, ca_file_name, ca_string | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer", NULL},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num", NULL},
