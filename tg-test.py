@@ -32,10 +32,10 @@ def history_cb(msg_list, ptype, pid, success, msgs):
     tgl.get_history(ptype, pid, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, ptype, pid));
 
 def on_msg_receive(msg):
-    if msg["out"] and not binlog_done:
+    if msg.out and not binlog_done:
         return;
 
-    print(msg["to"].id)
+    print("From: {0}, To: {1}".format(msg.src.id, msg.dest.user))
 
 """
 def on_msg_receive(msg):

@@ -78,6 +78,7 @@
 
 
 extern PyTypeObject tgl_PeerType;
+extern PyTypeObject tgl_MsgType;
 
 
 //#include "interface.h"
@@ -101,7 +102,6 @@ PyObject *_py_secret_chat_update;
 PyObject *_py_user_update;
 PyObject *_py_chat_update;
 
-PyObject* get_user (tgl_peer_t *P);
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
 // Utility functions
@@ -153,67 +153,6 @@ PyObject* get_tgl_peer_type (int x) {
   }
 
   return type;
-}
-
-PyObject* get_user (tgl_peer_t *P) {
-  PyObject *user;
-  
-  user = PyDict_New();
-  if(user == NULL)
-    assert(0); // TODO handle python exception
-
-  py_add_string_field (user, "first_name",      P->user.first_name);
-  py_add_string_field (user, "last_name",       P->user.last_name);
-  py_add_string_field (user, "real_first_name", P->user.real_first_name);
-  py_add_string_field (user, "real_last_name",  P->user.real_last_name);
-  py_add_string_field (user, "phone",           P->user.phone);
-  if (P->user.access_hash) {
-    py_add_num_field (user, "access_hash",   1);
-  }
-  if (P->user.username) {
-    py_add_string_field ( user, "username", P->user.username);
-  }
-  return user;
-}
-
-PyObject* get_chat (tgl_peer_t *P) {
-  PyObject *chat, *members;
-
-  chat = PyDict_New();
-  if(chat == NULL)
-    assert(0); // TODO handle python exception
-
-  assert (P->chat.title);
-
-  py_add_string_field (chat, "title",       P->chat.title);
-  py_add_num_field (chat, "members_num", P->chat.users_num);
-  if (P->chat.user_list) {
-    members = PyList_New(P->chat.users_num);
-    if(members == NULL)
-      assert(0); // TODO handle python exception
-
-    int i;
-    for (i = 0; i < P->chat.users_num; i++) {
-      tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
-      PyList_SetItem (members, i, get_peer(id, tgl_peer_get (TLS, id)));
-    }
-    PyDict_SetItemString (chat, "members", members);
-  }
-
-  return chat;
-}
-
-PyObject* get_encr_chat (tgl_peer_t *P) {
-  PyObject *encr_chat, *user;
-
-  encr_chat = PyDict_New();
-  if(encr_chat == NULL)
-    assert(0); // TODO handle python exception
-
-  user = get_peer (TGL_MK_USER (P->encr_chat.user_id), tgl_peer_get (TLS, TGL_MK_USER (P->encr_chat.user_id)));
-  PyDict_SetItemString (encr_chat, "user", user);
-  
-  return encr_chat;
 }
 
 PyObject* get_update_types (unsigned flags) {
@@ -275,166 +214,16 @@ PyObject* get_update_types (unsigned flags) {
 
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   PyObject *peer;
-/*
-  peer = PyDict_New();
-  if(peer == NULL)
-    assert(0); // TODO handle python exception;
-
-  PyDict_SetItemString (peer, "type_str", get_tgl_peer_type (tgl_get_peer_type(id)));
-  PyDict_SetItemString (peer, "type", PyInt_FromLong(tgl_get_peer_type(id)));
-  PyDict_SetItemString (peer, "id", PyInt_FromLong(tgl_get_peer_id(id)));
-
-  if (!P || !(P->flags & TGLPF_CREATED)) {
-    PyObject *name;
-
-    static char s[100];
-    switch (tgl_get_peer_type (id)) {
-    case TGL_PEER_USER:
-      sprintf (s, "user#%d", tgl_get_peer_id (id));
-      break;
-    case TGL_PEER_CHAT:
-      sprintf (s, "chat#%d", tgl_get_peer_id (id));
-      break;
-    case TGL_PEER_ENCR_CHAT:
-      sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
-      break;
-    default:
-      assert (0);
-    }
-    
-    name = PyDict_New();
-    if(name == NULL)
-      assert(0); // TODO handle python exception;
-
-    PyDict_SetItemString (name, "print_name", PyUnicode_FromString(s));
-    PyDict_SetItemString (peer, "peer", name);
-  } else {
-    PyObject *peer_obj;
-    
-    switch (tgl_get_peer_type (id)) {
-    case TGL_PEER_USER:
-      peer_obj = get_user (P);
-      break;
-    case TGL_PEER_CHAT:
-      peer_obj = get_chat (P);
-      break;
-    case TGL_PEER_ENCR_CHAT:
-      peer_obj = get_encr_chat (P);
-      break;
-    default:
-      assert (0);
-    }
-    PyDict_SetItemString (peer, "peer", peer_obj);
-  }
-*/
 
   peer = tgl_Peer_FromTglPeer(P);
   return peer;
 }
 
-PyObject* get_media (struct tgl_message_media *M) {
-  PyObject *media;
-
-  media = PyDict_New();
-  if(media == NULL)
-    assert(0); // TODO handle python exception
-
-  switch (M->type) {
-  case tgl_message_media_photo:
-    py_add_string_field (media, "type", "photo");
-    py_add_string_field (media, "caption", M->caption);
-    break;
-  case tgl_message_media_document:
-  case tgl_message_media_document_encr:
-    py_add_string_field (media, "type", "document");
-    break;
-  case tgl_message_media_unsupported:
-    py_add_string_field (media, "type", "unsupported");
-    break;
-  case tgl_message_media_geo:
-    py_add_string_field (media, "type", "geo");
-    py_add_num_field (media, "longitude", M->geo.longitude);
-    py_add_num_field (media, "latitude", M->geo.latitude);
-    break;
-  case tgl_message_media_contact:
-    py_add_string_field (media, "type", "contact");
-    py_add_string_field (media, "phone", M->phone);
-    py_add_string_field (media, "first_name", M->first_name);
-    py_add_string_field (media, "last_name", M->last_name);
-    py_add_num_field (media, "user_id", M->user_id);
-    break;
-  case tgl_message_media_webpage:
-    py_add_string_field (media, "type", "webpage");
-    py_add_string_field (media, "type", "webpage");
-    py_add_string_field (media, "url", M->webpage->url);
-    py_add_string_field (media, "title", M->webpage->title);
-    py_add_string_field (media, "description", M->webpage->description);
-    py_add_string_field (media, "author", M->webpage->author);
-    break;
-  case tgl_message_media_venue:
-    py_add_string_field (media, "type", "venue");
-    py_add_num_field (media, "longitude", M->venue.geo.longitude);
-    py_add_num_field (media, "latitude", M->venue.geo.latitude);
-    py_add_string_field (media, "title", M->venue.title);
-    py_add_string_field (media, "address", M->venue.address);
-    py_add_string_field (media, "provider", M->venue.provider);
-    py_add_string_field (media, "venue_id", M->venue.venue_id);
-    break;  
-  default:
-    py_add_string_field (media, "type", "unknown");
-  }
-
-  return media;
-}
-
 PyObject* get_message (struct tgl_message *M) {  
   assert (M);
   PyObject *msg;
-
-  msg = PyDict_New();
-  if(msg == NULL)
-    assert(0); // TODO handle python exception
-
-  static char s[30];
-  snprintf (s, 30, "%lld", M->id);
-  py_add_string_field (msg, "id", s);
-  if (!(M->flags & TGLMF_CREATED)) {
-    Py_RETURN_NONE;
-  }
-  py_add_num_field (msg, "flags", M->flags);
-
-  if (tgl_get_peer_type (M->fwd_from_id)) {
-    PyDict_SetItemString(msg, "fwd_from", get_peer(M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id)));
-    PyDict_SetItemString (msg, "fwd_date", get_datetime(M->fwd_date));
-  }
-
-  if (M->reply_id) {
-    snprintf (s, 30, "%lld", M->id);
-    py_add_string_field (msg, "reply_id", s);
-    struct tgl_message *MR = tgl_message_get (TLS, M->reply_id);
-    // Message details available only within session for now
-    if (MR) {
-      PyDict_SetItemString(msg, "reply_to", get_message(MR));
-    }
-  }
- 
-  PyDict_SetItemString(msg, "from",    get_peer(M->from_id, tgl_peer_get (TLS, M->from_id)));
-  PyDict_SetItemString(msg, "to",      get_peer(M->to_id, tgl_peer_get (TLS, M->to_id)));
-  PyDict_SetItemString(msg, "mention", ((M->flags & TGLMF_MENTION) ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "out",     ((M->flags & TGLMF_OUT) ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "unread",  ((M->flags & TGLMF_UNREAD) ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "service", ((M->flags & TGLMF_SERVICE) ? Py_True : Py_False));
-  PyDict_SetItemString(msg, "date",    get_datetime(M->date));
-
-  if (!(M->flags & TGLMF_SERVICE)) { 
-    if (M->message_len && M->message) {
-      PyDict_SetItemString(msg, "text", PyUnicode_FromStringAndSize(M->message, M->message_len));
-    }
-    if (M->media.type && M->media.type != tgl_message_media_none) {
-      PyDict_SetItemString(msg, "media", get_media(&M->media));  
-    }
-  }
-
+  
+  msg = tgl_Msg_FromTglMsg(M);
   return msg;
 }
 
@@ -1301,6 +1090,12 @@ MOD_INIT(tgl)
   Py_INCREF(&tgl_PeerType);
   PyModule_AddObject(m, "Peer", (PyObject *)&tgl_PeerType);
 
+  if (PyType_Ready(&tgl_MsgType) < 0)
+    return MOD_ERROR_VAL;
+  
+  Py_INCREF(&tgl_MsgType);
+  PyModule_AddObject(m, "Msg", (PyObject *)&tgl_MsgType);
+  
   return MOD_SUCCESS_VAL(m);  
 }
 

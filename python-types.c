@@ -206,6 +206,28 @@ tgl_Peer_getusername (tgl_Peer *self, void *closure)
 }
 
 
+static PyObject *
+tgl_Peer_getuser (tgl_Peer *self, void *closure)
+{
+  PyObject *ret;
+
+  switch(self->peer->id.type) {
+    case TGL_PEER_ENCR_CHAT:
+      ret = tgl_Peer_FromTglPeer(tgl_peer_get(TLS, TGL_MK_USER (self->peer->encr_chat.user_id)));
+      break;
+    case TGL_PEER_USER:
+    case TGL_PEER_CHAT:
+      PyErr_SetString(PyExc_TypeError, "Only peer.type == TGL_PEER_ENCR_CHAT has user");
+      Py_RETURN_NONE;
+      break;
+    default:
+     PyErr_SetString(PyExc_TypeError, "peer.type not supported!");
+     Py_RETURN_NONE;
+  }
+
+  Py_XINCREF(ret);
+  return ret;
+}
 
 static PyObject *
 tgl_Peer_getid (tgl_Peer *self, void *closure)
@@ -234,6 +256,7 @@ static PyGetSetDef tgl_Peer_getseters[] = {
   {"type", (getter)tgl_Peer_gettype, NULL, "", NULL},
   {"name", (getter)tgl_Peer_getname, NULL, "", NULL},
   {"user_id", (getter)tgl_Peer_getuser_id, NULL, "", NULL},
+  {"user", (getter)tgl_Peer_getuser, NULL, "", NULL},
   {"user_list", (getter)tgl_Peer_getuser_list, NULL, "", NULL},
   {"user_status", (getter)tgl_Peer_getuser_status, NULL, "", NULL},
   {"phone", (getter)tgl_Peer_getphone, NULL, "", NULL},
@@ -417,7 +440,7 @@ tgl_Msg_getservice (tgl_Msg *self, void *closure)
 
 
 static PyObject *
-tgl_Msg_getfrom (tgl_Msg *self, void *closure)
+tgl_Msg_getsrc (tgl_Msg *self, void *closure)
 {
   PyObject *ret;
 
@@ -432,7 +455,7 @@ tgl_Msg_getfrom (tgl_Msg *self, void *closure)
 }
 
 static PyObject *
-tgl_Msg_getto (tgl_Msg *self, void *closure)
+tgl_Msg_getdest (tgl_Msg *self, void *closure)
 {
   PyObject *ret;
 
@@ -539,7 +562,7 @@ tgl_Msg_getdate (tgl_Msg *self, void *closure)
 }
 
 static PyObject *
-tgl_Msg_getfwd_from (tgl_Msg *self, void *closure)
+tgl_Msg_getfwd_src (tgl_Msg *self, void *closure)
 {
   PyObject *ret;
 
@@ -614,12 +637,12 @@ static PyGetSetDef tgl_Msg_getseters[] = {
   {"out", (getter)tgl_Msg_getout, NULL, "", NULL}, 
   {"unread", (getter)tgl_Msg_getunread, NULL, "", NULL},
   {"service", (getter)tgl_Msg_getservice, NULL, "", NULL},
-  {"from", (getter)tgl_Msg_getfrom, NULL, "", NULL},
-  {"to", (getter)tgl_Msg_getto, NULL, "", NULL},
+  {"src", (getter)tgl_Msg_getsrc, NULL, "", NULL},
+  {"dest", (getter)tgl_Msg_getdest, NULL, "", NULL},
   {"text", (getter)tgl_Msg_gettext, NULL, "", NULL},
   {"media", (getter)tgl_Msg_getmedia, NULL, "", NULL},
   {"date", (getter)tgl_Msg_getdate, NULL, "", NULL},
-  {"fwd_from", (getter)tgl_Msg_getfwd_from, NULL, "", NULL},
+  {"fwd_src", (getter)tgl_Msg_getfwd_src, NULL, "", NULL},
   {"fwd_date", (getter)tgl_Msg_getfwd_date, NULL, "", NULL},
   {"reply", (getter)tgl_Msg_getreply, NULL, "", NULL},
   {"reply_id", (getter)tgl_Msg_getreply_id, NULL, "", NULL},
@@ -637,7 +660,7 @@ static PyMethodDef tgl_Msg_methods[] = {
 
 PyTypeObject tgl_MsgType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "tgl.Peer",                   /* tp_name */
+    "tgl.Msg",                   /* tp_name */
     sizeof(tgl_Msg),              /* tp_basicsize */
     0,                            /* tp_itemsize */
     (destructor)tgl_Msg_dealloc,  /* tp_dealloc */
@@ -656,7 +679,7 @@ PyTypeObject tgl_MsgType = {
     0,                            /* tp_setattro */
     0,                            /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,           /* tp_flags */
-    "tgl Peer",                   /* tp_doc */
+    "tgl Message",                   /* tp_doc */
     0,                            /* tp_traverse */
     0,                            /* tp_clear */
     0,                            /* tp_richcompare */
