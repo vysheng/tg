@@ -1134,7 +1134,7 @@ void do_send_typing (struct command *command, int arg_num, struct arg args[], st
       print_fail(ev);
       return;
     }
-    status =  (enum tgl_typing_status) args[1].num;  // if the status parameter is given, and is in range.
+    status = (enum tgl_typing_status) args[1].num;  // if the status parameter is given, and is in range.
   }
   if (ev) { ev->refcnt ++; }
   tgl_do_send_typing (TLS, args[0].P->id, status, print_success_gw, ev);
@@ -1321,7 +1321,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method", NULL},
   {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat", NULL},
   {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
-  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
+  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd_media <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
   {"get_message", {ca_number, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id", NULL},
   {"help", {ca_none}, do_help, "help\tPrints this help", NULL},
   {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read", NULL},
@@ -1352,7 +1352,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"reply_photo", {ca_number, ca_file_name, ca_string_end | ca_optional, ca_none}, do_reply_photo, "reply_photo <msg-id> <file> [caption]\tSends photo to peer", NULL},
   //{"reply_text", {ca_number, ca_file_name_end, ca_none}, do_reply_text, "reply_text <msg-id> <file>\tSends contents of text file as plain text message", NULL},
   {"reply_video", {ca_number, ca_file_name, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer", NULL},
-//  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion", NULL},
+  //{"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion", NULL},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits", NULL},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)", NULL},
   //{"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat", NULL},
@@ -1364,7 +1364,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"send_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_photo, "send_photo <peer> <file> [caption]\tSends photo to peer", NULL},
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message", NULL},
   {"send_typing", {ca_peer, ca_number | ca_optional, ca_none}, do_send_typing, "send_typing <peer> [status]\tSends typing notification. You can supply a custom status (range 0-10): none, typing, cancel, record video, upload video, record audio, upload audio, upload photo, upload document, geo, choose contact.", NULL},
-  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort", NULL},
+  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing_abort <peer>\tSends typing notification abort", NULL},
   {"send_video", {ca_peer, ca_file_name, ca_string | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer", NULL},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num", NULL},
   {"set_password", {ca_string | ca_optional, ca_none}, do_set_password, "set_password <hint>\tSets password", NULL},
@@ -2695,7 +2695,7 @@ void interpreter_ex (char *line, void *ex) {
   }
   
   if (!command->name) {
-    fail_interface (TLS, ex, ENOSYS, "can not find comamnd '%.*s'", cur_token_len, cur_token);
+    fail_interface (TLS, ex, ENOSYS, "can not find command '%.*s'", cur_token_len, cur_token);
     in_readline = 0;
     return; 
   }
