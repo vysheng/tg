@@ -20,6 +20,14 @@ extern PyObject *TglError;
 extern PyObject *PeerError;
 extern PyObject *MsgError;
 
+
+// Utility functions
+PyObject* get_datetime(long datetime)
+{
+  return PyDateTime_FromTimestamp(Py_BuildValue("(O)", PyLong_FromLong(datetime)));
+}
+
+
 //
 // tgl_peer_t wrapper
 //
@@ -34,6 +42,7 @@ tgl_Peer_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
   tgl_Peer *self;
 
+  PyDateTime_IMPORT;
   self = (tgl_Peer *)type->tp_alloc(type, 0);
   return (PyObject *)self;
 }
@@ -148,8 +157,7 @@ tgl_Peer_getuser_status(tgl_Peer *self, void *closure)
     case TGL_PEER_USER:
       ret = PyDict_New();
       PyDict_SetItemString(ret, "online", self->peer->user.status.online? Py_True : Py_False);
-      PyDict_SetItemString(ret, "when", PyDateTime_FromTimestamp(Py_BuildValue("(O)",
-                                        PyLong_FromLong(self->peer->user.status.when))));
+      PyDict_SetItemString(ret, "when", get_datetime(self->peer->user.status.when));
 
       break;
     case TGL_PEER_CHAT:
@@ -173,7 +181,10 @@ tgl_Peer_getphone (tgl_Peer *self, void *closure)
 
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.phone);
+      if(self->peer->user.phone)
+        ret = PyUnicode_FromString(self->peer->user.phone);
+      else
+        Py_RETURN_NONE;
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
@@ -196,7 +207,10 @@ tgl_Peer_getusername (tgl_Peer *self, void *closure)
 
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.username);
+      if(self->peer->user.username)
+        ret = PyUnicode_FromString(self->peer->user.username);
+      else
+        Py_RETURN_NONE;
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
@@ -219,7 +233,10 @@ tgl_Peer_getfirst_name (tgl_Peer *self, void *closure)
 
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.first_name);
+      if(self->peer->user.first_name)
+        ret = PyUnicode_FromString(self->peer->user.first_name);
+      else
+        Py_RETURN_NONE;
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
@@ -242,7 +259,10 @@ tgl_Peer_getlast_name (tgl_Peer *self, void *closure)
 
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.username);
+      if(self->peer->user.last_name)
+        ret = PyUnicode_FromString(self->peer->user.last_name);
+      else
+        Py_RETURN_NONE;
       break;
     case TGL_PEER_CHAT:
     case TGL_PEER_ENCR_CHAT:
@@ -381,6 +401,39 @@ static PyMethodDef tgl_Peer_methods[] = {
 };
 
 
+static PyObject *
+tgl_Peer_repr(tgl_Peer *self)
+{
+  PyObject *ret;
+  
+  switch(self->peer->id.type) {
+    case TGL_PEER_USER:
+      ret = PyUnicode_FromFormat("<tgl.Peer: type=user, id=%ld, username=%R, name=%R, first_name=%R, last_name=%R, phone=%R>",
+                                  self->peer->id.id,  
+                                  PyObject_GetAttrString((PyObject*)self, "username"), 
+                                  PyObject_GetAttrString((PyObject*)self, "name"), 
+                                  PyObject_GetAttrString((PyObject*)self, "first_name"), 
+                                  PyObject_GetAttrString((PyObject*)self, "last_name"), 
+                                  PyObject_GetAttrString((PyObject*)self, "phone") 
+            ); 
+      break;
+    case TGL_PEER_CHAT:
+      ret = PyUnicode_FromFormat("<tgl.Peer: type=chat, id=%ld, name=%s>",
+                                  self->peer->id.id,  self->peer->chat.print_title); 
+      break;
+    case TGL_PEER_ENCR_CHAT:
+      ret = PyUnicode_FromFormat("<tgl.Peer: type=secret_chat, id=%ld, name=%s, user=%R>",
+                                  self->peer->id.id,  self->peer->encr_chat.print_name, 
+                                  PyObject_GetAttrString((PyObject*)self, "user")); 
+      break;
+    default:
+      ret = PyUnicode_FromFormat("<tgl.Peer: Type Unknown>");
+    }
+
+  return ret;
+}
+
+
 PyTypeObject tgl_PeerType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "tgl.Peer",                   /* tp_name */
@@ -391,7 +444,7 @@ PyTypeObject tgl_PeerType = {
     0,                            /* tp_getattr */
     0,                            /* tp_setattr */
     0,                            /* tp_reserved */
-    0,                            /* tp_repr */
+    (reprfunc)tgl_Peer_repr,      /* tp_repr */
     0,                            /* tp_as_number */
     0,                            /* tp_as_sequence */
     0,                            /* tp_as_mapping */
@@ -446,6 +499,7 @@ tgl_Msg_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
   tgl_Msg *self;
 
+  PyDateTime_IMPORT;
   self = (tgl_Msg *)type->tp_alloc(type, 0);
   return (PyObject *)self;
 }
@@ -636,8 +690,7 @@ tgl_Msg_getdate (tgl_Msg *self, void *closure)
   PyObject *ret;
 
   if(self->msg->date) {
-    ret = PyDateTime_FromTimestamp(Py_BuildValue("(O)",
-                                   PyLong_FromLong(self->msg->date)));
+    ret = get_datetime(self->msg->date);
   } else {
     Py_RETURN_NONE;
   }
@@ -667,8 +720,7 @@ tgl_Msg_getfwd_date (tgl_Msg *self, void *closure)
   PyObject *ret;
 
   if(tgl_get_peer_type (self->msg->fwd_from_id)) {
-    ret = PyDateTime_FromTimestamp(Py_BuildValue("(O)",
-                                   PyLong_FromLong(self->msg->fwd_date)));
+    ret = get_datetime(self->msg->fwd_date);
   } else {
     Py_RETURN_NONE;
   }
@@ -712,7 +764,31 @@ tgl_Msg_getreply_id (tgl_Msg *self, void *closure)
   return ret;
 }
 
+static PyObject *
+tgl_Msg_repr(tgl_Msg *self)
+{
+  PyObject *ret;
 
+  ret = PyUnicode_FromFormat("<tgl.Msg id=%ld, flags=%d, mention=%R, out=%R, unread=%R, service=%R, src=%R, "
+                             "dest=%R, text=%R, media=%R, date=%R, fwd_src=%R, fwd_date=%R, reply_id=%R, reply=%R>",
+                             self->msg->id, self->msg->flags,
+                             PyObject_GetAttrString((PyObject*)self, "mention"),
+                             PyObject_GetAttrString((PyObject*)self, "out"),
+                             PyObject_GetAttrString((PyObject*)self, "unread"),
+                             PyObject_GetAttrString((PyObject*)self, "service"),
+                             PyObject_GetAttrString((PyObject*)self, "src"),
+                             PyObject_GetAttrString((PyObject*)self, "dest"),
+                             PyObject_GetAttrString((PyObject*)self, "text"),
+                             PyObject_GetAttrString((PyObject*)self, "media"),
+                             PyObject_GetAttrString((PyObject*)self, "date"),
+                             PyObject_GetAttrString((PyObject*)self, "fwd_src"),
+                             PyObject_GetAttrString((PyObject*)self, "fwd_date"),
+                             PyObject_GetAttrString((PyObject*)self, "reply_id"),
+                             PyObject_GetAttrString((PyObject*)self, "reply")
+        );
+
+  return ret;
+}
 
 
 static PyGetSetDef tgl_Msg_getseters[] = {
@@ -753,7 +829,7 @@ PyTypeObject tgl_MsgType = {
     0,                            /* tp_getattr */
     0,                            /* tp_setattr */
     0,                            /* tp_reserved */
-    0,                            /* tp_repr */
+    (reprfunc)tgl_Msg_repr,      /* tp_repr */
     0,                            /* tp_as_number */
     0,                            /* tp_as_sequence */
     0,                            /* tp_as_mapping */
@@ -764,7 +840,7 @@ PyTypeObject tgl_MsgType = {
     0,                            /* tp_setattro */
     0,                            /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,           /* tp_flags */
-    "tgl Message",                   /* tp_doc */
+    "tgl Message",                /* tp_doc */
     0,                            /* tp_traverse */
     0,                            /* tp_clear */
     0,                            /* tp_richcompare */

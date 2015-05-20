@@ -42,6 +42,7 @@ def on_msg_receive(msg):
     else: # chatroom
       peer = msg.dest
 
+    print(msg)
     if msg.text.startswith("!ping"):
       print("SENDING PONG")
       tgl.send_msg(peer, "PONG!", msg_cb)

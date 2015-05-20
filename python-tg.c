@@ -109,12 +109,6 @@ PyObject *_py_chat_update;
 
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
-// Utility functions
-PyObject* get_datetime(long datetime)
-{
-  return PyDateTime_FromTimestamp(Py_BuildValue("(O)", PyLong_FromLong(datetime)));
-}
-
 void py_add_string_field (PyObject* dict, char *name, const char *value) {
   assert (PyDict_Check(dict));
   assert (name && strlen (name));
