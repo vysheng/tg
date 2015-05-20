@@ -71,6 +71,8 @@ if test x$ax_python_bin != x; then
      fi
    fi
 fi
+unset ac_cv_prog_PYTHON_BIN
+unset PYTHON_BIN
 done
 if test x$ax_python_bin = x; then
    ax_python_bin=no
