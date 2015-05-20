@@ -1122,13 +1122,21 @@ void do_history (struct command *command, int arg_num, struct arg args[], struct
   tgl_do_get_history (TLS, args[0].P->id, args[2].num != NOT_FOUND ? args[2].num : 0, args[1].num != NOT_FOUND ? args[1].num : 40, offline_mode, print_msg_list_gw, ev);
 }
 
+void print_fail (struct in_ev *ev);
+
 void do_send_typing (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
-  if (ev) { ev->refcnt ++; }
   enum tgl_typing_status status = tgl_typing_typing; //de
-  if (args[1].num != NOT_FOUND && args[1].num >= 0 && args[1].num <= 10) {
+  if (args[1].num != NOT_FOUND) {
+    if (args[1].num > 0 && args[1].num > 10) {
+      TLS->error_code = ENOSYS;
+      TLS->error = strdup("illegal typing status");
+      print_fail(ev);
+      return;
+    }
     status =  (enum tgl_typing_status) args[1].num;  // if the status parameter is given, and is in range.
   }
+  if (ev) { ev->refcnt ++; }
   tgl_do_send_typing (TLS, args[0].P->id, status, print_success_gw, ev);
 }
 
@@ -1677,14 +1685,14 @@ void print_fail (struct in_ev *ev) {
 void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
 void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) {
   static char error[1001];
-  
+
   va_list ap;
   va_start (ap, format);
   int error_len = vsnprintf (error, 1000, format, ap);
   va_end (ap);
   if (error_len > 1000) { error_len = 1000; }
   error[error_len] = 0;
-  
+
   mprint_start (ev);
   if (!enable_json) {
     mprintf (ev, "FAIL: %d: %s\n", error_code, error);
