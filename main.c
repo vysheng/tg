@@ -960,6 +960,9 @@ int main (int argc, char **argv) {
       "This is free software, and you are welcome to redistribute it\n"
       "under certain conditions; type `show_license' for details.\n"
       "Telegram-cli uses libtgl version " TGL_VERSION "\n"
+#ifdef USE_PYTHON
+      "Telegram-cli uses libpython version " PY_VERSION "\n"
+#endif
     );
   }
   running_for_first_time ();
