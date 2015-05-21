@@ -1353,7 +1353,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message", NULL},
   {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification", NULL},
   {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort", NULL},
-  {"send_video", {ca_peer, ca_file_name, ca_string | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer", NULL},
+  {"send_video", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer", NULL},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num", NULL},
   {"set_password", {ca_string | ca_optional, ca_none}, do_set_password, "set_password <hint>\tSets password", NULL},
   {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name.", NULL},
