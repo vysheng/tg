@@ -391,16 +391,316 @@ tgl_Peer_send_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 
     return py_send_msg(Py_None, api_call);
   } else {
+    PyErr_Print();
     Py_XINCREF(Py_False);
     return Py_False;
   }
 
 }
 
+static PyObject *
+tgl_Peer_send_typing (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OO", (PyObject*) self, callback);
+    else
+      api_call = Py_BuildValue("O", (PyObject*) self);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_typing(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_typing_abort (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O", kwlist, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OO", (PyObject*) self, callback);
+    else
+      api_call = Py_BuildValue("O", (PyObject*) self);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_typing_abort(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_rename_chat (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"peer", "title", "callback", NULL};
+
+  char * title;
+  PyObject *callback = NULL;
+
+  if(self->peer->id.type != TGL_PEER_CHAT) {
+    PyErr_SetString(PeerError, "Only a chat peer can be renamed");
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &title, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, title, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, title);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_rename_chat(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_photo (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"filename", "callback", NULL};
+
+  char *filename;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_photo(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_video (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"filename", "callback", NULL};
+
+  char *filename;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_video(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_audio (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"filename", "callback", NULL};
+
+  char *filename;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_audio(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_document (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"filename", "callback", NULL};
+
+  char *filename;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_document(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_file (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"filename", "callback", NULL};
+
+  char *filename;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_file(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_text (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"filename", "callback", NULL};
+
+  char *filename;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_text(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_chat_set_photo (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"peer", "filename", "callback", NULL};
+
+  char * filename;
+  PyObject *callback = NULL;
+
+  if(self->peer->id.type != TGL_PEER_CHAT) {
+    PyErr_SetString(PeerError, "Only a chat peer can have a chat photo set.");
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &filename, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OsO", (PyObject*) self, filename, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, filename);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_chat_set_photo(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
 
 static PyMethodDef tgl_Peer_methods[] = {
-  {"send_msg", (PyCFunction)tgl_Peer_send_msg, METH_VARARGS | METH_KEYWORDS,
-   "Send a message to peer object"},
+  {"send_msg",          (PyCFunction)tgl_Peer_send_msg, METH_VARARGS | METH_KEYWORDS,
+    "Send a message to peer object"},
+  {"send_typing",       (PyCFunction)tgl_Peer_send_typing, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_typing_abort", (PyCFunction)tgl_Peer_send_typing_abort, METH_VARARGS | METH_KEYWORDS, ""},
+  {"rename_chat",       (PyCFunction)tgl_Peer_rename_chat, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_photo",        (PyCFunction)tgl_Peer_send_photo, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_video",        (PyCFunction)tgl_Peer_send_video, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_audio",        (PyCFunction)tgl_Peer_send_audio, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_file",         (PyCFunction)tgl_Peer_send_file, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_document",     (PyCFunction)tgl_Peer_send_document, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_text",         (PyCFunction)tgl_Peer_send_text, METH_VARARGS | METH_KEYWORDS, ""},
+  {"chat_set_photo",    (PyCFunction)tgl_Peer_chat_set_photo, METH_VARARGS | METH_KEYWORDS, ""},
   {NULL}  /* Sentinel */
 };
 
@@ -409,26 +709,26 @@ static PyObject *
 tgl_Peer_repr(tgl_Peer *self)
 {
   PyObject *ret;
-  
+
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
       ret = PyUnicode_FromFormat("<tgl.Peer: type=user, id=%ld, username=%R, name=%R, first_name=%R, last_name=%R, phone=%R>",
-                                  self->peer->id.id,  
-                                  PyObject_GetAttrString((PyObject*)self, "username"), 
-                                  PyObject_GetAttrString((PyObject*)self, "name"), 
-                                  PyObject_GetAttrString((PyObject*)self, "first_name"), 
-                                  PyObject_GetAttrString((PyObject*)self, "last_name"), 
-                                  PyObject_GetAttrString((PyObject*)self, "phone") 
-            ); 
+                                  self->peer->id.id,
+                                  PyObject_GetAttrString((PyObject*)self, "username"),
+                                  PyObject_GetAttrString((PyObject*)self, "name"),
+                                  PyObject_GetAttrString((PyObject*)self, "first_name"),
+                                  PyObject_GetAttrString((PyObject*)self, "last_name"),
+                                  PyObject_GetAttrString((PyObject*)self, "phone")
+            );
       break;
     case TGL_PEER_CHAT:
       ret = PyUnicode_FromFormat("<tgl.Peer: type=chat, id=%ld, name=%s>",
-                                  self->peer->id.id,  self->peer->chat.print_title); 
+                                  self->peer->id.id,  self->peer->chat.print_title);
       break;
     case TGL_PEER_ENCR_CHAT:
       ret = PyUnicode_FromFormat("<tgl.Peer: type=secret_chat, id=%ld, name=%s, user=%R>",
-                                  self->peer->id.id,  self->peer->encr_chat.print_name, 
-                                  PyObject_GetAttrString((PyObject*)self, "user")); 
+                                  self->peer->id.id,  self->peer->encr_chat.print_name,
+                                  PyObject_GetAttrString((PyObject*)self, "user"));
       break;
     default:
       ret = PyUnicode_FromFormat("<tgl.Peer: Type Unknown>");
