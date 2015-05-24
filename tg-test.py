@@ -16,7 +16,7 @@ def on_get_difference_end():
 
 def on_our_id(id):
     our_id = id
-    return "Set ID: " + str(our_id) 
+    return "Set ID: " + str(our_id)
 
 def msg_cb(success, msg):
     pp.pprint(success)
@@ -31,7 +31,9 @@ def history_cb(msg_list, peer, success, msgs):
   if len(msgs) == HISTORY_QUERY_SIZE:
     tgl.get_history(peer, len(msg_list), HISTORY_QUERY_SIZE, partial(history_cb, msg_list, peer));
 
-  
+
+def cb(success):
+    print(success)
 
 def on_msg_receive(msg):
     if msg.out and not binlog_done:
@@ -45,11 +47,8 @@ def on_msg_receive(msg):
     pp.pprint(msg)
     if msg.text.startswith("!ping"):
       print("SENDING PONG")
-      tgl.send_msg(peer, "PONG!", msg_cb)
-
-    if msg.text.startswith("!loadhistory"):
-      msg_list = []
-      tgl.get_history(peer, 0, HISTORY_QUERY_SIZE, partial(history_cb, msg_list, peer));
+      peer.send_msg("PONG!", msg_cb)
+      peer.send_contact(msg.src.phone, msg.src.first_name, msg.src.last_name , cb)
 
 
 def on_secret_chat_update(peer, types):

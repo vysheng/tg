@@ -25,6 +25,8 @@ extern PyObject *TglError;
 extern PyObject *PeerError;
 extern PyObject *MsgError;
 
+// Forward type declarations
+PyTypeObject tgl_PeerType;
 
 // Utility functions
 PyObject* get_datetime(long datetime)
@@ -432,7 +434,7 @@ tgl_Peer_send_typing_abort (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 
   PyObject *callback = NULL;
 
-  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O", kwlist, &callback)) {
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &callback)) {
     PyObject *api_call;
 
     if(callback)
@@ -455,7 +457,7 @@ tgl_Peer_send_typing_abort (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 tgl_Peer_rename_chat (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 {
-  static char *kwlist[] = {"peer", "title", "callback", NULL};
+  static char *kwlist[] = {"title", "callback", NULL};
 
   char * title;
   PyObject *callback = NULL;
@@ -657,7 +659,7 @@ tgl_Peer_send_text (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 tgl_Peer_chat_set_photo (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 {
-  static char *kwlist[] = {"peer", "filename", "callback", NULL};
+  static char *kwlist[] = {"filename", "callback", NULL};
 
   char * filename;
   PyObject *callback = NULL;
@@ -688,6 +690,222 @@ tgl_Peer_chat_set_photo (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 
 }
 
+static PyObject *
+tgl_Peer_chat_add_user (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"peer", "callback", NULL};
+
+  PyObject *peer;
+  PyObject *callback = NULL;
+
+  if(self->peer->id.type != TGL_PEER_CHAT) {
+    PyErr_SetString(PeerError, "Only a chat peer can have a user added.");
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O", kwlist, &tgl_PeerType, &peer, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OOO", (PyObject*) self, peer, callback);
+    else
+      api_call = Py_BuildValue("OO", (PyObject*) self, peer);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_chat_add_user(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_chat_del_user (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"peer", "callback", NULL};
+
+  PyObject *peer;
+  PyObject *callback = NULL;
+
+  if(self->peer->id.type != TGL_PEER_CHAT) {
+    PyErr_SetString(PeerError, "Only a chat peer can have a user deleted.");
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O", kwlist, &tgl_PeerType, &peer, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OOO", (PyObject*) self, peer, callback);
+    else
+      api_call = Py_BuildValue("OO", (PyObject*) self, peer);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_chat_del_user(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_history (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"offset", "limit", "callback", NULL};
+
+  int offset, limit;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "ii|O", kwlist, &offset, &limit, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OiiO", (PyObject*) self, offset, limit, callback);
+    else
+      api_call = Py_BuildValue("Oii", (PyObject*) self, offset, limit);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_history(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_info (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  PyObject *callback = NULL;
+
+  if(self->peer->id.type == TGL_PEER_ENCR_CHAT) {
+    PyErr_SetString(PeerError, "Secret chats currently have no info.");
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OO", (PyObject*) self, callback);
+    else
+      api_call = Py_None;
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+    if(self->peer->id.type == TGL_PEER_USER)
+      return py_user_info(Py_None, api_call);
+    else
+      return py_chat_info(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_send_contact (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"phone", "first_name", "last_name", "callback", NULL};
+
+  char *phone, *first_name, *last_name;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "sss|O", kwlist, &phone, &first_name, &last_name, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("Osss", (PyObject*) self, phone, first_name, last_name, callback);
+    else
+      api_call = Py_BuildValue("Os", (PyObject*) self, phone, first_name, last_name);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_contact(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+
+static PyObject *
+tgl_Peer_send_location (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"latitude", "longitude", "callback", NULL};
+
+  PyObject *latitude, *longitude;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!|O", kwlist, &PyFloat_Type,
+        &latitude, &PyFloat_Type, &longitude, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OOOO", (PyObject*) self, latitude, longitude, callback);
+    else
+      api_call = Py_BuildValue("OOO", (PyObject*) self, latitude, longitude);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_send_location(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Peer_mark_read (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OO", (PyObject*) self, callback);
+    else
+      api_call = Py_BuildValue("O", (PyObject*) self);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_mark_read(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
 static PyMethodDef tgl_Peer_methods[] = {
   {"send_msg",          (PyCFunction)tgl_Peer_send_msg, METH_VARARGS | METH_KEYWORDS,
     "Send a message to peer object"},
@@ -701,6 +919,13 @@ static PyMethodDef tgl_Peer_methods[] = {
   {"send_document",     (PyCFunction)tgl_Peer_send_document, METH_VARARGS | METH_KEYWORDS, ""},
   {"send_text",         (PyCFunction)tgl_Peer_send_text, METH_VARARGS | METH_KEYWORDS, ""},
   {"chat_set_photo",    (PyCFunction)tgl_Peer_chat_set_photo, METH_VARARGS | METH_KEYWORDS, ""},
+  {"info",              (PyCFunction)tgl_Peer_info, METH_VARARGS | METH_KEYWORDS, ""},
+  {"history",           (PyCFunction)tgl_Peer_history, METH_VARARGS | METH_KEYWORDS, ""},
+  {"chat_add_user",     (PyCFunction)tgl_Peer_chat_add_user, METH_VARARGS | METH_KEYWORDS, ""},
+  {"chat_del_user",     (PyCFunction)tgl_Peer_chat_del_user, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_contact",      (PyCFunction)tgl_Peer_send_contact, METH_VARARGS | METH_KEYWORDS, ""},
+  {"send_location",     (PyCFunction)tgl_Peer_send_location, METH_VARARGS | METH_KEYWORDS, ""},
+  {"mark_read",         (PyCFunction)tgl_Peer_mark_read, METH_VARARGS | METH_KEYWORDS, ""},
   {NULL}  /* Sentinel */
 };
 
@@ -1136,6 +1361,8 @@ static PyGetSetDef tgl_Msg_getseters[] = {
 static PyMemberDef tgl_Msg_members[] = {
   {NULL}  /* Sentinel */
 };
+
+
 
 static PyMethodDef tgl_Msg_methods[] = {
   {NULL}  /* Sentinel */
