@@ -21,7 +21,13 @@
 #include "config.h"
 #endif
 
+#if USE_PYTHON
+#include "python-tg.h"
+#endif
+
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #define READLINE_CALLBACKS
 
 #include <assert.h>
@@ -59,9 +65,7 @@
 #if USE_LUA
 #include "lua-tg.h"
 #endif
-#if USE_PYTHON
-#include "python-tg.h"
-#endif
+
 #include <tgl/tgl.h>
 #include <tgl/tgl-binlog.h>
 #include <tgl/tgl-net.h>

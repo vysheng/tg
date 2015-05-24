@@ -21,6 +21,10 @@
 #include "config.h"
 #endif
 
+#ifdef USE_PYTHON
+#  include "python-tg.h"
+#endif
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -75,9 +79,6 @@
 #  include "lua-tg.h"
 #endif
 
-#ifdef USE_PYTHON
-#  include "python-tg.h"
-#endif
 
 #include <tgl/tgl.h>
 
