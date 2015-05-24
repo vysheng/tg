@@ -21,7 +21,13 @@
 #include "config.h"
 #endif
 
-#define _GNU_SOURCE 
+#ifdef USE_PYTHON
+#  include "python-tg.h"
+#endif
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <assert.h>
 #include <stdio.h>
@@ -59,9 +65,6 @@
 #  include "lua-tg.h"
 #endif
 
-#ifdef USE_PYTHON
-#  include "python-tg.h"
-#endif
 
 //#include "mtproto-common.h"
 
