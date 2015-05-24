@@ -750,7 +750,7 @@ void py_do_all (void) {
 
     int len, len1, len2, len3;
     int limit, offset;
-    long msg_id;
+    long msg_id = 0;
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
     PyObject *cb_extra = NULL;
@@ -949,7 +949,7 @@ void py_do_all (void) {
         PyErr_Print();
       break;
     case pq_set_profile_name:
-      if(PyArg_ParseTuple(args, "s#s#|O", &str1, &len1, &str2, len2, &cb_extra))
+      if(PyArg_ParseTuple(args, "s#s#|O", &str1, &len1, &str2, &len2, &cb_extra))
         tgl_do_set_profile_name (TLS, str1, len1, str2, len2, py_user_cb, cb_extra);
       else
         PyErr_Print();
@@ -979,7 +979,7 @@ void py_do_all (void) {
       break;
     case pq_delete_msg:
     case pq_restore_msg:
-      if(PyArg_ParseTuple(args, "l|O", msg_id, &cb_extra))
+      if(PyArg_ParseTuple(args, "l|O", &msg_id, &cb_extra))
         tgl_do_delete_msg (TLS, msg_id, py_empty_cb, cb_extra);
       else
         PyErr_Print();
