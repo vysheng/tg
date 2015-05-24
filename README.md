@@ -24,7 +24,7 @@ Clone GitHub Repository
 
      git clone --recursive https://github.com/vysheng/tg.git && cd tg
 
-### Python Suppoer
+### Python Support
 
 Python support is currently limited to Python 2.7 or Python 3.1+. Other versions may work but are not tested.
 
