@@ -20,7 +20,9 @@ DEPEND="sys-libs/zlib
 	dev-libs/libconfig
 	dev-libs/openssl
 	dev-libs/libevent
-	lua? ( dev-lang/lua )"
+	lua? ( dev-lang/lua )
+	json? ( dev-lib/jansson )
+	python? ( dev-lang/python )"
 
 src_unpack() {
 	git-2_src_unpack
@@ -30,6 +32,8 @@ src_unpack() {
 
 src_configure() {
 	econf $(use_enable lua liblua )
+	econf $(use_enable python python )
+	econf $(use_enable json json )
 }
 
 src_install() {
