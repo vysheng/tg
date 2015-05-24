@@ -20,8 +20,8 @@
 #ifndef __PYTHON_TG_H__
 #define __PYTHON_TG_H__
 
-#include <string.h>
 #include <Python.h>
+#include <string.h>
 #include <tgl/tgl.h>
 
 // Python functions
