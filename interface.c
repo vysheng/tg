@@ -1133,10 +1133,22 @@ void do_history (struct command *command, int arg_num, struct arg args[], struct
   tgl_do_get_history (TLS, args[0].P->id, args[2].num != NOT_FOUND ? args[2].num : 0, args[1].num != NOT_FOUND ? args[1].num : 40, offline_mode, print_msg_list_gw, ev);
 }
 
+void print_fail (struct in_ev *ev);
+
 void do_send_typing (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num == 1);
+  assert (arg_num == 2);
+  enum tgl_typing_status status = tgl_typing_typing; //de
+  if (args[1].num != NOT_FOUND) {
+    if (args[1].num > 0 && args[1].num > 10) {
+      TLS->error_code = ENOSYS;
+      TLS->error = strdup("illegal typing status");
+      print_fail(ev);
+      return;
+    }
+    status = (enum tgl_typing_status) args[1].num;  // if the status parameter is given, and is in range.
+  }
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_typing (TLS, args[0].P->id, tgl_typing_typing, print_success_gw, ev);
+  tgl_do_send_typing (TLS, args[0].P->id, status, print_success_gw, ev);
 }
 
 void do_send_typing_abort (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1321,12 +1333,12 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method", NULL},
   {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat", NULL},
   {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
-  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
+  {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd_media <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
   {"get_message", {ca_number, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id", NULL},
   {"help", {ca_none}, do_help, "help\tPrints this help", NULL},
   {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read", NULL},
   {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual", NULL},
-  {"import_chat_link", {ca_string, ca_none}, do_import_chat_link, "impoty_chat_link <hash>\tJoins to chat by link", NULL},
+  {"import_chat_link", {ca_string, ca_none}, do_import_chat_link, "import_chat_link <hash>\tJoins to chat by link", NULL},
   {"load_audio", {ca_number, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_chat_photo", {ca_chat, ca_none}, do_load_user_photo, "load_chat_photo <chat>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_document", {ca_number, ca_none}, do_load_document, "load_document <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
@@ -1343,7 +1355,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
-  {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "msg <msg-id> <text>\tSends text reply to message", NULL},
+  {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "reply <msg-id> <text>\tSends text reply to message", NULL},
   {"reply_audio", {ca_number, ca_file_name, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer", NULL},
   {"reply_contact", {ca_number, ca_string, ca_string, ca_string, ca_none}, do_reply_contact, "reply_contact <msg-id> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)", NULL},
   {"reply_document", {ca_number, ca_file_name, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer", NULL},
@@ -1352,7 +1364,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"reply_photo", {ca_number, ca_file_name, ca_string_end | ca_optional, ca_none}, do_reply_photo, "reply_photo <msg-id> <file> [caption]\tSends photo to peer", NULL},
   //{"reply_text", {ca_number, ca_file_name_end, ca_none}, do_reply_text, "reply_text <msg-id> <file>\tSends contents of text file as plain text message", NULL},
   {"reply_video", {ca_number, ca_file_name, ca_none}, do_reply_video, "reply_video <msg-id> <file>\tSends video to peer", NULL},
-//  {"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion", NULL},
+  //{"restore_msg", {ca_number, ca_none}, do_restore_msg, "restore_msg <msg-id>\tRestores message. Only available shortly (one hour?) after deletion", NULL},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits", NULL},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)", NULL},
   //{"secret_chat_rekey", { ca_secret_chat, ca_none}, do_secret_chat_rekey, "generate new key for active secret chat", NULL},
@@ -1363,8 +1375,8 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"send_location", {ca_peer, ca_double, ca_double, ca_none}, do_send_location, "send_location <peer> <latitude> <longitude>\tSends geo location", NULL},
   {"send_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_photo, "send_photo <peer> <file> [caption]\tSends photo to peer", NULL},
   {"send_text", {ca_peer, ca_file_name_end, ca_none}, do_send_text, "send_text <peer> <file>\tSends contents of text file as plain text message", NULL},
-  {"send_typing", {ca_peer, ca_none}, do_send_typing, "send_typing <peer>\tSends typing notification", NULL},
-  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing <peer>\tSends typing notification abort", NULL},
+  {"send_typing", {ca_peer, ca_number | ca_optional, ca_none}, do_send_typing, "send_typing <peer> [status]\tSends typing notification. You can supply a custom status (range 0-10): none, typing, cancel, record video, upload video, record audio, upload audio, upload photo, upload document, geo, choose contact.", NULL},
+  {"send_typing_abort", {ca_peer, ca_none}, do_send_typing_abort, "send_typing_abort <peer>\tSends typing notification abort", NULL},
   {"send_video", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_send_video, "send_video <peer> <file> [caption]\tSends video to peer", NULL},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num", NULL},
   {"set_password", {ca_string | ca_optional, ca_none}, do_set_password, "set_password <hint>\tSets password", NULL},
@@ -1686,14 +1698,14 @@ void print_fail (struct in_ev *ev) {
 void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
 void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) {
   static char error[1001];
-  
+
   va_list ap;
   va_start (ap, format);
   int error_len = vsnprintf (error, 1000, format, ap);
   va_end (ap);
   if (error_len > 1000) { error_len = 1000; }
   error[error_len] = 0;
-  
+
   mprint_start (ev);
   if (!enable_json) {
     mprintf (ev, "FAIL: %d: %s\n", error_code, error);
@@ -2711,7 +2723,7 @@ void interpreter_ex (char *line, void *ex) {
   }
   
   if (!command->name) {
-    fail_interface (TLS, ex, ENOSYS, "can not find comamnd '%.*s'", cur_token_len, cur_token);
+    fail_interface (TLS, ex, ENOSYS, "can not find command '%.*s'", cur_token_len, cur_token);
     in_readline = 0;
     return; 
   }
