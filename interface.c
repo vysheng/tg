@@ -2621,6 +2621,11 @@ void interpreter_ex (char *line, void *ex) {
     in_readline = 0;
     return; 
   }
+  if (!*line) {
+    in_readline = 0;
+    return;
+  }
+
   if (line && *line) {
     add_history (line);
   }
