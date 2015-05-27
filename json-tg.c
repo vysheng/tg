@@ -350,6 +350,7 @@ json_t *json_pack_service (struct tgl_message *M) {
   case tgl_message_action_typing:    
     assert (json_object_set (res, "type", json_string ("typing")) >= 0);
     assert (json_array_append (res, json_pack_typing (M->action.typing)) >= 0);
+    break;
   case tgl_message_action_noop:
     assert (json_object_set (res, "type", json_string ("noop")) >= 0);
     break;
