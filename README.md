@@ -39,7 +39,7 @@ On gentoo:
 
 On Fedora:
 
-     sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel
+     sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel
 
 On FreeBSD:
 
