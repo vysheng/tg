@@ -245,6 +245,49 @@ json_t *json_pack_media (struct tgl_message_media *M) {
   return res;
 }
 
+json_t *json_pack_typing (enum tgl_typing_status status) {
+  json_t *res = json_object ();
+  switch (status) {
+    case tgl_typing_none:
+      assert (json_object_set (res, "status", json_string ("doing nothing")) >= 0);
+      break;
+    case tgl_typing_typing:
+      assert (json_object_set (res, "status", json_string ("typing")) >= 0);
+      break;
+    case tgl_typing_cancel:
+       assert (json_object_set (res, "status", json_string ("deleting typed message")) >= 0);
+       break;
+    case tgl_typing_record_video:
+       assert (json_object_set (res, "status", json_string ("recording video")) >= 0);
+       break;
+    case tgl_typing_upload_video:
+       assert (json_object_set (res, "status", json_string ("uploading video")) >= 0);
+       break;
+    case tgl_typing_record_audio:
+       assert (json_object_set (res, "status", json_string ("recording audio")) >= 0);
+       break;
+    case tgl_typing_upload_audio:
+       assert (json_object_set (res, "status", json_string ("uploading audio")) >= 0);
+       break;
+    case tgl_typing_upload_photo:
+       assert (json_object_set (res, "status", json_string ("uploading photo")) >= 0);
+       break;
+    case tgl_typing_upload_document:
+       assert (json_object_set (res, "status", json_string ("uploading document")) >= 0);
+       break;
+    case tgl_typing_geo:
+       assert (json_object_set (res, "status", json_string ("choosing location")) >= 0);
+       break;
+    case tgl_typing_choose_contact:
+       assert (json_object_set (res, "status", json_string ("choosing contact")) >= 0);
+       break;
+    default:
+       assert (json_object_set (res, "status", json_string ("???")) >= 0);
+       break;
+  }
+  return res;
+}
+
 json_t *json_pack_service (struct tgl_message *M) {
   json_t *res = json_object ();
   switch (M->action.type) {
@@ -308,6 +351,7 @@ json_t *json_pack_service (struct tgl_message *M) {
     break;
   case tgl_message_action_typing:    
     assert (json_object_set (res, "type", json_string ("typing")) >= 0);
+    assert (json_array_append (res, json_pack_typing (M->action.typing)) >= 0);
     break;
   case tgl_message_action_noop:
     assert (json_object_set (res, "type", json_string ("noop")) >= 0);
