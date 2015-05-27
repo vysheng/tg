@@ -495,24 +495,8 @@ void usage (void) {
   printf ("  --json                               prints answers and values in json format\n");
   #endif
   #ifdef USE_PYTHON
-  printf ("  -Z                  python script file\n");
+  printf ("  --python-script/-Z <script-name>     python script file\n");
   #endif
-  #ifdef USE_PYTHON
-  printf ("  -Z                  python script file\n");
-  #endif
-  printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
-  printf ("  -C                  disable color output\n");
-  printf ("  -R                  disable readline\n");
-  printf ("  -d                  daemon mode\n");
-  printf ("  -L <log-name>       log file name\n");
-  printf ("  -U <user-name>      change uid after start\n");
-  printf ("  -G <group-name>     change gid after start\n");
-  printf ("  -D                  disable output\n");
-  printf ("  -P <port>           port to listen for input commands\n");
-  printf ("  -S <socket-name>    unix socket to create\n");
-  printf ("  -e <commands>       make commands end exit\n");
-  printf ("  -I                  use user and chat IDs in updates instead of names\n");
-  printf ("  -6                  use ipv6 (may be unstable)\n");
 
   exit (1);
 }
@@ -659,6 +643,7 @@ void args_parse (int argc, char **argv) {
     {"accept-any-tcp", no_argument, 0,  1001},
     {"disable-link-preview", no_argument, 0, 1002},
     {"json", no_argument, 0, 1003},
+    {"python-script", required_argument, 0, 'Z'},
     {0,         0,                 0,  0 }
   };
 
