@@ -1008,6 +1008,17 @@ void do_import_card (struct command *command, int arg_num, struct arg args[], st
   }
 }
 
+void do_block_user (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_block_user (TLS, args[0].P->id, print_success_gw, ev);
+}
+
+void do_unblock_user (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_unblock_user (TLS, args[0].P->id, print_success_gw, ev);
+}
 /* }}} */
 
 /* {{{ WORKING WITH SECRET CHATS */
@@ -1292,6 +1303,7 @@ void do_clear (struct command *command, int arg_num, struct arg args[], struct i
 struct command commands[MAX_COMMANDS_SIZE] = {
   {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option", NULL},
   {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact, "add_contact <phone> <first name> <last name>\tTries to add user to contact list", NULL},
+  {"block_user", {ca_user, ca_none}, do_block_user, "block_user <user>\tBlocks user", NULL},
   {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once", NULL},
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100", NULL},
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat", NULL},
@@ -1364,6 +1376,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"stats", {ca_none}, do_stats, "stats\tFor debug purpose", NULL},
   {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online", NULL},
   {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline", NULL},
+  {"unblock_user", {ca_user, ca_none}, do_unblock_user, "unblock_user <user>\tUnblocks user", NULL},
   {"user_info", {ca_user, ca_none}, do_user_info, "user_info <user>\tPrints info about user (id, last online, phone)", NULL},
   {"view_audio", {ca_number, ca_none}, do_open_audio, "view_audio <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_chat_photo", {ca_chat, ca_none}, do_view_user_photo, "view_chat_photo <chat>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
