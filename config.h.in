@@ -164,6 +164,9 @@
 /* use lua */
 #undef USE_LUA
 
+/* use python */
+#undef USE_PYTHON
+
 /* fixed for correct valgrind work */
 #undef VALGRIND_FIXES
 

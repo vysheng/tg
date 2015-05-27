@@ -21,7 +21,13 @@
 #include "config.h"
 #endif
 
+#if USE_PYTHON
+#include "python-tg.h"
+#endif
+
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #define READLINE_CALLBACKS
 
 #include <assert.h>
@@ -56,7 +62,10 @@
 #include "interface.h"
 #include "telegram.h"
 #include "loop.h"
+#if USE_LUA
 #include "lua-tg.h"
+#endif
+
 #include <tgl/tgl.h>
 #include <tgl/tgl-binlog.h>
 #include <tgl/tgl-net.h>
@@ -215,6 +224,10 @@ void net_loop (void) {
       lua_do_all ();
     #endif
     
+    #ifdef USE_PYTHON
+      py_do_all ();
+    #endif
+
     if (safe_quit && !TLS->active_queries) {
       printf ("All done. Exit\n");
       do_halt (0);
@@ -655,6 +668,10 @@ void on_started (struct tgl_state *TLS) {
     lua_diff_end ();
   #endif
 
+  #ifdef USE_PYTHON
+    py_diff_end ();
+  #endif
+  
   if (start_command) {
     safe_quit = 1;
     while (*start_command) {
@@ -708,6 +725,10 @@ int loop (void) {
   binlog_read = 1;
   #ifdef USE_LUA
     lua_binlog_end ();
+  #endif
+  
+  #ifdef USE_PYTHON
+    py_binlog_end ();
   #endif
   
   if (sfd >= 0) {

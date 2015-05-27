@@ -4,6 +4,7 @@ AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
 m4_include([ax_lua.m4])
+m4_include([ax_python.m4])
 m4_include([m4_ax_check_openssl.m4])
 m4_include([m4_ax_check_zlib.m4])
 m4_include([m4-ax_gcc_builtin.m4])
@@ -93,6 +94,44 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
         AC_MSG_ERROR([No lua found. Try --disable-liblua])
       ])
   ])
+
+AC_MSG_CHECKING([for python])
+AC_ARG_ENABLE(python,[--enable-python/--disable-python],
+  [
+    if test "x$enableval" = "xno" ; then
+      AC_MSG_RESULT([disabled])
+    else
+      AC_MSG_RESULT([enabled])
+
+      AX_PYTHON()
+      AC_SUBST([PYTHON_FOUND])
+      if test $PYTHON_FOUND = no ; then
+        AC_MSG_ERROR([No supported python lib version found. Try --disable-python])
+      else
+        AC_SUBST([PYTHON_LIBS])
+        AC_SUBST([PYTHON_CFLAGS])
+        EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
+        CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
+        AC_DEFINE(USE_PYTHON,1,[use python])
+      fi
+    fi
+  ],[
+      AC_MSG_RESULT([enabled])
+
+      AX_PYTHON()
+      AC_SUBST([PYTHON_FOUND])
+      if test $PYTHON_FOUND = no ; then
+        AC_MSG_ERROR([No supported python lib version found. Try --disable-python])
+      else
+        AC_SUBST([PYTHON_LIBS])
+        AC_SUBST([PYTHON_CFLAGS])
+        EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
+        CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
+        AC_DEFINE(USE_PYTHON,1,[use python])
+      fi
+  ])
+
+
 
 AC_MSG_CHECKING([for libjansson])
 AC_ARG_ENABLE(json,[--enable-json/--disable-json],

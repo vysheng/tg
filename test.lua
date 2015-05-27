@@ -57,17 +57,6 @@ function get_title (P, Q)
   end
 end
 
-local lgi = require ('lgi')
-local notify = lgi.require('Notify')
-notify.init ("Telegram updates")
-local icon = os.getenv("HOME") .. "/.telegram-cli/telegram-pics/telegram_64.png"
-
-function do_notify (user, msg)
-  local n = notify.Notification.new(user, msg, icon)
-  n:show ()
-end
-
--- }}}
 
 function on_msg_receive (msg)
   if started == 0 then
@@ -76,7 +65,6 @@ function on_msg_receive (msg)
   if msg.out then
     return
   end
-  do_notify (get_title (msg.from, msg.to), msg.text)
 
   if (msg.text == 'ping') then
     if (msg.to.id == our_id) then

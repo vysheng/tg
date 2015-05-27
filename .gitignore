@@ -1,6 +1,7 @@
 telegram
 *.o
 Makefile
+aclocal.m4
 autom4te.cache
 config.h
 config.log
@@ -17,3 +18,4 @@ debian/files
 debian/telegram-cli/*
 debian/telegram-cli.debhelper.log
 debian/telegram-cli.substvars
+__pycache__

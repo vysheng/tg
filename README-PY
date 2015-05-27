@@ -1,0 +1,95 @@
+To use python with client you should write python script. You can specify it from config ("python_script" option) or from command_line [-Z].
+
+You should set the following callbacks in your script:
+  tgl.on_binlog_replay_end() - it is called when replay of old events end. Any updates prior this call were already received by this client
+                           some time ago. 
+  
+  tgl.on_get_difference_end() - it is called after first get_difference call. So we received all updates after last client execute.
+
+  tgl.on_our_id(our_id) - Informs about id of currently logged in user.
+
+  tgl.on_msg_receive(msg) - it is called when we receive new msg (!! may be called before on_binlog_replay_end, than it is old msg).
+
+  tgl.on_user_update(peer, what_changed) - updated info about user. what_changed is array of strings.
+  tgl.on_chat_update(peer, what_changed) - updated info about user. what_changed is array of strings.
+  tgl.on_secret_chat_update(peer, what_changed) - updated info about user. what_changed is array of strings.
+
+
+
+Also, you can call several functions. Each this function last two arguments, are callback, which is a python function implementing the callback from the function.
+These functions may return false immidiately if something is bad with args, or return true and call cb_function in future.
+The callback function should have one arguments: first success (True or False), and the rest depends on the call.
+Functions that require a peer type other than what is passed will raise tgl.PeerError.
+
+
+Function_list (arguments are listed aside from callback, import tgl for access) :
+  tgl.get_contact_list ()
+  tgl.get_dialog_list ()
+  
+  tgl.rename_chat (peer, new_name)
+  tgl.chat_set_photo (peer, file)
+  
+  tgl.send_typing (peer)
+  tgl.send_typing_abort (peer)
+  
+  tgl.send_msg (peer, text)
+  tgl.fwd_msg (peer, msg)
+  
+  tgl.send_photo (peer, file)
+  tgl.send_video (peer, file)
+  tgl.send_audio (peer, file)
+  tgl.send_document (peer, file)
+  tgl.send_text (peer, file)
+
+  tgl.load_photo(msg)
+  tgl.load_video(msg)
+  tgl.load_video_thumb(msg)
+  tgl.load_audio(msg)
+  tgl.load_document(msg)
+  tgl.load_document_thumb(msg)
+
+  tgl.info (peer)
+
+  tgl.get_history (peer, limit)
+  
+  tgl.chat_add_user (peer, user)
+  tgl.chat_del_user (peer, user)
+ 
+  tgl.add_contact (phone, first_name, last_name)
+  tgl.rename_contact (phone, first_name, last_name) 
+  
+  tgl.msg_search (peer, text)
+  tgl.msg_global_search (text)
+
+  tgl.mark_read (peer)
+
+  tgl.set_profile_photo (file)
+  
+  tgl.create_secret_chat (user)
+  tgl.create_group_chat (peer, name)
+  
+  tgl.delete_msg (msg)
+  tgl.restore_msg (msg_id)
+
+  tgl.status_online ()
+  tgl.status_offline ()
+
+  tgl.send_location (peer, latitude, longitude)
+
+Additionally, the tgl.Peer object has the following direct methods:
+  peer.rename_chat(new_name)
+  peer.chat_set_photo(file)
+  peer.send_typing()
+  peer.send_typing_abort()
+  peer.send_msg(text)
+  peer.send_photo(file)
+  peer.send_video(file)
+  peer.send_document(file)
+  peer.send_text(file)
+  peer.info()
+  peer.history(limit, offset)
+  peer.add_user(peer)
+  peer.del_user(peer)
+  peer.search(text)
+  peer.mark_read()
+  peer.send_location(latitude, longitude)

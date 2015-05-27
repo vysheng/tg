@@ -24,30 +24,35 @@ Clone GitHub Repository
 
      git clone --recursive https://github.com/vysheng/tg.git && cd tg
 
+### Python Support
+
+Python support is currently limited to Python 2.7 or Python 3.1+. Other versions may work but are not tested.
+
 #### Linux and BSDs
 
-Install libs: readline, openssl and (if you want to use config) libconfig, liblua and libjansson.
-If you do not want to use them pass options --disable-libconfig, --disable-liblua and --disable-json respectively.
+Install libs: readline, openssl and (if you want to use config) libconfig, liblua, python and libjansson.
+If you do not want to use them pass options --disable-libconfig, --disable-liblua, --disable-python and --disable-json respectively.
 
 On Ubuntu/Debian use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev make
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
 
 On gentoo:
 
-     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent dev-libs/jansson
+     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent dev-libs/jansson dev-lang/python
 
 On Fedora:
 
      sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel
+     sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel python-devel
 
 On FreeBSD:
 
-     pkg install libconfig libexecinfo lua52
+     pkg install libconfig libexecinfo lua52 python
 
 On OpenBSD:
 
-     pkg_add libconfig libexecinfo lua
+     pkg_add libconfig libexecinfo lua python
 
 Then,
 
@@ -69,6 +74,7 @@ If using [Homebrew](http://brew.sh/):
      brew install libconfig
      brew install readline
      brew install lua
+     brew install python
      brew install libevent
      export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
      export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
@@ -81,6 +87,7 @@ If using [MacPorts](https://www.macports.org):
      sudo port install libconfig-hr
      sudo port install readline
      sudo port install lua51
+     sudo port install python34
      sudo port install libevent
      export CFLAGS="-I/usr/local/include -I/opt/local/include -I/opt/local/include/lua-5.1"
      export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"

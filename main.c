@@ -21,6 +21,10 @@
 #include "config.h"
 #endif
 
+#ifdef USE_PYTHON
+#  include "python-tg.h"
+#endif
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -75,6 +79,7 @@
 #  include "lua-tg.h"
 #endif
 
+
 #include <tgl/tgl.h>
 
 #define PROGNAME "telegram-cli"
@@ -107,6 +112,7 @@ char *downloads_directory;
 char *config_directory;
 char *binlog_file_name;
 char *lua_file;
+char *python_file;
 int binlog_enabled;
 extern int log_level;
 int sync_from_start;
@@ -381,6 +387,10 @@ void parse_config (void) {
     parse_config_val (&conf, &lua_file, "lua_script", 0, config_directory);
   }
   
+  if (!python_file) {
+    parse_config_val (&conf, &python_file, "python_script", 0, config_directory);
+  }
+  
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
   
@@ -484,6 +494,26 @@ void usage (void) {
   #ifdef USE_JSON
   printf ("  --json                               prints answers and values in json format\n");
   #endif
+  #ifdef USE_PYTHON
+  printf ("  -Z                  python script file\n");
+  #endif
+  #ifdef USE_PYTHON
+  printf ("  -Z                  python script file\n");
+  #endif
+  printf ("  -W                  send dialog_list query and wait for answer before reading input\n");
+  printf ("  -C                  disable color output\n");
+  printf ("  -R                  disable readline\n");
+  printf ("  -d                  daemon mode\n");
+  printf ("  -L <log-name>       log file name\n");
+  printf ("  -U <user-name>      change uid after start\n");
+  printf ("  -G <group-name>     change gid after start\n");
+  printf ("  -D                  disable output\n");
+  printf ("  -P <port>           port to listen for input commands\n");
+  printf ("  -S <socket-name>    unix socket to create\n");
+  printf ("  -e <commands>       make commands end exit\n");
+  printf ("  -I                  use user and chat IDs in updates instead of names\n");
+  printf ("  -6                  use ipv6 (may be unstable)\n");
+
   exit (1);
 }
 
@@ -644,7 +674,11 @@ void args_parse (int argc, char **argv) {
 #ifdef USE_LUA
   "s:"
 #endif
+#ifdef USE_PYTHON
+  "Z:"
+#endif
   , long_options, NULL
+  
   )) != -1) {
     switch (opt) {
     case 1000:
@@ -700,6 +734,11 @@ void args_parse (int argc, char **argv) {
     case 'W':
       wait_dialog_list = 1;
       break;
+#ifdef USE_PYTHON
+    case 'Z':
+      python_file = strdup (optarg);
+      break;
+#endif
     case 'C':
       disable_colors ++;
       break;
@@ -922,6 +961,9 @@ int main (int argc, char **argv) {
       "This is free software, and you are welcome to redistribute it\n"
       "under certain conditions; type `show_license' for details.\n"
       "Telegram-cli uses libtgl version " TGL_VERSION "\n"
+#ifdef USE_PYTHON
+      "Telegram-cli uses libpython version " PY_VERSION "\n"
+#endif
     );
   }
   running_for_first_time ();
@@ -942,6 +984,12 @@ int main (int argc, char **argv) {
     lua_init (lua_file);
   }
   #endif
+  #ifdef USE_PYTHON
+  if (python_file) {
+    py_init (python_file);
+  }
+  #endif
+
 
   inner_main ();
   
