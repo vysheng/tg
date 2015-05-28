@@ -46,9 +46,7 @@ def on_msg_receive(msg):
 
     pp.pprint(msg)
     if msg.text.startswith("!ping"):
-      print("SENDING PONG")
-      peer.send_msg("PONG!", msg_cb)
-      peer.send_contact(msg.src.phone, msg.src.first_name, msg.src.last_name , cb)
+      peer.send_msg("PONG! google.com", preview=False, reply=msg.id)
 
 
 def on_secret_chat_update(peer, types):
