@@ -720,7 +720,7 @@ void do_set_password (struct command *command, int arg_num, struct arg args[], s
 void do_msg (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  vlogprintf (E_ERROR, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
+  vlogprintf (E_DEBUG, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
   tgl_do_send_message (TLS, args[0].P->id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, print_msg_success_gw, ev);
 }
 
