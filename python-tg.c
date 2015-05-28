@@ -744,7 +744,10 @@ void py_do_all (void) {
     PyObject *args = (PyObject *)py_ptr[p ++];
 
     const char *str, *str1, *str2, *str3;
-    
+
+    int preview = 0;
+    int reply_id = 0;
+    unsigned long long flags = 0;
     Py_ssize_t i;
     tgl_user_id_t *ids;
 
@@ -772,10 +775,19 @@ void py_do_all (void) {
         PyErr_Print();
       break;
     case pq_msg:
-      if(PyArg_ParseTuple(args, "O!s#|O", &tgl_PeerType, &peer, &str, &len, &cb_extra))
-        tgl_do_send_message (TLS, PY_PEER_ID(peer), str, len, 0, py_msg_cb, cb_extra);
-      else
+      if(PyArg_ParseTuple(args, "O!s#|OO", &tgl_PeerType, &peer, &str, &len, &cb_extra, &pyObj1)) {
+        if(PyArg_ParseTuple(pyObj1, "ii", &preview, &reply_id)) {
+          if(preview)
+            flags |= TGL_SEND_MSG_FLAG_ENABLE_PREVIEW;
+          else
+            flags |= TGL_SEND_MSG_FLAG_DISABLE_PREVIEW;
+          flags |= TGL_SEND_MSG_FLAG_REPLY (reply_id);
+        }
+        tgl_do_send_message (TLS, PY_PEER_ID(peer), str, len, flags, py_msg_cb, cb_extra);
+      } else
         PyErr_Print();
+
+      Py_XDECREF(pyObj1);
       break;
     case pq_send_typing:
       if(PyArg_ParseTuple(args, "O!|O", &tgl_PeerType, &peer, &cb_extra))
