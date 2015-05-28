@@ -105,6 +105,7 @@ PyObject *_py_new_msg;
 PyObject *_py_secret_chat_update;
 PyObject *_py_user_update;
 PyObject *_py_chat_update;
+PyObject *_py_on_loop;
 
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
@@ -389,6 +390,27 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 
   Py_XDECREF(result);
 }
+
+void py_on_loop () {
+  if (!python_loaded) { return; }
+
+  PyObject *result;
+
+  if(_py_on_loop == NULL) {
+    logprintf("Callback not set for on_chat_update");
+    return;
+  }
+
+  result = PyEval_CallObject(_py_on_loop, Py_None);
+
+  if(result == NULL)
+    PyErr_Print();
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
+
+  Py_XDECREF(result);
+}
+
 
 ////extern tgl_peer_t *Peers[];
 ////extern int peer_num;
@@ -737,6 +759,10 @@ void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char 
 
 void py_do_all (void) {
   int p = 0;
+
+  // ping the python thread that we're doing the loop
+  py_on_loop();
+
   while (p < pos) {
     assert (p + 2 <= pos);
 
@@ -1116,6 +1142,7 @@ TGL_PYTHON_CALLBACK("on_msg_receive", _py_new_msg);
 TGL_PYTHON_CALLBACK("on_secret_chat_update", _py_secret_chat_update);
 TGL_PYTHON_CALLBACK("on_user_update", _py_user_update);
 TGL_PYTHON_CALLBACK("on_chat_update", _py_chat_update);
+TGL_PYTHON_CALLBACK("on_loop", _py_on_loop);
 
 static PyMethodDef py_tgl_methods[] = {
   {"get_contact_list", py_contact_list, METH_VARARGS, "retrieve contact list"},
@@ -1169,6 +1196,7 @@ static PyMethodDef py_tgl_methods[] = {
   {"set_on_secret_chat_update", set_py_secret_chat_update, METH_VARARGS, ""},
   {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
   {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
+  {"set_on_loop", set_py_on_loop, METH_VARARGS, ""},
   { NULL, NULL, 0, NULL }
 };
 
