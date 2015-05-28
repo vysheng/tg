@@ -401,7 +401,7 @@ void py_on_loop () {
     return;
   }
 
-  result = PyEval_CallObject(_py_on_loop, Py_None);
+  result = PyEval_CallObject(_py_on_loop, Py_BuildValue("()"));
 
   if(result == NULL)
     PyErr_Print();
