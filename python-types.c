@@ -375,21 +375,28 @@ static PyMemberDef tgl_Peer_members[] = {
 static PyObject *
 tgl_Peer_send_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 {
-  static char *kwlist[] = {"message", "callback", NULL};
+  static char *kwlist[] = {"message", "callback", "preview", "reply", NULL};
 
   char *message;
+  int preview = 1;
+  int reply = 0;
   PyObject *callback = NULL;
 
-  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|O", kwlist, &message, &callback)) {
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "s|Opi", kwlist, &message, &callback, &preview, &reply)) {
     PyObject *api_call;
+    PyObject *flags;
+
+    flags = Py_BuildValue("(ii)", preview, reply);
+
 
     if(callback)
-      api_call = Py_BuildValue("OsO", (PyObject*) self, message, callback);
+      api_call = Py_BuildValue("OsOO", (PyObject*) self, message, callback, flags);
     else
-      api_call = Py_BuildValue("Os", (PyObject*) self, message);
+      api_call = Py_BuildValue("OsOO", (PyObject*) self, message, Py_None, flags);
 
     Py_INCREF(Py_None);
     Py_XINCREF(api_call);
+    Py_XINCREF(flags);
 
     return py_send_msg(Py_None, api_call);
   } else {
