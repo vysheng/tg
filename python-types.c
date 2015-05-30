@@ -969,6 +969,12 @@ tgl_Peer_repr(tgl_Peer *self)
   return ret;
 }
 
+int
+tgl_Peer_hash(PyObject *self)
+{
+  return PyObject_Hash(PyObject_GetAttrString(self, "id"));
+}
+
 PyObject *
 tgl_Peer_RichCompare(PyObject *self, PyObject *other, int cmp)
 {
@@ -1016,7 +1022,7 @@ PyTypeObject tgl_PeerType = {
     0,                            /* tp_as_number */
     0,                            /* tp_as_sequence */
     0,                            /* tp_as_mapping */
-    0,                            /* tp_hash  */
+    (hashfunc)tgl_Peer_hash,      /* tp_hash  */
     0,                            /* tp_call */
     0,                            /* tp_str */
     0,                            /* tp_getattro */
