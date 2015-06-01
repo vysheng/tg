@@ -378,7 +378,7 @@ tgl_Peer_send_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
   static char *kwlist[] = {"message", "callback", "preview", "reply", NULL};
 
   char *message;
-  int preview = 1;
+  int preview = -1;
   int reply = 0;
   PyObject *callback = NULL;
 

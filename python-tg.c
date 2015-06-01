@@ -803,10 +803,12 @@ void py_do_all (void) {
     case pq_msg:
       if(PyArg_ParseTuple(args, "O!s#|OO", &tgl_PeerType, &peer, &str, &len, &cb_extra, &pyObj1)) {
         if(PyArg_ParseTuple(pyObj1, "ii", &preview, &reply_id)) {
-          if(preview)
-            flags |= TGL_SEND_MSG_FLAG_ENABLE_PREVIEW;
-          else
-            flags |= TGL_SEND_MSG_FLAG_DISABLE_PREVIEW;
+          if(preview != -1) {
+            if(preview)
+              flags |= TGL_SEND_MSG_FLAG_ENABLE_PREVIEW;
+            else
+              flags |= TGL_SEND_MSG_FLAG_DISABLE_PREVIEW;
+          }
           flags |= TGL_SEND_MSG_FLAG_REPLY (reply_id);
         }
         tgl_do_send_message (TLS, PY_PEER_ID(peer), str, len, flags, py_msg_cb, cb_extra);
@@ -1135,7 +1137,7 @@ PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf,
 
 extern int safe_quit;
 extern int exit_code;
-PyObject* py_safe_quit(PyObject *self, PyObject *args) 
+PyObject* py_safe_quit(PyObject *self, PyObject *args)
 {
   int exit_val = 0;
   if(PyArg_ParseTuple(args, "|i", &exit_val)) {
@@ -1148,6 +1150,20 @@ PyObject* py_safe_quit(PyObject *self, PyObject *args)
   Py_RETURN_NONE;
 }
 
+PyObject* py_set_preview(PyObject *self, PyObject *args)
+{
+  int preview = 0;
+  if(PyArg_ParseTuple(args, "p", &preview)) {
+    if(preview)
+      TLS->disable_link_preview = 0;
+    else
+      TLS->disable_link_preview = 1;
+  } else {
+    PyErr_Print();
+  }
+
+  Py_RETURN_NONE;
+}
 
 // Store callables for python functions
 TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
@@ -1212,6 +1228,7 @@ static PyMethodDef py_tgl_methods[] = {
   {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
   {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
   {"set_on_loop", set_py_on_loop, METH_VARARGS, ""},
+  {"set_link_preview", py_set_preview, METH_VARARGS, ""},
   {"safe_quit", py_safe_quit, METH_VARARGS, ""},
   {"safe_exit", py_safe_quit, METH_VARARGS, ""}, // Alias to safe_quit for naming consistancy in python.
   { NULL, NULL, 0, NULL }
