@@ -999,7 +999,7 @@ tgl_Peer_RichCompare(PyObject *self, PyObject *other, int cmp)
       case Py_GT:
       case Py_LT:
       default:
-        Py_RETURN_NOTIMPLEMENTED;
+        return Py_INCREF(Py_NotImplemented), Py_NotImplemented;
       }
     }
   }
