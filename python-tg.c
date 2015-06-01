@@ -1133,6 +1133,21 @@ PyObject* py_status_offline(PyObject *self, PyObject *args) { return push_py_fun
 PyObject* py_send_location(PyObject *self, PyObject *args) { return push_py_func(pq_send_location, args); }
 PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf, args); }
 
+extern int safe_quit;
+extern int exit_code;
+PyObject* py_safe_quit(PyObject *self, PyObject *args) 
+{
+  int exit_val = 0;
+  if(PyArg_ParseTuple(args, "|i", &exit_val)) {
+    safe_quit = 1;
+    exit_code = exit_val;
+  } else {
+    PyErr_Print();
+  }
+
+  Py_RETURN_NONE;
+}
+
 
 // Store callables for python functions
 TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
@@ -1197,6 +1212,8 @@ static PyMethodDef py_tgl_methods[] = {
   {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
   {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
   {"set_on_loop", set_py_on_loop, METH_VARARGS, ""},
+  {"safe_quit", py_safe_quit, METH_VARARGS, ""},
+  {"safe_exit", py_safe_quit, METH_VARARGS, ""}, // Alias to safe_quit for naming consistancy in python.
   { NULL, NULL, 0, NULL }
 };
 
@@ -1236,14 +1253,6 @@ MOD_INIT(tgl)
   return MOD_SUCCESS_VAL(m);  
 }
 
-/*
-extern int safe_quit;
-static int safe_quit_from_py() {
-  Py_Finalize();
-  safe_quit = 1;
-  return 1;
-}
-*/
 
 void py_init (const char *file) {
   if (!file) { return; }

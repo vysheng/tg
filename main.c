@@ -127,6 +127,7 @@ int ipv6_enabled;
 char *start_command;
 int disable_link_preview;
 int enable_json;
+int exit_code;
 
 struct tgl_state *TLS;
 
@@ -834,6 +835,7 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
 }
 
 void do_halt (int error) {
+  int retval;
   if (daemonize) {
     return;
   }
@@ -857,8 +859,12 @@ void do_halt (int error) {
   if (sfd > 0) {
     close (sfd);
   }
-  
-  exit (error ? EXIT_FAILURE : EXIT_SUCCESS);
+ 
+  if(exit_code)
+    retval = exit_code;
+  else
+    retval = error ? EXIT_FAILURE : EXIT_SUCCESS;
+  exit (retval);
 }
 
 int main (int argc, char **argv) {
