@@ -75,6 +75,7 @@ If using [Homebrew](http://brew.sh/):
      brew install lua
      brew install python
      brew install libevent
+     brew install jansson
      export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
      export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
