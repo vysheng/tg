@@ -105,6 +105,7 @@ PyObject *_py_new_msg;
 PyObject *_py_secret_chat_update;
 PyObject *_py_user_update;
 PyObject *_py_chat_update;
+PyObject *_py_on_loop;
 
 PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P);
 
@@ -389,6 +390,27 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
 
   Py_XDECREF(result);
 }
+
+void py_on_loop () {
+  if (!python_loaded) { return; }
+
+  PyObject *result;
+
+  if(_py_on_loop == NULL) {
+    logprintf("Callback not set for on_chat_update");
+    return;
+  }
+
+  result = PyEval_CallObject(_py_on_loop, Py_BuildValue("()"));
+
+  if(result == NULL)
+    PyErr_Print();
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
+
+  Py_XDECREF(result);
+}
+
 
 ////extern tgl_peer_t *Peers[];
 ////extern int peer_num;
@@ -737,6 +759,10 @@ void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char 
 
 void py_do_all (void) {
   int p = 0;
+
+  // ping the python thread that we're doing the loop
+  py_on_loop();
+
   while (p < pos) {
     assert (p + 2 <= pos);
 
@@ -777,10 +803,12 @@ void py_do_all (void) {
     case pq_msg:
       if(PyArg_ParseTuple(args, "O!s#|OO", &tgl_PeerType, &peer, &str, &len, &cb_extra, &pyObj1)) {
         if(PyArg_ParseTuple(pyObj1, "ii", &preview, &reply_id)) {
-          if(preview)
-            flags |= TGL_SEND_MSG_FLAG_ENABLE_PREVIEW;
-          else
-            flags |= TGL_SEND_MSG_FLAG_DISABLE_PREVIEW;
+          if(preview != -1) {
+            if(preview)
+              flags |= TGL_SEND_MSG_FLAG_ENABLE_PREVIEW;
+            else
+              flags |= TGL_SEND_MSG_FLAG_DISABLE_PREVIEW;
+          }
           flags |= TGL_SEND_MSG_FLAG_REPLY (reply_id);
         }
         tgl_do_send_message (TLS, PY_PEER_ID(peer), str, len, flags, py_msg_cb, cb_extra);
@@ -1107,6 +1135,35 @@ PyObject* py_status_offline(PyObject *self, PyObject *args) { return push_py_fun
 PyObject* py_send_location(PyObject *self, PyObject *args) { return push_py_func(pq_send_location, args); }
 PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf, args); }
 
+extern int safe_quit;
+extern int exit_code;
+PyObject* py_safe_quit(PyObject *self, PyObject *args)
+{
+  int exit_val = 0;
+  if(PyArg_ParseTuple(args, "|i", &exit_val)) {
+    safe_quit = 1;
+    exit_code = exit_val;
+  } else {
+    PyErr_Print();
+  }
+
+  Py_RETURN_NONE;
+}
+
+PyObject* py_set_preview(PyObject *self, PyObject *args)
+{
+  int preview = 0;
+  if(PyArg_ParseTuple(args, "p", &preview)) {
+    if(preview)
+      TLS->disable_link_preview = 0;
+    else
+      TLS->disable_link_preview = 1;
+  } else {
+    PyErr_Print();
+  }
+
+  Py_RETURN_NONE;
+}
 
 // Store callables for python functions
 TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
@@ -1116,6 +1173,7 @@ TGL_PYTHON_CALLBACK("on_msg_receive", _py_new_msg);
 TGL_PYTHON_CALLBACK("on_secret_chat_update", _py_secret_chat_update);
 TGL_PYTHON_CALLBACK("on_user_update", _py_user_update);
 TGL_PYTHON_CALLBACK("on_chat_update", _py_chat_update);
+TGL_PYTHON_CALLBACK("on_loop", _py_on_loop);
 
 static PyMethodDef py_tgl_methods[] = {
   {"get_contact_list", py_contact_list, METH_VARARGS, "retrieve contact list"},
@@ -1169,6 +1227,10 @@ static PyMethodDef py_tgl_methods[] = {
   {"set_on_secret_chat_update", set_py_secret_chat_update, METH_VARARGS, ""},
   {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
   {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
+  {"set_on_loop", set_py_on_loop, METH_VARARGS, ""},
+  {"set_link_preview", py_set_preview, METH_VARARGS, ""},
+  {"safe_quit", py_safe_quit, METH_VARARGS, ""},
+  {"safe_exit", py_safe_quit, METH_VARARGS, ""}, // Alias to safe_quit for naming consistancy in python.
   { NULL, NULL, 0, NULL }
 };
 
@@ -1208,14 +1270,6 @@ MOD_INIT(tgl)
   return MOD_SUCCESS_VAL(m);  
 }
 
-/*
-extern int safe_quit;
-static int safe_quit_from_py() {
-  Py_Finalize();
-  safe_quit = 1;
-  return 1;
-}
-*/
 
 void py_init (const char *file) {
   if (!file) { return; }

@@ -378,7 +378,7 @@ tgl_Peer_send_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
   static char *kwlist[] = {"message", "callback", "preview", "reply", NULL};
 
   char *message;
-  int preview = 1;
+  int preview = -1;
   int reply = 0;
   PyObject *callback = NULL;
 
@@ -969,6 +969,44 @@ tgl_Peer_repr(tgl_Peer *self)
   return ret;
 }
 
+int
+tgl_Peer_hash(PyObject *self)
+{
+  return PyObject_Hash(PyObject_GetAttrString(self, "id"));
+}
+
+PyObject *
+tgl_Peer_RichCompare(PyObject *self, PyObject *other, int cmp)
+{
+  PyObject *result = NULL;
+
+  if(!PyObject_TypeCheck(other, &tgl_PeerType)) {
+    result = Py_False;
+  } else {
+    if(((tgl_Peer*)self)->peer == NULL ||
+       ((tgl_Peer*)other)->peer == NULL) {
+      result = Py_False; // If either object is not properly instantiated, compare is false
+    } else {
+      switch (cmp) {
+      case Py_EQ:
+        result = ((tgl_Peer*)self)->peer->id.id == ((tgl_Peer*)other)->peer->id.id ? Py_True : Py_False;
+        break;
+      case Py_NE:
+        result = ((tgl_Peer*)self)->peer->id.id == ((tgl_Peer*)other)->peer->id.id ? Py_False : Py_True;
+        break;
+      case Py_LE:
+      case Py_GE:
+      case Py_GT:
+      case Py_LT:
+      default:
+        return Py_INCREF(Py_NotImplemented), Py_NotImplemented;
+      }
+    }
+  }
+  Py_XINCREF(result);
+  return result;
+}
+
 
 PyTypeObject tgl_PeerType = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -984,7 +1022,7 @@ PyTypeObject tgl_PeerType = {
     0,                            /* tp_as_number */
     0,                            /* tp_as_sequence */
     0,                            /* tp_as_mapping */
-    0,                            /* tp_hash  */
+    (hashfunc)tgl_Peer_hash,      /* tp_hash  */
     0,                            /* tp_call */
     0,                            /* tp_str */
     0,                            /* tp_getattro */
@@ -994,7 +1032,7 @@ PyTypeObject tgl_PeerType = {
     "tgl Peer",                   /* tp_doc */
     0,                            /* tp_traverse */
     0,                            /* tp_clear */
-    0,                            /* tp_richcompare */
+    (richcmpfunc)tgl_Peer_RichCompare, /* tp_richcompare */
     0,                            /* tp_weaklistoffset */
     0,                            /* tp_iter */
     0,                            /* tp_iternext */
