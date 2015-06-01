@@ -3061,8 +3061,9 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
     case tgl_message_media_none:
       return;
     case tgl_message_media_photo:
-      assert (M->photo);
-      if (M->photo->caption && strlen (M->photo->caption)) {
+      if (!M->photo) {
+        mprintf (ev, "[photo bad]");
+      } else if (M->photo->caption && strlen (M->photo->caption)) {
         mprintf (ev, "[photo %s]", M->photo->caption);
       } else {
         mprintf (ev, "[photo]");
