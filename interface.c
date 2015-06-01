@@ -165,7 +165,7 @@ void socket_answer_add_printf (const char *format, ...) {
 }
 
 void socket_answer_end (struct in_ev *ev) {
-  if (ev->bev && socket_answer_pos > 0) {
+  if (ev->bev) {
     static char s[100];
     sprintf (s, "ANSWER %d\n", socket_answer_pos);
     bufferevent_write (ev->bev, s, strlen (s));
