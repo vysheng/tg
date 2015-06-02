@@ -1151,6 +1151,17 @@ tgl_Msg_getservice (tgl_Msg *self, void *closure)
   return ret;
 }
 
+static PyObject *
+tgl_Msg_getaction (tgl_Msg *self, void *closure)
+{
+  PyObject *ret;
+
+  ret = PyLong_FromLong(self->msg->action.type);
+
+  Py_XINCREF(ret);
+  return ret;
+}
+
 
 static PyObject *
 tgl_Msg_getsrc (tgl_Msg *self, void *closure)
@@ -1209,6 +1220,8 @@ tgl_Msg_gettext (tgl_Msg *self, void *closure)
   Py_XINCREF(ret);
   return ret;
 }
+
+
 
 static PyObject *
 tgl_Msg_getmedia (tgl_Msg *self, void *closure)
@@ -1357,6 +1370,55 @@ tgl_Msg_getreply_id (tgl_Msg *self, void *closure)
   return ret;
 }
 
+// All load methods are implemented the same, just alias load_document
+static PyObject *
+tgl_Msg_load_document (tgl_Msg *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &callback)) {
+    PyObject *api_call;
+
+    api_call = Py_BuildValue("OO", (PyObject*) self, callback);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_load_document(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
+tgl_Msg_load_document_thumb (tgl_Msg *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &callback)) {
+    PyObject *api_call;
+
+    api_call = Py_BuildValue("OO", (PyObject*) self, callback);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_load_document_thumb(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
 static PyObject *
 tgl_Msg_repr(tgl_Msg *self)
 {
@@ -1400,6 +1462,7 @@ static PyGetSetDef tgl_Msg_getseters[] = {
   {"fwd_date", (getter)tgl_Msg_getfwd_date, NULL, "", NULL},
   {"reply", (getter)tgl_Msg_getreply, NULL, "", NULL},
   {"reply_id", (getter)tgl_Msg_getreply_id, NULL, "", NULL},
+  {"action", (getter)tgl_Msg_getaction, NULL, "", NULL},
   {NULL}  /* Sentinel */
 };
 
@@ -1410,6 +1473,12 @@ static PyMemberDef tgl_Msg_members[] = {
 
 
 static PyMethodDef tgl_Msg_methods[] = {
+  {"load_document", (PyCFunction)tgl_Msg_load_document, METH_VARARGS | METH_KEYWORDS, ""},
+  {"load_photo", (PyCFunction)tgl_Msg_load_document, METH_VARARGS | METH_KEYWORDS, ""},
+  {"load_audio", (PyCFunction)tgl_Msg_load_document, METH_VARARGS | METH_KEYWORDS, ""},
+  {"load_video", (PyCFunction)tgl_Msg_load_document, METH_VARARGS | METH_KEYWORDS, ""},
+  {"load_document_thumb", (PyCFunction)tgl_Msg_load_document_thumb, METH_VARARGS | METH_KEYWORDS, ""},
+  {"load_video_thumb", (PyCFunction)tgl_Msg_load_document_thumb, METH_VARARGS | METH_KEYWORDS, ""},
   {NULL}  /* Sentinel */
 };
 
