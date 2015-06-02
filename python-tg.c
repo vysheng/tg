@@ -1234,6 +1234,41 @@ static PyMethodDef py_tgl_methods[] = {
   { NULL, NULL, 0, NULL }
 };
 
+void py_add_action_enums(PyObject *m)
+{
+  PyModule_AddIntConstant(m, "ACTION_NONE", tgl_message_action_none);
+  PyModule_AddIntConstant(m, "ACTION_GEO_CHAT_CREATE", tgl_message_action_geo_chat_create);
+  PyModule_AddIntConstant(m, "ACTION_GEO_CHAT_CHECKIN", tgl_message_action_geo_chat_checkin);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_CREATE", tgl_message_action_chat_create);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_EDIT_TITLE", tgl_message_action_chat_edit_title);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_EDIT_PHOTO", tgl_message_action_chat_edit_photo);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_DELETE_PHOTO", tgl_message_action_chat_delete_photo);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER", tgl_message_action_chat_add_user);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER_BY_LINK", tgl_message_action_chat_add_user_by_link);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_DELETE_USER", tgl_message_action_chat_delete_user);
+  PyModule_AddIntConstant(m, "ACTION_SET_MESSAGE_TTL", tgl_message_action_set_message_ttl);
+  PyModule_AddIntConstant(m, "ACTION_READ_MESSAGES", tgl_message_action_read_messages);
+  PyModule_AddIntConstant(m, "ACTION_DELETE_MESSAGES", tgl_message_action_delete_messages);
+  PyModule_AddIntConstant(m, "ACTION_SCREENSHOT_MESSAGES", tgl_message_action_screenshot_messages);
+  PyModule_AddIntConstant(m, "ACTION_FLUSH_HISTORY", tgl_message_action_flush_history);
+  PyModule_AddIntConstant(m, "ACTION_RESEND", tgl_message_action_resend);
+  PyModule_AddIntConstant(m, "ACTION_NOTIFY_LAYER", tgl_message_action_notify_layer);
+  PyModule_AddIntConstant(m, "ACTION_TYPING", tgl_message_action_typing);
+  PyModule_AddIntConstant(m, "ACTION_NOOP", tgl_message_action_noop);
+  PyModule_AddIntConstant(m, "ACTION_COMMIT_KEY", tgl_message_action_commit_key);
+  PyModule_AddIntConstant(m, "ACTION_ABORT_KEY", tgl_message_action_abort_key);
+  PyModule_AddIntConstant(m, "ACTION_REQUEST_KEY", tgl_message_action_request_key);
+  PyModule_AddIntConstant(m, "ACTION_ACCEPT_KEY", tgl_message_action_accept_key);
+}
+
+void py_add_peer_type_enums(PyObject *m)
+{
+  PyModule_AddIntConstant(m, "PEER_USER", TGL_PEER_USER);
+  PyModule_AddIntConstant(m, "PEER_USER", TGL_PEER_CHAT);
+  PyModule_AddIntConstant(m, "PEER_ENCR_CHAT", TGL_PEER_ENCR_CHAT);
+}
+
+
 MOD_INIT(tgl)
 {
   PyObject *m;
@@ -1242,6 +1277,9 @@ MOD_INIT(tgl)
 
   if (m == NULL)
     return MOD_ERROR_VAL;
+
+  py_add_action_enums(m);
+  py_add_peer_type_enums(m);
 
   if (PyType_Ready(&tgl_PeerType) < 0)
     return MOD_ERROR_VAL;
