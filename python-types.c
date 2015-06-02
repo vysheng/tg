@@ -1151,6 +1151,17 @@ tgl_Msg_getservice (tgl_Msg *self, void *closure)
   return ret;
 }
 
+static PyObject *
+tgl_Msg_getaction (tgl_Msg *self, void *closure)
+{
+  PyObject *ret;
+
+  ret = PyLong_FromLong(self->msg->action.type);
+
+  Py_XINCREF(ret);
+  return ret;
+}
+
 
 static PyObject *
 tgl_Msg_getsrc (tgl_Msg *self, void *closure)
@@ -1400,6 +1411,7 @@ static PyGetSetDef tgl_Msg_getseters[] = {
   {"fwd_date", (getter)tgl_Msg_getfwd_date, NULL, "", NULL},
   {"reply", (getter)tgl_Msg_getreply, NULL, "", NULL},
   {"reply_id", (getter)tgl_Msg_getreply_id, NULL, "", NULL},
+  {"action", (getter)tgl_Msg_getaction, NULL, "", NULL},
   {NULL}  /* Sentinel */
 };
 
