@@ -774,16 +774,21 @@ void py_do_all (void) {
     int preview = 0;
     int reply_id = 0;
     unsigned long long flags = 0;
+
     Py_ssize_t i;
     tgl_user_id_t *ids;
+
+    struct tgl_message *M;
 
     int len, len1, len2, len3;
     int limit, offset;
     long msg_id = 0;
+
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
     PyObject *cb_extra = NULL;
 
+    PyObject *msg = NULL;
     PyObject *peer = NULL;
     PyObject *peer1 = NULL;
 
@@ -877,33 +882,40 @@ void py_do_all (void) {
       else
         PyErr_Print();
       break;
-/*  case pq_load_photo:
+    case pq_load_photo:
     case pq_load_video:
     case pq_load_audio:
     case pq_load_document:
-      M = py_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
-        py_file_cb (TLS, py_ptr[p], 0, 0);
-      } else {
-        , limit, offse, limit, offsettif (M->media.type == tgl_message_media_photo) {
-          tgl_do_load_photo (TLS, &M->media.photo, py_file_cb, py_ptr[p]);
-        } else if (M->media.type == tgl_message_media_document) {
-          tgl_do_load_document (TLS, &M->media.document, py_file_cb, py_ptr[p]);
+      if(PyArg_ParseTuple(args, "O!O", &tgl_MsgType, &msg, &cb_extra))
+      {
+        M = ((tgl_Msg*)msg)->msg;
+        if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
+          py_file_cb (TLS, cb_extra, 0, 0);
         } else {
-          tgl_do_load_encr_document (TLS, &M->media.encr_document, py_file_cb, py_ptr[p]);
+          if (M->media.type == tgl_message_media_photo) {
+            assert (M->media.photo);
+            tgl_do_load_photo (TLS, M->media.photo, py_file_cb, cb_extra);
+          } else if (M->media.type == tgl_message_media_document) {
+            tgl_do_load_document (TLS, M->media.document, py_file_cb, cb_extra);
+          } else {
+            tgl_do_load_encr_document (TLS, M->media.encr_document, py_file_cb, cb_extra);
+          }
         }
       }
       break;
     case pq_load_video_thumb:
     case pq_load_document_thumb:
-      M = py_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_document)) {
-        py_file_cb (TLS, py_ptr[p], 0, 0);
-      } else {
-        tgl_do_load_document_thumb (TLS, &M->media.document, py_file_cb, py_ptr[p]);
+      if(PyArg_ParseTuple(args, "O!O", &tgl_MsgType, &msg, &cb_extra))
+      {
+        M = ((tgl_Msg*)msg)->msg;
+        if (!M || (M->media.type != tgl_message_media_document)) {
+          py_file_cb (TLS, cb_extra, 0, 0);
+        } else {
+          tgl_do_load_document_thumb (TLS, M->media.document, py_file_cb, cb_extra);
+        }
       }
       break;
-*/
+
     case pq_fwd:
       if(PyArg_ParseTuple(args, "O!l|O", &tgl_PeerType, &peer, &msg_id, &cb_extra))
         tgl_do_forward_message (TLS, PY_PEER_ID(peer), msg_id, 0, py_msg_cb, cb_extra);
@@ -1234,6 +1246,41 @@ static PyMethodDef py_tgl_methods[] = {
   { NULL, NULL, 0, NULL }
 };
 
+void py_add_action_enums(PyObject *m)
+{
+  PyModule_AddIntConstant(m, "ACTION_NONE", tgl_message_action_none);
+  PyModule_AddIntConstant(m, "ACTION_GEO_CHAT_CREATE", tgl_message_action_geo_chat_create);
+  PyModule_AddIntConstant(m, "ACTION_GEO_CHAT_CHECKIN", tgl_message_action_geo_chat_checkin);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_CREATE", tgl_message_action_chat_create);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_EDIT_TITLE", tgl_message_action_chat_edit_title);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_EDIT_PHOTO", tgl_message_action_chat_edit_photo);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_DELETE_PHOTO", tgl_message_action_chat_delete_photo);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER", tgl_message_action_chat_add_user);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER_BY_LINK", tgl_message_action_chat_add_user_by_link);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_DELETE_USER", tgl_message_action_chat_delete_user);
+  PyModule_AddIntConstant(m, "ACTION_SET_MESSAGE_TTL", tgl_message_action_set_message_ttl);
+  PyModule_AddIntConstant(m, "ACTION_READ_MESSAGES", tgl_message_action_read_messages);
+  PyModule_AddIntConstant(m, "ACTION_DELETE_MESSAGES", tgl_message_action_delete_messages);
+  PyModule_AddIntConstant(m, "ACTION_SCREENSHOT_MESSAGES", tgl_message_action_screenshot_messages);
+  PyModule_AddIntConstant(m, "ACTION_FLUSH_HISTORY", tgl_message_action_flush_history);
+  PyModule_AddIntConstant(m, "ACTION_RESEND", tgl_message_action_resend);
+  PyModule_AddIntConstant(m, "ACTION_NOTIFY_LAYER", tgl_message_action_notify_layer);
+  PyModule_AddIntConstant(m, "ACTION_TYPING", tgl_message_action_typing);
+  PyModule_AddIntConstant(m, "ACTION_NOOP", tgl_message_action_noop);
+  PyModule_AddIntConstant(m, "ACTION_COMMIT_KEY", tgl_message_action_commit_key);
+  PyModule_AddIntConstant(m, "ACTION_ABORT_KEY", tgl_message_action_abort_key);
+  PyModule_AddIntConstant(m, "ACTION_REQUEST_KEY", tgl_message_action_request_key);
+  PyModule_AddIntConstant(m, "ACTION_ACCEPT_KEY", tgl_message_action_accept_key);
+}
+
+void py_add_peer_type_enums(PyObject *m)
+{
+  PyModule_AddIntConstant(m, "PEER_USER", TGL_PEER_USER);
+  PyModule_AddIntConstant(m, "PEER_USER", TGL_PEER_CHAT);
+  PyModule_AddIntConstant(m, "PEER_ENCR_CHAT", TGL_PEER_ENCR_CHAT);
+}
+
+
 MOD_INIT(tgl)
 {
   PyObject *m;
@@ -1242,6 +1289,9 @@ MOD_INIT(tgl)
 
   if (m == NULL)
     return MOD_ERROR_VAL;
+
+  py_add_action_enums(m);
+  py_add_peer_type_enums(m);
 
   if (PyType_Ready(&tgl_PeerType) < 0)
     return MOD_ERROR_VAL;
