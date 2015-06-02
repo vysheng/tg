@@ -860,10 +860,12 @@ void do_halt (int error) {
     close (sfd);
   }
  
-  if(exit_code)
+  if (exit_code) {
     retval = exit_code;
-  else
+  } else {
     retval = error ? EXIT_FAILURE : EXIT_SUCCESS;
+  }
+
   exit (retval);
 }
 
