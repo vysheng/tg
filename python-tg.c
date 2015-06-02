@@ -774,16 +774,21 @@ void py_do_all (void) {
     int preview = 0;
     int reply_id = 0;
     unsigned long long flags = 0;
+
     Py_ssize_t i;
     tgl_user_id_t *ids;
+
+    struct tgl_message *M;
 
     int len, len1, len2, len3;
     int limit, offset;
     long msg_id = 0;
+
     PyObject *pyObj1 = NULL;
     PyObject *pyObj2 = NULL;
     PyObject *cb_extra = NULL;
 
+    PyObject *msg = NULL;
     PyObject *peer = NULL;
     PyObject *peer1 = NULL;
 
@@ -877,33 +882,40 @@ void py_do_all (void) {
       else
         PyErr_Print();
       break;
-/*  case pq_load_photo:
+    case pq_load_photo:
     case pq_load_video:
     case pq_load_audio:
     case pq_load_document:
-      M = py_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_photo_encr && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
-        py_file_cb (TLS, py_ptr[p], 0, 0);
-      } else {
-        , limit, offse, limit, offsettif (M->media.type == tgl_message_media_photo) {
-          tgl_do_load_photo (TLS, &M->media.photo, py_file_cb, py_ptr[p]);
-        } else if (M->media.type == tgl_message_media_document) {
-          tgl_do_load_document (TLS, &M->media.document, py_file_cb, py_ptr[p]);
+      if(PyArg_ParseTuple(args, "O!O", &tgl_MsgType, &msg, &cb_extra))
+      {
+        M = ((tgl_Msg*)msg)->msg;
+        if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
+          py_file_cb (TLS, cb_extra, 0, 0);
         } else {
-          tgl_do_load_encr_document (TLS, &M->media.encr_document, py_file_cb, py_ptr[p]);
+          if (M->media.type == tgl_message_media_photo) {
+            assert (M->media.photo);
+            tgl_do_load_photo (TLS, M->media.photo, py_file_cb, cb_extra);
+          } else if (M->media.type == tgl_message_media_document) {
+            tgl_do_load_document (TLS, M->media.document, py_file_cb, cb_extra);
+          } else {
+            tgl_do_load_encr_document (TLS, M->media.encr_document, py_file_cb, cb_extra);
+          }
         }
       }
       break;
     case pq_load_video_thumb:
     case pq_load_document_thumb:
-      M = py_ptr[p + 1];
-      if (!M || (M->media.type != tgl_message_media_document)) {
-        py_file_cb (TLS, py_ptr[p], 0, 0);
-      } else {
-        tgl_do_load_document_thumb (TLS, &M->media.document, py_file_cb, py_ptr[p]);
+      if(PyArg_ParseTuple(args, "O!O", &tgl_MsgType, &msg, &cb_extra))
+      {
+        M = ((tgl_Msg*)msg)->msg;
+        if (!M || (M->media.type != tgl_message_media_document)) {
+          py_file_cb (TLS, cb_extra, 0, 0);
+        } else {
+          tgl_do_load_document_thumb (TLS, M->media.document, py_file_cb, cb_extra);
+        }
       }
       break;
-*/
+
     case pq_fwd:
       if(PyArg_ParseTuple(args, "O!l|O", &tgl_PeerType, &peer, &msg_id, &cb_extra))
         tgl_do_forward_message (TLS, PY_PEER_ID(peer), msg_id, 0, py_msg_cb, cb_extra);
