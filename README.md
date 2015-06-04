@@ -45,6 +45,10 @@ On Fedora:
 
      sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel
 
+On Archlinux:
+
+     yaourt -S telegram-git
+
 On FreeBSD:
 
      pkg install libconfig libexecinfo lua52 python
