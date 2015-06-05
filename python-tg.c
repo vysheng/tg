@@ -467,7 +467,8 @@ enum py_query_type {
   pq_status_online,
   pq_status_offline,
   pq_send_location,
-  pq_extf
+  pq_extf,
+  pq_import_chat_link
 };
 
 void py_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
@@ -1062,7 +1063,13 @@ void py_do_all (void) {
       break;
     case pq_extf:
       if(PyArg_ParseTuple(args, "s#|O", &str, &len, &cb_extra))
-        tgl_do_send_extf (TLS, str, len, py_str_cb, &cb_extra);
+        tgl_do_send_extf (TLS, str, len, py_str_cb, cb_extra);
+      else
+        PyErr_Print();
+      break;
+    case pq_import_chat_link:
+      if(PyArg_ParseTuple(args, "s#|O", &str, &len, &cb_extra))
+        tgl_do_import_chat_link  (TLS, str, len, py_empty_cb, cb_extra);
       else
         PyErr_Print();
       break;
@@ -1146,6 +1153,7 @@ PyObject* py_status_online(PyObject *self, PyObject *args) { return push_py_func
 PyObject* py_status_offline(PyObject *self, PyObject *args) { return push_py_func(pq_status_offline, args); }
 PyObject* py_send_location(PyObject *self, PyObject *args) { return push_py_func(pq_send_location, args); }
 PyObject* py_extf(PyObject *self, PyObject *args) { return push_py_func(pq_extf, args); }
+PyObject* py_import_chat_link(PyObject *self, PyObject *args) { return push_py_func(pq_import_chat_link, args); }
 
 extern int safe_quit;
 extern int exit_code;
@@ -1232,6 +1240,7 @@ static PyMethodDef py_tgl_methods[] = {
   {"status_offline", py_status_offline, METH_VARARGS, ""},
   {"send_location", py_send_location, METH_VARARGS, ""},  
   {"ext_function", py_extf, METH_VARARGS, ""},
+  {"import_chat_link", py_import_chat_link, METH_VARARGS, ""},
   {"set_on_binlog_replay_end", set_py_binlog_end, METH_VARARGS, ""},
   {"set_on_get_difference_end", set_py_diff_end, METH_VARARGS, ""},
   {"set_on_our_id", set_py_our_id, METH_VARARGS, ""},
