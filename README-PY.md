@@ -63,8 +63,20 @@ All of these functions are accessed by importing the `tgl` module.
 Peer
 ====
 ## Attributes
-| Attribute | Description          |
-|---------- | ---------------------|
+| Attribute | Type |  Description          |
+|---------- | ---- | ----------------------|
+|`id`|`int`|Telegram peer id|
+|`type`|`int`|Peer type, you can compare this with `tgl.PEER_CHAT`, `tgl.PEER_USER`, or `tgl.PEER_ENCR_CHAT`|
+|`type_name`|`string`|Text representation of the type of the peer, `'chat'`, `'user'`, or `'secret_chat'`|
+|`name`|`string`|Returns the tg print version of the name. Usually `FirstName_LastName` for user, and the chatname with spaces replaced with `_`|
+|`user_id`|`int`|Used in secret chats, since a secret chat has it's own id, this is the id of the user at the endpoint.|
+|`user_list`|`peer_list`|Only used in `tgl.PEER_CHAT` peers, contains list of users. This currently does not work, it is not populating properly.|
+|`user_status`|`dict`|Only used in `tgl.PEER_USER` peers. Dictionary with the current status, keys: 'online': `bool`, 'when': `datetime`|
+|`phone`|`string`|Only used in `tgl.PEER_USER` peers. Phone number, only available if user is on contact list.|
+|`username`|`string`|Only used in `tgl.PEER_USER` peers. Will be `None` if username is not set.|
+|`first_name`|`string`|Only used in `tgl.PEER_USER` peers.|
+|`last_name`|`string`|Only used in `tgl.PEER_USER` peers.|
+
 ## Methods
 | Method | Description          | Callback Type |
 |------- | ---------------------| ------------- |
@@ -104,8 +116,50 @@ def history_callback(msg_count, peer, success, msgs)
 Msg
 ====
 ## Attributes
-| Attribute | Description          |
-|---------- | ---------------------|
+| Attribute | Type |  Description          |
+|---------- | ---- | ----------------------|
+|`id`|`int`|Message id|
+|`flags`|`int`|tgl flags, see source code for tgl for various possible flags. This is a bitfield in an int.|
+|`mention`|`bool`|`True` if you are @mentioned.|
+|`out`|`bool`|`True` if you sent this message.|
+|`unread`|`bool`|`True` if you have not marked this as read.|
+|`service`|`bool`|`True` if the message is a service messages, see tgl.Msg.action for the type.|
+|`src`|`tgl.Peer`|Peer who sent the message|
+|`dest`|`tgl.Peer`|Peer who the message was sent too. In a group, this will be the chat peer. Otherwise it will be you.|
+|`text`|`string`|Text contents of the message. This may be `None` if it's media without caption.|
+|`media`|`dict`|Dictionary that varies based on the media type.|
+|`date`|`datetime`|When the message was sent.|
+|`fwd_src`|`tgl.Peer`|The user that sent the forwarded message.|
+|`fwd_date`|`datetime`|When the forwarded message was originally sent.|
+|`reply`|`tgl.Msg`|Message that this message is replying to.|
+|`reply_id`|`int`|Message id that this message is replying to.|
+|`action`|`int`|Action enum for the message if `msg.service == True`. See all the possible values below|
+
+## Action Type Constants
+- tgl.ACTION_NONE
+- tgl.ACTION_GEO_CHAT_CREATE
+- tgl.ACTION_GEO_CHAT_CHECKIN
+- tgl.ACTION_CHAT_CREATE
+- tgl.ACTION_CHAT_EDIT_TITLE
+- tgl.ACTION_CHAT_EDIT_PHOTO
+- tgl.ACTION_CHAT_DELETE_PHOTO
+- tgl.ACTION_CHAT_ADD_USER
+- tgl.ACTION_CHAT_ADD_USER_BY_LINK
+- tgl.ACTION_CHAT_DELETE_USER
+- tgl.ACTION_SET_MESSAGE_TTL
+- tgl.ACTION_READ_MESSAGES
+- tgl.ACTION_DELETE_MESSAGES
+- tgl.ACTION_SCREENSHOT_MESSAGES
+- tgl.ACTION_FLUSH_HISTORY
+- tgl.ACTION_RESEND
+- tgl.ACTION_NOTIFY_LAYER
+- tgl.ACTION_TYPING
+- tgl.ACTION_NOOP
+- tgl.ACTION_COMMIT_KEY
+- tgl.ACTION_ABORT_KEY
+- tgl.ACTION_REQUEST_KEY
+- tgl.ACTION_ACCEPT_KEY
+
 ## Methods
 | Method | Description          | Callback Type |
 |------- | ---------------------| ------------- |
