@@ -1276,7 +1276,7 @@ void py_add_action_enums(PyObject *m)
 void py_add_peer_type_enums(PyObject *m)
 {
   PyModule_AddIntConstant(m, "PEER_USER", TGL_PEER_USER);
-  PyModule_AddIntConstant(m, "PEER_USER", TGL_PEER_CHAT);
+  PyModule_AddIntConstant(m, "PEER_CHAT", TGL_PEER_CHAT);
   PyModule_AddIntConstant(m, "PEER_ENCR_CHAT", TGL_PEER_ENCR_CHAT);
 }
 
