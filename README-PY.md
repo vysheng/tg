@@ -8,7 +8,7 @@ Version Notes
 =====================
 The python integration is written with Python 2/3 in mind, however, there is a bias to Python 3. Because of this, there are a few caveats:
 - I am only testing against Python 2.7, and have no intention to support/test < 2.7 but am more than happy to accept PRs for fixes as long as it does not break 2.7/3
-- repr/print of native types is dumbed down for < 2.7.9, I highly recommend using this version or new. (This is due to a [bug](http://bugs.python.org/issue22023) in python)
+- repr/print of native types is dumbed down for < 2.7.9, I highly recommend using this version or newer. (This is due to a [bug](http://bugs.python.org/issue22023) in python)
 
 TGL Callbacks
 =============
@@ -61,7 +61,7 @@ All of these functions are accessed by importing the `tgl` module.
 |`tgl.status_online ()`|Sets status as online|`empty_cb`|
 |`tgl.status_offline ()`|Sets status as offline|`empty_cb`|
 |`tgl.import_chat_link (link)`|Join channel using the `link`.|`empty_cb`|
-|`tgl.safe_exit (exit_status)`|Exception to the rule about callbacks, none is accepted. Causes the bot to quit after cleaning up. `exit_status` is an optional parameter with the exit status (On glibc, this must be 0-255)|NONE|
+|`tgl.safe_exit (exit_status)`|Exception to the rule about callbacks, no callback parameter is accepted. Causes the bot to quit after cleaning up. `exit_status` is an optional parameter with the exit status (On glibc, this must be 0-255)|NONE|
 
 Peer
 ====
