@@ -59,6 +59,7 @@ All of these functions are accessed by importing the `tgl` module.
 |`tgl.status_online ()`|Sets status as online|`empty_cb`|
 |`tgl.status_offline ()`|Sets status as offline|`empty_cb`|
 |`tgl.import_chat_link (link)`|Join channel using the `link`.|`empty_cb`|
+|`tgl.safe_exit (exit_status)`|Exception to the rule about callbacks, none is accepted. Causes the bot to quit after cleaning up. `exit_status` is an optional parameter with the exit status (On glibc, this must be 0-255)|NONE|
 
 Peer
 ====
@@ -170,5 +171,3 @@ Msg
 |`msg.load_document(callback)`|Saves the media and returns the path to the file in the callback. *requires callback*|`file_cb`|
 |`msg.load_document_thumb(callback)`|Saves the media and returns the path to the file in the callback. *requires callback*|`file_cb`|
 |`msg.delete_msg ()`|Deletes the message from the local history|`empty_cb`|
-
-
