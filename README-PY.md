@@ -2,6 +2,8 @@ Python Bindings
 ====================
 All of the functions and methods are executed in the network loop of tg, ***NOT IMMEDIATELY***. What this means is all calls should be considered async, and so there is an optional callback parameter for every function/method as the last parameter. For many uses, you won't care about the return value, so you can leave out the callback. Note there are a few cases where the callback is considered mandatory when the function is considered an information query and has no functionality without returned data. These will explicitly have the callback in the parameter list and will be noted in the description.
 
+You can specify the python script from config ("python_script" option) or from command_line [-Z].
+
 Version Notes
 =====================
 The python integration is written with Python 2/3 in mind, however, there is a bias to Python 3. Because of this, there are a few caveats:
