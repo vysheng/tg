@@ -437,11 +437,8 @@ int str_format_time(long when, char* string)
 
 json_t *json_pack_user_status (struct tgl_user *U) {
   json_t *res = json_object ();
+  assert (json_object_set (res, "user",  json_pack_peer (U->id)) >= 0);
   struct tgl_user_status *S = &U->status;
-  json_object ();
-  json_t *user_res = json_object ();
-  json_pack_user(user_res, (void *) U);
-  assert (json_object_set (res, "user",  user_res) >= 0);
   assert (json_object_set (res, "online", json_boolean (S->online == 1)) >= 0);
   assert (json_object_set (res, "state", json_integer (S->online)) >= 0);
   if (S->online > 0 || S->online == -1) {
