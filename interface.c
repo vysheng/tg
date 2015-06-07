@@ -1859,7 +1859,7 @@ void print_user_list_gw (struct tgl_state *TLSR, void *extra, int success, int n
       json_t *res = json_array ();
       int i;
       for (i = num - 1; i >= 0; i--) {
-        json_t *a = json_pack_peer (UL[i]->id, (void *)UL[i]);
+        json_t *a = json_pack_peer (UL[i]->id);
         assert (json_array_append (res, a) >= 0);
       }
       char *s = json_dumps (res, 0);
@@ -1885,7 +1885,7 @@ void print_user_gw (struct tgl_state *TLSR, void *extra, int success, struct tgl
     mprintf (ev, "\n");
   } else {
     #ifdef USE_JSON
-      json_t *res = json_pack_peer (U->id, (void *)U);
+      json_t *res = json_pack_peer (U->id);
       char *s = json_dumps (res, 0);
       mprintf (ev, "%s\n", s);
       json_decref (res);
@@ -1998,7 +1998,7 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
     mpop_color (ev);
   } else {
     #ifdef USE_JSON
-      json_t *res = json_pack_peer (C->id, (void *)C);
+      json_t *res = json_pack_peer (C->id);
       char *s = json_dumps (res, 0);
       mprintf (ev, "%s\n", s);
       json_decref (res);
@@ -2058,7 +2058,7 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
     mpop_color (ev);
   } else {
     #ifdef USE_JSON
-      json_t *res = json_pack_peer (U->id, (void *)U);
+      json_t *res = json_pack_peer (U->id);
       char *s = json_dumps (res, 0);
       mprintf (ev, "%s\n", s);
       json_decref (res);
@@ -2085,7 +2085,7 @@ void print_secret_chat_gw (struct tgl_state *TLSR, void *extra, int success, str
     mpop_color (ev);
   } else {
     #ifdef USE_JSON
-      json_t *res = json_pack_peer (E->id, (void *)E);
+      json_t *res = json_pack_peer (E->id);
       char *s = json_dumps (res, 0);
       mprintf (ev, "%s\n", s);
       json_decref (res);
@@ -2130,7 +2130,7 @@ void print_dialog_list_gw (struct tgl_state *TLSR, void *extra, int success, int
       json_t *res = json_array ();
       int i;
       for (i = size - 1; i >= 0; i--) {
-        json_t *a = json_pack_peer (peers[i], tgl_peer_get (TLS, peers[i]));
+        json_t *a = json_pack_peer (peers[i]);
         assert (json_array_append (res, a) >= 0);
       }
       char *s = json_dumps (res, 0);
@@ -2433,7 +2433,7 @@ void json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
   #ifdef USE_JSON
     json_t *res = json_object ();
     assert (json_object_set (res, "event", json_string ("updates")) >= 0);
-    assert (json_object_set (res, "peer", json_pack_peer (P->id, P)) >= 0);
+    assert (json_object_set (res, "peer", json_pack_peer (P->id)) >= 0);
     assert (json_object_set (res, "updates", json_pack_updates (flags)) >= 0);
     char *s = json_dumps (res, 0);
     mprintf (ev, "%s\n", s);
