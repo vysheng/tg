@@ -59,6 +59,10 @@ void json_pack_chat (json_t *res, tgl_peer_t *P) {
   assert (json_object_set (res, "title", json_string (P->chat.title)) >= 0);
   assert (json_object_set (res, "members_num", json_integer (P->chat.users_num)) >= 0);
 
+  if (P->chat.admin_id) {
+    assert (json_object_set (res, "admin", json_pack_peer(TGL_MK_USER(P->chat.admin_id))) >= 0);
+  }
+
   if (P->chat.user_list) {
     json_t *m = json_array ();
     assert (m);
