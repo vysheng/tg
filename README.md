@@ -188,6 +188,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **stats** - just for debugging
 * **show_license** - prints contents of GPLv2
 * **help** - prints this help
+* **get_self** - get our user info
 
 #### Card
 * **export_card** - print your 'card' that anyone can later use to import your contact
