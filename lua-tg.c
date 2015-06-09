@@ -653,7 +653,8 @@ enum lua_query_type {
   lq_status_online,
   lq_status_offline,
   lq_send_location,
-  lq_extf
+  lq_extf,
+  lq_import_chat_link
 };
 
 struct lua_query_extra {
@@ -1235,6 +1236,12 @@ void lua_do_all (void) {
       free (s);
       p += 2;
       break;
+    case lq_import_chat_link:
+      s = lua_ptr[p + 1];
+      tgl_do_import_chat_link (TLS, s, strlen (s), lua_empty_cb, lua_ptr[p]);
+      free (s);
+      p += 2;
+      break;
     case lq_send_location:
       if (sizeof (void *) == 4) {
         tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(float *)(lua_ptr + p + 2), *(float *)(lua_ptr + p + 3), 0, lua_msg_cb, lua_ptr[p]);
@@ -1332,6 +1339,7 @@ struct lua_function functions[] = {
   {"status_offline", lq_status_offline, { lfp_none }},
   {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
+  {"import_chat_link", lq_import_chat_link, { lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 

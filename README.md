@@ -53,6 +53,10 @@ On OpenBSD:
 
      pkg_add libconfig libexecinfo lua python
 
+On openSUSE:
+
+     sudo zypper in lua-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel libopenssl-devel
+
 Then,
 
      ./configure
