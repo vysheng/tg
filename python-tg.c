@@ -808,7 +808,7 @@ void py_do_all (void) {
       break;
     case pq_msg:
       if(PyArg_ParseTuple(args, "O!s#|OO", &tgl_PeerType, &peer, &str, &len, &cb_extra, &pyObj1)) {
-        if(PyArg_ParseTuple(pyObj1, "ii", &preview, &reply_id)) {
+        if(pyObj1 && PyArg_ParseTuple(pyObj1, "ii", &preview, &reply_id)) {
           if(preview != -1) {
             if(preview)
               flags |= TGL_SEND_MSG_FLAG_ENABLE_PREVIEW;
