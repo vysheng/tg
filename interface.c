@@ -856,6 +856,11 @@ void do_broadcast (struct command *command, int arg_num, struct arg args[], stru
 
 /* {{{ EDITING SELF PROFILE */
 
+void do_get_self(struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  if (ev) { ev->refcnt ++; }
+  tgl_do_get_user_info (TLS, TGL_MK_USER(TLS->our_id), 0, print_user_info_gw, ev);
+}
+
 void do_set_profile_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
@@ -1344,6 +1349,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
   {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd_media <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
   {"get_message", {ca_number, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id", NULL},
+  {"get_self", {ca_none}, do_get_self, "get_self \tGet our user info", NULL},
   {"help", {ca_none}, do_help, "help\tPrints this help", NULL},
   {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read", NULL},
   {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual", NULL},
