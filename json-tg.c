@@ -57,16 +57,20 @@ void json_pack_user (json_t *res, tgl_peer_t *P) {
 void json_pack_chat (json_t *res, tgl_peer_t *P) {
   assert (P->chat.title);
   assert (json_object_set (res, "title", json_string (P->chat.title)) >= 0);
+  tgl_peer_id_t admin_id = TGL_MK_USER (P->chat.admin_id);
+  assert (json_object_set (res, "admin", json_pack_peer (admin_id)) >= 0);
   assert (json_object_set (res, "members_num", json_integer (P->chat.users_num)) >= 0);
-
   if (P->chat.user_list) {
     json_t *m = json_array ();
     assert (m);
 
     int i;
     for (i = 0; i < P->chat.users_num; i++) {
-      tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
-      assert (json_array_append (m, json_pack_peer (id)) >= 0);
+      tgl_peer_id_t user_id = TGL_MK_USER (P->chat.user_list[i].user_id);
+      tgl_peer_id_t inviter_id = TGL_MK_USER (P->chat.user_list[i].inviter_id);
+      json_t *peer = json_pack_peer (user_id);
+      assert (json_object_set (peer, "inviter", json_pack_peer (inviter_id)) >= 0);
+      assert (json_array_append (m, peer) >= 0);
     }
 
     assert (json_object_set (res, "members", m) >= 0);
