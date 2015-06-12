@@ -892,13 +892,17 @@ int main (int argc, char **argv) {
 
   if (port > 0) {
     struct sockaddr_in serv_addr;
-
+    int yes = 1;
     sfd = socket (AF_INET, SOCK_STREAM, 0);
     if (sfd < 0) {
       perror ("socket");
       exit(1);
     }
 
+    if(setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0) {
+      perror("setsockopt");
+      exit(1);
+    }
     memset (&serv_addr, 0, sizeof (serv_addr));
     
     serv_addr.sin_family = AF_INET;
