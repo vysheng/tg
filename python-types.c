@@ -19,7 +19,6 @@
 #include "python-tg.h"
 
 extern struct tgl_state *TLS;
-
 // TGL Python Exceptions
 extern PyObject *TglError;
 extern PyObject *PeerError;
@@ -944,7 +943,10 @@ tgl_Peer_repr(tgl_Peer *self)
 
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromFormat("<tgl.Peer: type=user, id=%ld, username=%R, name=%R, first_name=%R, last_name=%R, phone=%R>",
+#if PY_VERSION_HEX < 0x02070900
+       ret = PyUnicode_FromFormat("<tgl.Peer: id=%ld>", self->peer->id.id);
+#else
+       ret = PyUnicode_FromFormat("<tgl.Peer: type=user, id=%ld, username=%R, name=%R, first_name=%R, last_name=%R, phone=%R>",
                                   self->peer->id.id,
                                   PyObject_GetAttrString((PyObject*)self, "username"),
                                   PyObject_GetAttrString((PyObject*)self, "name"),
@@ -952,6 +954,7 @@ tgl_Peer_repr(tgl_Peer *self)
                                   PyObject_GetAttrString((PyObject*)self, "last_name"),
                                   PyObject_GetAttrString((PyObject*)self, "phone")
             );
+#endif
       break;
     case TGL_PEER_CHAT:
       ret = PyUnicode_FromFormat("<tgl.Peer: type=chat, id=%ld, name=%s>",
@@ -1423,7 +1426,9 @@ static PyObject *
 tgl_Msg_repr(tgl_Msg *self)
 {
   PyObject *ret;
-
+#if PY_VERSION_HEX < 0x02070900
+  ret = PyUnicode_FromFormat("<tgl.Msg id=%ld>", self->msg->id);
+#else
   ret = PyUnicode_FromFormat("<tgl.Msg id=%ld, flags=%d, mention=%R, out=%R, unread=%R, service=%R, src=%R, "
                              "dest=%R, text=%R, media=%R, date=%R, fwd_src=%R, fwd_date=%R, reply_id=%R, reply=%R>",
                              self->msg->id, self->msg->flags,
@@ -1441,7 +1446,7 @@ tgl_Msg_repr(tgl_Msg *self)
                              PyObject_GetAttrString((PyObject*)self, "reply_id"),
                              PyObject_GetAttrString((PyObject*)self, "reply")
         );
-
+#endif
   return ret;
 }
 
