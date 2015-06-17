@@ -939,7 +939,7 @@ int main (int argc, char **argv) {
     
     serv_addr.sun_family = AF_UNIX;
 
-    snprintf (serv_addr.sun_path, 108, "%s", unix_socket);
+    snprintf (serv_addr.sun_path, sizeof(serv_addr.sun_path), "%s", unix_socket);
  
     if (bind (usfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
       perror ("bind");
