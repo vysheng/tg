@@ -41,7 +41,7 @@ Then, go to tg directory and generate Makefile :
      cd tg
      ./configure
      
-Then, patch Makefile, and compile :
+Then, patch Makefile and compile :
 
      patch -p1 < telegram-cli-cygwin.patch
      make
@@ -52,4 +52,4 @@ To run telegram-cli, type
      
      bin/telegram-cli -k tg-server.pub
 
-**Caution**: A binary compiled with Cygwin should be run in Cygwin Terminal.
+**Caution**: A binary compiled with Cygwin is encouraged to run in Cygwin Terminal.
