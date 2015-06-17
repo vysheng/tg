@@ -834,9 +834,9 @@ void sig_term_handler (int signum __attribute__ ((unused))) {
   if (write (1, "SIGTERM/SIGINT received\n", 25) < 0) { 
     // Sad thing
   }
-  if (TLS && TLS->ev_base) {
-    event_base_loopbreak (TLS->ev_base);
-  }
+  //if (TLS && TLS->ev_base) {
+  //  event_base_loopbreak (TLS->ev_base);
+  //}
   sigterm_cnt ++;
 }
 
