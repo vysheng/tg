@@ -84,7 +84,7 @@ void json_pack_encr_chat (json_t *res, tgl_peer_t *P) {
 
 json_t *json_pack_peer (tgl_peer_id_t id) {
   tgl_peer_t *P = tgl_peer_get (TLS, id);
-  assert (P);
+  //assert (P);
   json_t *res = json_object ();
   assert (json_object_set (res, "id", json_integer (tgl_get_peer_id (id))) >= 0);
 

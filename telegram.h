@@ -21,4 +21,4 @@
 #define PROG_NAME "telegram-cli"
 #endif
 
-#define TELEGRAM_CLI_VERSION "1.3.1"
+#define TELEGRAM_CLI_VERSION "1.3.2"

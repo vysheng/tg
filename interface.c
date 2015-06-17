@@ -299,6 +299,30 @@ void next_token_end (void) {
   }
 }
 
+void next_token_end_ac (void) {
+  skip_wspc ();
+  
+  if (*line_ptr && *line_ptr != '"' && *line_ptr != '\'') {
+    cur_token_quoted = 0;
+    cur_token = line_ptr;
+    while (*line_ptr) { line_ptr ++; }
+    cur_token_len = line_ptr - cur_token;
+    assert (cur_token_len > 0);
+    cur_token_end_str = !force_end_mode;
+    return;
+  } else {
+    if (*line_ptr) {
+      next_token ();
+      skip_wspc ();
+      if (*line_ptr) {
+        cur_token_len = -1; 
+      }
+    } else {
+      next_token ();
+    }
+  }
+}
+
 #define NOT_FOUND (int)0x80000000
 tgl_peer_id_t TGL_PEER_NOT_FOUND = {.id = NOT_FOUND};
 
@@ -569,6 +593,7 @@ enum command_argument {
   ca_number,
   ca_double,
   ca_string_end,
+  ca_msg_string_end,
   ca_string,
   ca_modifier,
   ca_command,
@@ -855,6 +880,11 @@ void do_broadcast (struct command *command, int arg_num, struct arg args[], stru
 /* }}} */
 
 /* {{{ EDITING SELF PROFILE */
+
+void do_get_self(struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  if (ev) { ev->refcnt ++; }
+  tgl_do_get_user_info (TLS, TGL_MK_USER(TLS->our_id), 0, print_user_info_gw, ev);
+}
 
 void do_set_profile_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
@@ -1344,6 +1374,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"fwd", {ca_peer, ca_number, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
   {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd_media <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
   {"get_message", {ca_number, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id", NULL},
+  {"get_self", {ca_none}, do_get_self, "get_self \tGet our user info", NULL},
   {"help", {ca_none}, do_help, "help\tPrints this help", NULL},
   {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read", NULL},
   {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual", NULL},
@@ -1360,11 +1391,11 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"load_video_thumb", {ca_number, ca_none}, do_load_video_thumb, "load_video_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"main_session", {ca_none}, do_main_session, "main_session\tSends updates to this connection (or terminal). Useful only with listening socket", NULL},
   {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read", NULL},
-  {"msg", {ca_peer, ca_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer", NULL},
+  {"msg", {ca_peer, ca_msg_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer", NULL},
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
-  {"reply", {ca_number, ca_string_end, ca_none}, do_reply, "reply <msg-id> <text>\tSends text reply to message", NULL},
+  {"reply", {ca_number, ca_msg_string_end, ca_none}, do_reply, "reply <msg-id> <text>\tSends text reply to message", NULL},
   {"reply_audio", {ca_number, ca_file_name, ca_none}, do_send_audio, "reply_audio <msg-id> <file>\tSends audio to peer", NULL},
   {"reply_contact", {ca_number, ca_string, ca_string, ca_string, ca_none}, do_reply_contact, "reply_contact <msg-id> <phone> <first-name> <last-name>\tSends contact (not necessary telegram user)", NULL},
   {"reply_document", {ca_number, ca_file_name, ca_none}, do_reply_document, "reply_document <msg-id> <file>\tSends document to peer", NULL},
@@ -1422,9 +1453,14 @@ void register_new_command (struct command *cmd) {
   commands[i] = *cmd;
 }
 
+tgl_peer_t *autocomplete_peer;
+int autocomplete_id;
+
 enum command_argument get_complete_mode (void) {
   force_end_mode = 0;
   line_ptr = rl_line_buffer;
+  autocomplete_peer = NULL;
+  autocomplete_id = 0;
 
   while (1) {
     next_token ();
@@ -1471,8 +1507,9 @@ enum command_argument get_complete_mode (void) {
     int opt = (*flags) & ca_optional;
 
     if (op == ca_none) { return ca_none; }
-    if (op == ca_string_end || op == ca_file_name_end) {
-      next_token_end ();
+    if (op == ca_string_end || op == ca_file_name_end || op == ca_msg_string_end) {
+      next_token_end_ac ();
+
       if (cur_token_len < 0 || !cur_token_end_str) { 
         return ca_none;
       } else {
@@ -1510,10 +1547,18 @@ enum command_argument get_complete_mode (void) {
           ok = (tgl_get_peer_type (cur_token_encr_chat ()) != NOT_FOUND);
           break;
         case ca_peer:
-          ok = (tgl_get_peer_type (cur_token_user ()) != NOT_FOUND);
+          ok = (tgl_get_peer_type (cur_token_peer ()) != NOT_FOUND);
+          if (ok) {
+            autocomplete_peer = tgl_peer_get (TLS, cur_token_peer ());
+            autocomplete_id = 0;
+          }
           break;
         case ca_number:
           ok = (cur_token_int () != NOT_FOUND);
+          if (ok) {
+            autocomplete_peer = NULL;
+            autocomplete_id = cur_token_int ();
+          }
           break;
         case ca_double:
           ok = (cur_token_double () != NOT_FOUND);
@@ -1585,6 +1630,70 @@ int complete_command_list (int index, const char *text, int len, char **R) {
   }
 }
 
+
+int complete_spec_message_answer (struct tgl_message *M, int index, const char *text, int len, char **R) {
+  if (!M || !M->reply_markup || !M->reply_markup->rows) {
+    *R = NULL;
+    return -1;
+  }
+  index ++;
+
+  int total = M->reply_markup->row_start[M->reply_markup->rows];
+  while (index < total && strncmp (M->reply_markup->buttons[index], text, len)) {
+    index ++;
+  }
+  
+  if (index < total) {
+    *R = strdup (M->reply_markup->buttons[index]);
+    assert (*R);
+    return index;
+  } else {
+    *R = NULL;
+    return -1;
+  }
+}
+
+int complete_message_answer (tgl_peer_t *P, int index, const char *text, int len, char **R) {
+  struct tgl_message *M = P->last;
+  while (M && (M->flags & TGLMF_OUT)) {
+    M = M->next;
+  }
+
+
+  return complete_spec_message_answer (M, index, text, len, R);
+}
+
+int complete_user_command (tgl_peer_t *P, int index, const char *text, int len, char **R) {
+  if (len <= 0 || *text != '/') {
+    return complete_message_answer (P, index, text, len, R);
+  }
+  text ++;
+  len --;
+  struct tgl_user *U = (void *)P;
+  index ++;
+  if (!U->bot_info) {
+    *R = NULL;
+    return -1;
+  }
+  while (index < U->bot_info->commands_num && strncmp (U->bot_info->commands[index].command, text, len)) {
+    index ++;
+  }
+  if (index < U->bot_info->commands_num) {
+    *R = NULL;
+    assert (asprintf (R, "/%s", U->bot_info->commands[index].command) >= 0);
+    assert (*R);
+    return index;
+  } else {
+    *R = NULL;
+    return -1;
+  }
+}
+
+int complete_chat_command (tgl_peer_t *P, int index, const char *text, int len, char **R) {
+  *R = NULL;
+  return -1;
+}
+
 char *command_generator (const char *text, int state) {  
 #ifndef DISABLE_EXTF
   static int len;
@@ -1616,7 +1725,7 @@ char *command_generator (const char *text, int state) {
     if (mode != ca_file_name && mode != ca_file_name_end && index == -1) { return 0; }
   }
   
-  if (mode == ca_none || mode == ca_string || mode == ca_string_end || mode == ca_number || mode == ca_double) { 
+  if (mode == ca_none || mode == ca_string || mode == ca_string_end || mode == ca_number || mode == ca_double) {   
     if (c) { rl_line_buffer[rl_point] = c; }
     return 0; 
   }
@@ -1651,6 +1760,30 @@ char *command_generator (const char *text, int state) {
     return R;
   case ca_modifier:
     index = complete_string_list (modifiers, index, command_pos, command_len, &R);
+    if (c) { rl_line_buffer[rl_point] = c; }
+    return R;
+  case ca_msg_string_end:
+    if (autocomplete_peer) {
+      if (tgl_get_peer_type (autocomplete_peer->id) == TGL_PEER_USER) {
+        index = complete_user_command (autocomplete_peer, index, command_pos, command_len, &R);
+      }
+      if (tgl_get_peer_type (autocomplete_peer->id) == TGL_PEER_CHAT) {
+        index = complete_chat_command (autocomplete_peer, index, command_pos, command_len, &R);
+      }
+    }
+    if (autocomplete_id) {
+      struct tgl_message *M = tgl_message_get (TLS, autocomplete_id);
+      if (M) {
+        if (command_len > 0 && *command_pos == '/') {
+          tgl_peer_t *P = tgl_peer_get (TLS, M->from_id);
+          if (P) {
+            index = complete_user_command (autocomplete_peer, index, command_pos, command_len, &R);
+          }
+        } else {
+          index = complete_spec_message_answer (M, index, command_pos, command_len, &R);
+        }
+      }
+    }
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
 #ifndef DISABLE_EXTF
@@ -2049,6 +2182,17 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
     mprintf (ev, "\t");
     print_user_status (&U->status, ev);
     mprintf (ev, "\n");
+
+    if (U->bot_info) {
+      mprintf (ev, "\tshare_text:  %s\n", U->bot_info->share_text);
+      mprintf (ev, "\tdescription: %s\n", U->bot_info->description);
+      mprintf (ev, "\tcommands:\n");
+
+      int i;
+      for (i = 0; i < U->bot_info->commands_num; i++) {
+        mprintf (ev, "\t\t/%s <%s>: %s\n", U->bot_info->commands[i].command, U->bot_info->commands[i].params, U->bot_info->commands[i].description);
+      }
+    }
     mpop_color (ev);
   } else {
     #ifdef USE_JSON
@@ -2782,7 +2926,7 @@ void interpreter_ex (char *line, void *ex) {
       break;
     }
       
-    if (op == ca_string_end || op == ca_file_name_end) {
+    if (op == ca_string_end || op == ca_file_name_end || op == ca_msg_string_end) {
       next_token_end ();
       if (cur_token_len < 0) { 
         fail_interface (TLS, ex, ENOSYS, "can not parse string_end arg #%d", args_num);
@@ -2915,7 +3059,7 @@ void interpreter_ex (char *line, void *ex) {
         continue;
       }
     }
-    assert (0);
+    //assert (0);
   }
   int i;
   for (i = 0; i < args_num; i++) {

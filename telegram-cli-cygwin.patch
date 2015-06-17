@@ -1,0 +1,16 @@
+Binary files tg/.git/index and tg-cygwin/.git/index differ
+diff -urN tg/Makefile tg-cygwin/Makefile
+--- tg/Makefile	2015-06-16 12:39:34.931053900 +0900
++++ tg-cygwin/Makefile	2015-06-16 12:44:12.584342300 +0900
+@@ -4,9 +4,9 @@
+ LDFLAGS= -L/usr/local/lib -L/usr/lib -L/usr/lib -L/usr/lib
+ CPPFLAGS= -I/usr/local/include -I/usr/include -I/usr/include  -I/usr/include/python3.4m -I/usr/include
+ DEFS=-DHAVE_CONFIG_H
+-COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC
++COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter
+ EXTRA_LIBS=-ljansson -lconfig -lz -levent -lm   -lreadline -llua-5.2  -lpython3.4m -lssl -lcrypto
+-LOCAL_LDFLAGS=-rdynamic -ggdb -levent ${EXTRA_LIBS} -ldl -lpthread -lutil
++LOCAL_LDFLAGS=-ggdb -levent ${EXTRA_LIBS} -ldl -lpthread -lutil
+ LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
+ 
+ DEP=dep
