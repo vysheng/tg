@@ -100,6 +100,7 @@
   "# This is an empty config file\n" \
   "# Feel free to put something here\n"
 
+int bot_mode;
 int verbosity;
 int msg_num_mode;
 char *default_username;
@@ -492,6 +493,7 @@ void usage (void) {
   printf ("  --help/-h                            prints this help\n");
   printf ("  --accept-any-tcp                     accepts tcp connections from any src (only loopback by default)\n");
   printf ("  --disable-link-preview               disables server-side previews to links\n");
+  printf ("  --bot/-b                             bot mode\n");  
   #ifdef USE_JSON
   printf ("  --json                               prints answers and values in json format\n");
   #endif
@@ -640,6 +642,7 @@ void args_parse (int argc, char **argv) {
     {"exec", required_argument, 0, 'e'},
     {"disable-names", no_argument, 0, 'I'},
     {"enable-ipv6", no_argument, 0, '6'},
+    {"bot", no_argument, 0, 'b'},
     {"help", no_argument, 0, 'h'},
     {"accept-any-tcp", no_argument, 0,  1001},
     {"disable-link-preview", no_argument, 0, 1002},
@@ -651,7 +654,7 @@ void args_parse (int argc, char **argv) {
 
 
   int opt = 0;
-  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6"
+  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6b"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -667,6 +670,9 @@ void args_parse (int argc, char **argv) {
   
   )) != -1) {
     switch (opt) {
+    case 'b':
+      bot_mode ++;
+      break;
     case 1000:
       tgl_allocator = &tgl_allocator_debug;
       break;

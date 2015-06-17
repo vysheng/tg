@@ -76,6 +76,7 @@
 int verbosity;
 extern int readline_disabled;
 
+extern int bot_mode;
 int binlog_read;
 extern char *default_username;
 extern char *auth_token;
@@ -360,10 +361,10 @@ void write_dc (struct tgl_dc *DC, void *extra) {
 
   assert (DC->flags & TGLDCF_LOGGED_IN);
 
-  assert (write (auth_file_fd, &DC->port, 4) == 4);
-  int l = strlen (DC->ip);
+  assert (write (auth_file_fd, &DC->options[0]->port, 4) == 4);
+  int l = strlen (DC->options[0]->ip);
   assert (write (auth_file_fd, &l, 4) == 4);
-  assert (write (auth_file_fd, DC->ip, l) == l);
+  assert (write (auth_file_fd, DC->options[0]->ip, l) == l);
   assert (write (auth_file_fd, &DC->auth_key_id, 8) == 8);
   assert (write (auth_file_fd, DC->auth_key, 256) == 256);
 }
@@ -700,6 +701,9 @@ int loop (void) {
   tgl_set_app_version (TLS, "Telegram-cli " TELEGRAM_CLI_VERSION);
   if (ipv6_enabled) {
     tgl_enable_ipv6 (TLS);
+  }
+  if (bot_mode) {
+    tgl_enable_bot (TLS);
   }
   if (disable_link_preview) {
     tgl_disable_link_preview (TLS);
