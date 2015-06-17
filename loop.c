@@ -384,8 +384,8 @@ void write_auth_file (void) {
   close (auth_file_fd);
 }
 
-void write_secret_chat (tgl_peer_t *_P, void *extra) {
-  struct tgl_secret_chat *P = (void *)_P;
+void write_secret_chat (tgl_peer_t *Peer, void *extra) {
+  struct tgl_secret_chat *P = (void *)Peer;
   if (tgl_get_peer_type (P->id) != TGL_PEER_ENCR_CHAT) { return; }
   if (P->state != sc_ok) { return; }
   int *a = extra;
@@ -633,7 +633,7 @@ void event_incoming (struct bufferevent *bev, short what, void *_arg) {
 
 static void accept_incoming (evutil_socket_t efd, short what, void *arg) {
   vlogprintf (E_WARNING, "Accepting incoming connection\n");
-  unsigned clilen = 0;
+  socklen_t clilen = 0;
   struct sockaddr_in cli_addr;
   int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
 
