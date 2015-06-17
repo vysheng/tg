@@ -52,4 +52,4 @@ To run telegram-cli, type
      
      bin/telegram-cli -k tg-server.pub
 
-**Caution**: A binary compiled with Cygwin is encouraged to run in Cygwin Terminal.
+**Caution**: A binary compiled with Cygwin is recommended to run in Cygwin Terminal.
