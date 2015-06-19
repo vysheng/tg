@@ -5,12 +5,12 @@ Install [Cygwin](https://www.cygwin.com/) and cygwin's package manager, [apt-cyg
 
 In Cygwin Terminal, install compiler and tools :
 
-     apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip
+     apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make patch diffutils grep tar gzip
 
 Now you have a compiler, but no libraries. You need readline, openssl, libconfig, liblua, python and libjansson to use telegram-cli's full functionality.
 
 
-Clone GitHub Repository in Cygwin Terminal :
+Clone tg Repository in Cygwin Terminal :
 
      git clone --recursive https://github.com/vysheng/tg.git
 
@@ -43,7 +43,7 @@ Patch Makefile.in and compile :
      ./configure
      make
 
-If patch don't work, patch Makefile.in manually :
+If the patch doesn't work, modify Makefile.in manually :
      remove -fPIC from COMPILE_FLAGS
      remove -rdynamic from LOCAL_LDFLAGS
 
