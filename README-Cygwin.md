@@ -36,9 +36,6 @@ Compile libjansson :
      ./configure
      make && make install && cd ..
 
-Now libraries are ready to compile.
-
-
 Patch Makefile.in and compile :
 
      cd tg
