@@ -1,0 +1,15 @@
+diff -urN tg/Makefile.in tg-cygwin/Makefile.in
+--- tg/Makefile.in	2015-06-19 23:25:30.972865200 +0900
++++ tg-cygwin/Makefile.in	2015-06-19 23:26:07.870665200 +0900
+@@ -4,9 +4,9 @@
+ LDFLAGS=@LDFLAGS@ @OPENSSL_LDFLAGS@
+ CPPFLAGS=@CPPFLAGS@ @OPENSSL_INCLUDES@
+ DEFS=@DEFS@
+-COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC
++COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter
+ EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@ @OPENSSL_LIBS@
+-LOCAL_LDFLAGS=-rdynamic -ggdb -levent ${EXTRA_LIBS} -ldl -lpthread -lutil
++LOCAL_LDFLAGS=-ggdb -levent ${EXTRA_LIBS} -ldl -lpthread -lutil
+ LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
+ 
+ DEP=dep
