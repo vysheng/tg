@@ -86,6 +86,12 @@
 #  include "json-tg.h"
 #endif
 
+#include "tgl/mtproto-common.h"
+#include "auto/auto-store.h"
+#include "auto/auto-fetch-ds.h"
+#include "auto/auto-types.h"
+#include "auto/auto-free-ds.h"
+
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
@@ -127,13 +133,12 @@ extern int daemonize;
 extern struct tgl_state *TLS;
 int readline_deactivated;
 
+void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
 void event_incoming (struct bufferevent *bev, short what, void *_arg);
 
 int is_same_word (const char *s, size_t l, const char *word) {
   return s && word && strlen (word) == l && !memcmp (s, word, l);
 }
-
-void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
 
 static void skip_wspc (void) {
   while (*line_ptr && ((unsigned char)*line_ptr) <= ' ') {
@@ -746,7 +751,27 @@ void do_msg (struct command *command, int arg_num, struct arg args[], struct in_
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   vlogprintf (E_DEBUG, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
-  tgl_do_send_message (TLS, args[0].P->id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, print_msg_success_gw, ev);
+  tgl_do_send_message (TLS, args[0].P->id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, NULL, print_msg_success_gw, ev);
+}
+
+void do_msg_kbd (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 3);
+  if (ev) { ev->refcnt ++; }
+
+  clear_packet ();  
+  if (tglf_store_type (TLS, ARG2STR(1), TYPE_TO_PARAM (reply_markup)) < 0) {
+    fail_interface (TLS, ev, ENOSYS, "can not parse reply markup");    
+    return;
+  }
+  in_ptr = packet_buffer;
+  in_end = packet_ptr;
+
+  struct tl_ds_reply_markup *DS_RM = fetch_ds_type_reply_markup (TYPE_TO_PARAM (reply_markup));
+  assert (DS_RM);
+
+  tgl_do_send_message (TLS, args[0].P->id, ARG2STR(2), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, DS_RM, print_msg_success_gw, ev);
+
+  free_ds_type_reply_markup (DS_RM, TYPE_TO_PARAM (reply_markup));
 }
 
 void do_reply (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1392,6 +1417,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"main_session", {ca_none}, do_main_session, "main_session\tSends updates to this connection (or terminal). Useful only with listening socket", NULL},
   {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read", NULL},
   {"msg", {ca_peer, ca_msg_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer", NULL},
+  {"msg_kbd", {ca_peer, ca_string, ca_msg_string_end, ca_none}, do_msg_kbd, "msg <peer> <kbd> <text>\tSends text message to peer with custom kbd", NULL},
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
@@ -1837,7 +1863,6 @@ void print_fail (struct in_ev *ev) {
   mprint_end (ev);
 }
 
-void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
 void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) {
   static char error[1001];
 
@@ -2299,7 +2324,7 @@ void interpreter_chat_mode (char *line) {
     return;
   }
   if (strlen (line) > 0) {
-    tgl_do_send_message (TLS, chat_mode_id, line, strlen (line), 0, 0, 0);
+    tgl_do_send_message (TLS, chat_mode_id, line, strlen (line), 0, NULL, 0, 0);
   }
 }
 

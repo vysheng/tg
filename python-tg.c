@@ -817,7 +817,7 @@ void py_do_all (void) {
           }
           flags |= TGL_SEND_MSG_FLAG_REPLY (reply_id);
         }
-        tgl_do_send_message (TLS, PY_PEER_ID(peer), str, len, flags, py_msg_cb, cb_extra);
+        tgl_do_send_message (TLS, PY_PEER_ID(peer), str, len, flags, NULL, py_msg_cb, cb_extra);
       } else
         PyErr_Print();
 
