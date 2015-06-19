@@ -114,7 +114,8 @@ Then build:
 
 #### Windows
 
-In Windows, you should compile with Cygwin, which has POSIX API functionality. Follow instructions at [READMD-Cygwin.md](https://github.com/vysheng/tg/README-Cygwin.md).
+In Windows, you should compile with Cygwin, which has POSIX API functionality.
+Follow instructions at [READMD-Cygwin.md](https://github.com/vysheng/tg/blob/master/README-Cygwin.md).
 
 #### Other UNIX
 

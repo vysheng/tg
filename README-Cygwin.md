@@ -10,7 +10,7 @@ In Cygwin Terminal, install compiler and tools :
 Now you have a compiler, but no libraries. You need readline, openssl, libconfig, liblua, python and libjansson to use telegram-cli's full functionality.
 
 
-Then Clone GitHub Repository in Cygwin Terminal :
+Clone GitHub Repository in Cygwin Terminal :
 
      git clone --recursive https://github.com/vysheng/tg.git
 
@@ -18,7 +18,7 @@ Then Clone GitHub Repository in Cygwin Terminal :
 In Cygwin Terminal, type : 
 
      apt-cyg install libevent-devel openssl-devel libreadline-devel lua-devel python3
-(Install package 'python' to use Python 2.7, or install package 'python3' to use Python 3)
+     # (Choose 'python' instead of 'python3' to use Python 2.7 instead of Python 3)
 
 libconfig and libjansson is not in cygwin's package, so you should compile yourself.
 
@@ -36,15 +36,19 @@ Compile libjansson :
      ./configure
      make && make install && cd ..
 
-Then, go to tg directory and generate Makefile :
+Now libraries are ready to compile.
+
+
+Patch Makefile.in and compile :
 
      cd tg
+     patch -p1 < build-cygwin.patch
      ./configure
-     
-Then, patch Makefile, and compile :
-
-     patch -p1 < telegram-cli-cygwin.patch
      make
+
+If patch don't work, patch Makefile.in manually :
+     remove -fPIC from COMPILE_FLAGS
+     remove -rdynamic from LOCAL_LDFLAGS
 
 After compile is done, **telegram-cli.exe** will be generated in **bin** directory.
 
@@ -52,4 +56,4 @@ To run telegram-cli, type
      
      bin/telegram-cli -k tg-server.pub
 
-**Caution**: A binary compiled with Cygwin should be run in Cygwin Terminal.
+**Caution**: A binary compiled with Cygwin is recommended to run in Cygwin Terminal.
