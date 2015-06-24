@@ -1727,6 +1727,31 @@ int complete_user_command (tgl_peer_t *P, int index, const char *text, int len, 
 }
 
 int complete_chat_command (tgl_peer_t *P, int index, const char *text, int len, char **R) {
+  if (len <= 0 || *text != '/') {
+    return complete_message_answer (P, index, text, len, R);
+  }
+  text ++;
+  len --;
+
+  index ++;
+
+  int tot = 0;
+  int i;
+  for (i = 0; i < P->chat.user_list_size; i++) { 
+    struct tgl_user *U = (void *)tgl_peer_get (TLS, TGL_MK_USER (P->chat.user_list[i].user_id));
+    if (!U) { continue; }
+    if (!U->bot_info) { continue; }
+    while (index - tot < U->bot_info->commands_num && strncmp (U->bot_info->commands[index - tot].command, text, len)) {
+      index ++;
+    }
+    if (index - tot < U->bot_info->commands_num) {
+      *R = NULL;
+      assert (asprintf (R, "/%s", U->bot_info->commands[index].command) >= 0);
+      assert (*R);
+      return index;
+    }
+    tot += U->bot_info->commands_num;
+  }
   *R = NULL;
   return -1;
 }
