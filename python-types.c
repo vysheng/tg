@@ -407,6 +407,34 @@ tgl_Peer_send_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
+tgl_Peer_fwd_msg (tgl_Peer *self, PyObject *args, PyObject *kwargs)
+{
+  static char *kwlist[] = {"callback", NULL};
+
+  int fwd_id = 0;
+  PyObject *callback = NULL;
+
+  if(PyArg_ParseTupleAndKeywords(args, kwargs, "i|O", kwlist, &fwd_id, &callback)) {
+    PyObject *api_call;
+
+    if(callback)
+      api_call = Py_BuildValue("OiO", (PyObject*) self, fwd_id, callback);
+    else
+      api_call = Py_BuildValue("Oi", (PyObject*) self, fwd_id);
+
+    Py_INCREF(Py_None);
+    Py_XINCREF(api_call);
+
+    return py_fwd(Py_None, api_call);
+  } else {
+    PyErr_Print();
+    Py_XINCREF(Py_False);
+    return Py_False;
+  }
+
+}
+
+static PyObject *
 tgl_Peer_send_typing (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 {
   static char *kwlist[] = {"callback", NULL};
@@ -932,6 +960,7 @@ static PyMethodDef tgl_Peer_methods[] = {
   {"send_contact",      (PyCFunction)tgl_Peer_send_contact, METH_VARARGS | METH_KEYWORDS, ""},
   {"send_location",     (PyCFunction)tgl_Peer_send_location, METH_VARARGS | METH_KEYWORDS, ""},
   {"mark_read",         (PyCFunction)tgl_Peer_mark_read, METH_VARARGS | METH_KEYWORDS, ""},
+  {"fwd_msg",           (PyCFunction)tgl_Peer_fwd_msg, METH_VARARGS | METH_KEYWORDS, ""},
   {NULL}  /* Sentinel */
 };
 
