@@ -1340,6 +1340,15 @@ void do_get_message (struct command *command, int arg_num, struct arg args[], st
 
 /* }}} */
 
+/* {{{ BOT */
+
+void do_start_bot (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 3);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_start_bot (TLS, args[0].P->id, args[1].P->id, ARG2STR(2), print_success_gw, ev);
+}
+/* }}} */
+
 extern char *default_username;
 extern char *config_filename;
 extern char *prefix;
@@ -1452,6 +1461,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl", NULL},
   {"set_username", {ca_string, ca_none}, do_set_username, "set_username <name>\tSets username.", NULL},
   {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license", NULL},
+  {"start_bot", {ca_user, ca_chat, ca_string, ca_none}, do_start_bot, "start_bot <bot> <chat> <data>\tAdds bot to chat", NULL},
   {"stats", {ca_none}, do_stats, "stats\tFor debug purpose", NULL},
   {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online", NULL},
   {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline", NULL},
@@ -2216,7 +2226,7 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
 
       int i;
       for (i = 0; i < U->bot_info->commands_num; i++) {
-        mprintf (ev, "\t\t/%s <%s>: %s\n", U->bot_info->commands[i].command, U->bot_info->commands[i].params, U->bot_info->commands[i].description);
+        mprintf (ev, "\t\t/%s: %s\n", U->bot_info->commands[i].command, U->bot_info->commands[i].description);
       }
     }
     mpop_color (ev);
