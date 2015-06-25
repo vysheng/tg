@@ -1707,11 +1707,15 @@ int complete_user_command (tgl_peer_t *P, int index, const char *text, int len, 
   text ++;
   len --;
   struct tgl_user *U = (void *)P;
-  index ++;
   if (!U->bot_info) {
     *R = NULL;
     return -1;
   }
+  if (index >= U->bot_info->commands_num) {
+    return U->bot_info->commands_num + complete_message_answer (P, index - U->bot_info->commands_num, text - 1, len + 1, R);
+  }
+  
+  index ++;
   while (index < U->bot_info->commands_num && strncmp (U->bot_info->commands[index].command, text, len)) {
     index ++;
   }
@@ -1721,8 +1725,7 @@ int complete_user_command (tgl_peer_t *P, int index, const char *text, int len, 
     assert (*R);
     return index;
   } else {
-    *R = NULL;
-    return -1;
+    return U->bot_info->commands_num + complete_message_answer (P, index - U->bot_info->commands_num, text - 1, len + 1, R);
   }
 }
 
@@ -1741,19 +1744,31 @@ int complete_chat_command (tgl_peer_t *P, int index, const char *text, int len, 
     struct tgl_user *U = (void *)tgl_peer_get (TLS, TGL_MK_USER (P->chat.user_list[i].user_id));
     if (!U) { continue; }
     if (!U->bot_info) { continue; }
-    while (index - tot < U->bot_info->commands_num && strncmp (U->bot_info->commands[index - tot].command, text, len)) {
+    int p = len - 1;
+    while (p >= 0 && text[p] != '@') { p --; }
+    if (p < 0) { p = len; }
+    while (index - tot < U->bot_info->commands_num && strncmp (U->bot_info->commands[index - tot].command, text, p)) {
       index ++;
     }
     if (index - tot < U->bot_info->commands_num) {
       *R = NULL;
-      assert (asprintf (R, "/%s", U->bot_info->commands[index].command) >= 0);
+      if (U->username) {
+        assert (asprintf (R, "/%s@%s", U->bot_info->commands[index].command, U->username) >= 0);
+      } else {
+        assert (asprintf (R, "/%s", U->bot_info->commands[index].command) >= 0);
+      }
+
       assert (*R);
       return index;
     }
     tot += U->bot_info->commands_num;
   }
-  *R = NULL;
-  return -1;
+
+  if (index == tot) {
+    return tot + complete_message_answer (P, index - tot, text - 1, len + 1, R);
+  } else {
+    return tot + complete_message_answer (P, index - tot - 1, text - 1, len + 1, R);
+  }
 }
 
 char *command_generator (const char *text, int state) {  
@@ -2238,7 +2253,6 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
       mprintf (ev, " @%s", U->username);
     }
     mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
-    mprintf (ev, "\treal name: %s %s\n", U->real_first_name, U->real_last_name);
     mprintf (ev, "\tphone: %s\n", U->phone);
     mprintf (ev, "\t");
     print_user_status (&U->status, ev);
