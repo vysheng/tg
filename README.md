@@ -78,12 +78,7 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
 If using [Homebrew](http://brew.sh/):
 
-     brew install libconfig
-     brew install readline
-     brew install lua
-     brew install python
-     brew install libevent
-     brew install jansson
+     brew install libconfig readline lua python libevent jansson
      export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
      export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
