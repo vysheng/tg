@@ -560,7 +560,10 @@ void set_prompt (const char *s) {
 }
 
 void update_prompt (void) {
-  if (readline_disabled) { return; }
+  if (readline_disabled) {
+    fflush (stdout);
+    return;
+  }
   if (read_one_string) { return; }
   print_start ();
   set_prompt (get_default_prompt ());
