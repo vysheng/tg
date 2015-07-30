@@ -2858,13 +2858,14 @@ void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
 
 void on_login (struct tgl_state *TLS);
 void on_started (struct tgl_state *TLS);
-void do_get_string (struct tgl_state *TLS, const char *prompt, int flags, void (*cb)(struct tgl_state *, const char *, void *), void *arg);
+void do_get_values (struct tgl_state *TLS, enum tgl_value_type type, const char *prompt, int num_values,
+          void (*callback)(struct tgl_state *TLS, const char *string[], void *arg), void *arg);
 
 struct tgl_update_callback upd_cb = {
   .new_msg = print_message_gw,
   .marked_read = mark_read_upd,
   .logprintf = logprintf,
-  .get_string = do_get_string,
+  .get_values = do_get_values,
   .logged_in = on_login,
   .started = on_started,
   .type_notification = type_notification_upd,
