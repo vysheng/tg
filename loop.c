@@ -75,6 +75,7 @@
 
 int verbosity;
 extern int readline_disabled;
+extern char *bot_hash;
 
 extern int bot_mode;
 int binlog_read;
@@ -235,6 +236,12 @@ void do_get_string (struct tgl_state *TLS) {
 
 void do_get_values (struct tgl_state *TLS, enum tgl_value_type type, const char *prompt, int num_values,
           void (*callback)(struct tgl_state *TLS, const char *string[], void *arg), void *arg) {
+  if (type == tgl_bot_hash && bot_hash) {
+    assert (num_values == 1);
+    one_string_results[0] = bot_hash;
+    callback (TLS, (void *)one_string_results, arg);
+    return;
+  }
   one_string_cb = callback;
   one_string_num = 0;
   one_string_total_args = num_values;
