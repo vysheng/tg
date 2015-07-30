@@ -107,12 +107,15 @@ json_t *json_pack_peer (tgl_peer_id_t id) {
     default:
       assert (0);
     }
-
+    
     assert (json_object_set (res, "print_name", json_string (s)) >= 0);
     return res;
   }
-  
-  assert (json_object_set (res, "print_name", json_string (P->print_name)) >= 0);
+  if(P->print_name != NULL){
+    assert (json_object_set (res, "print_name", json_string (P->print_name)) >= 0);
+  } else {
+    assert (json_object_set (res, "print_name", json_string ("")) >= 0);
+  }
   assert (json_object_set (res, "flags", json_integer (P->flags)) >= 0);
   
   switch (tgl_get_peer_type (id)) {
