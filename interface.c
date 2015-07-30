@@ -2135,7 +2135,6 @@ void print_string_gw (struct tgl_state *TLSR, void *extra, int success, const ch
   }
   if (!success) { print_fail (ev); return; }
   mprint_start (ev);
-  mprint_start (ev);
   if (!enable_json) {
     mprintf (ev, "%s\n", name);
   } else {
@@ -3166,7 +3165,7 @@ int readline_active;
 
 int saved_point;
 char *saved_line;
-int prompt_was;
+static int prompt_was;
 
 
 void deactivate_readline (void) {
