@@ -2003,6 +2003,9 @@ void print_msg_list_gw (struct tgl_state *TLSR, void *extra, int success, int nu
   if (!enable_json) {
     int i;
     for (i = num - 1; i >= 0; i--) {
+      #ifdef USE_LUA
+        lua_list_msg (ML[i]);
+      #endif
       print_message (ev, ML[i]);
     }
   } else {
@@ -2010,6 +2013,9 @@ void print_msg_list_gw (struct tgl_state *TLSR, void *extra, int success, int nu
       json_t *res = json_array ();
       int i;
       for (i = num - 1; i >= 0; i--) {
+        #ifdef USE_LUA
+          lua_list_msg (ML[i]);
+        #endif
         json_t *a = json_pack_message (ML[i]);
         assert (json_array_append (res, a) >= 0);        
       }

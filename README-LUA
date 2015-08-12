@@ -9,6 +9,7 @@ It should have several functions:
   on_our_id(our_id) - Informs about id of currently logged in user.
 
   on_msg_receive(msg) - it is called when we receive new msg (!! may be called before on_binlog_replay_end, than it is old msg).
+  on_msg_history(msg) - it is called when a msg from history is printed.
 
   on_user_update(user,what_changed) - updated info about user. what_changed is array of strings.
   on_chat_update(user,what_changed) - updated info about user. what_changed is array of strings.
