@@ -102,6 +102,7 @@ PyObject *_py_binlog_end;
 PyObject *_py_diff_end;
 PyObject *_py_our_id;
 PyObject *_py_new_msg;
+PyObject *_py_list_msg;
 PyObject *_py_secret_chat_update;
 PyObject *_py_user_update;
 PyObject *_py_chat_update;
@@ -304,6 +305,30 @@ void py_new_msg (struct tgl_message *M) {
 
   arglist = Py_BuildValue("(O)", msg);
   result = PyEval_CallObject(_py_new_msg, arglist);
+  Py_DECREF(arglist);
+
+  if(result == NULL)  
+    PyErr_Print();
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
+
+  Py_XDECREF(result);
+}
+
+void py_list_msg (struct tgl_message *M) {
+  if (!python_loaded) { return; }
+  PyObject *msg;
+  PyObject *arglist, *result;
+
+  if(_py_list_msg == NULL) {
+    logprintf("Callback not set for on_msg_history");
+    return;
+  }
+
+  msg = get_message (M);
+
+  arglist = Py_BuildValue("(O)", msg);
+  result = PyEval_CallObject(_py_list_msg, arglist);
   Py_DECREF(arglist);
 
   if(result == NULL)  
@@ -1190,6 +1215,7 @@ TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
 TGL_PYTHON_CALLBACK("on_get_difference_end", _py_diff_end);
 TGL_PYTHON_CALLBACK("on_our_id", _py_our_id);
 TGL_PYTHON_CALLBACK("on_msg_receive", _py_new_msg);
+TGL_PYTHON_CALLBACK("on_msg_history", _py_list_msg);
 TGL_PYTHON_CALLBACK("on_secret_chat_update", _py_secret_chat_update);
 TGL_PYTHON_CALLBACK("on_user_update", _py_user_update);
 TGL_PYTHON_CALLBACK("on_chat_update", _py_chat_update);
@@ -1245,6 +1271,7 @@ static PyMethodDef py_tgl_methods[] = {
   {"set_on_get_difference_end", set_py_diff_end, METH_VARARGS, ""},
   {"set_on_our_id", set_py_our_id, METH_VARARGS, ""},
   {"set_on_msg_receive", set_py_new_msg, METH_VARARGS, ""},
+  {"set_on_msg_history", set_py_list_msg, METH_VARARGS, ""},
   {"set_on_secret_chat_update", set_py_secret_chat_update, METH_VARARGS, ""},
   {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
   {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
