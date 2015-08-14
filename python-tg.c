@@ -296,7 +296,7 @@ void py_new_msg (struct tgl_message *M) {
   PyObject *arglist, *result;
 
   if(_py_new_msg == NULL) {
-    logprintf("Callback not set for on_new_msg");
+    logprintf("Callback not set for on_msg_receive");
     return;
   }
 
