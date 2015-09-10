@@ -76,22 +76,31 @@ static PyObject *
 tgl_Peer_getname (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
-
+  
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.print_name);
+      if(self->peer->user.print_name)
+        ret = PyUnicode_FromString(self->peer->user.print_name);
+      else
+      	Py_RETURN_NONE;	
       break;
     case TGL_PEER_CHAT:
-      ret = PyUnicode_FromString(self->peer->chat.print_title);
+      if(self->peer->chat.print_title)
+	    ret = PyUnicode_FromString(self->peer->chat.print_title);
+	  else
+      	Py_RETURN_NONE;
       break;
     case TGL_PEER_ENCR_CHAT:
-      ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
+      if(self->peer->encr_chat.print_name)
+      	ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
+      else
+      	Py_RETURN_NONE;
       break;
     default:
      PyErr_SetString(PeerError, "peer.type_name not supported!");
      Py_RETURN_NONE;
   }
-
+  
   Py_XINCREF(ret);
   return ret;
 }
