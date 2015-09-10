@@ -32,7 +32,7 @@ As mentioned, all methods and functions have callbacks. The following are the di
 |----- | ------------------ | ------------|
 |empty_cb|`(success)`|This just indicated the success of the call. All other callback types have this as well.|
 |contact_list_cb|`(success, peer_list)`|`peer_list` is a list of `tgl.Peer` objects|
-|dialog_list_cb|`(success, dialog_list)`|`dialog_list` is a list of dicts, with keys: 'peer': `tgl.Peer`, 'message': `tgl.Msg`|
+|dialog_list_cb|`(success, dialog_list)`|`dialog_list` is a list of dicts, with keys: 'peer': `tgl.Peer`, 'unread': `bool( Determine whether has unread message)`|
 |msg_cb|`(success, msg)`|`msg` is a `tgl.Msg`|
 |msg_list_cb|`(success, msg_list)`|`msg_list` is a list of `tgl.Msg` objects|
 |file_cb|`(success, file_path)`|`file_path` is a string with an absolute path|
