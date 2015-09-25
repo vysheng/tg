@@ -638,6 +638,7 @@ int disable_msg_preview;
 
 void print_user_list_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_user *UL[]);
 void print_msg_list_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_message *ML[]);
+void print_msg_list_history_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_message *ML[]);
 void print_msg_list_success_gw (struct tgl_state *TLS, void *extra, int success, int num, struct tgl_message *ML[]);
 void print_dialog_list_gw (struct tgl_state *TLS, void *extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[]);
 void print_chat_info_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_chat *C);
@@ -796,7 +797,12 @@ void do_send_text (struct command *command, int arg_num, struct arg args[], stru
   if (ev) { ev->refcnt ++; }
   tgl_do_send_text (TLS, args[0].P->id, args[1].str, TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, print_msg_success_gw, ev);
 }
-
+ 
+void do_post_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_send_text (TLS, args[0].P->id, args[1].str, TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | TGLMF_POST_AS_CHANNEL, print_msg_success_gw, ev);
+}
 void do_reply_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
@@ -828,6 +834,26 @@ void do_send_video (struct command *command, int arg_num, struct arg args[], str
 
 void do_send_document (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   _do_send_file (command, arg_num, args, ev, 0);
+}
+
+void do_post_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  _do_send_file (command, arg_num, args, ev, TGL_SEND_MSG_FLAG_DOCUMENT_PHOTO | TGLMF_POST_AS_CHANNEL);
+}
+
+void do_post_file (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  _do_send_file (command, arg_num, args, ev, TGL_SEND_MSG_FLAG_DOCUMENT_AUTO | TGLMF_POST_AS_CHANNEL);
+}
+
+void do_post_audio (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  _do_send_file (command, arg_num, args, ev, TGL_SEND_MSG_FLAG_DOCUMENT_AUDIO | TGLMF_POST_AS_CHANNEL);
+}
+
+void do_post_video (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  _do_send_file (command, arg_num, args, ev, TGL_SEND_MSG_FLAG_DOCUMENT_VIDEO | TGLMF_POST_AS_CHANNEL);
+}
+
+void do_post_document (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  _do_send_file (command, arg_num, args, ev, TGLMF_POST_AS_CHANNEL);
 }
 
 void _do_reply_file (struct command *command, int arg_num, struct arg args[], struct in_ev *ev, unsigned long long flags) {
@@ -894,6 +920,12 @@ void do_send_location (struct command *command, int arg_num, struct arg args[], 
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
   tgl_do_send_location (TLS, args[0].P->id, args[1].dval, args[2].dval, TGL_SEND_MSG_FLAG_REPLY(reply_id), print_msg_success_gw, ev);
+}
+
+void do_post_location (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 3);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_send_location (TLS, args[0].P->id, args[1].dval, args[2].dval, TGL_SEND_MSG_FLAG_REPLY(reply_id) | TGLMF_POST_AS_CHANNEL, print_msg_success_gw, ev);
 }
 
 void do_reply_location (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1211,7 +1243,7 @@ void do_mark_read (struct command *command, int arg_num, struct arg args[], stru
 void do_history (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
-  tgl_do_get_history (TLS, args[0].P->id, args[2].num != NOT_FOUND ? args[2].num : 0, args[1].num != NOT_FOUND ? args[1].num : 40, offline_mode, print_msg_list_gw, ev);
+  tgl_do_get_history (TLS, args[0].P->id, args[2].num != NOT_FOUND ? args[2].num : 0, args[1].num != NOT_FOUND ? args[1].num : 40, offline_mode, print_msg_list_history_gw, ev);
 }
 
 void print_fail (struct in_ev *ev);
@@ -1446,6 +1478,13 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"msg", {ca_peer, ca_msg_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer", NULL},
   {"msg_kbd", {ca_peer, ca_string, ca_msg_string_end, ca_none}, do_msg_kbd, "msg <peer> <kbd> <text>\tSends text message to peer with custom kbd", NULL},
   {"post", {ca_peer, ca_msg_string_end, ca_none}, do_post, "post <peer> <text>\tSends text message to peer as admin", NULL},
+  {"post_audio", {ca_peer, ca_file_name, ca_none}, do_post_audio, "post_audio <peer> <file>\tPosts audio to peer", NULL},
+  {"post_document", {ca_peer, ca_file_name, ca_none}, do_post_document, "post_document <peer> <file>\tPosts document to peer", NULL},
+  {"post_file", {ca_peer, ca_file_name, ca_none}, do_post_file, "post_file <peer> <file>\tSends document to peer", NULL},
+  {"post_location", {ca_peer, ca_double, ca_double, ca_none}, do_post_location, "post_location <peer> <latitude> <longitude>\tSends geo location", NULL},
+  {"post_photo", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_post_photo, "post_photo <peer> <file> [caption]\tSends photo to peer", NULL},
+  {"post_text", {ca_peer, ca_file_name_end, ca_none}, do_post_text, "post_text <peer> <file>\tSends contents of text file as plain text message", NULL},
+  {"pist_video", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_post_video, "post_video <peer> <file> [caption]\tSends video to peer", NULL},
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
@@ -2036,6 +2075,19 @@ void print_msg_list_gw (struct tgl_state *TLSR, void *extra, int success, int nu
     #endif
   }
   mprint_end (ev);
+}
+
+void print_msg_list_history_gw (struct tgl_state *TLSR, void *extra, int success, int num, struct tgl_message *ML[]) {
+  print_msg_list_gw (TLSR, extra, success, num, ML);
+  if (num > 0) {
+    if (tgl_get_peer_type (ML[0]->to_id) != TGL_PEER_CHANNEL) {
+      if (tgl_get_peer_type (ML[0]->to_id) != TGL_PEER_USER || tgl_get_peer_id (ML[0]->to_id) != TLS->our_id) {
+        tgl_do_messages_mark_read (TLS, ML[0]->to_id, ML[0]->id, 0, NULL, NULL);
+      } else {
+        tgl_do_messages_mark_read (TLS, ML[0]->from_id, ML[0]->id, 0, NULL, NULL);
+      }
+    }
+  }
 }
 
 void print_msg_gw (struct tgl_state *TLSR, void *extra, int success, struct tgl_message *M) {
