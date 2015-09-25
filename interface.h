@@ -68,6 +68,7 @@ struct tgl_message;
 struct in_ev;
 void print_message (struct in_ev *ev, struct tgl_message *M);
 void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
+void print_channel_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
 void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U);
 void print_encr_chat_name_full (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
 void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);

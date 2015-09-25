@@ -415,6 +415,11 @@ void push_service (struct tgl_message *M) {
     lua_newtable (luaState);
     lua_add_string_field ("type", "abort_rekey");
     break;
+  case tgl_message_action_channel_create:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "channel_created");
+    lua_add_string_field ("title", M->action.title);
+    break;
   default:
     lua_pushstring (luaState, "???");
     break;

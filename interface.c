@@ -69,6 +69,7 @@
 //#include "mtproto-common.h"
 
 #include <tgl/tgl.h>
+#include <tgl/tgl-queries.h>
 #include "loop.h"
 
 #ifndef PATH_MAX
@@ -757,6 +758,13 @@ void do_msg (struct command *command, int arg_num, struct arg args[], struct in_
   tgl_do_send_message (TLS, args[0].P->id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, NULL, print_msg_success_gw, ev);
 }
 
+void do_post (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  vlogprintf (E_DEBUG, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
+  tgl_do_send_message (TLS, args[0].P->id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | TGLMF_POST_AS_CHANNEL, NULL, print_msg_success_gw, ev);
+}
+
 void do_msg_kbd (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 3);
   if (ev) { ev->refcnt ++; }
@@ -1172,6 +1180,12 @@ void do_dialog_list (struct command *command, int arg_num, struct arg args[], st
   tgl_do_get_dialog_list (TLS, args[0].num != NOT_FOUND ? args[0].num : 100, args[1].num != NOT_FOUND ? args[1].num : 0, print_dialog_list_gw, ev);
 }
 
+void do_channel_list (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num <= 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_get_channels_dialog_list (TLS, args[0].num != NOT_FOUND ? args[0].num : 100, args[1].num != NOT_FOUND ? args[1].num : 0, print_dialog_list_gw, ev);
+}
+
 void do_resolve_username (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
@@ -1393,6 +1407,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"add_contact", {ca_string, ca_string, ca_string, ca_none}, do_add_contact, "add_contact <phone> <first name> <last name>\tTries to add user to contact list", NULL},
   {"block_user", {ca_user, ca_none}, do_block_user, "block_user <user>\tBlocks user", NULL},
   {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once", NULL},
+  {"channel_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_channel_list, "channel_list [limit=100] [offset=0]\tList of last channels", NULL},
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100", NULL},
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat", NULL},
   {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)", NULL},
@@ -1430,6 +1445,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read", NULL},
   {"msg", {ca_peer, ca_msg_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer", NULL},
   {"msg_kbd", {ca_peer, ca_string, ca_msg_string_end, ca_none}, do_msg_kbd, "msg <peer> <kbd> <text>\tSends text message to peer with custom kbd", NULL},
+  {"post", {ca_peer, ca_msg_string_end, ca_none}, do_post, "post <peer> <text>\tSends text message to peer as admin", NULL},
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
@@ -2335,6 +2351,12 @@ void print_dialog_list_gw (struct tgl_state *TLSR, void *extra, int success, int
           UC = tgl_peer_get (TLS, peers[i]);
           mprintf (ev, "Chat ");
           print_chat_name (ev, peers[i], UC);
+          mprintf (ev, ": %d unread\n", unread_count[i]);
+          break;
+        case TGL_PEER_CHANNEL:
+          UC = tgl_peer_get (TLS, peers[i]);
+          mprintf (ev, "Channel ");
+          print_channel_name (ev, peers[i], UC);
           mprintf (ev, ": %d unread\n", unread_count[i]);
           break;
       }
@@ -3502,6 +3524,17 @@ void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   mpop_color (ev);
 }
 
+void print_channel_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
+  assert (tgl_get_peer_type (id) == TGL_PEER_CHANNEL);
+  mpush_color (ev, COLOR_CYAN);
+  if (!C || use_ids) {
+    mprintf (ev, "channel#%d", tgl_get_peer_id (id));
+  } else {
+    mprintf (ev, "%s", C->channel.title);
+  }
+  mpop_color (ev);
+}
+
 void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   mpush_color (ev, COLOR_MAGENTA);
@@ -3545,8 +3578,12 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   assert (M);
   //print_start ();
   mpush_color (ev, COLOR_GREY);
-  
-  mpush_color (ev, COLOR_MAGENTA);
+
+  if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL) {
+    mpush_color (ev, COLOR_CYAN);
+  } else {
+    mpush_color (ev, COLOR_MAGENTA);
+  }
   if (msg_num_mode) {
     mprintf (ev, "%lld ", M->id);
   }
@@ -3555,12 +3592,17 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   mprintf (ev, " ");
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
     print_chat_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
+  } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL) {
+    print_channel_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
   } else {
     assert (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT);
     print_encr_chat_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
   }
-  mprintf (ev, " ");
-  print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
+
+  if (tgl_get_peer_type (M->from_id) == TGL_PEER_USER) {
+    mprintf (ev, " ");
+    print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
+  }
  
   switch (M->action.type) {
   case tgl_message_action_none:
@@ -3639,6 +3681,9 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     break;
   case tgl_message_action_abort_key:
     mprintf (ev, " abort rekey #%016llx\n", M->action.exchange_id);
+    break;
+  case tgl_message_action_channel_create:
+    mprintf (ev, " created channel %s\n", M->action.title);
     break;
   }
   mpop_color (ev);
@@ -3732,8 +3777,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
         mprintf (ev, " »»» ");
       }
     }
-  } else {
-    assert (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT);
+  } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
     mpush_color (ev, COLOR_MAGENTA);
     if (msg_num_mode) {
       mprintf (ev, "%lld ", M->id);
@@ -3746,6 +3790,34 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
     if ((tgl_get_peer_type (M->from_id) == TGL_PEER_USER) && (tgl_get_peer_id (M->from_id) == TLS->our_id)) {
       mpush_color (ev, COLOR_GREEN);
+    } else {
+      mpush_color (ev, COLOR_BLUE);
+    }
+    if (M->flags & TGLMF_UNREAD) {
+      mprintf (ev, " >>> ");
+    } else {
+      mprintf (ev, " »»» ");
+    }
+  } else {
+    assert (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL);
+    
+    mpush_color (ev, COLOR_CYAN);
+    if (msg_num_mode) {
+      mprintf (ev, "%lld ", M->id);
+    }
+    print_date (ev, M->date);
+    mpop_color (ev);
+    mprintf (ev, " ");
+    print_channel_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
+
+    if (tgl_get_peer_type (M->from_id) == TGL_PEER_USER) {
+      mprintf (ev, " ");
+      print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
+      if ((tgl_get_peer_type (M->from_id) == TGL_PEER_USER) && (tgl_get_peer_id (M->from_id) == TLS->our_id)) {
+        mpush_color (ev, COLOR_GREEN);
+      } else {
+        mpush_color (ev, COLOR_BLUE);
+      }
     } else {
       mpush_color (ev, COLOR_BLUE);
     }

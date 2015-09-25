@@ -37,19 +37,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
-#if (READLINE == GNU)
 #include <readline/readline.h>
-#else
-#include <editline/readline.h>
-#endif
-#ifdef EVENT_V2
-#include <event2/event.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-#else
-#include <event.h>
-#include "event-old.h"
-#endif
 
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -297,18 +285,6 @@ void running_for_first_time (void) {
       exit (EXIT_FAILURE);
     }
     close (config_file_fd);
-    /*int auth_file_fd = open (get_auth_key_filename (), O_CREAT | O_RDWR, 0600);
-    int x = -1;
-    assert (write (auth_file_fd, &x, 4) == 4);
-    close (auth_file_fd);
-
-    printf ("[%s] created\n", config_filename);*/
-  
-    /* create downloads directory */
-    /*if (mkdir (downloads_directory, 0755) !=0) {
-      perror ("creating download directory");
-      exit (EXIT_FAILURE);
-    }*/
   }
 }
 
