@@ -2080,12 +2080,10 @@ void print_msg_list_gw (struct tgl_state *TLSR, void *extra, int success, int nu
 void print_msg_list_history_gw (struct tgl_state *TLSR, void *extra, int success, int num, struct tgl_message *ML[]) {
   print_msg_list_gw (TLSR, extra, success, num, ML);
   if (num > 0) {
-    if (tgl_get_peer_type (ML[0]->to_id) != TGL_PEER_CHANNEL) {
-      if (tgl_get_peer_type (ML[0]->to_id) != TGL_PEER_USER || tgl_get_peer_id (ML[0]->to_id) != TLS->our_id) {
-        tgl_do_messages_mark_read (TLS, ML[0]->to_id, ML[0]->id, 0, NULL, NULL);
-      } else {
-        tgl_do_messages_mark_read (TLS, ML[0]->from_id, ML[0]->id, 0, NULL, NULL);
-      }
+    if (tgl_get_peer_type (ML[0]->to_id) != TGL_PEER_USER || tgl_get_peer_id (ML[0]->to_id) != TLS->our_id) {
+      tgl_do_messages_mark_read (TLS, ML[0]->to_id, ML[0]->id, 0, NULL, NULL);
+    } else {
+      tgl_do_messages_mark_read (TLS, ML[0]->from_id, ML[0]->id, 0, NULL, NULL);
     }
   }
 }
