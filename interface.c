@@ -104,7 +104,8 @@ extern int one_string_flags;
 extern int enable_json;
 int disable_auto_accept;
 int msg_num_mode;
-int permanent_id_mode;
+int permanent_msg_id_mode;
+int permanent_peer_id_mode;
 int disable_colors;
 int alert_sound;
 extern int binlog_read;
@@ -417,140 +418,88 @@ double cur_token_double (void) {
   }
 }
 
-tgl_peer_id_t cur_token_user (void) {
+tgl_peer_id_t cur_token_peer_any (int mask) {
   if (cur_token_len <= 0) { return TGL_PEER_NOT_FOUND; }
+  
   int l = cur_token_len;
   char *s = cur_token;
 
+  if (*s == '$') {
+    s ++;
+    l --;
+    if (l != 2 * sizeof (tgl_peer_id_t)) {
+      return TGL_PEER_NOT_FOUND;
+    }
+
+    tgl_peer_id_t res;
+    unsigned char *r = (void *)&res;
+    int i;
+    for (i = 0; i < l; i++) {
+      if ((s[i] < '0' || s[i] > '9') && 
+          (s[i] < 'a' || s[i] > 'f')) {
+        return TGL_PEER_NOT_FOUND;
+      }
+    }
+    for (i = 0; i < (int)sizeof (tgl_peer_id_t); i++) {
+      r[i] = hex2int (s[2 * i]) * 16 + hex2int (s[2 * i + 1]);
+    }
+
+    if (mask && tgl_get_peer_type (res) != mask) {
+      return TGL_PEER_NOT_FOUND;
+    }
+
+    return res;
+  }
+
+  const char *ss[] = {"user#id", "user#", "chat#id", "chat#", "secret_chat#id", "secret_chat#", "channel#id", "channel#"};
+  int tt[] = {TGL_PEER_USER, TGL_PEER_USER, TGL_PEER_CHAT, TGL_PEER_CHAT, TGL_PEER_ENCR_CHAT, TGL_PEER_ENCR_CHAT, TGL_PEER_CHANNEL, TGL_PEER_CHANNEL};
+
+  int i;
+  for (i = 0; i < 8; i++) if (!mask || mask == tt[i]) {
+    int x = strlen (ss[i]);
+    if (l > x && !memcmp (s, ss[i], x)) {
+      char c = cur_token[cur_token_len];
+      cur_token[cur_token_len] = 0;
+      int r = atoi (s + x);
+      cur_token[cur_token_len] = c;    
+
+      if (r < 0) { return TGL_PEER_NOT_FOUND; }
+      tgl_peer_t *P = tgl_peer_get (TLS, tgl_set_peer_id (tt[i], r));
+      if (!P) { return TGL_PEER_NOT_FOUND; }
+      return P->id;
+    }
+  }
+
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
-
-  if (l >= 8 && !memcmp (s, "user#id", 7)) {
-    s += 7;    
-    l -= 7;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 6 && !memcmp (s, "user#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-
   tgl_peer_t *P = tgl_peer_get_by_name (TLS, s); 
   cur_token[cur_token_len] = c;
   
-  if (P && tgl_get_peer_type (P->id) == TGL_PEER_USER) {
+  if (P && (!mask || tgl_get_peer_type (P->id) == mask)) {
     return P->id;
   } else {
     return TGL_PEER_NOT_FOUND;
   }
+}
+
+tgl_peer_id_t cur_token_user (void) {
+  return cur_token_peer_any (TGL_PEER_USER);
 }
 
 tgl_peer_id_t cur_token_chat (void) {
-  if (cur_token_len <= 0) { return TGL_PEER_NOT_FOUND; }
-  int l = cur_token_len;
-  char *s = cur_token;
-
-  char c = cur_token[cur_token_len];
-  cur_token[cur_token_len] = 0;
-  
-  if (l >= 8 && !memcmp (s, "chat#id", 7)) {
-    s += 7;    
-    l -= 7;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 6 && !memcmp (s, "chat#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-
-  tgl_peer_t *P = tgl_peer_get_by_name (TLS, s); 
-  cur_token[cur_token_len] = c;
-  
-  if (P && tgl_get_peer_type (P->id) == TGL_PEER_CHAT) {
-    return P->id;
-  } else {
-    return TGL_PEER_NOT_FOUND;
-  }
+  return cur_token_peer_any (TGL_PEER_CHAT);
 }
 
 tgl_peer_id_t cur_token_encr_chat (void) {
-  if (cur_token_len <= 0) { return TGL_PEER_NOT_FOUND; }
-  char *s = cur_token;
-  char c = cur_token[cur_token_len];
-  cur_token[cur_token_len] = 0;
+  return cur_token_peer_any (TGL_PEER_ENCR_CHAT);
+}
 
-  tgl_peer_t *P = tgl_peer_get_by_name (TLS, s); 
-  cur_token[cur_token_len] = c;
-  
-  if (P && tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT) {
-    return P->id;
-  } else {
-    return TGL_PEER_NOT_FOUND;
-  }
+tgl_peer_id_t cur_token_channel (void) {
+  return cur_token_peer_any (TGL_PEER_CHANNEL);
 }
 
 tgl_peer_id_t cur_token_peer (void) {
-  if (cur_token_len <= 0) { return TGL_PEER_NOT_FOUND; }
-  int l = cur_token_len;
-  char *s = cur_token;
-  char c = cur_token[cur_token_len];
-  cur_token[cur_token_len] = 0;
-  
-  if (l >= 8 && !memcmp (s, "user#id", 7)) {
-    s += 7;    
-    l -= 7;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 8 && !memcmp (s, "chat#id", 7)) {
-    s += 7;    
-    l -= 7;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 6 && !memcmp (s, "user#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 6 && !memcmp (s, "chat#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  
-  tgl_peer_t *P = tgl_peer_get_by_name (TLS, s); 
-  cur_token[cur_token_len] = c;
-  
-  if (P) {
-    return P->id;
-  } else {
-    return TGL_PEER_NOT_FOUND;
-  }
+  return cur_token_peer_any (0);
 }
 
 static tgl_peer_t *mk_peer (tgl_peer_id_t id) {
@@ -3656,9 +3605,23 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
 int unknown_user_list_pos;
 int unknown_user_list[1000];
 
+void print_peer_permanent_name (struct in_ev *ev, tgl_peer_id_t id) {
+  mprintf (ev, "$");
+  unsigned char *d = (void *)&id;
+  int i;
+  for (i = 0; i < (int)sizeof (tgl_peer_id_t); i++) {
+    mprintf (ev, "%02x", (unsigned)d[i]);
+  }
+}
+
 void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
   assert (tgl_get_peer_type (id) == TGL_PEER_USER);
   mpush_color (ev, COLOR_RED);
+  if (permanent_peer_id_mode) {
+    print_peer_permanent_name (ev, id);
+    mpop_color (ev);
+    return;
+  }
   if (!U) {
     mprintf (ev, "user#%d", tgl_get_peer_id (id));
     int i;
@@ -3700,6 +3663,11 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
 void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_CHAT);
   mpush_color (ev, COLOR_MAGENTA);
+  if (permanent_peer_id_mode) {
+    print_peer_permanent_name (ev, id);
+    mpop_color (ev);
+    return;
+  }
   if (!C || use_ids) {
     mprintf (ev, "chat#%d", tgl_get_peer_id (id));
   } else {
@@ -3711,6 +3679,11 @@ void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
 void print_channel_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_CHANNEL);
   mpush_color (ev, COLOR_CYAN);
+  if (permanent_peer_id_mode) {
+    print_peer_permanent_name (ev, id);
+    mpop_color (ev);
+    return;
+  }
   if (!C || use_ids) {
     mprintf (ev, "channel#%d", tgl_get_peer_id (id));
   } else {
@@ -3722,6 +3695,11 @@ void print_channel_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
 void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
   mpush_color (ev, COLOR_MAGENTA);
+  if (permanent_peer_id_mode) {
+    print_peer_permanent_name (ev, id);
+    mpop_color (ev);
+    return;
+  }
   if (!C || use_ids) {
     mprintf (ev, "encr_chat#%d", tgl_get_peer_id (id));
   } else {
@@ -3760,7 +3738,7 @@ void print_date_full (struct in_ev *ev, long t) {
 
 void print_msg_id (struct in_ev *ev, struct tgl_message *M) {
   if (msg_num_mode) {
-    if (!permanent_id_mode) {
+    if (!permanent_msg_id_mode) {
       mprintf (ev, "%d ", M->temp_id);
     } else {
       unsigned char *s = (void *)&M->permanent_id;

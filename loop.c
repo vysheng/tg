@@ -760,8 +760,12 @@ void on_login (struct tgl_state *TLS) {
 }
 
 void on_started (struct tgl_state *TLS);
-void dlist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], tgl_message_id_t *last_msg_id[], int unread_count[])  {
+void clist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], tgl_message_id_t *last_msg_id[], int unread_count[]) {
   on_started (TLS);
+}
+
+void dlist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], tgl_message_id_t *last_msg_id[], int unread_count[])  {
+  tgl_do_get_channels_dialog_list (TLS, 100, 0, clist_cb, 0);
 }
 
 void on_started (struct tgl_state *TLS) {

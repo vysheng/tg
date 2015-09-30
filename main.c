@@ -117,6 +117,8 @@ char *start_command;
 int disable_link_preview;
 int enable_json;
 int exit_code;
+int permanent_msg_id_mode;
+int permanent_peer_id_mode;
 
 struct tgl_state *TLS;
 
@@ -476,6 +478,8 @@ void usage (void) {
   #ifdef USE_PYTHON
   printf ("  --python-script/-Z <script-name>     python script file\n");
   #endif
+  printf ("  --permanent-msg-ids                  use permanent msg ids\n");
+  printf ("  --permanent-peer-ids                 use permanent peer ids\n");
 
   exit (1);
 }
@@ -625,6 +629,8 @@ void args_parse (int argc, char **argv) {
     {"disable-link-preview", no_argument, 0, 1002},
     {"json", no_argument, 0, 1003},
     {"python-script", required_argument, 0, 'Z'},
+    {"permanent-msg-ids", no_argument, 0, 1004},
+    {"permanent-peer-ids", no_argument, 0, 1005},
     {0,         0,                 0,  0 }
   };
 
@@ -755,6 +761,12 @@ void args_parse (int argc, char **argv) {
       break;
     case 1003:
       enable_json = 1;
+      break;
+    case 1004:
+      permanent_msg_id_mode = 1;
+      break;
+    case 1005:
+      permanent_peer_id_mode = 1;
       break;
     case 'h':
     default:
