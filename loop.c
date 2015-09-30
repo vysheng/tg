@@ -70,6 +70,7 @@
 #include <tgl/tgl-binlog.h>
 #include <tgl/tgl-net.h>
 #include <tgl/tgl-timers.h>
+#include <tgl/tgl-queries.h>
 
 #include <openssl/sha.h>
 
@@ -349,13 +350,13 @@ void net_loop (void) {
     write_state_file ();
     update_prompt ();
     
-    if (unknown_user_list_pos) {
+/*    if (unknown_user_list_pos) {
       int i;
       for (i = 0; i < unknown_user_list_pos; i++) {
         tgl_do_get_user_info (TLS, TGL_MK_USER (unknown_user_list[i]), 0, 0, 0);
       }
       unknown_user_list_pos = 0;
-    }   
+    }   */
   }
 
   if (term_ev) {
@@ -484,7 +485,7 @@ void write_auth_file (void) {
 
   tgl_dc_iterator_ex (TLS, write_dc, &auth_file_fd);
 
-  assert (write (auth_file_fd, &TLS->our_id, 4) == 4);
+  assert (write (auth_file_fd, &TLS->our_id.peer_id, 4) == 4);
   close (auth_file_fd);
 }
 
@@ -611,7 +612,7 @@ void read_auth_file (void) {
     assert (!l);
   }
   if (our_id) {
-    bl_do_set_our_id (TLS, our_id);
+    bl_do_set_our_id (TLS, TGL_MK_USER (our_id));
   }
   close (auth_file_fd);
 }
@@ -759,7 +760,7 @@ void on_login (struct tgl_state *TLS) {
 }
 
 void on_started (struct tgl_state *TLS);
-void dlist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], int last_msg_id[], int unread_count[])  {
+void dlist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], tgl_message_id_t *last_msg_id[], int unread_count[])  {
   on_started (TLS);
 }
 
@@ -850,7 +851,7 @@ int loop (void) {
   update_prompt ();
    
   if (reset_authorization) {
-    tgl_peer_t *P = tgl_peer_get (TLS, TGL_MK_USER (TLS->our_id));
+    tgl_peer_t *P = tgl_peer_get (TLS, TLS->our_id);
     if (P && P->user.phone && reset_authorization == 1) {
       set_default_username (P->user.phone);
     }

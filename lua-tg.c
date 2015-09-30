@@ -431,8 +431,14 @@ void push_message (struct tgl_message *M) {
   my_lua_checkstack (luaState, 10);
   lua_newtable (luaState);
 
-  static char s[30];
-  snprintf (s, 30, "%lld", M->id);
+  static char s[256];
+  unsigned char *mid = (void *)&M->permanent_id;
+
+  int i;
+  for (i = 0; i < (int)sizeof (struct tgl_message_permanent_id); i++) {
+    sprintf (s + 2 * i, "%02u", (unsigned) mid[i]);
+  }
+
   lua_add_string_field ("id", s);
   if (!(M->flags & TGLMF_CREATED)) { return; }
   lua_add_num_field ("flags", M->flags);
