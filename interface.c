@@ -3708,15 +3708,23 @@ void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
   mpop_color (ev);
 }
 
-void print_encr_chat_name_full (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
-  assert (tgl_get_peer_type (id) == TGL_PEER_ENCR_CHAT);
-  mpush_color (ev, COLOR_MAGENTA);
-  if (!C || use_ids) {
-    mprintf (ev, "encr_chat#%d", tgl_get_peer_id (id));
-  } else {
-    mprintf (ev, "%s", C->print_name);
+void print_peer_name  (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
+  switch (tgl_get_peer_type (id)) {
+  case TGL_PEER_USER:
+    print_user_name (ev, id, C);
+    return;
+  case TGL_PEER_CHAT:
+    print_chat_name (ev, id, C);
+    return;
+  case TGL_PEER_CHANNEL:
+    print_channel_name (ev, id, C);
+    return;
+  case TGL_PEER_ENCR_CHAT:
+    print_encr_chat_name (ev, id, C);
+    return;
+  default:
+    assert (0);
   }
-  mpop_color (ev);
 }
 
 static char *monthes[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -3990,9 +3998,9 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       mprintf (ev, " »»» ");
     }
   }
-  if (tgl_get_peer_type (M->fwd_from_id) == TGL_PEER_USER) {
+  if (tgl_get_peer_type (M->fwd_from_id) > 0) {
     mprintf (ev, "[fwd from ");
-    print_user_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
+    print_peer_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
     mprintf (ev, "] ");
   }
   if (M->reply_id) {
