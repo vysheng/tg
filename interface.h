@@ -84,4 +84,7 @@ void print_date (struct in_ev *ev, long t);
 void play_sound (void);
 void update_prompt (void);
 void set_interface_callbacks (void);
+
+char *print_permanent_msg_id (tgl_message_id_t id);
+char *print_permanent_peer_id (tgl_peer_id_t id);
 #endif

@@ -73,6 +73,15 @@ void lua_add_string_field (const char *name, const char *value) {
   lua_settable (luaState, -3);
 }
 
+void lua_add_lstring_field (const char *name, const char *value, int len) {
+  assert (name && strlen (name));
+  if (!value || !len) { return; }
+  my_lua_checkstack (luaState, 3);
+  lua_pushstring (luaState, name);
+  lua_pushlstring (luaState, len, value);
+  lua_settable (luaState, -3);
+}
+
 void lua_add_string_field_arr (int num, const char *value) {
   if (!value || !strlen (value)) { return; }
   my_lua_checkstack (luaState, 3);
@@ -99,6 +108,9 @@ void push_tgl_peer_type (int x) {
     break;
   case TGL_PEER_ENCR_CHAT:
     lua_pushstring (luaState, "encr_chat");
+    break;
+  case TGL_PEER_CHANNEL:
+    lua_pushstring (luaState, "channel");
     break;
   default:
     assert (0);
@@ -142,6 +154,15 @@ void push_encr_chat (tgl_peer_t *P) {
   lua_pushstring (luaState, "user");
   push_peer (TGL_MK_USER (P->encr_chat.user_id), tgl_peer_get (TLS, TGL_MK_USER (P->encr_chat.user_id)));
   lua_settable (luaState, -3);
+}
+
+void push_channel (tgl_peer_t *P) {
+  my_lua_checkstack (luaState, 4);
+  lua_add_string_field (luaState, "title", P->channel.title);
+  lua_add_string_field (luaState, "about", P->channel.about);
+  lua_add_num_field (luaState, "participants_count", P->channel.participants_count);
+  lua_add_num_field (luaState, "admins_count", P->channel.admins_count);
+  lua_add_num_field (luaState, "kicked_count", P->channel.kicked_count);
 }
 
 void push_update_types (unsigned flags) {
@@ -203,12 +224,9 @@ void push_update_types (unsigned flags) {
 
 void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   lua_newtable (luaState);
- 
-  lua_add_num_field ("id", tgl_get_peer_id (id));
-  lua_pushstring (luaState, "type");
-  push_tgl_peer_type (tgl_get_peer_type (id));
-  lua_settable (luaState, -3);
-
+  
+  lua_add_lstring_field ("id", print_permanent_peer_id (P->id));
+  lua_add_string_field (luaState, "type", tgl_get_peer_type (id));
 
   if (!P || !(P->flags & TGLPF_CREATED)) {
     lua_pushstring (luaState, "print_name"); 
@@ -222,6 +240,9 @@ void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
       break;
     case TGL_PEER_ENCR_CHAT:
       sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
+      break;
+    case TGL_PEER_CHANNEL:
+      sprintf (s, "channel#%d", tgl_get_peer_id (id));
       break;
     default:
       assert (0);
@@ -420,9 +441,9 @@ void push_service (struct tgl_message *M) {
     lua_add_string_field ("type", "channel_created");
     lua_add_string_field ("title", M->action.title);
     break;
-  default:
+  /*default:
     lua_pushstring (luaState, "???");
-    break;
+    break;*/
   }
 }
 
@@ -431,15 +452,7 @@ void push_message (struct tgl_message *M) {
   my_lua_checkstack (luaState, 10);
   lua_newtable (luaState);
 
-  static char s[256];
-  unsigned char *mid = (void *)&M->permanent_id;
-
-  int i;
-  for (i = 0; i < (int)sizeof (struct tgl_message_permanent_id); i++) {
-    sprintf (s + 2 * i, "%02u", (unsigned) mid[i]);
-  }
-
-  lua_add_string_field ("id", s);
+  lua_add_string_field ("id", print_permanent_msg_id (M->permanent_id));
   if (!(M->flags & TGLMF_CREATED)) { return; }
   lua_add_num_field ("flags", M->flags);
  
@@ -1619,6 +1632,7 @@ enum command_argument {
   ca_user,
   ca_chat,
   ca_secret_chat,
+  ca_channel,
   ca_peer,
   ca_file_name,
   ca_file_name_end,
