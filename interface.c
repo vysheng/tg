@@ -1585,7 +1585,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"view_document_thumb", {ca_msg_id, ca_none}, do_open_document_thumb, "view_document_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_file", {ca_msg_id, ca_none}, do_open_file, "view_file <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_file_thumb", {ca_msg_id, ca_none}, do_open_file_thumb, "view_file_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
-  {"view_photo", {ca_number, ca_none}, do_open_photo, "view_photo <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_photo", {ca_msg_id, ca_none}, do_open_photo, "view_photo <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_user_photo", {ca_user, ca_none}, do_view_user_photo, "view_user_photo <user>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_video", {ca_msg_id, ca_none}, do_open_video, "view_video <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_video_thumb", {ca_msg_id, ca_none}, do_open_video_thumb, "view_video_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
@@ -3840,14 +3840,17 @@ void print_date_full (struct in_ev *ev, long t) {
   mprintf (ev, "[%04d/%02d/%02d %02d:%02d:%02d]", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
-void print_msg_id (struct in_ev *ev, struct tgl_message *M) {
+void print_msg_id (struct in_ev *ev, tgl_message_id_t msg_id, struct tgl_message *M) {
   if (msg_num_mode) {
     if (!permanent_msg_id_mode) {
-      mprintf (ev, "%d", M->temp_id);
+      if (M) {
+        mprintf (ev, "%d", M->temp_id);
+      } else {
+        mprintf (ev, "???");
+      }
     } else {
-      mprintf (ev, "%s", print_permanent_msg_id (M->permanent_id));
+      mprintf (ev, "%s", print_permanent_msg_id (msg_id));
     }
-    mprintf (ev, " ");
   }
 }
 
@@ -3861,7 +3864,8 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   } else {
     mpush_color (ev, COLOR_MAGENTA);
   }
-  print_msg_id (ev, M);
+  print_msg_id (ev, M->permanent_id, M);
+  mprintf (ev, " ");
   print_date (ev, M->date);
   mpop_color (ev);
   mprintf (ev, " ");
@@ -3990,7 +3994,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_USER) {
     if (M->flags & TGLMF_OUT) {
       mpush_color (ev, COLOR_GREEN);
-      print_msg_id (ev, M);
+      print_msg_id (ev, M->permanent_id, M);
+      mprintf (ev, " ");
       print_date (ev, M->date);
       mpop_color (ev);
       mprintf (ev, " ");
@@ -4003,7 +4008,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       }
     } else {
       mpush_color (ev, COLOR_BLUE);
-      print_msg_id (ev, M);
+      print_msg_id (ev, M->permanent_id, M);
+      mprintf (ev, " ");
       print_date (ev, M->date);
       mpop_color (ev);
       mprintf (ev, " ");
@@ -4020,7 +4026,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     assert (P);
     if (M->flags & TGLMF_UNREAD) {
       mpush_color (ev, COLOR_GREEN);
-      print_msg_id (ev, M);
+      print_msg_id (ev, M->permanent_id, M);
+      mprintf (ev, " ");
       print_date (ev, M->date);
       mprintf (ev, " ");
       mpush_color (ev, COLOR_CYAN);
@@ -4033,7 +4040,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       }
     } else {
       mpush_color (ev, COLOR_BLUE);
-      print_msg_id (ev, M);
+      print_msg_id (ev, M->permanent_id, M);
+      mprintf (ev, " ");
       print_date (ev, M->date);
       mpush_color (ev, COLOR_CYAN);
       mprintf (ev, " %s", P->print_name);
@@ -4046,7 +4054,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     }
   } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
     mpush_color (ev, COLOR_MAGENTA);
-    print_msg_id (ev, M);
+    print_msg_id (ev, M->permanent_id, M);
+    mprintf (ev, " ");
     print_date (ev, M->date);
     mpop_color (ev);
     mprintf (ev, " ");
@@ -4067,7 +4076,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     assert (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL);
     
     mpush_color (ev, COLOR_CYAN);
-    print_msg_id (ev, M);
+    print_msg_id (ev, M->permanent_id, M);
+    mprintf (ev, " ");
     print_date (ev, M->date);
     mpop_color (ev);
     mprintf (ev, " ");
@@ -4096,7 +4106,12 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     mprintf (ev, "] ");
   }
   if (M->reply_id) {
-    mprintf (ev, "[reply to %d] ", M->reply_id);
+    mprintf (ev, "[reply to ");
+    tgl_message_id_t msg_id = M->permanent_id;
+    msg_id.id = M->reply_id;
+    struct tgl_message *N = tgl_message_get (TLS, &msg_id);
+    print_msg_id (ev, msg_id, N);
+    mprintf (ev, "] ");
   }
   if (M->flags & TGLMF_MENTION) {
     mprintf (ev, "[mention] ");
