@@ -1329,6 +1329,10 @@ void do_ ## act ## _ ## tp (struct command *command, int arg_num, struct arg arg
       tgl_do_load_photo (TLS, M->media.photo, actf, ev);\
     } else if (M->media.type == tgl_message_media_document) {\
       tgl_do_load_document (TLS, M->media.document, actf, ev);\
+    } else if (M->media.type == tgl_message_media_video) {\
+      tgl_do_load_video (TLS, M->media.document, actf, ev);\
+    } else if (M->media.type == tgl_message_media_audio) {\
+      tgl_do_load_audio (TLS, M->media.document, actf, ev);\
     } else if (M->media.type == tgl_message_media_document_encr) {\
       tgl_do_load_encr_document (TLS, M->media.encr_document, actf, ev); \
     } else if (M->media.type == tgl_message_media_webpage) {\
@@ -3551,6 +3555,8 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       }
       return;
     case tgl_message_media_document:
+    case tgl_message_media_audio:
+    case tgl_message_media_video:
       mprintf (ev, "[");
       assert (M->document);
       if (M->document->flags & TGLDF_IMAGE) {
