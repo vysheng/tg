@@ -3495,6 +3495,11 @@ void logprintf (const char *format, ...) {
     printf (COLOR_GREY);
   }
   printf (" *** ");
+
+
+  double T = tglt_get_double_time ();
+  printf ("%.6lf ", T);
+
   va_list ap;
   va_start (ap, format);
   vfprintf (stdout, format, ap);
