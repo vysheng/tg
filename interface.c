@@ -1253,6 +1253,27 @@ void do_create_secret_chat (struct command *command, int arg_num, struct arg arg
 
 /* }}} */
 
+/* WORING WITH CHANNELS {{{ */
+
+void do_rename_channel (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_rename_channel (TLS, args[0].peer_id, ARG2STR (1), print_success_gw, ev);
+}
+
+void do_channel_set_photo (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_set_channel_photo (TLS, args[0].peer_id, args[1].str, print_success_gw, ev); 
+}
+
+void do_channel_set_about (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_channel_set_about (TLS, args[0].peer_id, ARG2STR (1), print_success_gw, ev);
+}
+/* }}} */
+
 /* {{{ WORKING WITH DIALOG LIST */
 
 void do_dialog_list (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -1500,6 +1521,8 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once", NULL},
   {"channel_info", {ca_channel, ca_none}, do_channel_info, "channel_info <channel>\tPrints info about channel (id, members, admin, etc.)", NULL},
   {"channel_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_channel_list, "channel_list [limit=100] [offset=0]\tList of last channels", NULL},
+  {"channel_set_about", {ca_channel, ca_string, ca_none}, do_channel_set_about, "channel_set_about <channel> <about>\tSets channel about info.", NULL},
+  {"channel_set_photo", {ca_channel, ca_file_name_end, ca_none}, do_channel_set_photo, "channel_set_photo <channel> <filename>\tSets channel photo. Photo will be cropped to square", NULL},
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100", NULL},
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat", NULL},
   {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)", NULL},
@@ -1524,6 +1547,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual", NULL},
   {"import_chat_link", {ca_string, ca_none}, do_import_chat_link, "import_chat_link <hash>\tJoins to chat by link", NULL},
   {"load_audio", {ca_msg_id, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
+  {"load_channel_photo", {ca_channel, ca_none}, do_load_user_photo, "load_channel_photo <channel>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_chat_photo", {ca_chat, ca_none}, do_load_user_photo, "load_chat_photo <chat>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_document", {ca_msg_id, ca_none}, do_load_document, "load_document <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_document_thumb", {ca_msg_id, ca_none}, do_load_document_thumb, "load_document_thumb <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
@@ -1546,6 +1570,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"post_text", {ca_peer, ca_file_name_end, ca_none}, do_post_text, "post_text <peer> <file>\tSends contents of text file as plain text message", NULL},
   {"post_video", {ca_peer, ca_file_name, ca_string_end | ca_optional, ca_none}, do_post_video, "post_video <peer> <file> [caption]\tSends video to peer", NULL},
   {"quit", {ca_none}, do_quit, "quit\tQuits immediately", NULL},
+  {"rename_channel", {ca_channel, ca_string_end, ca_none}, do_rename_channel, "rename_channel <channel> <new name>\tRenames channel", NULL},
   {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat", NULL},
   {"rename_contact", {ca_user, ca_string, ca_string, ca_none}, do_rename_contact, "rename_contact <user> <first name> <last name>\tRenames contact", NULL},
   {"reply", {ca_msg_id, ca_msg_string_end, ca_none}, do_reply, "reply <msg-id> <text>\tSends text reply to message", NULL},
@@ -1586,6 +1611,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"unblock_user", {ca_user, ca_none}, do_unblock_user, "unblock_user <user>\tUnblocks user", NULL},
   {"user_info", {ca_user, ca_none}, do_user_info, "user_info <user>\tPrints info about user (id, last online, phone)", NULL},
   {"view_audio", {ca_msg_id, ca_none}, do_open_audio, "view_audio <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
+  {"view_channel_photo", {ca_channel, ca_none}, do_view_user_photo, "view_channel_photo <channel>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_chat_photo", {ca_chat, ca_none}, do_view_user_photo, "view_chat_photo <chat>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_document", {ca_msg_id, ca_none}, do_open_document, "view_document <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_document_thumb", {ca_msg_id, ca_none}, do_open_document_thumb, "view_document_thumb <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
@@ -2438,6 +2464,7 @@ void print_channel_info_gw (struct tgl_state *TLSR, void *extra, int success, st
     mprintf (ev, "Channel ");
     print_channel_name (ev, U->id, U);
     mprintf (ev, " (id %d):\n", tgl_get_peer_id (U->id));
+    mprintf (ev, "\t\tabout\t%s\n", C->about);
     mprintf (ev, "\t\t%d participants, %d admins, %d kicked\n", C->participants_count, C->admins_count, C->kicked_count);
     mpop_color (ev);
   } else {
