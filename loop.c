@@ -637,11 +637,7 @@ void read_secret_chat (int fd, int v) {
   assert (read (fd, &state, 4) == 4);
   assert (read (fd, &key_fingerprint, 8) == 8);
   assert (read (fd, &key, 256) == 256);
-  if (v >= 2) {
-    assert (read (fd, sha, 20) == 20);
-  } else {
-    SHA1 ((void *)key, 256, sha);
-  }
+  assert (read (fd, sha, 20) == 20);
   int in_seq_no = 0, out_seq_no = 0, last_in_seq_no = 0;
   if (v >= 1) {
     assert (read (fd, &in_seq_no, 4) == 4);

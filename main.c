@@ -973,6 +973,8 @@ int main (int argc, char **argv) {
   #endif
   tgl_set_rsa_key (TLS, "tg-server.pub");
 
+  #include "tgl/mtproto-key.c"
+  tgl_set_rsa_key_direct (TLS, _mtproto_default_e, _mtproto_default_key_len, _mtproto_default_key);
 
   get_terminal_attributes ();
 

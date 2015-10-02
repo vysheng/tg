@@ -93,6 +93,8 @@
 #include "auto/auto-types.h"
 #include "auto/auto-free-ds.h"
 
+#include <errno.h>
+
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
