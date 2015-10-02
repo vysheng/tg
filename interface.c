@@ -1272,6 +1272,18 @@ void do_channel_set_about (struct command *command, int arg_num, struct arg args
   if (ev) { ev->refcnt ++; }
   tgl_do_channel_set_about (TLS, args[0].peer_id, ARG2STR (1), print_success_gw, ev);
 }
+    
+void do_create_channel (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num >= 2 && arg_num <= 1000);
+  static tgl_peer_id_t ids[1000];
+  int i;
+  for (i = 0; i < arg_num - 2; i++) {
+    ids[i] = args[i + 2].peer_id;
+  }
+
+  if (ev) { ev->refcnt ++; }
+  tgl_do_create_channel (TLS, arg_num - 2, ids, ARG2STR (0), ARG2STR (1), 1, print_success_gw, ev);  
+}
 /* }}} */
 
 /* {{{ WORKING WITH DIALOG LIST */
@@ -1531,6 +1543,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"clear", {ca_none}, do_clear, "clear\tClears all data and exits. For debug.", NULL},
   {"contact_list", {ca_none}, do_contact_list, "contact_list\tPrints contact list", NULL},
   {"contact_search", {ca_string, ca_none}, do_resolve_username, "contact_search username\tSearches user by username", NULL},
+  {"create_channel", {ca_string, ca_string, ca_user | ca_optional, ca_period, ca_none}, do_create_channel, "create_channel <name> <about> <user>+\tCreates channel with users", NULL},
   {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat, "create_group_chat <name> <user>+\tCreates group chat with users", NULL},
   {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat", NULL},
   {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list", NULL},
@@ -3258,6 +3271,8 @@ void interpreter_ex (char *line, void *ex) {
     int period = 0;
     if (*flags == ca_period) {
       flags --;
+    }
+    if (*flags != ca_none && *(flags + 1) == ca_period) {
       period = 1;
     }
     enum command_argument op = (*flags) & 255;
@@ -3390,15 +3405,15 @@ void interpreter_ex (char *line, void *ex) {
           assert (0);
         }
 
-        if (opt && !ok) {
-          line_ptr = save;
-          flags ++;
-          continue;
-        }
         if (period && !ok) {
           line_ptr = save;
           flags += 2;
           args_num --;
+          continue;
+        }
+        if (opt && !ok) {
+          line_ptr = save;
+          flags ++;
           continue;
         }
         if (!ok) {
