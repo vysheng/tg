@@ -1285,6 +1285,12 @@ void do_channel_set_about (struct command *command, int arg_num, struct arg args
   tgl_do_channel_set_about (TLS, args[0].peer_id, ARG2STR (1), print_success_gw, ev);
 }
 
+void do_channel_set_admin (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 3);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_channel_set_admin (TLS, args[0].peer_id, args[1].peer_id, args[2].num, print_success_gw, ev);
+}
+
 void do_channel_set_username (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
@@ -1575,6 +1581,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"channel_leave", {ca_channel, ca_none}, do_leave_channel, "channel_leave <channel>\tLeaves from channel", NULL},
   {"channel_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_channel_list, "channel_list [limit=100] [offset=0]\tList of last channels", NULL},
   {"channel_set_about", {ca_channel, ca_string, ca_none}, do_channel_set_about, "channel_set_about <channel> <about>\tSets channel about info.", NULL},
+  {"channel_set_admin", {ca_channel, ca_user, ca_number, ca_none}, do_channel_set_admin, "channel_set_admin <channel> <admin> <type>\tSets channel admin. 0 - not admin, 1 - moderator, 2 - editor", NULL},
   {"channel_set_username", {ca_channel, ca_string, ca_none}, do_channel_set_username, "channel_set_username <channel> <username>\tSets channel username info.", NULL},
   {"channel_set_photo", {ca_channel, ca_file_name_end, ca_none}, do_channel_set_photo, "channel_set_photo <channel> <filename>\tSets channel photo. Photo will be cropped to square", NULL},
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100", NULL},
