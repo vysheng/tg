@@ -1314,6 +1314,13 @@ void do_leave_channel (struct command *command, int arg_num, struct arg args[], 
   if (ev) { ev->refcnt ++; }
   tgl_do_leave_channel (TLS, args[0].peer_id, print_success_gw, ev);
 }
+
+void do_export_channel_link (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_export_channel_link (TLS, args[0].peer_id, print_string_gw, ev);
+}
+
 /* }}} */
 
 /* {{{ WORKING WITH DIALOG LIST */
@@ -1585,6 +1592,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"delete_msg", {ca_msg_id, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message", NULL},
   {"dialog_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_dialog_list, "dialog_list [limit=100] [offset=0]\tList of last conversations", NULL},
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method", NULL},
+  {"export_channel_link", {ca_channel, ca_none}, do_export_channel_link, "export_channel_link\tPrints channel link that can be used to join to channel", NULL},
   {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat", NULL},
   {"fwd", {ca_peer, ca_msg_id, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
   {"fwd_media", {ca_peer, ca_msg_id, ca_none}, do_fwd_media, "fwd_media <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
@@ -1594,6 +1602,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"history", {ca_peer, ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_history, "history <peer> [limit] [offset]\tPrints messages with this peer (most recent message lower). Also marks messages as read", NULL},
   {"import_card", {ca_string, ca_none}, do_import_card, "import_card <card>\tGets user by card and prints it name. You can then send messages to him as usual", NULL},
   {"import_chat_link", {ca_string, ca_none}, do_import_chat_link, "import_chat_link <hash>\tJoins to chat by link", NULL},
+  {"import_channel_link", {ca_string, ca_none}, do_import_chat_link, "import_channel_link <hash>\tJoins to channel by link", NULL},
   {"load_audio", {ca_msg_id, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_channel_photo", {ca_channel, ca_none}, do_load_user_photo, "load_channel_photo <channel>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
   {"load_chat_photo", {ca_chat, ca_none}, do_load_user_photo, "load_chat_photo <chat>\tDownloads file to downloads dirs. Prints file name after download end", NULL},
