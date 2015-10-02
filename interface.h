@@ -87,4 +87,6 @@ void set_interface_callbacks (void);
 
 char *print_permanent_msg_id (tgl_message_id_t id);
 char *print_permanent_peer_id (tgl_peer_id_t id);
+tgl_peer_id_t parse_input_peer_id (const char *s, int l, int mask);
+tgl_message_id_t parse_input_msg_id (const char *s, int l);
 #endif
