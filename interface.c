@@ -1272,6 +1272,12 @@ void do_channel_set_about (struct command *command, int arg_num, struct arg args
   if (ev) { ev->refcnt ++; }
   tgl_do_channel_set_about (TLS, args[0].peer_id, ARG2STR (1), print_success_gw, ev);
 }
+
+void do_channel_set_username (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_channel_set_username (TLS, args[0].peer_id, ARG2STR (1), print_success_gw, ev);
+}
     
 void do_create_channel (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num >= 2 && arg_num <= 1000);
@@ -1534,6 +1540,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"channel_info", {ca_channel, ca_none}, do_channel_info, "channel_info <channel>\tPrints info about channel (id, members, admin, etc.)", NULL},
   {"channel_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_channel_list, "channel_list [limit=100] [offset=0]\tList of last channels", NULL},
   {"channel_set_about", {ca_channel, ca_string, ca_none}, do_channel_set_about, "channel_set_about <channel> <about>\tSets channel about info.", NULL},
+  {"channel_set_username", {ca_channel, ca_string, ca_none}, do_channel_set_username, "channel_set_username <channel> <username>\tSets channel username info.", NULL},
   {"channel_set_photo", {ca_channel, ca_file_name_end, ca_none}, do_channel_set_photo, "channel_set_photo <channel> <filename>\tSets channel photo. Photo will be cropped to square", NULL},
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100", NULL},
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat", NULL},
@@ -2476,9 +2483,12 @@ void print_channel_info_gw (struct tgl_state *TLSR, void *extra, int success, st
     mpush_color (ev, COLOR_YELLOW);
     mprintf (ev, "Channel ");
     print_channel_name (ev, U->id, U);
-    mprintf (ev, " (id %d):\n", tgl_get_peer_id (U->id));
-    mprintf (ev, "\t\tabout\t%s\n", C->about);
-    mprintf (ev, "\t\t%d participants, %d admins, %d kicked\n", C->participants_count, C->admins_count, C->kicked_count);
+    if (C->username) {
+      mprintf (ev, " @%s", C->username);
+    }
+    mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
+    mprintf (ev, "\tabout: %s\n", C->about);
+    mprintf (ev, "\t%d participants, %d admins, %d kicked\n", C->participants_count, C->admins_count, C->kicked_count);
     mpop_color (ev);
   } else {
     #ifdef USE_JSON
