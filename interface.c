@@ -1090,6 +1090,18 @@ void do_import_chat_link (struct command *command, int arg_num, struct arg args[
   tgl_do_import_chat_link (TLS, ARG2STR (0), print_success_gw, ev);
 }
 
+void do_channel_invite (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_channel_invite_user (TLS, args[0].peer_id, args[1].peer_id, print_success_gw, ev);
+}
+
+void do_channel_kick (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_channel_kick_user (TLS, args[0].peer_id, args[1].peer_id, print_success_gw, ev);
+}
+
 /* }}} */
 
  /* {{{ WORKING WITH USERS */
@@ -1550,7 +1562,9 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"block_user", {ca_user, ca_none}, do_block_user, "block_user <user>\tBlocks user", NULL},
   {"broadcast", {ca_user, ca_period, ca_string_end, ca_none}, do_broadcast, "broadcast <user>+ <text>\tSends text to several users at once", NULL},
   {"channel_info", {ca_channel, ca_none}, do_channel_info, "channel_info <channel>\tPrints info about channel (id, members, admin, etc.)", NULL},
+  {"channel_invite", {ca_channel, ca_user, ca_none}, do_channel_invite, "channel_invite <channel> <user>\tInvites user to channel", NULL},
   {"channel_join", {ca_channel, ca_none}, do_join_channel, "channel_join <channel>\tJoins to channel", NULL},
+  {"channel_kick", {ca_channel, ca_user, ca_none}, do_channel_kick, "channel_kick <channel> <user>\tKicks user from channel", NULL},
   {"channel_leave", {ca_channel, ca_none}, do_leave_channel, "channel_leave <channel>\tLeaves from channel", NULL},
   {"channel_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_channel_list, "channel_list [limit=100] [offset=0]\tList of last channels", NULL},
   {"channel_set_about", {ca_channel, ca_string, ca_none}, do_channel_set_about, "channel_set_about <channel> <about>\tSets channel about info.", NULL},
