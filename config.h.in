@@ -42,9 +42,6 @@
 /* Define to 1 if you have the `jansson' library (-ljansson). */
 #undef HAVE_LIBJANSSON
 
-/* Define to 1 if you have the `m' library (-lm). */
-#undef HAVE_LIBM
-
 /* Define to 1 if you have `z' library (-lz) */
 #undef HAVE_LIBZ
 

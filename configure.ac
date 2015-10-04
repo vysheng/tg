@@ -17,7 +17,6 @@ CPPFLAGS="$CPPFLAGS -I/usr/local/include"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
 
 # Checks for libraries.
-AC_CHECK_LIB([m], [sqrt])
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
 AC_CHECK_LIB([event], [event_base_new], [], [AC_MSG_ERROR([no libevent found])])
