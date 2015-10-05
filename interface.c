@@ -772,6 +772,24 @@ void do_main_session (struct command *command, int arg_num, struct arg args[], s
   notify_ev = ev;
   if (ev) { ev->refcnt ++; }
 }
+
+void do_version (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (!arg_num);
+  if (ev) { mprint_start (ev); }
+  mpush_color (ev, COLOR_YELLOW);
+  mprintf (ev, "Telegram-cli version %s (uses tgl version %s)\n", TELEGRAM_CLI_VERSION, TGL_VERSION);
+  #ifdef TGL_AVOID_OPENSSL 
+    mprintf (ev, "uses libgcrypt for encryption\n");
+  #else
+    mprintf (ev, "uses libopenssl for encryption\n");
+  #endif
+  mpop_color (ev);
+  if (ev) { mprint_end (ev); }
+  if (!ev) {
+    fflush (stdout);
+  }
+
+}
 /* }}} */
 
 #define ARG2STR_DEF(n,def) args[n].str ? args[n].str : def, args[n].str ? strlen (args[n].str) : strlen (def)
@@ -1674,6 +1692,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline", NULL},
   {"unblock_user", {ca_user, ca_none}, do_unblock_user, "unblock_user <user>\tUnblocks user", NULL},
   {"user_info", {ca_user, ca_none}, do_user_info, "user_info <user>\tPrints info about user (id, last online, phone)", NULL},
+  {"version", {ca_none}, do_version, "version\tPrints client and library version", NULL},
   {"view_audio", {ca_msg_id, ca_none}, do_open_audio, "view_audio <msg-id>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_channel_photo", {ca_channel, ca_none}, do_view_user_photo, "view_channel_photo <channel>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},
   {"view_chat_photo", {ca_chat, ca_none}, do_view_user_photo, "view_chat_photo <chat>\tDownloads file to downloads dirs. Then tries to open it with system default action", NULL},

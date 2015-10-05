@@ -957,8 +957,10 @@ int main (int argc, char **argv) {
       "This is free software, and you are welcome to redistribute it\n"
       "under certain conditions; type `show_license' for details.\n"
       "Telegram-cli uses libtgl version " TGL_VERSION "\n"
+#ifndef TGL_AVOID_OPENSSL 
       "Telegram-cli includes software developed by the OpenSSL Project\n"
       "for use in the OpenSSL Toolkit. (http://www.openssl.org/)\n"
+#endif
 #ifdef USE_PYTHON
       "Telegram-cli uses libpython version " PY_VERSION "\n"
 #endif
