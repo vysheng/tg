@@ -1815,7 +1815,7 @@ enum command_argument get_complete_mode (void) {
           ok = (cur_token_double () != NOT_FOUND);
           break;
         case ca_command:
-          ok = 1;
+          ok = cur_token_len > 0;
           break;
         default:
           assert (0);
@@ -3481,6 +3481,10 @@ void interpreter_ex (char *line, void *ex) {
     }
     if (op == ca_string || op == ca_file_name || op == ca_command) {
       if (cur_token_end_str || cur_token_len < 0) {
+        if (opt) {
+          flags ++;
+          continue;
+        }
         fail_interface (TLS, ex, ENOSYS, "can not parse string arg #%d", args_num);
         break;
       } else {
