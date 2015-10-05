@@ -62,6 +62,7 @@
 #include "interface.h"
 #include <tgl/tools.h>
 #include <getopt.h>
+#include <tgl/mtproto-key.h>
 
 #ifdef USE_LUA
 #  include "lua-tg.h"
@@ -973,8 +974,7 @@ int main (int argc, char **argv) {
   #endif
   tgl_set_rsa_key (TLS, "tg-server.pub");
 
-  #include "tgl/mtproto-key.c"
-  tgl_set_rsa_key_direct (TLS, _mtproto_default_e, _mtproto_default_key_len, _mtproto_default_key);
+  tgl_set_rsa_key_direct (TLS, tglmp_get_default_e (), tglmp_get_default_key_len (), tglmp_get_default_key ());
 
   get_terminal_attributes ();
 
