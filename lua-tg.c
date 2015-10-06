@@ -667,6 +667,7 @@ enum lua_query_type {
   lq_set_profile_name,
   lq_send_video,
   lq_send_text,
+  lq_reply,
   lq_fwd,
   lq_fwd_media,
   lq_load_photo,
@@ -1183,6 +1184,10 @@ void lua_do_all (void) {
       }
       p += 2;
       break;
+    case lq_reply:
+      tgl_do_reply_message (TLS, &lua_ptr[p + 1].msg_id, LUA_STR_ARG (p + 2), 0, lua_msg_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
     case lq_fwd:
       tmp_msg_id = &lua_ptr[p + 2].msg_id;
       tgl_do_forward_messages (TLS, lua_ptr[p + 1].peer_id, 1, (void *)&tmp_msg_id, 0, lua_one_msg_cb, lua_ptr[p].ptr);
@@ -1356,6 +1361,7 @@ struct lua_function functions[] = {
   {"load_audio", lq_load_audio, { lfp_msg, lfp_none }},
   {"load_document", lq_load_document, { lfp_msg, lfp_none }},
   {"load_document_thumb", lq_load_document_thumb, { lfp_msg, lfp_none }},
+  {"reply_msg", lq_reply, { lfp_msg, lfp_string, lfp_none }},
   {"fwd_msg", lq_fwd, { lfp_peer, lfp_msg, lfp_none }},
   {"fwd_media", lq_fwd_media, { lfp_peer, lfp_msg, lfp_none }},
   {"chat_info", lq_chat_info, { lfp_chat, lfp_none }},
