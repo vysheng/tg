@@ -657,6 +657,7 @@ enum lua_query_type {
   lq_contact_list,
   lq_dialog_list,
   lq_msg,
+  lq_msg_channel,
   lq_send_typing,
   lq_send_typing_abort,
   lq_rename_chat,
@@ -1108,6 +1109,10 @@ void lua_do_all (void) {
       tgl_do_send_message (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), 0, NULL, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
+    case lq_msg_channel:
+      tgl_do_send_message (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), 256, NULL, lua_msg_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
     case lq_send_typing:
       tgl_do_send_typing (TLS, lua_ptr[p + 1].peer_id, tgl_typing_typing, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
@@ -1335,6 +1340,7 @@ struct lua_function functions[] = {
   {"get_dialog_list", lq_dialog_list, { lfp_none }},
   {"rename_chat", lq_rename_chat, { lfp_chat, lfp_string, lfp_none }},
   {"send_msg", lq_msg, { lfp_peer, lfp_string, lfp_none }},
+  {"post_msg", lq_msg_channel, { lfp_channel, lfp_string, lfp_none }},
   {"send_typing", lq_send_typing, { lfp_peer, lfp_none }},
   {"send_typing_abort", lq_send_typing_abort, { lfp_peer, lfp_none }},
   {"send_photo", lq_send_photo, { lfp_peer, lfp_string, lfp_none }},
