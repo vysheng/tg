@@ -269,6 +269,9 @@ void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   case TGL_PEER_ENCR_CHAT:
     push_encr_chat (P);
     break;
+  case TGL_PEER_CHANNEL:
+    push_channel (P);
+    break;
   default:
     assert (0);
   }
