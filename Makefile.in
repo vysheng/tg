@@ -51,5 +51,8 @@ ${EXE}/telegram-cli: ${TG_OBJECTS} ${LIB}/libtgl.a
 	${CC} $^ ${LINK_FLAGS} -o $@
 
 clean:
-	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
+	rm -rf ${DIR_LIST}
+
+distclean:
+	rm -rf ${DIR_LIST} config.h config.log config.status
 
