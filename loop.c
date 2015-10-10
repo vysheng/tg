@@ -813,7 +813,7 @@ int loop (void) {
   if (disable_link_preview) {
     tgl_disable_link_preview (TLS);
   }
-  tgl_init (TLS);
+  assert (tgl_init (TLS) >= 0);
  
   /*if (binlog_enabled) {
     double t = tglt_get_double_time ();
