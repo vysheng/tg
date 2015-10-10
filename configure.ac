@@ -109,7 +109,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
 AC_MSG_CHECKING([for python])
 AC_ARG_ENABLE(python,[--enable-python/--disable-python],
   [
-    if test "x$enableval" = "xno" ; then
+    if test "x$enableval" = "xyes" ; then
       AC_MSG_RESULT([disabled])
     else
       AC_MSG_RESULT([enabled])
@@ -127,19 +127,7 @@ AC_ARG_ENABLE(python,[--enable-python/--disable-python],
       fi
     fi
   ],[
-      AC_MSG_RESULT([enabled])
-
-      AX_PYTHON()
-      AC_SUBST([PYTHON_FOUND])
-      if test $PYTHON_FOUND = no ; then
-        AC_MSG_ERROR([No supported python lib version found. Try --disable-python])
-      else
-        AC_SUBST([PYTHON_LIBS])
-        AC_SUBST([PYTHON_CFLAGS])
-        EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
-        CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
-        AC_DEFINE(USE_PYTHON,1,[use python])
-      fi
+      AC_MSG_RESULT([disabled])
   ])
 
 
