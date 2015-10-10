@@ -20,16 +20,16 @@ void json_pack_peer_type (json_t *res, tgl_peer_id_t id) {
   int x = tgl_get_peer_type (id);
   switch (x) {
   case TGL_PEER_USER:
-    assert (json_object_set (res, "type", json_string ("user")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("user")) >= 0);
     break;
   case TGL_PEER_CHAT:
-    assert (json_object_set (res, "type", json_string ("chat")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("chat")) >= 0);
     break;
   case TGL_PEER_ENCR_CHAT:
-    assert (json_object_set (res, "type", json_string ("encr_chat")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("encr_chat")) >= 0);
     break;
   case TGL_PEER_CHANNEL:
-    assert (json_object_set (res, "type", json_string ("channel")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("channel")) >= 0);
     break;
   default:
     assert (0);
@@ -101,6 +101,7 @@ json_t *json_pack_peer (tgl_peer_id_t id) {
   assert (json_object_set (res, "id", json_string (print_permanent_peer_id (id))) >= 0);
 
   json_pack_peer_type (res, id);
+  assert (json_object_set (res, "peer_id", json_integer (tgl_get_peer_id (id))) >= 0);
 
   assert (res);
     
