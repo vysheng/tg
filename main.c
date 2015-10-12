@@ -263,7 +263,7 @@ void running_for_first_time (void) {
   // printf ("I: config file=[%s]\n", config_filename);
 
   int config_file_fd;
-  char *config_directory = get_config_directory ();
+  //char *config_directory = get_config_directory ();
   //char *downloads_directory = get_downloads_directory ();
 
   if (!mkdir (config_directory, CONFIG_DIRECTORY_MODE)) {
@@ -404,6 +404,8 @@ void parse_config (void) {
       printf ("[%s] created\n", downloads_directory);
     }
   }
+  tfree_str (config_directory);
+  config_directory = NULL;
   config_destroy (&conf);
 }
 #else

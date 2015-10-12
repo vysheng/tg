@@ -1567,21 +1567,22 @@ extern struct event *term_ev;
 void do_clear (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   logprintf ("Do_clear\n");
   free (default_username);
-  free (config_filename);
+  tfree_str (config_filename);
   //free (prefix);
-  free (auth_file_name);
-  free (state_file_name);
-  free (secret_chat_file_name);
-  free (downloads_directory);
-  free (config_directory);
-  free (binlog_file_name);
-  free (lua_file);
-  free (python_file);
+  tfree_str (auth_file_name);
+  tfree_str (state_file_name);
+  tfree_str (secret_chat_file_name);
+  tfree_str (downloads_directory);
+  //tfree_str (config_directory);
+  tfree_str (binlog_file_name);
+  tfree_str (lua_file);
+  tfree_str (python_file);
   clear_history ();
   event_free (term_ev);
   struct event_base *ev_base = TLS->ev_base;
   tgl_free_all (TLS);
   event_base_free (ev_base);
+  logprintf ("Bytes left allocated: %lld\n", tgl_get_allocated_bytes ());
   do_halt (0);
 }
 
