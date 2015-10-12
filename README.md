@@ -47,7 +47,7 @@ On Fedora:
 
 On Archlinux:
 
-     yaourt -S telegram-git
+     yaourt -S telegram-cli-git
 
 On FreeBSD:
 
@@ -70,7 +70,7 @@ Then,
 
 On Gentoo: use ebuild provided.
 
-On Arch: https://aur.archlinux.org/packages/telegram-git/ 
+On Arch: https://aur.archlinux.org/packages/telegram-cli-git/ 
 
 #### Mac OS X
 
