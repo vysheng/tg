@@ -109,7 +109,7 @@ int msg_num_mode;
 int permanent_msg_id_mode;
 int permanent_peer_id_mode;
 int disable_colors;
-int alert_sound;
+extern int alert_sound;
 extern int binlog_read;
 
 int safe_quit;
