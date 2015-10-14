@@ -128,6 +128,7 @@ int ipv6_enabled;
 char *start_command;
 int disable_link_preview;
 int enable_json;
+int alert_sound;
 int exit_code;
 
 struct tgl_state *TLS;
@@ -480,6 +481,7 @@ void usage (void) {
   printf ("  --wait-dialog-list/-W                send dialog_list query and wait for answer before reading input\n");
   printf ("  --disable-colors/-C                  disable color output\n");
   printf ("  --disable-readline/-R                disable readline\n");
+  printf ("  --alert/-A                           enable bell notifications\n");
   printf ("  --daemonize/-d                       daemon mode\n");
   printf ("  --logname/-L <log-name>              log file name\n");
   printf ("  --username/-U <user-name>            change uid after start\n");
@@ -632,6 +634,7 @@ void args_parse (int argc, char **argv) {
     {"wait-dialog-list", no_argument, 0, 'W'},
     {"disable-colors", no_argument, 0, 'C'},
     {"disable-readline", no_argument, 0, 'R'},
+    {"alert", no_argument, 0, 'A'},
     {"daemonize", no_argument, 0, 'd'},
     {"logname", required_argument, 0, 'L'},
     {"username", required_argument, 0, 'U'},
@@ -655,7 +658,7 @@ void args_parse (int argc, char **argv) {
 
 
   int opt = 0;
-  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRdL:DU:G:qP:S:e:I6b"
+  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAdL:DU:G:qP:S:e:I6b"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -740,6 +743,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'R':
       readline_disabled ++;
+      break;
+    case 'A':
+      alert_sound = 1;
       break;
     case 'd':
       daemonize ++;
