@@ -111,6 +111,7 @@ int permanent_peer_id_mode;
 int disable_colors;
 extern int alert_sound;
 extern int binlog_read;
+extern char *home_directory;
 
 int safe_quit;
 
@@ -1589,6 +1590,9 @@ void do_clear (struct command *command, int arg_num, struct arg args[], struct i
   tfree_str (binlog_file_name);
   tfree_str (lua_file);
   tfree_str (python_file);
+  if (home_directory) {
+    tfree_str (home_directory);
+  }
   clear_history ();
   event_free (term_ev);
   struct event_base *ev_base = TLS->ev_base;

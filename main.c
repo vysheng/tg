@@ -121,6 +121,7 @@ int alert_sound;
 int exit_code;
 int permanent_msg_id_mode;
 int permanent_peer_id_mode;
+char *home_directory;
 
 struct tgl_state *TLS;
 
@@ -167,11 +168,11 @@ int str_empty (char *str) {
 }
 
 char *get_home_directory (void) {
-  static char *home_directory = NULL;
+  if (home_directory) { return home_directory; }
   home_directory = getenv("TELEGRAM_HOME");
-  if (!str_empty (home_directory)) { return tstrdup (home_directory); }
+  if (!str_empty (home_directory)) { return home_directory = tstrdup (home_directory); }
   home_directory = getenv("HOME");
-  if (!str_empty (home_directory)) { return tstrdup (home_directory); }
+  if (!str_empty (home_directory)) { return home_directory = tstrdup (home_directory); }
   struct passwd *current_passwd;
   uid_t user_id;
   setpwent ();
@@ -372,9 +373,13 @@ void parse_config (void) {
   if (!python_file) {
     parse_config_val (&conf, &python_file, "python_script", 0, config_directory);
   }
-  
+ 
+  #if 0
   strcpy (buf + l, "binlog_enabled");
   config_lookup_bool (&conf, buf, &binlog_enabled);
+  #else
+  binlog_enabled = 0;
+  #endif
   
   int pfs_enabled = 0;
   strcpy (buf + l, "pfs_enabled");
@@ -415,7 +420,7 @@ void parse_config (void) {
     printf ("libconfig not enabled\n");
   }
   tasprintf (&downloads_directory, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, DOWNLOADS_DIRECTORY);
-  
+
   if (binlog_enabled) {
     tasprintf (&binlog_file_name, "%s/%s/%s", get_home_directory (), CONFIG_DIRECTORY, BINLOG_FILE);
     tgl_set_binlog_mode (TLS, 1);
@@ -451,7 +456,9 @@ void usage (void) {
   printf ("  --config/-c                          config file name\n");
   printf ("  --profile/-p                         use specified profile\n");
   #else
+  #if 0
   printf ("  --enable-binlog/-B                   enable binlog\n");
+  #endif
   #endif
   printf ("  --log-level/-l                       log level\n");
   printf ("  --sync-from-start/-f                 during authorization fetch all messages since registration\n");
@@ -605,7 +612,9 @@ void args_parse (int argc, char **argv) {
     {"config", required_argument, 0, 'c'},
     {"profile", required_argument, 0, 'p'},
 #else
+    #if 0
     {"enable-binlog", no_argument, 0, 'B'},
+    #endif
 #endif
     {"log-level", required_argument, 0, 'l'},
     {"sync-from-start", no_argument, 0, 'f'},
@@ -647,7 +656,9 @@ void args_parse (int argc, char **argv) {
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
+  #if 0
   "B"
+  #endif
 #endif
 #ifdef USE_LUA
   "s:"
@@ -694,9 +705,11 @@ void args_parse (int argc, char **argv) {
       assert (strlen (prefix) <= 100);
       break;
 #else
+    #if 0
     case 'B':
       binlog_enabled = 1;
       break;
+    #endif
 #endif
     case 'l':
       log_level = atoi (optarg);
