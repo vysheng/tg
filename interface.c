@@ -2564,6 +2564,9 @@ void print_channel_info_gw (struct tgl_state *TLSR, void *extra, int success, st
     tgl_peer_t *U = (void *)C;
     mpush_color (ev, COLOR_YELLOW);
     mprintf (ev, "Channel ");
+    if (U->flags & TGLCHF_OFFICIAL) {
+      mprintf (ev, "(official) ");
+    }
     print_channel_name (ev, U->id, U);
     if (C->username) {
       mprintf (ev, " @%s", C->username);
@@ -3234,6 +3237,7 @@ void user_status_upd (struct tgl_state *TLS, struct tgl_user *U) {
 }
 
 void on_login (struct tgl_state *TLS);
+void on_failed_login (struct tgl_state *TLS);
 void on_started (struct tgl_state *TLS);
 void do_get_values (struct tgl_state *TLS, enum tgl_value_type type, const char *prompt, int num_values,
           void (*callback)(struct tgl_state *TLS, const char *string[], void *arg), void *arg);
@@ -3257,7 +3261,8 @@ struct tgl_update_callback upd_cb = {
   .secret_chat_update = secret_chat_update_gw,
   .msg_receive = print_message_gw,
   .our_id = our_id_gw,
-  .user_status_update = user_status_upd
+  .user_status_update = user_status_upd,
+  .on_failed_login = on_failed_login
 };
 
 
@@ -3520,6 +3525,7 @@ void interpreter_ex (char *line, void *ex) {
     if (op == ca_string || op == ca_file_name || op == ca_command) {
       if (cur_token_end_str || cur_token_len < 0) {
         if (opt) {
+          args[args_num ++].str = NULL;
           flags ++;
           continue;
         }

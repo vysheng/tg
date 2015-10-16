@@ -755,6 +755,13 @@ void on_login (struct tgl_state *TLS) {
   write_auth_file ();
 }
 
+void on_failed_login (struct tgl_state *TLS) {
+  logprintf ("login failed\n");
+  logprintf ("login error #%d: %s\n", TLS->error_code, TLS->error);
+  logprintf ("you can relogin by deleting auth file or running telegram-cli with '-q' flag\n");
+  exit (2);
+}
+
 void on_started (struct tgl_state *TLS);
 void clist_cb (struct tgl_state *TLSR, void *callback_extra, int success, int size, tgl_peer_id_t peers[], tgl_message_id_t *last_msg_id[], int unread_count[]) {
   on_started (TLS);
