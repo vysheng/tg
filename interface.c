@@ -846,6 +846,7 @@ void do_msg (struct command *command, int arg_num, struct arg args[], struct in_
   if (ev) { ev->refcnt ++; }
   vlogprintf (E_DEBUG, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
   tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | do_html, NULL, print_msg_success_gw, ev);
+  tgl_do_mark_read (TLS, args[0].peer_id, 0, 0);
 }
 
 void do_post (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -879,6 +880,15 @@ void do_reply (struct command *command, int arg_num, struct arg args[], struct i
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   tgl_do_reply_message (TLS, &args[0].msg_id, ARG2STR(1), disable_msg_preview | do_html, print_msg_success_gw, ev);
+
+  /* attempt to mark the conversation as read */
+  struct tgl_message *M = tgl_message_get (TLS, &args[0].msg_id);
+  if (M) {
+    /* if it's a chat get its id, else get the user id that is != from our */
+    tgl_peer_id_t id = (M->to_id.peer_type == TGL_PEER_CHAT ||
+                        M->to_id.peer_id != TLS->our_id.peer_id)? M->to_id : M->from_id;
+    tgl_do_mark_read (TLS, id, 0, 0);
+  }
 }
 
 void do_send_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -977,6 +987,7 @@ void do_fwd (struct command *command, int arg_num, struct arg args[], struct in_
   assert (arg_num <= 1000);
   //if (arg_num == 2) {
   //  tgl_do_forward_message (TLS, args[0].P->id, &args[1].msg_id, 0, print_msg_success_gw, ev);
+  //  tgl_do_mark_read (TLS, args[0].P->id, 0, 0);
   //} else {
     static tgl_message_id_t *list[1000];
     int i;
@@ -984,6 +995,7 @@ void do_fwd (struct command *command, int arg_num, struct arg args[], struct in_
       list[i] = &args[i + 1].msg_id;
     }
     tgl_do_forward_messages (TLS, args[0].peer_id, arg_num - 1, (void *)list, 0, print_msg_list_success_gw, ev);
+    tgl_do_mark_read (TLS, args[0].peer_id, 0, 0);
   //}
 }
 
