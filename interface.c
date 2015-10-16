@@ -2881,6 +2881,7 @@ void interpreter_chat_mode (char *line) {
   }
   if (strlen (line) > 0) {
     tgl_do_send_message (TLS, chat_mode_id, line, strlen (line), 0, NULL, 0, 0);
+    tgl_do_mark_read (TLS, chat_mode_id, 0, 0);
   }
 }
 
