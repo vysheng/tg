@@ -4094,9 +4094,9 @@ if test "${enable_openssl+set}" = set; then :
 
 $as_echo "#define TGL_AVOID_OPENSSL 1" >>confdefs.h
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_md_open in -lgcrypt" >&5
-$as_echo_n "checking for gcry_md_open in -lgcrypt... " >&6; }
-if ${ac_cv_lib_gcrypt_gcry_md_open+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_mpi_snatch in -lgcrypt" >&5
+$as_echo_n "checking for gcry_mpi_snatch in -lgcrypt... " >&6; }
+if ${ac_cv_lib_gcrypt_gcry_mpi_snatch+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -4110,33 +4110,35 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char gcry_md_open ();
+char gcry_mpi_snatch ();
 int
 main ()
 {
-return gcry_md_open ();
+return gcry_mpi_snatch ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_gcrypt_gcry_md_open=yes
+  ac_cv_lib_gcrypt_gcry_mpi_snatch=yes
 else
-  ac_cv_lib_gcrypt_gcry_md_open=no
+  ac_cv_lib_gcrypt_gcry_mpi_snatch=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gcrypt_gcry_md_open" >&5
-$as_echo "$ac_cv_lib_gcrypt_gcry_md_open" >&6; }
-if test "x$ac_cv_lib_gcrypt_gcry_md_open" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gcrypt_gcry_mpi_snatch" >&5
+$as_echo "$ac_cv_lib_gcrypt_gcry_mpi_snatch" >&6; }
+if test "x$ac_cv_lib_gcrypt_gcry_mpi_snatch" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBGCRYPT 1
 _ACEOF
 
   LIBS="-lgcrypt $LIBS"
 
+else
+  as_fn_error $? "\"Need libgcrypt >= 1.60\"" "$LINENO" 5
 fi
 
   else

@@ -37,8 +37,8 @@ AC_ARG_ENABLE(openssl,[  --disable-openssl	  disables OpenSSL, and don't link ag
 			  (this can't read *.pub files, though.)],
   [ 
   if test "x$enableval" = "xno" ; then    
-	AC_DEFINE([TGL_AVOID_OPENSSL],[1],[avoid OpenSSL entirely, use libgcrypt instead (this can't read *.pub files, though.)])
-    AC_CHECK_LIB([gcrypt], [gcry_md_open])
+  	AC_DEFINE([TGL_AVOID_OPENSSL],[1],[avoid OpenSSL entirely, use libgcrypt instead (this can't read *.pub files, though.)])
+    AC_CHECK_LIB([gcrypt], [gcry_mpi_snatch], [], [AC_MSG_ERROR(["Need libgcrypt >= 1.60"])])
   else
     # Don't be annoying, so don't inform the user about --disable-openssl
     AX_CHECK_OPENSSL(,[AC_MSG_ERROR([No openssl found.])])
