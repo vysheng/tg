@@ -687,13 +687,13 @@ struct command commands[];
 
 /* {{{ client methods */
 void do_help (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
-  assert (arg_num <= 1);
+  assert (arg_num == 1);
   if (ev) { mprint_start (ev); }
   int total = 0;
   mpush_color (ev, COLOR_YELLOW);
   struct command *cmd = commands;
   while (cmd->name) {
-    if (!arg_num || !strcmp (args[0].str, cmd->name)) {
+    if (!args[0].str || !strcmp (args[0].str, cmd->name)) {
       mprintf (ev, "%s\n", cmd->desc);
       total ++;
     }
