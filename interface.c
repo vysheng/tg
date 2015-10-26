@@ -112,6 +112,7 @@ int disable_colors;
 extern int alert_sound;
 extern int binlog_read;
 extern char *home_directory;
+int do_html;
 
 int safe_quit;
 
@@ -601,6 +602,7 @@ char *modifiers[] = {
   "[offline]",
   "[enable_preview]",
   "[disable_preview]",
+  "[html]",
   "[reply=",
   0
 };
@@ -811,14 +813,14 @@ void do_msg (struct command *command, int arg_num, struct arg args[], struct in_
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   vlogprintf (E_DEBUG, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
-  tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, NULL, print_msg_success_gw, ev);
+  tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | do_html, NULL, print_msg_success_gw, ev);
 }
 
 void do_post (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   vlogprintf (E_DEBUG, "reply_id=%d, disable=%d\n", reply_id, disable_msg_preview);
-  tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | TGLMF_POST_AS_CHANNEL, NULL, print_msg_success_gw, ev);
+  tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(1), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | TGLMF_POST_AS_CHANNEL | do_html, NULL, print_msg_success_gw, ev);
 }
 
 void do_msg_kbd (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
@@ -836,7 +838,7 @@ void do_msg_kbd (struct command *command, int arg_num, struct arg args[], struct
   struct tl_ds_reply_markup *DS_RM = fetch_ds_type_reply_markup (TYPE_TO_PARAM (reply_markup));
   assert (DS_RM);
 
-  tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(2), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, DS_RM, print_msg_success_gw, ev);
+  tgl_do_send_message (TLS, args[0].peer_id, ARG2STR(2), TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | do_html, DS_RM, print_msg_success_gw, ev);
 
   free_ds_type_reply_markup (DS_RM, TYPE_TO_PARAM (reply_markup));
 }
@@ -844,24 +846,24 @@ void do_msg_kbd (struct command *command, int arg_num, struct arg args[], struct
 void do_reply (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_message (TLS, &args[0].msg_id, ARG2STR(1), disable_msg_preview, print_msg_success_gw, ev);
+  tgl_do_reply_message (TLS, &args[0].msg_id, ARG2STR(1), disable_msg_preview | do_html, print_msg_success_gw, ev);
 }
 
 void do_send_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_text (TLS, args[0].peer_id, args[1].str, TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview, print_msg_success_gw, ev);
+  tgl_do_send_text (TLS, args[0].peer_id, args[1].str, TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | do_html, print_msg_success_gw, ev);
 }
  
 void do_post_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_text (TLS, args[0].peer_id, args[1].str, TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | TGLMF_POST_AS_CHANNEL, print_msg_success_gw, ev);
+  tgl_do_send_text (TLS, args[0].peer_id, args[1].str, TGL_SEND_MSG_FLAG_REPLY(reply_id) | disable_msg_preview | TGLMF_POST_AS_CHANNEL | do_html, print_msg_success_gw, ev);
 }
 void do_reply_text (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
-  tgl_do_reply_text (TLS, &args[0].msg_id, args[1].str, disable_msg_preview, print_msg_success_gw, ev);
+  tgl_do_reply_text (TLS, &args[0].msg_id, args[1].str, disable_msg_preview | do_html, print_msg_success_gw, ev);
 }
 
 static void _do_send_file (struct command *command, int arg_num, struct arg args[], struct in_ev *ev, unsigned long long flags) {
@@ -997,7 +999,7 @@ void do_broadcast (struct command *command, int arg_num, struct arg args[], stru
     ids[i] = args[i].peer_id;
   }  
   if (ev) { ev->refcnt ++; }
-  tgl_do_send_broadcast (TLS, arg_num - 1, ids, args[arg_num - 1].str, strlen (args[arg_num - 1].str), disable_msg_preview, print_msg_list_success_gw, ev);
+  tgl_do_send_broadcast (TLS, arg_num - 1, ids, args[arg_num - 1].str, strlen (args[arg_num - 1].str), disable_msg_preview | do_html, print_msg_list_success_gw, ev);
 }
 
 /* }}} */
@@ -2142,6 +2144,9 @@ void work_modifier (const char *s, int l) {
   if (sscanf (s, "[reply=%d]", &reply_id) >= 1) {
   }
   
+  if (is_same_word (s, l, "[html]")) {
+    do_html = TGLMF_HTML;
+  }
   if (is_same_word (s, l, "[disable_preview]")) {
     disable_msg_preview = TGL_SEND_MSG_FLAG_DISABLE_PREVIEW;
   }
@@ -3276,6 +3281,7 @@ void interpreter_ex (char *line, void *ex) {
     return;
   }
 
+  do_html = 0;
   line_ptr = line;
   offline_mode = 0;
   reply_id = 0;
