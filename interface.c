@@ -2289,7 +2289,7 @@ void print_fail (struct in_ev *ev) {
     json_t *res = json_object ();
     assert (json_object_set_new (res, "result", json_string ("FAIL")) >= 0);
     assert (json_object_set_new (res, "error_code", json_integer (TLS->error_code)) >= 0);
-    assert (json_object_set_new (res, "error", json_string (TLS->error)) >= 0);
+    assert (json_object_set_new (res, "error", json_string (TLS->error ? TLS->error : "")) >= 0);
     char *s = json_dumps (res, 0);
     mprintf (ev, "%s\n", s);
     json_decref (res);
