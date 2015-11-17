@@ -1335,6 +1335,12 @@ void do_delete_msg (struct command *command, int arg_num, struct arg args[], str
   tgl_do_delete_msg (TLS, args[0].num, print_success_gw, ev);
 }
 
+void do_delete_history (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_delete_history (TLS, args[0].P->id, args[1].num != NOT_FOUND ? args[1].num : 0, print_success_gw, ev);
+}
+
 void do_get_message (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   if (ev) { ev->refcnt ++; }
@@ -1405,6 +1411,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat", NULL},
   {"del_contact", {ca_user, ca_none}, do_del_contact, "del_contact <user>\tDeletes contact from contact list", NULL},
   {"delete_msg", {ca_number, ca_none}, do_delete_msg, "delete_msg <msg-id>\tDeletes message", NULL},
+  {"delete_history", {ca_peer, ca_number | ca_optional, ca_none}, do_delete_history, "delete_history <peer> [offset=0]\tDeletes all history with peer", NULL},
   {"dialog_list", {ca_number | ca_optional, ca_number | ca_optional, ca_none}, do_dialog_list, "dialog_list [limit=100] [offset=0]\tList of last conversations", NULL},
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method", NULL},
   {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat", NULL},
