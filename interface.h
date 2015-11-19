@@ -68,6 +68,7 @@ struct tgl_message;
 struct in_ev;
 void print_message (struct in_ev *ev, struct tgl_message *M);
 void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
+void print_channel_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
 void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U);
 void print_encr_chat_name_full (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
 void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C);
@@ -83,4 +84,9 @@ void print_date (struct in_ev *ev, long t);
 void play_sound (void);
 void update_prompt (void);
 void set_interface_callbacks (void);
+
+char *print_permanent_msg_id (tgl_message_id_t id);
+char *print_permanent_peer_id (tgl_peer_id_t id);
+tgl_peer_id_t parse_input_peer_id (const char *s, int l, int mask);
+tgl_message_id_t parse_input_msg_id (const char *s, int l);
 #endif

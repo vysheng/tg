@@ -17,7 +17,6 @@ CPPFLAGS="$CPPFLAGS -I/usr/local/include"
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
 
 # Checks for libraries.
-AC_CHECK_LIB([m], [sqrt])
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
 AC_CHECK_LIB([event], [event_base_new], [], [AC_MSG_ERROR([no libevent found])])
@@ -34,7 +33,19 @@ EXTRA_LIBS=""
 #     OPENSSL_LIBS to the -l directives required
 #     OPENSSL_LDFLAGS to the -L or -R flags required
 
-AX_CHECK_OPENSSL(,[AC_MSG_ERROR([No openssl found])])
+AC_ARG_ENABLE(openssl,[  --disable-openssl	  disables OpenSSL, and don't link against it
+			  (this can't read *.pub files, though.)],
+  [ 
+  if test "x$enableval" = "xno" ; then    
+  	AC_DEFINE([TGL_AVOID_OPENSSL],[1],[avoid OpenSSL entirely, use libgcrypt instead (this can't read *.pub files, though.)])
+    AC_CHECK_LIB([gcrypt], [gcry_mpi_snatch], [], [AC_MSG_ERROR(["Need libgcrypt >= 1.60"])])
+  else
+    # Don't be annoying, so don't inform the user about --disable-openssl
+    AX_CHECK_OPENSSL(,[AC_MSG_ERROR([No openssl found.])])
+  fi 
+  ],[
+  AX_CHECK_OPENSSL(,[AC_MSG_ERROR([No openssl found. With --disable-openssl, libtgl will use libgcrypt instead.])])
+  ])
 AX_CHECK_ZLIB(, [AC_MSG_ERROR([No zlib found])])
 
 AC_CHECK_LIB([readline], [rl_save_prompt], [ EXTRA_LIBS="${EXTRA_LIBS} -lreadline" ; ], [AC_MSG_ERROR([no libreadline found])])
@@ -98,7 +109,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
 AC_MSG_CHECKING([for python])
 AC_ARG_ENABLE(python,[--enable-python/--disable-python],
   [
-    if test "x$enableval" = "xno" ; then
+    if test "x$enableval" = "xyes" ; then
       AC_MSG_RESULT([disabled])
     else
       AC_MSG_RESULT([enabled])
@@ -116,19 +127,7 @@ AC_ARG_ENABLE(python,[--enable-python/--disable-python],
       fi
     fi
   ],[
-      AC_MSG_RESULT([enabled])
-
-      AX_PYTHON()
-      AC_SUBST([PYTHON_FOUND])
-      if test $PYTHON_FOUND = no ; then
-        AC_MSG_ERROR([No supported python lib version found. Try --disable-python])
-      else
-        AC_SUBST([PYTHON_LIBS])
-        AC_SUBST([PYTHON_CFLAGS])
-        EXTRA_LIBS="${EXTRA_LIBS} -l${PYTHON_LIB}"
-        CPPFLAGS="${CPPFLAGS} -I${PYTHON_INCLUDE_DIR}"
-        AC_DEFINE(USE_PYTHON,1,[use python])
-      fi
+      AC_MSG_RESULT([disabled])
   ])
 
 
