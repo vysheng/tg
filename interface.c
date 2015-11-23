@@ -932,6 +932,12 @@ void do_set_username (struct command *command, int arg_num, struct arg args[], s
   tgl_do_set_username (TLS, ARG2STR (0), print_user_gw, ev);
 }
 
+void do_set_phone_number (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_set_phone_number (TLS, ARG2STR (0), print_success_gw, ev);
+}
+
 void do_status_online (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   if (ev) { ev->refcnt ++; }
@@ -1463,6 +1469,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo, "set_profile_photo <filename>\tSets profile photo. Photo will be cropped to square", NULL},
   {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl", NULL},
   {"set_username", {ca_string, ca_none}, do_set_username, "set_username <name>\tSets username.", NULL},
+  {"set_phone_number", {ca_string, ca_none}, do_set_phone_number, "set_phone_number <phone>\tChanges the phone number of this account", NULL},
   {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license", NULL},
   {"start_bot", {ca_user, ca_chat, ca_string, ca_none}, do_start_bot, "start_bot <bot> <chat> <data>\tAdds bot to chat", NULL},
   {"stats", {ca_none}, do_stats, "stats\tFor debug purpose", NULL},
