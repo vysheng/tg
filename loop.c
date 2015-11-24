@@ -660,7 +660,8 @@ void read_secret_chat (int fd, int v) {
     &last_in_seq_no,
     &out_seq_no,
     &key_fingerprint,
-    TGLECF_CREATE | TGLECF_CREATED
+    TGLECF_CREATE | TGLECF_CREATED,
+    NULL, 0
   );
     
 }
