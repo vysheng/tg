@@ -341,9 +341,9 @@ json_t *json_pack_service (struct tgl_message *M) {
   case tgl_message_action_chat_delete_photo:
     assert (json_object_set (res, "type", json_string ("chat_delete_photo")) >= 0);
     break;
-  case tgl_message_action_chat_add_user:
+  case tgl_message_action_chat_add_users:
     assert (json_object_set (res, "type", json_string ("chat_add_user")) >= 0);
-    assert (json_object_set (res, "user", json_pack_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user))) >= 0);
+    assert (json_object_set (res, "user", json_pack_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.users[0]))) >= 0);
     break;
   case tgl_message_action_chat_add_user_by_link:
     assert (json_object_set (res, "type", json_string ("chat_add_user_link")) >= 0);
@@ -401,6 +401,12 @@ json_t *json_pack_service (struct tgl_message *M) {
   case tgl_message_action_channel_create:
     assert (json_object_set (res, "type", json_string ("channel_created")) >= 0);
     assert (json_object_set (res, "title", json_string (M->action.title)) >= 0);
+    break;
+  case tgl_message_action_migrated_to:
+    assert (json_object_set (res, "type", json_string ("migrated_to")) >= 0);
+    break;
+  case tgl_message_action_migrated_from:
+    assert (json_object_set (res, "type", json_string ("migrated_from")) >= 0);
     break;
   default:
     assert (json_object_set (res, "type", json_string ("???")) >= 0);

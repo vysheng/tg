@@ -712,6 +712,12 @@ void do_help (struct command *command, int arg_num, struct arg args[], struct in
   }
 }
 
+void do_get_terms_of_service (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (!arg_num);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_get_terms_of_service (TLS, print_string_gw, ev);
+}
+
 void do_stats (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (!arg_num);
   static char stat_buf[1 << 15];
@@ -1140,6 +1146,13 @@ void do_channel_get_admins (struct command *command, int arg_num, struct arg arg
   if (ev) { ev->refcnt ++; }
   tgl_do_channel_get_members (TLS, args[0].peer_id, args[1].num == NOT_FOUND ? 100 : args[1].num, args[2].num == NOT_FOUND ? 0 : args[2].num, 1, print_user_list_gw, ev);
 }
+
+void do_chat_upgrade (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  if (ev) { ev->refcnt ++; }
+  tgl_do_upgrade_group (TLS, args[0].peer_id, print_success_gw, ev);
+}
+
 
 /* }}} */
 
@@ -1633,6 +1646,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat", NULL},
   {"chat_info", {ca_chat, ca_none}, do_chat_info, "chat_info <chat>\tPrints info about chat (id, members, admin, etc.)", NULL},
   {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo, "chat_set_photo <chat> <filename>\tSets chat photo. Photo will be cropped to square", NULL},
+  {"chat_upgrade", {ca_chat, ca_none}, do_chat_upgrade, "chat_upgrade <chat>\tUpgrades chat to megagroup", NULL},
   {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer, "chat_with_peer <peer>\tInterface option. All input will be treated as messages to this peer. Type /quit to end this mode", NULL},
   {"clear", {ca_none}, do_clear, "clear\tClears all data and exits. For debug.", NULL},
   {"contact_list", {ca_none}, do_contact_list, "contact_list\tPrints contact list", NULL},
@@ -1648,6 +1662,7 @@ struct command commands[MAX_COMMANDS_SIZE] = {
   {"export_chat_link", {ca_chat, ca_none}, do_export_chat_link, "export_chat_link\tPrints chat link that can be used to join to chat", NULL},
   {"fwd", {ca_peer, ca_msg_id, ca_period, ca_none}, do_fwd, "fwd <peer> <msg-id>+\tForwards message to peer. Forward to secret chats is forbidden", NULL},
   {"fwd_media", {ca_peer, ca_msg_id, ca_none}, do_fwd_media, "fwd_media <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd", NULL},
+  {"get_terms_of_service", {ca_none}, do_get_terms_of_service, "get_terms_of_service\tPrints telegram's terms of service", NULL},
   {"get_message", {ca_msg_id, ca_none}, do_get_message, "get_message <msg-id>\tGet message by id", NULL},
   {"get_self", {ca_none}, do_get_self, "get_self \tGet our user info", NULL},
   {"help", {ca_command | ca_optional, ca_none}, do_help, "help [command]\tPrints this help", NULL},
@@ -2577,7 +2592,16 @@ void print_channel_info_gw (struct tgl_state *TLSR, void *extra, int success, st
     mpush_color (ev, COLOR_YELLOW);
     mprintf (ev, "Channel ");
     if (U->flags & TGLCHF_OFFICIAL) {
-      mprintf (ev, "(official) ");
+      mprintf (ev, "[verified] ");
+    }
+    if (U->flags & TGLCHF_BROADCAST) {
+      mprintf (ev, "[broadcast] ");
+    }
+    if (U->flags & TGLCHF_MEGAGROUP) {
+      mprintf (ev, "[megagroup] ");
+    }
+    if (U->flags & TGLCHF_DEACTIVATED) {
+      mprintf (ev, "[deactivated] ");
     }
     print_channel_name (ev, U->id, U);
     if (C->username) {
@@ -4071,9 +4095,14 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   case tgl_message_action_chat_delete_photo:
     mprintf (ev, " deleted photo\n");
     break;
-  case tgl_message_action_chat_add_user:
-    mprintf (ev, " added user ");
-    print_user_name (ev, tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+  case tgl_message_action_chat_add_users:
+    mprintf (ev, " added users:");
+    {
+      int i;
+      for (i = 0; i < M->action.user_num; i++) {
+        print_user_name (ev, tgl_set_peer_id (TGL_PEER_USER, M->action.users[i]), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.users[i])));
+      }
+    }
     mprintf (ev, "\n");
     break;
   case tgl_message_action_chat_add_user_by_link:
@@ -4128,6 +4157,12 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     break;
   case tgl_message_action_channel_create:
     mprintf (ev, " created channel %s\n", M->action.title);
+    break;
+  case tgl_message_action_migrated_to:
+    mprintf (ev, " migrated to channel\n");
+    break;
+  case tgl_message_action_migrated_from:
+    mprintf (ev, " migrated from group '%s'\n", M->action.title);
     break;
   }
   mpop_color (ev);

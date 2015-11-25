@@ -364,12 +364,12 @@ void push_service (struct tgl_message *M) {
     lua_newtable (luaState);
     lua_add_string_field ("type", "chat_delete_photo");
     break;
-  case tgl_message_action_chat_add_user:
+  case tgl_message_action_chat_add_users:
     lua_newtable (luaState);
     lua_add_string_field ("type", "chat_add_user");
     
     lua_pushstring (luaState, "user");
-    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.users[0]), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.users[0])));
     lua_settable (luaState, -3);
     break;
   case tgl_message_action_chat_add_user_by_link:
@@ -449,6 +449,14 @@ void push_service (struct tgl_message *M) {
     lua_newtable (luaState);
     lua_add_string_field ("type", "channel_created");
     lua_add_string_field ("title", M->action.title);
+    break;
+  case tgl_message_action_migrated_to:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "migrated_to");
+    break;
+  case tgl_message_action_migrated_from:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "migrated_from");
     break;
   default:
     lua_pushstring (luaState, "???");
