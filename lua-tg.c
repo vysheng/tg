@@ -683,6 +683,7 @@ enum lua_query_type {
   lq_load_video_thumb,
   lq_load_video,
   lq_chat_info,
+  lq_channel_info,
   lq_user_info,
   lq_history,
   lq_chat_add_user,
@@ -1034,6 +1035,38 @@ void lua_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, st
   free (cb);
 }
 
+void lua_channel_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_channel *C) {
+  assert (TLSR == TLS);
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success) {
+    push_peer (C->id, (void *)C);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
 void lua_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_user *C) {
   assert (TLSR == TLS);
   struct lua_query_extra *cb = cb_extra;
@@ -1211,6 +1244,10 @@ void lua_do_all (void) {
       tgl_do_get_chat_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_chat_cb, lua_ptr[p].ptr);
       p += 2;
       break;
+    case lq_channel_info:
+      tgl_do_get_channel_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_channel_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
     case lq_user_info:
       tgl_do_get_user_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_user_cb, lua_ptr[p].ptr);
       p += 2;
@@ -1379,6 +1416,7 @@ struct lua_function functions[] = {
   {"fwd_msg", lq_fwd, { lfp_peer, lfp_msg, lfp_none }},
   {"fwd_media", lq_fwd_media, { lfp_peer, lfp_msg, lfp_none }},
   {"chat_info", lq_chat_info, { lfp_chat, lfp_none }},
+  {"channel_info", lq_channel_info, { lfp_channel, lfp_none }},
   {"user_info", lq_user_info, { lfp_user, lfp_none }},
   {"get_history", lq_history, { lfp_peer, lfp_nonnegative_number, lfp_none }},
   {"chat_add_user", lq_chat_add_user, { lfp_chat, lfp_user, lfp_none }},
