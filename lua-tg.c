@@ -1258,11 +1258,11 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_chat_add_user:
-      tgl_do_add_user_to_chat (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 1].peer_id, 10, lua_empty_cb, lua_ptr[p].ptr);
+      tgl_do_add_user_to_chat (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 10, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_chat_del_user:
-      tgl_do_del_user_from_chat (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      tgl_do_del_user_from_chat (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_add_contact:
