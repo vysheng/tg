@@ -711,7 +711,8 @@ enum lua_query_type {
   lq_send_location,
   lq_extf,
   lq_import_chat_link,
-  lq_export_chat_link
+  lq_export_chat_link,
+  lq_channel_invite_user
 };
 
 struct lua_query_extra {
@@ -1340,6 +1341,10 @@ void lua_do_all (void) {
       tgl_do_send_location (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].dnum, lua_ptr[p + 3].dnum, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 4;
       break;
+    case lq_channel_invite_user:
+      tgl_do_channel_invite_user (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1441,6 +1446,7 @@ struct lua_function functions[] = {
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   {"import_chat_link", lq_import_chat_link, { lfp_string, lfp_none }},
   {"export_chat_link", lq_export_chat_link, { lfp_chat, lfp_none }},
+  {"channel_invite_user", lq_channel_invite_user, { lfp_channel, lfp_user, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
