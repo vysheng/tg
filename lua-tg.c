@@ -226,11 +226,11 @@ void push_update_types (unsigned flags) {
 void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   lua_newtable (luaState);
   
-  lua_add_string_field ("id", print_permanent_peer_id (P->id));
+  lua_add_string_field ("id", print_permanent_peer_id (P ? P->id : id));
   lua_pushstring (luaState, "peer_type");
-  push_tgl_peer_type (tgl_get_peer_type (P->id));
+  push_tgl_peer_type (tgl_get_peer_type (id));
   lua_settable (luaState, -3);
-  lua_add_num_field ("peer_id", tgl_get_peer_id (P->id));
+  lua_add_num_field ("peer_id", tgl_get_peer_id (id));
 
   if (!P || !(P->flags & TGLPF_CREATED)) {
     lua_pushstring (luaState, "print_name"); 

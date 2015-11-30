@@ -95,6 +95,19 @@
 
 #include <errno.h>
 
+#include "tgl/tree.h"
+
+struct username_peer_pair {
+  const char *username;
+  tgl_peer_t *peer;
+};
+
+#define username_peer_pair_cmp(a,b) strcmp (a->username, b->username)
+DEFINE_TREE (username_peer_pair, struct username_peer_pair *, username_peer_pair_cmp, NULL)
+struct tree_username_peer_pair *username_peer_pair;
+
+struct username_peer_pair *current_map;
+
 #define ALLOW_MULT 1
 char *default_prompt = "> ";
 
@@ -476,6 +489,19 @@ tgl_peer_id_t parse_input_peer_id (const char *s, int l, int mask) {
     }
 
     return res;
+  }
+
+  if (*s == '@') {
+    s ++;
+    l --;
+    char *tmp = strndup (s, l);
+    struct username_peer_pair *p = tree_lookup_username_peer_pair (username_peer_pair, (void *)&tmp);
+    free (tmp);
+    if (p && (!mask || tgl_get_peer_type (p->peer->id) == mask)) {
+      return p->peer->id;
+    } else {
+      return TGL_PEER_NOT_FOUND;
+    }
   }
 
   const char *ss[] = {"user#id", "user#", "chat#id", "chat#", "secret_chat#id", "secret_chat#", "channel#id", "channel#"};
@@ -2050,6 +2076,44 @@ int complete_chat_command (tgl_peer_t *P, int index, const char *text, int len, 
   }
 }
 
+int complete_username (int mode, int index, const char *text, int len, char **R) {
+  *R = NULL;
+  if (len > 0 && *text == '@') {
+    text ++;
+    len --;
+  }
+  index ++;
+  while (index < TLS->peer_num) {
+    tgl_peer_t *P = TLS->Peers[index];
+    if (mode && tgl_get_peer_type (P->id) != mode) {
+      index ++;
+      continue;
+    }
+    char *u = NULL;
+    if (tgl_get_peer_type (P->id) == TGL_PEER_USER) {
+      u = P->user.username;
+    } else if (tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL) {
+      u = P->channel.username;
+    }
+    if (!u) {
+      index ++;
+      continue;
+    }
+    if ((int)strlen (u) < len || memcmp (u, text, len)) {
+      index ++;
+      continue;
+    }
+    *R = malloc (strlen (u) + 2);
+    *R[0] = '@';
+    memcpy (*R + 1, u, strlen (u) + 1);
+    break;
+  }
+  if (index == TLS->peer_num) {
+    return -1;
+  }
+  return index;
+}
+
 char *command_generator (const char *text, int state) {  
 #ifndef DISABLE_EXTF
   static int len;
@@ -2094,11 +2158,19 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case ca_user:
-    index = tgl_complete_user_list (TLS, index, command_pos, command_len, &R);    
+    if (command_len && command_pos[0] == '@') {
+      index = complete_username (TGL_PEER_USER, index, command_pos, command_len, &R);
+    } else {
+      index = tgl_complete_user_list (TLS, index, command_pos, command_len, &R);    
+    }
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case ca_peer:
-    index = tgl_complete_peer_list (TLS, index, command_pos, command_len, &R);
+    if (command_len && command_pos[0] == '@') {
+      index = complete_username (0, index, command_pos, command_len, &R);
+    } else {
+      index = tgl_complete_peer_list (TLS, index, command_pos, command_len, &R);
+    }
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case ca_file_name:
@@ -2115,7 +2187,11 @@ char *command_generator (const char *text, int state) {
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case ca_channel:
-    index = tgl_complete_channel_list (TLS, index, command_pos, command_len, &R);    
+    if (command_len && command_pos[0] == '@') {
+      index = complete_username (TGL_PEER_CHANNEL, index, command_pos, command_len, &R);
+    } else {
+      index = tgl_complete_channel_list (TLS, index, command_pos, command_len, &R);    
+    }
     if (c) { rl_line_buffer[rl_point] = c; }
     return R;
   case ca_modifier:
@@ -3073,6 +3149,39 @@ void json_peer_update (struct in_ev *ev, tgl_peer_t *P, unsigned flags) {
   #endif
 }
 
+void peer_update_username (tgl_peer_t *P, const char *username) {
+  if (!username) {
+    if (P->extra) {
+      struct username_peer_pair *p = tree_lookup_username_peer_pair (username_peer_pair, (void *)&P->extra);      
+      assert (p);
+      username_peer_pair = tree_delete_username_peer_pair (username_peer_pair, p);
+      tfree_str (P->extra);
+      tfree (p, sizeof (*p));
+      P->extra = NULL;
+    }
+    return;
+  }
+  assert (username);
+  if (P->extra && !strcmp (P->extra, username)) {
+    return;
+  }
+  if (P->extra) {
+    struct username_peer_pair *p = tree_lookup_username_peer_pair (username_peer_pair, (void *)&P->extra);
+    assert (p);
+    username_peer_pair = tree_delete_username_peer_pair (username_peer_pair, p);
+    tfree_str (P->extra);
+    tfree (p, sizeof (*p));
+    P->extra = NULL;
+  }
+
+  P->extra = tstrdup (username);
+  struct username_peer_pair *p = talloc (sizeof (*p));
+  p->peer = P;
+  p->username = P->extra;
+  
+  username_peer_pair = tree_insert_username_peer_pair (username_peer_pair, p, rand ());
+}
+
 void user_update_gw (struct tgl_state *TLSR, struct tgl_user *U, unsigned flags) {
   assert (TLSR == TLS);
   #ifdef USE_LUA
@@ -3081,6 +3190,8 @@ void user_update_gw (struct tgl_state *TLSR, struct tgl_user *U, unsigned flags)
   #ifdef USE_PYTHON
     py_user_update (U, flags);
   #endif
+
+  peer_update_username ((void *)U, U->username);
  
   if (disable_output && !notify_ev) { return; }
   if (!binlog_read) { return; }
@@ -3149,8 +3260,6 @@ void secret_chat_update_gw (struct tgl_state *TLSR, struct tgl_secret_chat *U, u
   #ifdef USE_PYTHON
     py_secret_chat_update (U, flags);
   #endif
-  
-
 
   if ((flags & TGL_UPDATE_WORKING) || (flags & TGL_UPDATE_DELETED)) {
     write_secret_chat_file ();
@@ -3186,6 +3295,15 @@ void secret_chat_update_gw (struct tgl_state *TLSR, struct tgl_secret_chat *U, u
     }
     mprint_end (ev);
   }
+}
+
+void channel_update_gw (struct tgl_state *TLSR, struct tgl_channel *U, unsigned flags) {
+  assert (TLSR == TLS);
+  
+  peer_update_username ((void *)U, U->username);
+ 
+  if (disable_output && !notify_ev) { return; }
+  if (!binlog_read) { return; }
 }
 
 void print_card_gw (struct tgl_state *TLSR, void *extra, int success, int size, int *card) {
@@ -3295,6 +3413,7 @@ struct tgl_update_callback upd_cb = {
   .user_update = user_update_gw,
   .chat_update = chat_update_gw,
   .secret_chat_update = secret_chat_update_gw,
+  .channel_update = channel_update_gw,
   .msg_receive = print_message_gw,
   .our_id = our_id_gw,
   .user_status_update = user_status_upd,
