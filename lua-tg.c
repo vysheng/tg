@@ -715,7 +715,8 @@ enum lua_query_type {
   lq_channel_invite_user,
   lq_channel_kick_user,
   lq_channel_get_admins,
-  lq_channel_get_users
+  lq_channel_get_users,
+  lq_contact_search
 };
 
 struct lua_query_extra {
@@ -1135,6 +1136,38 @@ void lua_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char
   free (cb);
 }
 
+void lua_contact_search_cb (struct tgl_state *TLSR, void *cb_extra, int success, tgl_peer_t *C) {
+  assert (TLSR == TLS);
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success) {
+    push_peer (C->id, (void *)C);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
 #define LUA_STR_ARG(n) lua_ptr[n].str, strlen (lua_ptr[n].str)
 
 void lua_do_all (void) {
@@ -1360,6 +1393,10 @@ void lua_do_all (void) {
       tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 0, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
+    case lq_contact_search:
+      tgl_do_contact_search (TLS, LUA_STR_ARG (p + 1), lua_contact_search_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1465,6 +1502,7 @@ struct lua_function functions[] = {
   {"channel_kick_user", lq_channel_kick_user, { lfp_channel, lfp_user, lfp_none }},
   {"channel_get_admins", lq_channel_get_admins, { lfp_channel, lfp_none }},
   {"channel_get_users", lq_channel_get_users, { lfp_channel, lfp_none }},
+  {"resolve_username", lq_contact_search, { lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
