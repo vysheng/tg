@@ -4422,6 +4422,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   if (tgl_get_peer_type (M->fwd_from_id) > 0) {
     mprintf (ev, "[fwd from ");
     print_peer_name (ev, M->fwd_from_id, tgl_peer_get (TLS, M->fwd_from_id));
+    mprintf (ev, " ");
+    print_date (ev, M->date);
     mprintf (ev, "] ");
   }
   if (M->reply_id) {
