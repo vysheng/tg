@@ -482,7 +482,10 @@ void push_message (struct tgl_message *M) {
   }
 
   if (M->reply_id) {
-    lua_add_num_field ("reply_id", M->reply_id);
+    tgl_message_id_t msg_id = M->permanent_id;
+    msg_id.id = M->reply_id;
+    
+    lua_add_string_field ("reply_id", print_permanent_msg_id (msg_id));
   }
 
   if (M->flags & TGLMF_MENTION) {
