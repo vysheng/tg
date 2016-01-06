@@ -431,7 +431,10 @@ json_t *json_pack_message (struct tgl_message *M) {
   }
 
   if (M->reply_id) {
-    assert (json_object_set (res, "reply_id", json_integer (M->reply_id)) >= 0);
+    tgl_message_id_t msg_id = M->permanent_id;
+    msg_id.id = M->reply_id;
+    
+    assert (json_object_set (res, "reply_id", json_string (print_permanent_msg_id (msg_id))) >= 0);
   }
 
   if (M->flags & TGLMF_MENTION) {
