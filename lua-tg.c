@@ -144,6 +144,13 @@ void push_chat (tgl_peer_t *P) {
       lua_pushnumber (luaState, i);
       tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
       push_peer (id, tgl_peer_get (TLS, id));
+      int inviter_id = P->chat.user_list[i].inviter_id;
+      if (inviter_id) {
+        lua_pushstring (luaState, "inviter");
+        tgl_peer_id_t id = TGL_MK_USER (inviter_id);
+        push_peer (id, tgl_peer_get (TLS, id));
+        lua_settable (luaState, -3);
+      }
       lua_settable (luaState, -3);
     }
     lua_settable (luaState, -3);
