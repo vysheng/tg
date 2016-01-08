@@ -494,9 +494,9 @@ tgl_peer_id_t parse_input_peer_id (const char *s, int l, int mask) {
   if (*s == '@') {
     s ++;
     l --;
-    char *tmp = strndup (s, l);
+    char *tmp = tstrndup (s, l);
     struct username_peer_pair *p = tree_lookup_username_peer_pair (username_peer_pair, (void *)&tmp);
-    free (tmp);
+    tfree_str (tmp);
     if (p && (!mask || tgl_get_peer_type (p->peer->id) == mask)) {
       return p->peer->id;
     } else {
