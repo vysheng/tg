@@ -1,20 +1,17 @@
 /*
     This file is part of telegram-cli.
-
     Telegram-cli is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
-
     Telegram-cli is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
-
     Copyright Vitaly Valtman 2013-2015
+
 */
 
 #ifdef HAVE_CONFIG_H
@@ -648,6 +645,7 @@ enum lua_query_type {
   lq_load_document_thumb,
   lq_delete_msg,
   lq_restore_msg,
+  lq_res_user,
   lq_accept_secret_chat,
   lq_send_contact,
   lq_status_online,
@@ -1204,6 +1202,12 @@ void lua_do_all (void) {
       tgl_do_delete_msg (TLS, ((struct tgl_message *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
       p += 2;
       break;
+    case lq_res_user:
+      s = lua_ptr[p + 1];
+      tgl_do_contact_search (TLS, s, strlen (s), lua_user_cb, lua_ptr[p]);
+      free (s);
+      p += 2;
+      break;
     case lq_restore_msg:
       tgl_do_delete_msg (TLS, (long)lua_ptr[p + 1], lua_empty_cb, lua_ptr[p]);
       p += 2;
@@ -1332,6 +1336,7 @@ struct lua_function functions[] = {
   {"create_secret_chat", lq_create_secret_chat, { lfp_user, lfp_none }},
   {"create_group_chat", lq_create_group_chat, { lfp_user, lfp_string, lfp_none }},
   {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
+  {"res_user", lq_res_user, { lfp_string, lfp_none }},
   {"restore_msg", lq_restore_msg, { lfp_positive_number, lfp_none }},
   {"accept_secret_chat", lq_accept_secret_chat, { lfp_secret_chat, lfp_none }},
   {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
