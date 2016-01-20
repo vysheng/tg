@@ -1,19 +1,15 @@
 /*
     This file is part of telegram-cli.
-
     Telegram-cli is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
-
     Telegram-cli is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
-
     Copyright Vitaly Valtman 2013-2015
 */
 
@@ -634,6 +630,7 @@ enum lua_query_type {
   lq_chat_del_user,
   lq_add_contact,
   lq_del_contact,
+  lq_block_user,
   lq_rename_contact,
   lq_search,
   lq_global_search,
@@ -648,13 +645,16 @@ enum lua_query_type {
   lq_load_document_thumb,
   lq_delete_msg,
   lq_restore_msg,
+  lq_res_user,
+  lq_get_message,
   lq_accept_secret_chat,
   lq_send_contact,
   lq_status_online,
   lq_status_offline,
   lq_send_location,
   lq_extf,
-  lq_import_chat_link
+  lq_import_chat_link,
+  lq_export_chat_link
 };
 
 struct lua_query_extra {
@@ -914,6 +914,38 @@ void lua_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tg
   free (cb);
 }
 
+void lua_link_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char *link) {
+  assert (TLSR == TLS);
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success) {
+    lua_pushstring (luaState, link);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
 void lua_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_secret_chat *C) {
   assert (TLSR == TLS);
   struct lua_query_extra *cb = cb_extra;
@@ -1150,6 +1182,10 @@ void lua_do_all (void) {
       tgl_do_del_contact (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
       p += 2;
       break;
+   case lq_block_user:
+      tgl_do_block_user (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
     case lq_rename_contact:
       s1 = lua_ptr[p + 1];
       s2 = lua_ptr[p + 2];
@@ -1163,8 +1199,15 @@ void lua_do_all (void) {
     case lq_search:
       s = lua_ptr[p + 2];
       tgl_do_msg_search (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, 0, 40, 0, s, strlen (s), lua_msg_list_cb, lua_ptr[p]);
+   
       free (s);
       p += 3;
+      break;
+    case lq_res_user:
+      s = lua_ptr[p + 1];
+      tgl_do_contact_search (TLS, s, strlen (s), lua_user_cb, lua_ptr[p]);
+      free (s);
+      p += 2;
       break;
     case lq_global_search:
       s = lua_ptr[p + 1];
@@ -1174,6 +1217,10 @@ void lua_do_all (void) {
       break;
     case lq_mark_read:
       tgl_do_mark_read (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
+    case lq_export_chat_link:
+      tgl_do_export_chat_link (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_link_cb, lua_ptr[p]);
       p += 2;
       break;
     case lq_set_profile_photo:
@@ -1206,6 +1253,10 @@ void lua_do_all (void) {
       break;
     case lq_restore_msg:
       tgl_do_delete_msg (TLS, (long)lua_ptr[p + 1], lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
+    case lq_get_message:
+      tgl_do_get_message (TLS, (long)lua_ptr[p + 1], lua_msg_cb, lua_ptr[p]);
       p += 2;
       break;
     case lq_accept_secret_chat:
@@ -1323,6 +1374,8 @@ struct lua_function functions[] = {
   {"chat_del_user", lq_chat_del_user, { lfp_chat, lfp_user, lfp_none }},
   {"add_contact", lq_add_contact, { lfp_string, lfp_string, lfp_string, lfp_none }},
   {"del_contact", lq_del_contact, { lfp_user, lfp_none }},
+  {"block_user", lq_block_user, { lfp_user, lfp_none }},
+  {"res_user", lq_res_user, { lfp_string, lfp_none }},
   {"rename_contact", lq_rename_contact, { lfp_string, lfp_string, lfp_string, lfp_none }},
   {"msg_search", lq_search, { lfp_peer, lfp_string, lfp_none }},
   {"msg_global_search", lq_global_search, { lfp_string, lfp_none }},
@@ -1333,6 +1386,7 @@ struct lua_function functions[] = {
   {"create_group_chat", lq_create_group_chat, { lfp_user, lfp_string, lfp_none }},
   {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
   {"restore_msg", lq_restore_msg, { lfp_positive_number, lfp_none }},
+  {"get_message", lq_get_message, { lfp_positive_number, lfp_none }},
   {"accept_secret_chat", lq_accept_secret_chat, { lfp_secret_chat, lfp_none }},
   {"send_contact", lq_send_contact, { lfp_peer, lfp_string, lfp_string, lfp_string, lfp_none }},
   {"status_online", lq_status_online, { lfp_none }},
@@ -1340,6 +1394,7 @@ struct lua_function functions[] = {
   {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   {"import_chat_link", lq_import_chat_link, { lfp_string, lfp_none }},
+  {"export_chat_link", lq_export_chat_link, { lfp_chat, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
