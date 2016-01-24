@@ -2,6 +2,8 @@
 
 Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
 
+**[ This is a fork of [telegram-cli](https://github.com/vysheng/tg) with history callbacks to use in [ibotg](https://github.com/prsai/ibotg) ]**
+
 ### API, Protocol documentation
 
 Documentation for Telegram API is available here: http://core.telegram.org/api
@@ -22,7 +24,7 @@ Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%
 
 Clone GitHub Repository
 
-     git clone --recursive https://github.com/vysheng/tg.git && cd tg
+     git clone --recursive https://github.com/prsai/tg.git && cd tg
 
 ### Python Support
 
