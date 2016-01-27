@@ -86,7 +86,6 @@ If using [Homebrew](http://brew.sh/):
 You might have to manually pass the location of OpenSSL to `configure`:
 
     $ brew info openssl
-    brew info openssl
     openssl: stable 1.0.2e (bottled) [keg-only]
     SSL/TLS cryptography library
     https://openssl.org/
