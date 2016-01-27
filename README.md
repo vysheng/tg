@@ -83,6 +83,23 @@ If using [Homebrew](http://brew.sh/):
      export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
 
+You might have to manually pass the location of OpenSSL to `configure`:
+
+    $ brew info openssl
+    brew info openssl
+    openssl: stable 1.0.2e (bottled) [keg-only]
+    SSL/TLS cryptography library
+    https://openssl.org/
+    /usr/local/Cellar/openssl/1.0.2d_1 (464 files, 11.6M)
+    Poured from bottle
+    /usr/local/Cellar/openssl/1.0.2e (465 files, 11.9M)
+    Poured from bottle
+    /usr/local/Cellar/openssl/1.0.2e_1 (465 files, 11.9M)
+
+In my case I used `/usr/local/Cellar/openssl/1.0.2e_1`:
+
+    $ ./configure --with-openssl=/usr/local/Cellar/openssl/1.0.2e_1
+
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
 If using [MacPorts](https://www.macports.org):
