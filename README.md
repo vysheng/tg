@@ -106,11 +106,21 @@ or manually:
 
      ./configure
 
-or with OpenSSL:
+You might have to manually pass the location of OpenSSL to `configure`:
 
-     ./configure --with-openssl=/usr/local/opt/openssl && make CFSUFFIX='-Wno-error=unused'
+    $ brew info openssl
+    openssl: stable 1.0.2e (bottled) [keg-only]
+    Poured from bottle /usr/local/Cellar/openssl/1.0.2e_1 (465 files, 11.9M)
 
-If you get a lua error on Sierra, you can configure without LUA using
+so in this case the configure should be run as:
+
+     ./configure --with-openssl=/usr/local/Cellar/openssl/1.0.2e_1
+
+in other cases OpenSSL could be found in `/usr/local/opt`, e.g.:
+
+     ./configure --with-openssl=/usr/local/opt/openssl
+
+If you get a LUA error on Sierra, you can configure without LUA using
 
      ./configure --disable-liblua
 
