@@ -66,6 +66,8 @@ Then,
      ./configure
      make
 
+If you are going to build tg on OpenBSD or FreeBSD, please use `gmake` instead of `make`.
+
 #### Other methods to install on linux
 
 On Gentoo: use ebuild provided.
