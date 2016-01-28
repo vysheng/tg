@@ -29,6 +29,8 @@ addons:
     - libjansson-dev
 >>>>>>> use travis-ci's apt addon to install packages
 
+sudo: false
+
 script:
   - git submodule update --init --recursive
   - ./configure
