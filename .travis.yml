@@ -19,6 +19,9 @@ addons:
 
 sudo: false
 
+git:
+  depth: 10
+
 script:
   - git submodule update --init --recursive
   - ./configure
