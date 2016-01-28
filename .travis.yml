@@ -17,6 +17,8 @@ addons:
     - libevent-dev
     - libjansson-dev
 
+sudo: false
+
 script:
   - git submodule update --init --recursive
   - ./configure
