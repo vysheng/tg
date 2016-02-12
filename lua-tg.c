@@ -645,6 +645,7 @@ enum lua_query_type {
   lq_send_file,
   lq_load_audio,
   lq_load_document,
+  lq_res_user,
   lq_load_document_thumb,
   lq_delete_msg,
   lq_restore_msg,
@@ -654,7 +655,11 @@ enum lua_query_type {
   lq_status_offline,
   lq_send_location,
   lq_extf,
-  lq_import_chat_link
+  lq_import_chat_link,
+  lq_export_chat_link,
+  lq_block_user,
+  lq_unblock_user,
+  lq_get_message
 };
 
 struct lua_query_extra {
@@ -913,6 +918,40 @@ void lua_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tg
 
   free (cb);
 }
+
+void lua_link_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char *link) {
+  assert (TLSR == TLS);
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success) {
+    lua_pushstring (luaState, link);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
+
 
 void lua_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_secret_chat *C) {
   assert (TLSR == TLS);
@@ -1242,6 +1281,10 @@ void lua_do_all (void) {
       free (s);
       p += 2;
       break;
+    case lq_export_chat_link:
+      tgl_do_export_chat_link (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_str_cb, lua_ptr[p]);
+      p += 2;
+      break;
     case lq_send_location:
       if (sizeof (void *) == 4) {
         tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(float *)(lua_ptr + p + 2), *(float *)(lua_ptr + p + 3), 0, lua_msg_cb, lua_ptr[p]);
@@ -1249,6 +1292,24 @@ void lua_do_all (void) {
         tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(double *)(lua_ptr + p + 2), *(double *)(lua_ptr + p + 3), 0, lua_msg_cb, lua_ptr[p]);
       }
       p += 4;
+      break;
+    case lq_res_user:
+      s = lua_ptr[p + 1];
+      tgl_do_contact_search (TLS, s, strlen (s), lua_user_cb, lua_ptr[p]);
+      free (s);
+      p += 2;
+      break;
+    case lq_block_user:
+      tgl_do_block_user (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
+    case lq_unblock_user:
+      tgl_do_unblock_user (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      p += 2;
+      break;
+    case lq_get_message:
+      tgl_do_get_message (TLS, (long)lua_ptr[p + 1], lua_msg_cb, lua_ptr[p]);
+      p += 2;
       break;
   /*
   lq_delete_msg,
@@ -1340,6 +1401,11 @@ struct lua_function functions[] = {
   {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   {"import_chat_link", lq_import_chat_link, { lfp_string, lfp_none }},
+  {"res_user", lq_res_user, { lfp_string, lfp_none }},
+  {"export_chat_link", lq_export_chat_link, { lfp_chat, lfp_none }},
+  {"block_user", lq_block_user, { lfp_user, lfp_none }},
+  {"unblock_user", lq_unblock_user, { lfp_user, lfp_none }},
+  {"get_message", lq_get_message, { lfp_positive_number, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
