@@ -164,6 +164,7 @@ void push_channel (tgl_peer_t *P) {
   lua_add_num_field ("participants_count", P->channel.participants_count);
   lua_add_num_field ("admins_count", P->channel.admins_count);
   lua_add_num_field ("kicked_count", P->channel.kicked_count);
+  lua_add_string_field ("user_channel", P->channel.username);
 }
 
 void push_update_types (unsigned flags) {
