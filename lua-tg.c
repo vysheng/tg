@@ -726,7 +726,8 @@ enum lua_query_type {
   lq_contact_search,
   lq_channel_join,
   lq_get_message,
-  lq_rename_channel
+  lq_rename_channel,
+  lq_channel_set_photo
 };
 
 struct lua_query_extra {
@@ -1435,6 +1436,10 @@ void lua_do_all (void) {
       tgl_do_rename_channel (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
+    case lq_channel_set_photo:
+      tgl_do_set_channel_photo (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1548,6 +1553,7 @@ struct lua_function functions[] = {
   {"channel_join", lq_channel_join, { lfp_channel, lfp_none }},
   {"get_message", lq_get_message, { lfp_msg, lfp_none }},
   {"rename_channel", lq_rename_channel, { lfp_peer, lfp_string, lfp_none }},
+  {"channel_set_photo", lq_channel_set_photo, { lfp_peer, lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
