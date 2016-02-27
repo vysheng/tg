@@ -724,7 +724,8 @@ enum lua_query_type {
   lq_channel_set_admin,
   lq_channel_leave,
   lq_contact_search,
-  lq_channel_join
+  lq_channel_join,
+  lq_get_message
 };
 
 struct lua_query_extra {
@@ -1425,6 +1426,10 @@ void lua_do_all (void) {
       tgl_do_join_channel (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
+    case lq_get_message:
+      tgl_do_get_message (TLS, &lua_ptr[p + 1].msg_id, lua_msg_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1536,6 +1541,7 @@ struct lua_function functions[] = {
   {"channel_leave", lq_channel_leave, { lfp_channel, lfp_none }},
   {"resolve_username", lq_contact_search, { lfp_string, lfp_none }},
   {"channel_join", lq_channel_join, { lfp_channel, lfp_none }},
+  {"get_message", lq_get_message, { lfp_msg, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
