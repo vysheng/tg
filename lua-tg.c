@@ -730,8 +730,11 @@ enum lua_query_type {
   lq_channel_get_admins,
   lq_channel_get_users,
   lq_contact_search,
-  lq_get_message
-
+  lq_get_message,
+  lq_channel_set_admin,
+  lq_chat_upgrade,
+  lq_channel_set_about,
+  lq_export_channel_link
 };
 
 struct lua_query_extra {
@@ -1424,6 +1427,22 @@ void lua_do_all (void) {
        tgl_do_get_message (TLS, &lua_ptr[p + 1].msg_id, lua_msg_cb, lua_ptr[p].ptr);
        p += 2;
       break;
+    case lq_channel_set_admin:
+      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_ptr[p + 3].num, lua_empty_cb, lua_ptr[p].ptr);
+      p += 4;
+      break;
+    case lq_chat_upgrade:
+      tgl_do_upgrade_group (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+    case lq_export_channel_link:
+      tgl_do_export_channel_link (TLS, lua_ptr[p + 1].peer_id, lua_str_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+    case lq_channel_set_about:
+      tgl_do_channel_set_about (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1533,6 +1552,10 @@ struct lua_function functions[] = {
   {"channel_get_users", lq_channel_get_users, { lfp_channel, lfp_none }},
   {"resolve_username", lq_contact_search, { lfp_string, lfp_none }},
   {"get_message", lq_get_message, { lfp_msg, lfp_none }},
+  {"export_channel_link", lq_export_channel_link, { lfp_channel, lfp_none }},
+  {"channel_set_admin", lq_channel_set_admin, { lfp_peer, lfp_user, lfp_nonnegative_number, lfp_none }},
+  {"channel_set_about", lq_channel_set_about, { lfp_channel, lfp_string, lfp_none }},
+  {"chat_upgrade", lq_chat_upgrade, { lfp_chat, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
