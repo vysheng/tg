@@ -721,7 +721,8 @@ enum lua_query_type {
   lq_channel_get_users,
   lq_channel_set_about,
   lq_export_channel_link,
-  lq_channel_set_admin
+  lq_channel_set_admin,
+  lq_channel_leave
 };
 
 struct lua_query_extra {
@@ -1378,6 +1379,10 @@ void lua_do_all (void) {
       tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 2, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
+    case lq_channel_leave:
+      tgl_do_leave_channel (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1486,6 +1491,7 @@ struct lua_function functions[] = {
   {"channel_set_about", lq_channel_set_about, { lfp_channel, lfp_string, lfp_none }},
   {"export_channel_link", lq_export_channel_link, { lfp_channel, lfp_none }},
   {"channel_set_admin", lq_channel_set_admin, { lfp_channel, lfp_user,lfp_none }},
+  {"channel_leave", lq_channel_leave, { lfp_channel, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
