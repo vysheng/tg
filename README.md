@@ -49,6 +49,10 @@ On Fedora:
 
      sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel jansson-devel python-devel libgcrypt-devel
 
+On CentOS:
+
+     sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel jansson-devel python-devel
+
 On Archlinux:
 
      yaourt -S telegram-cli-git
