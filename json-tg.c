@@ -5,6 +5,7 @@
 #include "json-tg.h"
 #include <tgl/tgl.h>
 #include <tgl/tgl-layout.h>
+#include "interface.h"
 #include <assert.h>
 //format time:
 #include <time.h>
@@ -19,13 +20,16 @@ void json_pack_peer_type (json_t *res, tgl_peer_id_t id) {
   int x = tgl_get_peer_type (id);
   switch (x) {
   case TGL_PEER_USER:
-    assert (json_object_set (res, "type", json_string ("user")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("user")) >= 0);
     break;
   case TGL_PEER_CHAT:
-    assert (json_object_set (res, "type", json_string ("chat")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("chat")) >= 0);
     break;
   case TGL_PEER_ENCR_CHAT:
-    assert (json_object_set (res, "type", json_string ("encr_chat")) >= 0);
+    assert (json_object_set (res, "peer_type", json_string ("encr_chat")) >= 0);
+    break;
+  case TGL_PEER_CHANNEL:
+    assert (json_object_set (res, "peer_type", json_string ("channel")) >= 0);
     break;
   default:
     assert (0);
@@ -89,6 +93,14 @@ void json_pack_chat (json_t *res, tgl_peer_t *P) {
   }
 }
 
+void json_pack_channel (json_t *res, tgl_peer_t *P) {
+  assert (P->channel.title);
+  assert (json_object_set (res, "title", json_string (P->channel.title)) >= 0);
+  assert (json_object_set (res, "participants_count", json_integer (P->channel.participants_count)) >= 0);
+  assert (json_object_set (res, "admins_count", json_integer (P->channel.admins_count)) >= 0);
+  assert (json_object_set (res, "kicked_count", json_integer (P->channel.kicked_count)) >= 0);
+}
+
 
 void json_pack_encr_chat (json_t *res, tgl_peer_t *P) {
   assert (json_object_set (res, "user", json_pack_peer (TGL_MK_USER (P->encr_chat.user_id))) >= 0);
@@ -98,9 +110,10 @@ json_t *json_pack_peer (tgl_peer_id_t id) {
   tgl_peer_t *P = tgl_peer_get (TLS, id);
   //assert (P);
   json_t *res = json_object ();
-  assert (json_object_set (res, "id", json_integer (tgl_get_peer_id (id))) >= 0);
+  assert (json_object_set (res, "id", json_string (print_permanent_peer_id (id))) >= 0);
 
   json_pack_peer_type (res, id);
+  assert (json_object_set (res, "peer_id", json_integer (tgl_get_peer_id (id))) >= 0);
 
   assert (res);
     
@@ -112,6 +125,9 @@ json_t *json_pack_peer (tgl_peer_id_t id) {
       break;
     case TGL_PEER_CHAT:
       sprintf (s, "chat#%d", tgl_get_peer_id (id));
+      break;
+    case TGL_PEER_CHANNEL:
+      sprintf (s, "channel#%d", tgl_get_peer_id (id));
       break;
     case TGL_PEER_ENCR_CHAT:
       sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
@@ -139,6 +155,9 @@ json_t *json_pack_peer (tgl_peer_id_t id) {
     break;
   case TGL_PEER_ENCR_CHAT:
     json_pack_encr_chat (res, P);
+    break;
+  case TGL_PEER_CHANNEL:
+    json_pack_channel (res, P);
     break;
   default:
     assert (0);
@@ -210,6 +229,8 @@ json_t *json_pack_media (struct tgl_message_media *M) {
     }
     break;
   case tgl_message_media_document:
+  case tgl_message_media_audio:
+  case tgl_message_media_video:
   case tgl_message_media_document_encr:
     assert (json_object_set (res, "type", json_string ("document")) >= 0);
     break;
@@ -332,9 +353,9 @@ json_t *json_pack_service (struct tgl_message *M) {
   case tgl_message_action_chat_delete_photo:
     assert (json_object_set (res, "type", json_string ("chat_delete_photo")) >= 0);
     break;
-  case tgl_message_action_chat_add_user:
+  case tgl_message_action_chat_add_users:
     assert (json_object_set (res, "type", json_string ("chat_add_user")) >= 0);
-    assert (json_object_set (res, "user", json_pack_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user))) >= 0);
+    assert (json_object_set (res, "user", json_pack_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.users[0]))) >= 0);
     break;
   case tgl_message_action_chat_add_user_by_link:
     assert (json_object_set (res, "type", json_string ("chat_add_user_link")) >= 0);
@@ -389,6 +410,16 @@ json_t *json_pack_service (struct tgl_message *M) {
   case tgl_message_action_abort_key:
     assert (json_object_set (res, "type", json_string ("abort_key")) >= 0);
     break;
+  case tgl_message_action_channel_create:
+    assert (json_object_set (res, "type", json_string ("channel_created")) >= 0);
+    assert (json_object_set (res, "title", json_string (M->action.title)) >= 0);
+    break;
+  case tgl_message_action_migrated_to:
+    assert (json_object_set (res, "type", json_string ("migrated_to")) >= 0);
+    break;
+  case tgl_message_action_migrated_from:
+    assert (json_object_set (res, "type", json_string ("migrated_from")) >= 0);
+    break;
   default:
     assert (json_object_set (res, "type", json_string ("???")) >= 0);
     break;
@@ -401,7 +432,7 @@ json_t *json_pack_message (struct tgl_message *M) {
   assert (json_object_set (res, "event", json_string ("message")) >= 0);
   //will overwriten to service, if service.
 
-  assert (json_object_set (res, "id", json_integer (M->id)) >= 0);
+  assert (json_object_set (res, "id", json_string (print_permanent_msg_id (M->permanent_id))) >= 0);
   if (!(M->flags & TGLMF_CREATED)) { return res; }
 
   assert (json_object_set (res, "flags", json_integer (M->flags)) >= 0);
@@ -412,7 +443,10 @@ json_t *json_pack_message (struct tgl_message *M) {
   }
 
   if (M->reply_id) {
-    assert (json_object_set (res, "reply_id", json_integer (M->reply_id)) >= 0);
+    tgl_message_id_t msg_id = M->permanent_id;
+    msg_id.id = M->reply_id;
+    
+    assert (json_object_set (res, "reply_id", json_string (print_permanent_msg_id (msg_id))) >= 0);
   }
 
   if (M->flags & TGLMF_MENTION) {

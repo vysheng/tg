@@ -42,6 +42,7 @@ lua_State *luaState;
 //#include "interface.h"
 //#include "auto/constants.h"
 #include <tgl/tgl.h>
+#include <tgl/tgl-queries.h>
 #include "interface.h"
 
 #include <assert.h>
@@ -73,6 +74,15 @@ void lua_add_string_field (const char *name, const char *value) {
   lua_settable (luaState, -3);
 }
 
+void lua_add_lstring_field (const char *name, const char *value, int len) {
+  assert (name && strlen (name));
+  if (!value || !len) { return; }
+  my_lua_checkstack (luaState, 3);
+  lua_pushstring (luaState, name);
+  lua_pushlstring (luaState, value, len);
+  lua_settable (luaState, -3);
+}
+
 void lua_add_string_field_arr (int num, const char *value) {
   if (!value || !strlen (value)) { return; }
   my_lua_checkstack (luaState, 3);
@@ -99,6 +109,9 @@ void push_tgl_peer_type (int x) {
     break;
   case TGL_PEER_ENCR_CHAT:
     lua_pushstring (luaState, "encr_chat");
+    break;
+  case TGL_PEER_CHANNEL:
+    lua_pushstring (luaState, "channel");
     break;
   default:
     assert (0);
@@ -142,6 +155,15 @@ void push_encr_chat (tgl_peer_t *P) {
   lua_pushstring (luaState, "user");
   push_peer (TGL_MK_USER (P->encr_chat.user_id), tgl_peer_get (TLS, TGL_MK_USER (P->encr_chat.user_id)));
   lua_settable (luaState, -3);
+}
+
+void push_channel (tgl_peer_t *P) {
+  my_lua_checkstack (luaState, 4);
+  lua_add_string_field ("title", P->channel.title);
+  lua_add_string_field ("about", P->channel.about);
+  lua_add_num_field ("participants_count", P->channel.participants_count);
+  lua_add_num_field ("admins_count", P->channel.admins_count);
+  lua_add_num_field ("kicked_count", P->channel.kicked_count);
 }
 
 void push_update_types (unsigned flags) {
@@ -203,12 +225,12 @@ void push_update_types (unsigned flags) {
 
 void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   lua_newtable (luaState);
- 
-  lua_add_num_field ("id", tgl_get_peer_id (id));
-  lua_pushstring (luaState, "type");
+  
+  lua_add_string_field ("id", print_permanent_peer_id (P ? P->id : id));
+  lua_pushstring (luaState, "peer_type");
   push_tgl_peer_type (tgl_get_peer_type (id));
   lua_settable (luaState, -3);
-
+  lua_add_num_field ("peer_id", tgl_get_peer_id (id));
 
   if (!P || !(P->flags & TGLPF_CREATED)) {
     lua_pushstring (luaState, "print_name"); 
@@ -222,6 +244,9 @@ void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
       break;
     case TGL_PEER_ENCR_CHAT:
       sprintf (s, "encr_chat#%d", tgl_get_peer_id (id));
+      break;
+    case TGL_PEER_CHANNEL:
+      sprintf (s, "channel#%d", tgl_get_peer_id (id));
       break;
     default:
       assert (0);
@@ -245,6 +270,9 @@ void push_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   case TGL_PEER_ENCR_CHAT:
     push_encr_chat (P);
     break;
+  case TGL_PEER_CHANNEL:
+    push_channel (P);
+    break;
   default:
     assert (0);
   }
@@ -260,6 +288,8 @@ void push_media (struct tgl_message_media *M) {
     lua_add_string_field ("caption", M->caption);
     break;
   case tgl_message_media_document:
+  case tgl_message_media_audio:
+  case tgl_message_media_video:
   case tgl_message_media_document_encr:
     lua_newtable (luaState);
     lua_add_string_field ("type", "document");
@@ -334,12 +364,12 @@ void push_service (struct tgl_message *M) {
     lua_newtable (luaState);
     lua_add_string_field ("type", "chat_delete_photo");
     break;
-  case tgl_message_action_chat_add_user:
+  case tgl_message_action_chat_add_users:
     lua_newtable (luaState);
     lua_add_string_field ("type", "chat_add_user");
     
     lua_pushstring (luaState, "user");
-    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.user), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.user)));
+    push_peer (tgl_set_peer_id (TGL_PEER_USER, M->action.users[0]), tgl_peer_get (TLS, tgl_set_peer_id (TGL_PEER_USER, M->action.users[0])));
     lua_settable (luaState, -3);
     break;
   case tgl_message_action_chat_add_user_by_link:
@@ -415,6 +445,19 @@ void push_service (struct tgl_message *M) {
     lua_newtable (luaState);
     lua_add_string_field ("type", "abort_rekey");
     break;
+  case tgl_message_action_channel_create:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "channel_created");
+    lua_add_string_field ("title", M->action.title);
+    break;
+  case tgl_message_action_migrated_to:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "migrated_to");
+    break;
+  case tgl_message_action_migrated_from:
+    lua_newtable (luaState);
+    lua_add_string_field ("type", "migrated_from");
+    break;
   default:
     lua_pushstring (luaState, "???");
     break;
@@ -426,9 +469,7 @@ void push_message (struct tgl_message *M) {
   my_lua_checkstack (luaState, 10);
   lua_newtable (luaState);
 
-  static char s[30];
-  snprintf (s, 30, "%lld", M->id);
-  lua_add_string_field ("id", s);
+  lua_add_string_field ("id", print_permanent_msg_id (M->permanent_id));
   if (!(M->flags & TGLMF_CREATED)) { return; }
   lua_add_num_field ("flags", M->flags);
  
@@ -441,7 +482,10 @@ void push_message (struct tgl_message *M) {
   }
 
   if (M->reply_id) {
-    lua_add_num_field ("reply_id", M->reply_id);
+    tgl_message_id_t msg_id = M->permanent_id;
+    msg_id.id = M->reply_id;
+    
+    lua_add_string_field ("reply_id", print_permanent_msg_id (msg_id));
   }
 
   if (M->flags & TGLMF_MENTION) {
@@ -520,13 +564,13 @@ void lua_diff_end (void) {
   }
 }
 
-void lua_our_id (int id) {
+void lua_our_id (tgl_peer_id_t id) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);
   //lua_checkstack (luaState, 20);
   my_lua_checkstack (luaState, 20);
   lua_getglobal (luaState, "on_our_id");
-  lua_pushnumber (luaState, id);
+  lua_pushnumber (luaState, tgl_get_peer_id (id));
   assert (lua_gettop (luaState) == 2);
 
   int r = ps_lua_pcall (luaState, 1, 0, 0);
@@ -602,7 +646,19 @@ void lua_chat_update (struct tgl_chat *C, unsigned flags) {
 //extern int peer_num;
 
 #define MAX_LUA_COMMANDS 1000
-void *lua_ptr[MAX_LUA_COMMANDS];
+
+struct lua_arg {
+  int flags;
+  union {
+    tgl_message_id_t msg_id;
+    tgl_peer_id_t peer_id;
+    char *str;
+    long long num;
+    double dnum;
+    void *ptr;
+  };
+};
+struct lua_arg lua_ptr[MAX_LUA_COMMANDS];
 static int pos;
 
 static inline tgl_peer_t *get_peer (const char *s) { 
@@ -613,6 +669,7 @@ enum lua_query_type {
   lq_contact_list,
   lq_dialog_list,
   lq_msg,
+  lq_msg_channel,
   lq_send_typing,
   lq_send_typing_abort,
   lq_rename_chat,
@@ -622,12 +679,14 @@ enum lua_query_type {
   lq_set_profile_name,
   lq_send_video,
   lq_send_text,
+  lq_reply,
   lq_fwd,
   lq_fwd_media,
   lq_load_photo,
   lq_load_video_thumb,
   lq_load_video,
   lq_chat_info,
+  lq_channel_info,
   lq_user_info,
   lq_history,
   lq_chat_add_user,
@@ -654,7 +713,12 @@ enum lua_query_type {
   lq_status_offline,
   lq_send_location,
   lq_extf,
-  lq_import_chat_link
+  lq_import_chat_link,
+  lq_export_chat_link,
+  lq_channel_invite_user,
+  lq_channel_kick_user,
+  lq_channel_get_admins,
+  lq_channel_get_users
 };
 
 struct lua_query_extra {
@@ -726,7 +790,7 @@ void lua_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, i
   free (cb);
 }
 
-void lua_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], int msgs[], int unread[]) {
+void lua_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], tgl_message_id_t *msgs[], int unread[]) {
   assert (TLSR == TLS);
   struct lua_query_extra *cb = cb_extra;
   lua_settop (luaState, 0);
@@ -794,6 +858,38 @@ void lua_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
 
   if (success && M && (M->flags & TGLMF_CREATED)) {
     push_message (M);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
+void lua_one_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, int size, struct tgl_message *M[]) {
+  assert (TLSR == TLS);
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success && size > 0 && M[0] && (M[0]->flags & TGLMF_CREATED)) {
+    push_message (M[0]);
   } else {
     lua_pushboolean (luaState, 0);
   }
@@ -946,6 +1042,38 @@ void lua_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, st
   free (cb);
 }
 
+void lua_channel_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_channel *C) {
+  assert (TLSR == TLS);
+  struct lua_query_extra *cb = cb_extra;
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->func);
+  lua_rawgeti (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  lua_pushnumber (luaState, success);
+
+  if (success) {
+    push_peer (C->id, (void *)C);
+  } else {
+    lua_pushboolean (luaState, 0);
+  }
+
+  assert (lua_gettop (luaState) == 4);
+
+  int r = ps_lua_pcall (luaState, 3, 0, 0);
+
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->func);
+  luaL_unref (luaState, LUA_REGISTRYINDEX, cb->param);
+
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+
+  free (cb);
+}
+
 void lua_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_user *C) {
   assert (TLSR == TLS);
   struct lua_query_extra *cb = cb_extra;
@@ -1010,245 +1138,230 @@ void lua_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char
   free (cb);
 }
 
+#define LUA_STR_ARG(n) lua_ptr[n].str, strlen (lua_ptr[n].str)
+
 void lua_do_all (void) {
   int p = 0;
   while (p < pos) {
-    int l = (long)lua_ptr[p ++];
+    int l = lua_ptr[p ++].num;
     assert (p + l + 1 <= pos);
-    enum lua_query_type f = (long)lua_ptr[p ++];
+    enum lua_query_type f = lua_ptr[p ++].num;
     struct tgl_message *M;
-    char *s, *s1, *s2, *s3;
+    int q = p;
+    tgl_message_id_t *tmp_msg_id;
     switch (f) {
     case lq_contact_list:
-      tgl_do_update_contact_list (TLS, lua_contact_list_cb, lua_ptr[p ++]);
+      tgl_do_update_contact_list (TLS, lua_contact_list_cb, lua_ptr[p ++].ptr);
       break;
     case lq_dialog_list:
-      tgl_do_get_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++]);
+      tgl_do_get_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
       break;
     case lq_msg:
-      tgl_do_send_message (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], strlen (lua_ptr[p + 2]), 0, NULL, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_message (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), 0, NULL, lua_msg_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_msg_channel:
+      tgl_do_send_message (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), 256, NULL, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_typing:
-      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_typing, lua_empty_cb, lua_ptr[p]);
+      tgl_do_send_typing (TLS, lua_ptr[p + 1].peer_id, tgl_typing_typing, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_send_typing_abort:
-      tgl_do_send_typing (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, tgl_typing_cancel, lua_empty_cb, lua_ptr[p]);
+      tgl_do_send_typing (TLS, lua_ptr[p + 1].peer_id, tgl_typing_cancel, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_rename_chat:
-      tgl_do_rename_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], strlen (lua_ptr[p + 2]), lua_empty_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_rename_chat (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_photo:
-      tgl_do_send_document (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_PHOTO, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_document (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_PHOTO, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_video:
-      tgl_do_send_document (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_VIDEO, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_document (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_VIDEO, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_audio:
-      tgl_do_send_document (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_AUDIO, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_document (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_AUDIO, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_document:
-      tgl_do_send_document (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], NULL, 0, 0, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_document (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, NULL, 0, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_file:
-      tgl_do_send_document (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_AUTO, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_document (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, NULL, 0, TGL_SEND_MSG_FLAG_DOCUMENT_AUTO, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_send_text:
-      tgl_do_send_text (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], 0, lua_msg_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_send_text (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_chat_set_photo:
-      tgl_do_set_chat_photo (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_ptr[p + 2], lua_empty_cb, lua_ptr[p]);
-      free (lua_ptr[p + 2]);
+      tgl_do_set_chat_photo (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_load_photo:
     case lq_load_video:
     case lq_load_audio:
     case lq_load_document:
-      M = lua_ptr[p + 1];
+      M = tgl_message_get (TLS, &lua_ptr[p + 1].msg_id);
       if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
-        lua_file_cb (TLS, lua_ptr[p], 0, 0);
+        lua_file_cb (TLS, lua_ptr[p].ptr, 0, 0);
       } else {
         if (M->media.type == tgl_message_media_photo) {
           assert (M->media.photo);
-          tgl_do_load_photo (TLS, M->media.photo, lua_file_cb, lua_ptr[p]);
+          tgl_do_load_photo (TLS, M->media.photo, lua_file_cb, lua_ptr[p].ptr);
         } else if (M->media.type == tgl_message_media_document) {
           assert (M->media.document);
-          tgl_do_load_document (TLS, M->media.document, lua_file_cb, lua_ptr[p]);
+          tgl_do_load_document (TLS, M->media.document, lua_file_cb, lua_ptr[p].ptr);
         } else {
-          tgl_do_load_encr_document (TLS, M->media.encr_document, lua_file_cb, lua_ptr[p]);
+          tgl_do_load_encr_document (TLS, M->media.encr_document, lua_file_cb, lua_ptr[p].ptr);
         }
       }
       p += 2;
       break;
     case lq_load_video_thumb:
     case lq_load_document_thumb:
-      M = lua_ptr[p + 1];
+      M = tgl_message_get (TLS, &lua_ptr[p + 1].msg_id);
       if (!M || (M->media.type != tgl_message_media_document)) {
-        lua_file_cb (TLS, lua_ptr[p], 0, 0);
+        lua_file_cb (TLS, lua_ptr[p].ptr, 0, 0);
       } else {
-        tgl_do_load_document_thumb (TLS, M->media.document, lua_file_cb, lua_ptr[p]);
+        tgl_do_load_document_thumb (TLS, M->media.document, lua_file_cb, lua_ptr[p].ptr);
       }
       p += 2;
       break;
+    case lq_reply:
+      tgl_do_reply_message (TLS, &lua_ptr[p + 1].msg_id, LUA_STR_ARG (p + 2), 0, lua_msg_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
     case lq_fwd:
-      tgl_do_forward_message (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((struct tgl_message *)lua_ptr[p + 2])->id, 0, lua_msg_cb, lua_ptr[p]);
+      tmp_msg_id = &lua_ptr[p + 2].msg_id;
+      tgl_do_forward_messages (TLS, lua_ptr[p + 1].peer_id, 1, (void *)&tmp_msg_id, 0, lua_one_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_fwd_media:
-      tgl_do_forward_media (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((struct tgl_message *)lua_ptr[p + 2])->id, 0, lua_msg_cb, lua_ptr[p]);
+      tgl_do_forward_media (TLS, lua_ptr[p + 1].peer_id, &lua_ptr[p + 2].msg_id, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_chat_info:
-      tgl_do_get_chat_info (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, lua_chat_cb, lua_ptr[p]);
+      tgl_do_get_chat_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_chat_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+    case lq_channel_info:
+      tgl_do_get_channel_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_channel_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_user_info:
-      tgl_do_get_user_info (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, lua_user_cb, lua_ptr[p]);
+      tgl_do_get_user_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_user_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_history:
-      tgl_do_get_history (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, (long)lua_ptr[p + 2], 0, lua_msg_list_cb, lua_ptr[p]);
+      tgl_do_get_history (TLS, lua_ptr[p + 1].peer_id, 0, lua_ptr[p + 2].num, 0, lua_msg_list_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_chat_add_user:
-      tgl_do_add_user_to_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, 10, lua_empty_cb, lua_ptr[p]);
+      tgl_do_add_user_to_chat (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 10, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_chat_del_user:
-      tgl_do_del_user_from_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, ((tgl_peer_t *)lua_ptr[p + 2])->id, lua_empty_cb, lua_ptr[p]);
+      tgl_do_del_user_from_chat (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_add_contact:
-      s1 = lua_ptr[p + 1];
-      s2 = lua_ptr[p + 2];
-      s3 = lua_ptr[p + 3];
-      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, lua_contact_list_cb, lua_ptr[p]);
-      free (s1);
-      free (s2);
-      free (s3);
+      tgl_do_add_contact (TLS, LUA_STR_ARG (p + 1), LUA_STR_ARG (p + 2), LUA_STR_ARG (p + 3), 0, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 4;
       break;
     case lq_del_contact:
-      tgl_do_del_contact (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      tgl_do_del_contact (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_rename_contact:
-      s1 = lua_ptr[p + 1];
-      s2 = lua_ptr[p + 2];
-      s3 = lua_ptr[p + 3];
-      tgl_do_add_contact (TLS, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 1, lua_contact_list_cb, lua_ptr[p]);
-      free (s1);
-      free (s2);
-      free (s3);
+      tgl_do_add_contact (TLS, LUA_STR_ARG (p + 1), LUA_STR_ARG (p + 2), LUA_STR_ARG (p + 3), 1, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 4;
       break;
     case lq_search:
-      s = lua_ptr[p + 2];
-      tgl_do_msg_search (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, 0, 0, 40, 0, s, strlen (s), lua_msg_list_cb, lua_ptr[p]);
-      free (s);
+      tgl_do_msg_search (TLS, lua_ptr[p + 1].peer_id, 0, 0, 40, 0, LUA_STR_ARG (p + 2), lua_msg_list_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_global_search:
-      s = lua_ptr[p + 1];
-      tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, s, strlen (s), lua_msg_list_cb, lua_ptr[p]);
-      free (s);
+      tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, LUA_STR_ARG (p + 1), lua_msg_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_mark_read:
-      tgl_do_mark_read (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
+      tgl_do_mark_read (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_set_profile_photo:
-      s = lua_ptr[p + 1];
-      tgl_do_set_profile_photo (TLS, s, lua_empty_cb, lua_ptr[p]);
-      free (s);
+      tgl_do_set_profile_photo (TLS, lua_ptr[p + 1].str, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_set_profile_name:
-      s1 = lua_ptr[p + 1];
-      s2 = lua_ptr[p + 1];
-      tgl_do_set_profile_name (TLS, s1, strlen (s1), s2, strlen (s2), lua_user_cb, lua_ptr[p]);
-      free (s1);
-      free (s2);
+      tgl_do_set_profile_name (TLS, LUA_STR_ARG (p + 1), LUA_STR_ARG (p + 2), lua_user_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_create_secret_chat:
-      tgl_do_create_secret_chat (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, lua_secret_chat_cb, lua_ptr[p]);
+      tgl_do_create_secret_chat (TLS, lua_ptr[p + 1].peer_id, lua_secret_chat_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_create_group_chat:
-      s = lua_ptr[p + 2];
-      tgl_do_create_group_chat (TLS, 1, &((tgl_peer_t *)lua_ptr[p + 1])->id, s, strlen (s), lua_empty_cb, lua_ptr[p]);
-      free (s);
+      tgl_do_create_group_chat (TLS, 1, &lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_delete_msg:
-      tgl_do_delete_msg (TLS, ((struct tgl_message *)lua_ptr[p + 1])->id, lua_empty_cb, lua_ptr[p]);
-      p += 2;
-      break;
-    case lq_restore_msg:
-      tgl_do_delete_msg (TLS, (long)lua_ptr[p + 1], lua_empty_cb, lua_ptr[p]);
+      tgl_do_delete_msg (TLS, &lua_ptr[p + 1].msg_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_accept_secret_chat:
-      tgl_do_accept_encr_chat_request (TLS, lua_ptr[p + 1], lua_secret_chat_cb, lua_ptr[p]);
+      tgl_do_accept_encr_chat_request (TLS, (void *)tgl_peer_get (TLS, lua_ptr[p + 1].peer_id), lua_secret_chat_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_send_contact:
-      s1 = lua_ptr[p + 2];
-      s2 = lua_ptr[p + 3];
-      s3 = lua_ptr[p + 4];
-      tgl_do_send_contact (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id, s1, strlen (s1), s2, strlen (s2), s3, strlen (s3), 0, lua_msg_cb, lua_ptr[p]);
-      free (s1);
-      free (s2);
-      free (s3);
+      tgl_do_send_contact (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), LUA_STR_ARG (p + 3), LUA_STR_ARG (p + 4), 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 5;
       break;
     case lq_status_online:
-      tgl_do_update_status (TLS, 1, lua_empty_cb, lua_ptr[p]);
+      tgl_do_update_status (TLS, 1, lua_empty_cb, lua_ptr[p].ptr);
       p ++;
       break;
     case lq_status_offline:
-      tgl_do_update_status (TLS, 0, lua_empty_cb, lua_ptr[p]);
+      tgl_do_update_status (TLS, 0, lua_empty_cb, lua_ptr[p].ptr);
       p ++;
       break;
     case lq_extf:
-      s = lua_ptr[p + 1];
-      tgl_do_send_extf (TLS, s, strlen (s), lua_str_cb, lua_ptr[p]);
-      free (s);
+      tgl_do_send_extf (TLS, LUA_STR_ARG (p + 1), lua_str_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_import_chat_link:
-      s = lua_ptr[p + 1];
-      tgl_do_import_chat_link (TLS, s, strlen (s), lua_empty_cb, lua_ptr[p]);
-      free (s);
+      tgl_do_import_chat_link (TLS, LUA_STR_ARG (p + 1), lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+    case lq_export_chat_link:
+      tgl_do_export_chat_link (TLS, lua_ptr[p + 1].peer_id, lua_str_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_send_location:
-      if (sizeof (void *) == 4) {
-        tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(float *)(lua_ptr + p + 2), *(float *)(lua_ptr + p + 3), 0, lua_msg_cb, lua_ptr[p]);
-      } else {
-        tgl_do_send_location (TLS, ((tgl_peer_t *)lua_ptr[p + 1])->id , *(double *)(lua_ptr + p + 2), *(double *)(lua_ptr + p + 3), 0, lua_msg_cb, lua_ptr[p]);
-      }
+      tgl_do_send_location (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].dnum, lua_ptr[p + 3].dnum, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 4;
+      break;
+    case lq_channel_invite_user:
+      tgl_do_channel_invite_user (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_channel_kick_user:
+      tgl_do_channel_kick_user (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_channel_get_admins:
+      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 1, lua_contact_list_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+    case lq_channel_get_users:
+      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 0, lua_contact_list_cb, lua_ptr[p].ptr);
+      p += 2;
       break;
   /*
   lq_delete_msg,
@@ -1269,6 +1382,12 @@ void lua_do_all (void) {
     default:
       assert (0);
     }
+    while (q < p) {
+      if (lua_ptr[q].flags & 1) {
+        tfree_str (lua_ptr[q].str);
+      }
+      q ++;
+    }
   }
   pos = 0;
 }
@@ -1278,6 +1397,7 @@ enum lua_function_param {
   lfp_none,
   lfp_peer,
   lfp_chat,
+  lfp_channel,
   lfp_user,
   lfp_secret_chat,
   lfp_string,
@@ -1299,6 +1419,7 @@ struct lua_function functions[] = {
   {"get_dialog_list", lq_dialog_list, { lfp_none }},
   {"rename_chat", lq_rename_chat, { lfp_chat, lfp_string, lfp_none }},
   {"send_msg", lq_msg, { lfp_peer, lfp_string, lfp_none }},
+  {"post_msg", lq_msg_channel, { lfp_channel, lfp_string, lfp_none }},
   {"send_typing", lq_send_typing, { lfp_peer, lfp_none }},
   {"send_typing_abort", lq_send_typing_abort, { lfp_peer, lfp_none }},
   {"send_photo", lq_send_photo, { lfp_peer, lfp_string, lfp_none }},
@@ -1314,9 +1435,11 @@ struct lua_function functions[] = {
   {"load_audio", lq_load_audio, { lfp_msg, lfp_none }},
   {"load_document", lq_load_document, { lfp_msg, lfp_none }},
   {"load_document_thumb", lq_load_document_thumb, { lfp_msg, lfp_none }},
+  {"reply_msg", lq_reply, { lfp_msg, lfp_string, lfp_none }},
   {"fwd_msg", lq_fwd, { lfp_peer, lfp_msg, lfp_none }},
   {"fwd_media", lq_fwd_media, { lfp_peer, lfp_msg, lfp_none }},
   {"chat_info", lq_chat_info, { lfp_chat, lfp_none }},
+  {"channel_info", lq_channel_info, { lfp_channel, lfp_none }},
   {"user_info", lq_user_info, { lfp_user, lfp_none }},
   {"get_history", lq_history, { lfp_peer, lfp_nonnegative_number, lfp_none }},
   {"chat_add_user", lq_chat_add_user, { lfp_chat, lfp_user, lfp_none }},
@@ -1340,6 +1463,11 @@ struct lua_function functions[] = {
   {"send_location", lq_send_location, { lfp_peer, lfp_double, lfp_double, lfp_none }},  
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   {"import_chat_link", lq_import_chat_link, { lfp_string, lfp_none }},
+  {"export_chat_link", lq_export_chat_link, { lfp_chat, lfp_none }},
+  {"channel_invite_user", lq_channel_invite_user, { lfp_channel, lfp_user, lfp_none }},
+  {"channel_kick_user", lq_channel_kick_user, { lfp_channel, lfp_user, lfp_none }},
+  {"channel_get_admins", lq_channel_get_admins, { lfp_channel, lfp_none }},
+  {"channel_get_users", lq_channel_get_users, { lfp_channel, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
@@ -1361,9 +1489,9 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
 
   assert (pos + 3 + p < MAX_LUA_COMMANDS);
 
-  lua_ptr[pos ++] = (void *)(long)(p + 1);
-  lua_ptr[pos ++] = (void *)(long)F->type;
-  lua_ptr[pos ++] = e;
+  lua_ptr[pos ++].num = (p + 1);
+  lua_ptr[pos ++].num = F->type;
+  lua_ptr[pos ++].ptr = e;
 
   int sp = p;
   int ok = 1;
@@ -1372,10 +1500,10 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
     p --;
     cc ++;
     const char *s;
-    tgl_peer_t *P;
     long long num;
     double dval;
-    struct tgl_message *M;
+    tgl_peer_id_t peer_id;
+    lua_ptr[pos + p].flags = 0;
     switch (F->params[p]) {
     case lfp_none:
       assert (0);
@@ -1383,40 +1511,32 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
     case lfp_peer:
     case lfp_user:
     case lfp_chat:
+    case lfp_channel:
     case lfp_secret_chat:
       s = lua_tostring (L, -cc);
       if (!s) {
         ok = 0;
         break;
       }
-      if (sscanf (s, "user#id%lld", &num) == 1 && num > 0) {
-        tgl_insert_empty_user (TLS, num);
-        P = tgl_peer_get (TLS, TGL_MK_USER (num));
-      } else if (sscanf (s, "chat#id%lld", &num) == 1 && num > 0) {
-        tgl_insert_empty_chat (TLS, num);
-        P = tgl_peer_get (TLS, TGL_MK_CHAT (num));
-      } else if (sscanf (s, "user#%lld", &num) == 1 && num > 0) {
-        tgl_insert_empty_user (TLS, num);
-        P = tgl_peer_get (TLS, TGL_MK_USER (num));
-      } else if (sscanf (s, "chat#%lld", &num) == 1 && num > 0) {
-        tgl_insert_empty_chat (TLS, num);
-        P = tgl_peer_get (TLS, TGL_MK_CHAT (num));
+      
+      if (F->params[p] == lfp_user) {
+        peer_id = parse_input_peer_id (s, strlen (s), TGL_PEER_USER);
+      } else if (F->params[p] == lfp_chat) {
+        peer_id = parse_input_peer_id (s, strlen (s), TGL_PEER_CHAT);
+      } else if (F->params[p] == lfp_secret_chat) {
+        peer_id = parse_input_peer_id (s, strlen (s), TGL_PEER_ENCR_CHAT);
+      } else if (F->params[p] == lfp_channel) {
+        peer_id = parse_input_peer_id (s, strlen (s), TGL_PEER_CHANNEL);
       } else {
-        P = get_peer (s);
+        peer_id = parse_input_peer_id (s, strlen (s), 0);
       }
-      if (!P/* || !(P->flags & FLAG_CREATED)*/) {
+      
+      if (!peer_id.peer_type) {
         ok = 0;
         break;
       }
-      if (F->params[p] != lfp_peer) {
-        if ((tgl_get_peer_type (P->id) == TGL_PEER_USER && F->params[p] != lfp_user) || 
-            (tgl_get_peer_type (P->id) == TGL_PEER_CHAT && F->params[p] != lfp_chat) || 
-            (tgl_get_peer_type (P->id) == TGL_PEER_ENCR_CHAT && F->params[p] != lfp_secret_chat)) {
-          ok = 0;
-          break;
-        }
-      }
-      lua_ptr[pos + p] = P;
+      
+      lua_ptr[pos + p].peer_id = peer_id;
       break;
 
     case lfp_string:
@@ -1425,23 +1545,31 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
         ok = 0;
         break;
       }
-      lua_ptr[pos + p] = (void *)s;
+      lua_ptr[pos + p].str = (void *)s;
+      lua_ptr[pos + p].flags |= 1;
       break;
 
     case lfp_number:
       num = lua_tonumber (L, -cc);
       
-      lua_ptr[pos + p] = (void *)(long)num;
+      lua_ptr[pos + p].num = num;
       break;
     
     case lfp_double:
-      dval  = lua_tonumber (L, -cc);
-    
-      if (sizeof (void *) == 4) {
-        *(float *)(lua_ptr + pos + p) = dval;
-      } else {
-        assert (sizeof (void *) >= 8);
-        *(double *)(lua_ptr + pos + p) = dval;
+      dval = lua_tonumber (L, -cc);
+      lua_ptr[pos + p].dnum = dval;
+      break;
+
+    case lfp_msg:
+      s = lua_tostring (L, -cc);
+      if (!s) {
+        ok = 0;
+        break;
+      }
+      lua_ptr[pos + p].msg_id = parse_input_msg_id (s, strlen (s));
+      if (lua_ptr[pos + p].msg_id.peer_type == 0) {
+        ok = 0;
+        break;
       }
       break;
     
@@ -1452,7 +1580,7 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
         break;
       }
       
-      lua_ptr[pos + p] = (void *)(long)num;
+      lua_ptr[pos + p].num = num;
       break;
     
     case lfp_nonnegative_number:
@@ -1462,26 +1590,7 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
         break;
       }
       
-      lua_ptr[pos + p] = (void *)(long)num;
-      break;
-
-    case lfp_msg:
-      s = lua_tostring (L, -cc);
-      if (!s || !strlen (s)) {
-        ok = 0;
-        break;
-      }
-
-      num = atoll (s);
-
-      M = tgl_message_get (TLS, num);
-
-      if (!M || !(M->flags & TGLMF_CREATED)) {
-        ok = 0;
-        break;
-      }
-      
-      lua_ptr[pos + p] = M;
+      lua_ptr[pos + p].num = num;
       break;
     
     default:
@@ -1499,7 +1608,7 @@ static int parse_lua_function (lua_State *L, struct lua_function *F) {
   
   for (p = 0; p < sp; p++) {
     if (F->params[p] == lfp_string) {
-      lua_ptr[pos + p] = strdup (lua_ptr[pos + p]);
+      lua_ptr[pos + p].str = tstrdup (lua_ptr[pos + p].str);
     }
   }
   pos += p;
@@ -1608,6 +1717,7 @@ enum command_argument {
   ca_user,
   ca_chat,
   ca_secret_chat,
+  ca_channel,
   ca_peer,
   ca_file_name,
   ca_file_name_end,
