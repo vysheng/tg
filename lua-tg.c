@@ -1416,7 +1416,7 @@ void lua_do_all (void) {
       tgl_do_send_location (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].dnum, lua_ptr[p + 3].dnum, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 4;
       break;
-	//channel Support
+	//channels and megagroups
 	case lq_channels_dialog_list:
 	  tgl_do_get_channels_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
 	  break;
