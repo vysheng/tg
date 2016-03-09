@@ -1416,23 +1416,23 @@ void lua_do_all (void) {
       tgl_do_send_location (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].dnum, lua_ptr[p + 3].dnum, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 4;
       break;
-	//channels and megagroups
-	case lq_channels_dialog_list:
-	  tgl_do_get_channels_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
-	  break;
-	case lq_chat_upgrade:
-	  tgl_do_upgrade_group (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 2;
-	  break;
+	//channel Support
+    case lq_channels_dialog_list:
+      tgl_do_get_channels_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
+      break;
+    case lq_chat_upgrade:
+      tgl_do_upgrade_group (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
 	case lq_create_channel:
-	  tgl_do_create_channel (TLS, 1, &lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), LUA_STR_ARG (p + 3), 1,lua_empty_cb, lua_ptr[p].ptr);
-	  p += 4;
-	  break;
-	case lq_channel_info:
+      tgl_do_create_channel (TLS, 1, &lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), LUA_STR_ARG (p + 3), 1,lua_empty_cb, lua_ptr[p].ptr);
+      p += 4;
+      break;
+    case lq_channel_info:
       tgl_do_get_channel_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_channel_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-	case lq_export_channel_link:
+    case lq_export_channel_link:
       tgl_do_export_channel_link (TLS, lua_ptr[p + 1].peer_id, lua_str_cb, lua_ptr[p].ptr);
       p += 2;
       break;
@@ -1440,13 +1440,13 @@ void lua_do_all (void) {
       tgl_do_channel_invite_user (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
-	case lq_channel_join:
-	  tgl_do_join_channel (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 2;
-	  break;
-	case lq_leave_channel:
-	  tgl_do_leave_channel (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 2;
+    case lq_channel_join:
+      tgl_do_join_channel (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+    case lq_leave_channel:
+      tgl_do_leave_channel (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
 	  break;
     case lq_channel_kick:
       tgl_do_channel_kick_user (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_empty_cb, lua_ptr[p].ptr);
@@ -1460,46 +1460,46 @@ void lua_do_all (void) {
       tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 1000, 0, 0, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-	case lq_channel_get_bots:
+    case lq_channel_get_bots:
       tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 1000, 0, 4, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-	case lq_channel_get_kicked:
+    case lq_channel_get_kicked:
       tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 1000, 0, 3, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-	case lq_channel_unblock:
-	  tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
-	case lq_rename_channel:
-	  tgl_do_rename_channel (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
-	case lq_channel_set_photo:
-	  tgl_do_set_channel_photo (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
-	case lq_channel_set_about:
-	  tgl_do_channel_set_about (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
-	case lq_channel_set_username:
-	  tgl_do_channel_set_username (TLS,  lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
-	case lq_channel_set_admin:
-	  tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 2, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
+    case lq_channel_unblock:
+      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_rename_channel:
+      tgl_do_rename_channel (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_channel_set_photo:
+      tgl_do_set_channel_photo (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_channel_set_about:
+      tgl_do_channel_set_about (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_channel_set_username:
+      tgl_do_channel_set_username (TLS,  lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
+    case lq_channel_set_admin:
+      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 2, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
 	case lq_channel_set_mod:
-	  tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 1, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
+      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 1, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
 	case lq_channel_demote:
-	  tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
-	  p += 3;
-	  break;
+      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
