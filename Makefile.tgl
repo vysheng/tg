@@ -1,11 +1,11 @@
-TGL_OBJECTS=${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/tgl.o ${OBJ}/updates.o ${OBJ}/tgl-net.o ${OBJ}/tgl-timers.o ${OBJ}/tg-mime-types.o ${OBJ}/mtproto-utils.o 
+TGL_OBJECTS=${OBJ}/mtproto-common.o ${OBJ}/mtproto-client.o ${OBJ}/mtproto-key.o ${OBJ}/queries.o ${OBJ}/structures.o ${OBJ}/binlog.o ${OBJ}/tgl.o ${OBJ}/updates.o ${OBJ}/tgl-net.o ${OBJ}/tgl-timers.o ${OBJ}/tg-mime-types.o ${OBJ}/mtproto-utils.o  ${OBJ}/crypto/bn_openssl.o ${OBJ}/crypto/bn_altern.o ${OBJ}/crypto/rsa_pem_openssl.o ${OBJ}/crypto/rsa_pem_altern.o ${OBJ}/crypto/md5_openssl.o ${OBJ}/crypto/md5_altern.o ${OBJ}/crypto/sha_openssl.o ${OBJ}/crypto/sha_altern.o ${OBJ}/crypto/aes_openssl.o ${OBJ}/crypto/aes_altern.o 
 
 TGL_OBJECTS_AUTO=${OBJ}/auto/auto-skip.o ${OBJ}/auto/auto-fetch.o ${OBJ}/auto/auto-store.o ${OBJ}/auto/auto-autocomplete.o ${OBJ}/auto/auto-types.o ${OBJ}/auto/auto-fetch-ds.o  ${OBJ}/auto/auto-free-ds.o ${OBJ}/auto/auto-store-ds.o ${OBJ}/auto/auto-print-ds.o
 
 
 TLD_OBJECTS=${OBJ}/dump-tl-file.o
 GENERATE_OBJECTS=${OBJ}/generate.o
-TGL_COMMON_OBJECTS=${OBJ}/tools.o
+TGL_COMMON_OBJECTS=${OBJ}/tools.o ${OBJ}/crypto/rand_openssl.o ${OBJ}/crypto/rand_altern.o ${OBJ}/crypto/err_openssl.o ${OBJ}/crypto/err_altern.o
 TGL_OBJ_C=${GENERATE_OBJECTS} ${TGL_COMMON_OBJECTS} ${TGL_OBJECTS} ${TLD_OBJECTS}
 
 .SUFFIXES:
@@ -41,10 +41,10 @@ ${AUTO}/scheme2.tl: ${AUTO}/scheme.tl ${EXE}/tl-parser
 	${EXE}/tl-parser -E ${AUTO}/scheme.tl 2> $@  || ( cat $@ && rm $@ && false )
 
 ${AUTO}/auto-%.c: ${AUTO}/scheme.tlo ${EXE}/generate auto/constants.h ${AUTO}/auto-%.h | create_dirs_and_headers
-	${EXE}/generate -g $(patsubst ${AUTO}/auto-%.c,%,$@) ${AUTO}/scheme.tlo > $@ || rm $@
+	${EXE}/generate -g $(patsubst ${AUTO}/auto-%.c,%,$@) ${AUTO}/scheme.tlo > $@ || ( rm $@ && false )
 
 ${AUTO}/auto-%.h: ${AUTO}/scheme.tlo ${EXE}/generate
-	${EXE}/generate -g $(patsubst ${AUTO}/auto-%.h,%-header,$@) ${AUTO}/scheme.tlo > $@ || rm $@
+	${EXE}/generate -g $(patsubst ${AUTO}/auto-%.h,%-header,$@) ${AUTO}/scheme.tlo > $@  || ( rm $@ && false )
 
 ${AUTO}/constants.h: ${AUTO}/scheme2.tl ${srcdir}/tgl/gen_constants_h.awk
 	awk -f ${srcdir}/tgl/gen_constants_h.awk < $< > $@

@@ -14,7 +14,7 @@ AUTO=auto
 EXE=bin
 OBJ=objs
 LIB=libs
-DIR_LIST=${DEP} ${AUTO} ${EXE} ${OBJ} ${LIB} ${DEP}/auto ${OBJ}/auto
+DIR_LIST=${DEP} ${AUTO} ${EXE} ${OBJ} ${LIB} ${DEP}/auto ${OBJ}/auto ${OBJ}/crypto ${DEP}/crypto
 
 EXE_LIST=${EXE}/telegram-cli
 
@@ -51,5 +51,8 @@ ${EXE}/telegram-cli: ${TG_OBJECTS} ${LIB}/libtgl.a
 	${CC} $^ ${LINK_FLAGS} -o $@
 
 clean:
-	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
+	rm -rf ${DIR_LIST}
+
+distclean:
+	rm -rf ${DIR_LIST} config.h config.log config.status
 

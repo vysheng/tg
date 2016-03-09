@@ -7,14 +7,12 @@ test_dc1 = {
   config_directory = ".telegram/test_dc1";
   test = true;
   msg_num = true;
-  binlog_enabled = true;
 };
 
 binlog = {
   config_directory = ".telegram/binlog";
   test = false;
   msg_num = true;
-  binlog_enabled = true;
   log_level = 2;
 };
 
@@ -22,7 +20,6 @@ binlog_mts = {
   config_directory = ".telegram/binlog_mts";
   test = false;
   msg_num = true;
-  binlog_enabled = true;
   log_level = 2;
 };
 
@@ -30,7 +27,6 @@ mega = {
   config_directory = ".telegram/mega";
   test = false;
   msg_num = true;
-  binlog_enabled = true;
   log_level = 2;
 };
 
@@ -55,12 +51,11 @@ test = {
 test1 = {
   config_directory = ".telegram/test1";
   msg_num = true;
-  binlog_enabled = true;
 };
 
 test2 = {
   config_directory = ".telegram/test2";
   msg_num = true;
-  binlog_enabled = true;
+  pfs_enabled = true;
 };
 
