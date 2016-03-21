@@ -57,6 +57,7 @@ All of these functions are accessed by importing the `tgl` module.
 |`tgl.set_profile_photo (file_path)`|Sets avatar to image found at `file_path`, no checking on the file.|`empty_cb`|
 |`tgl.create_secret_chat (user)`|Creates secret chat with user, callback recommended to get new peer for the secret chat.|`secret_chat_cb`|
 |`tgl.create_group_chat (peer_list, name)`|`peer_list` contains users to create group with, must be more than 1 peer.|`empty_cb`|
+|`tgl.delete_msg (msg_id)`|Deletes the message from the local history.|`empty_cb`|
 |`tgl.restore_msg (msg_id)`|Restore a deleted message by message id.|`empty_cb`|
 |`tgl.status_online ()`|Sets status as online|`empty_cb`|
 |`tgl.status_offline ()`|Sets status as offline|`empty_cb`|
@@ -100,20 +101,20 @@ Peer
 |`peer.chat_del_user (user)`|Removes `user`(`tgl.Peer`) from the group. The calling peer must be of type `tgl.PEER_CHAT`|`empty_cb`|
 |`peer.mark_read ()`|Marks the dialog with the peer as read. This cannot be done on message level.|`empty_cb`|
 |`peer.msg_search (text, callback)`|Get all messages that match the search text with the peer. *requires callback*|`msg_list_cb`|
-|`peer.get_history (offset, limit, callback)`|Get all messages with the peer. `offset` specifies what message to start at, and `limit` specifies how many messages to retrieve. See example below for one method to get the entire history. *requires callback*|`msg_list_cb`|
+|`peer.history (offset, limit, callback)`|Get all messages with the peer. `offset` specifies what message to start at, and `limit` specifies how many messages to retrieve. See example below for one method to get the entire history. *requires callback*|`msg_list_cb`|
 |`peer.info ()`|Gets peer info.|`peer_cb`|
 
-Example usage for `peer.get_history`:
+Example usage for `peer.history`:
 ```
 from functools import partial
 history = []
 # Get all the history, 100 msgs at a time
-peer.get_history(0, 100, partial(history_callback, 100, peer))
+peer.history(0, 100, partial(history_callback, 100, peer))
 
-def history_callback(msg_count, peer, success, msgs)
+def history_callback(msg_count, peer, success, msgs):
     history.extend(msgs)
     if len(msgs) == msg_count:
-        peer.get_history(len(history), msg_count, partial(history_callback, msg_count, peer))
+        peer.history(len(history), msg_count, partial(history_callback, msg_count, peer))
 ```
 
 Msg
@@ -172,4 +173,3 @@ Msg
 |`msg.load_audio(callback)`|Saves the media and returns the path to the file in the callback. *requires callback*|`file_cb`|
 |`msg.load_document(callback)`|Saves the media and returns the path to the file in the callback. *requires callback*|`file_cb`|
 |`msg.load_document_thumb(callback)`|Saves the media and returns the path to the file in the callback. *requires callback*|`file_cb`|
-|`msg.delete_msg ()`|Deletes the message from the local history|`empty_cb`|
