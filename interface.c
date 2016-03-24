@@ -4007,7 +4007,8 @@ void print_media (struct in_ev *ev, struct tgl_message_media *M) {
       
     default:
       mprintf (ev, "x = %d\n", M->type);
-      assert (0);
+      M->type = tgl_message_media_unsupported;
+      break;
   }
 }
 
