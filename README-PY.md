@@ -1,4 +1,4 @@
-Python Bindings
+dialog_list_cbPython Bindings
 ====================
 All of the functions and methods are executed in the network loop of tg, ***NOT IMMEDIATELY***. What this means is all calls should be considered async, and so there is an optional callback parameter for every function/method as the last parameter. For many uses, you won't care about the return value, so you can leave out the callback. Note there are a few cases where the callback is considered mandatory when the function is considered an information query and has no functionality without returned data. These will explicitly have the callback in the parameter list and will be noted in the description.
 
@@ -32,7 +32,7 @@ As mentioned, all methods and functions have callbacks. The following are the di
 |----- | ------------------ | ------------|
 |empty_cb|`(success)`|This just indicated the success of the call. All other callback types have this as well.|
 |contact_list_cb|`(success, peer_list)`|`peer_list` is a list of `tgl.Peer` objects|
-|dialog_list_cb|`(success, dialog_list)`|`dialog_list` is a list of dicts, with keys: 'peer': `tgl.Peer`, 'message': `tgl.Msg`|
+|dialog_list_cb|`(success, dialog_list)`|`dialog_list` is a list of dicts, with keys: 'peer': `tgl.Peer`, 'unread': `bool( Determine whether has unread message)`|
 |msg_cb|`(success, msg)`|`msg` is a `tgl.Msg`|
 |msg_list_cb|`(success, msg_list)`|`msg_list` is a list of `tgl.Msg` objects|
 |file_cb|`(success, file_path)`|`file_path` is a string with an absolute path|
