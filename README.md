@@ -107,6 +107,11 @@ Then build:
      env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
      make
 
+#### Windows
+
+In Windows, you should compile with Cygwin, which has POSIX API functionality.
+Follow instructions at [READMD-Cygwin.md](https://github.com/vysheng/tg/blob/master/README-Cygwin.md).
+
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
