@@ -23,6 +23,10 @@ TG_OBJECTS=${OBJ}/main.o ${OBJ}/loop.o ${OBJ}/interface.o ${OBJ}/lua-tg.o ${OBJ}
 INCLUDE=-I. -I${srcdir} -I${srcdir}/tgl
 CC=@CC@
 
+PREFIX?=/usr/local
+INSTALL_BIN=$(PREFIX)/bin
+INSTALL=install
+
 .SUFFIXES:
 
 .SUFFIXES: .c .h .o
@@ -56,3 +60,6 @@ clean:
 distclean:
 	rm -rf ${DIR_LIST} config.h config.log config.status
 
+install: all
+	@mkdir -p $(INSTALL_BIN)
+	$(INSTALL) telegram $(INSTALL_BIN)
