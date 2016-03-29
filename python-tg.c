@@ -397,7 +397,7 @@ void py_on_loop () {
   PyObject *result;
 
   if(_py_on_loop == NULL) {
-    logprintf("Callback not set for on_chat_update");
+    logprintf("Callback not set for on_loop");
     return;
   }
 
