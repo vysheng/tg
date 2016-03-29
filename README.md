@@ -102,6 +102,8 @@ Install these ports:
 * devel/libexecinfo
 * lang/lua52
 
+Change the sun path in line 936 in main.c from 108 to 104 (Applicable for both brew and ports)
+
 Then build:
 
      env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
