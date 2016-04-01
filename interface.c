@@ -722,7 +722,8 @@ void do_help (struct command *command, int arg_num, struct arg args[], struct in
   struct command *cmd = commands;
   while (cmd->name) {
     if (!args[0].str || !strcmp (args[0].str, cmd->name)) {
-      mprintf (ev, "%s\n", cmd->desc);
+      int tab_index = strchr (cmd->desc, '\t') - cmd->desc;
+      mprintf (ev, "%-55.*s %s\n", tab_index, cmd->desc, cmd->desc + tab_index + 1);
       total ++;
     }
     cmd ++;
