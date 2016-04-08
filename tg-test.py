@@ -9,12 +9,14 @@ pp = pprint.PrettyPrinter(indent=4)
 binlog_done = False;
 
 def on_binlog_replay_end():
+    global binlog_done
     binlog_done = True;
 
 def on_get_difference_end():
     pass
 
 def on_our_id(id):
+    global our_id
     our_id = id
     return "Set ID: " + str(our_id)
 
