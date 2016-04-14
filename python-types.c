@@ -161,7 +161,7 @@ tgl_Peer_getuser_status(tgl_Peer *self, void *closure)
   switch(self->peer->id.type) {
     case TGL_PEER_USER:
       ret = PyDict_New();
-      PyDict_SetItemString(ret, "online", self->peer->user.status.online? Py_True : Py_False);
+      PyDict_SetItemString(ret, "online", self->peer->user.status.online > 0 ? Py_True : Py_False);
       PyDict_SetItemString(ret, "when", get_datetime(self->peer->user.status.when));
 
       break;
