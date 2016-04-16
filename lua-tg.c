@@ -692,6 +692,7 @@ enum lua_query_type {
   lq_chat_set_photo,
   lq_set_profile_photo,
   lq_set_profile_name,
+  lq_set_profile_username,
   lq_send_video,
   lq_send_text,
   lq_reply,
@@ -1274,7 +1275,7 @@ void lua_do_all (void) {
     case lq_load_audio:
     case lq_load_document:
       M = tgl_message_get (TLS, &lua_ptr[p + 1].msg_id);
-      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_document_encr)) {
+      if (!M || (M->media.type != tgl_message_media_photo && M->media.type != tgl_message_media_document && M->media.type != tgl_message_media_video && M->media.type != tgl_message_media_audio && M->media.type != tgl_message_media_document_encr)) {
         lua_file_cb (TLS, lua_ptr[p].ptr, 0, 0);
       } else {
         if (M->media.type == tgl_message_media_photo) {
@@ -1283,6 +1284,12 @@ void lua_do_all (void) {
         } else if (M->media.type == tgl_message_media_document) {
           assert (M->media.document);
           tgl_do_load_document (TLS, M->media.document, lua_file_cb, lua_ptr[p].ptr);
+		} else if (M->media.type == tgl_message_media_video) {
+          assert (M->media.document);
+          tgl_do_load_audio (TLS, M->media.document, lua_file_cb, lua_ptr[p].ptr);
+		} else if (M->media.type == tgl_message_media_audio) {
+          assert (M->media.document);
+          tgl_do_load_audio (TLS, M->media.document, lua_file_cb, lua_ptr[p].ptr);
         } else {
           tgl_do_load_encr_document (TLS, M->media.encr_document, lua_file_cb, lua_ptr[p].ptr);
         }
@@ -1364,8 +1371,12 @@ void lua_do_all (void) {
       tgl_do_set_profile_photo (TLS, lua_ptr[p + 1].str, lua_empty_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-    case lq_set_profile_name:
-      tgl_do_set_profile_name (TLS, LUA_STR_ARG (p + 1), LUA_STR_ARG (p + 2), lua_user_cb, lua_ptr[p].ptr);
+   case lq_set_profile_username:
+      tgl_do_set_username (TLS, lua_ptr[p + 1].str, strlen(lua_ptr[p + 1].str), lua_user_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+   case lq_set_profile_name:
+      tgl_do_set_profile_name (TLS, lua_ptr[p + 1].str,  strlen(lua_ptr[p + 1].str),lua_ptr[p + 2].str, strlen(lua_ptr[p + 2].str), lua_user_cb, lua_ptr[p].ptr);
       p += 3;
       break;
     case lq_create_secret_chat:
@@ -1461,17 +1472,17 @@ void lua_do_all (void) {
       p += 2;
       break;
     case lq_channel_get_bots:
-      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 1000, 0, 4, lua_contact_list_cb, lua_ptr[p].ptr);
+      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 5000, 0, 4, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_channel_get_kicked:
-      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 1000, 0, 3, lua_contact_list_cb, lua_ptr[p].ptr);
+      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 5000, 0, 3, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-    case lq_channel_unblock:
-      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
-      p += 3;
-      break;
+    //case lq_channel_unblock:
+      //tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
+      //p += 3;
+      //break;
     case lq_rename_channel:
       tgl_do_rename_channel (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
@@ -1589,7 +1600,8 @@ struct lua_function functions[] = {
   {"resolve_username", lq_resolve_username, { lfp_string, lfp_none }},
   {"mark_read", lq_mark_read, { lfp_peer, lfp_none }},
   {"set_profile_photo", lq_set_profile_photo, { lfp_string, lfp_none }},
-  {"set_profile_name", lq_set_profile_name, { lfp_string, lfp_none }},
+  {"set_profile_name", lq_set_profile_name, { lfp_string,lfp_string, lfp_none }},
+  {"set_profile_username", lq_set_profile_username, { lfp_string, lfp_none }},
   {"create_secret_chat", lq_create_secret_chat, { lfp_user, lfp_none }},
   {"create_group_chat", lq_create_group_chat, { lfp_user, lfp_string, lfp_none }},
   {"delete_msg", lq_delete_msg, { lfp_msg, lfp_none }},
