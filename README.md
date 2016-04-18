@@ -150,6 +150,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **send_photo** \<peer\> \<photo-file-name\> - sends photo to peer
 * **send_video** \<peer\> \<video-file-name\> - sends video to peer
 * **send_text** \<peer\> \<text-file-name> - sends text file as plain messages
+* **send_document** \<peer\> \<document-file-name\> - sends document to peer
 * **load_photo**/load_video/load_video_thumb/load_audio/load_document/load_document_thumb \<msg-seqno\> - loads photo/video/audio/document to download dir
 * **view_photo**/view_video/view_video_thumb/view_audio/view_document/view_document_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
 * **fwd_media** \<msg-seqno\> send media in your message. Use this to prevent sharing info about author of media (though, it is possible to determine user_id from media itself, it is not possible get access_hash of this user)
