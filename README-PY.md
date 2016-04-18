@@ -20,6 +20,7 @@ Assign python fuctions to the following tgl attributes to set callbacks from TG.
 |`tgl.on_get_difference_end()`| This is called after first get_difference call. So we received all updates after last client execute.|
 |`tgl.on_our_id(our_id)`|Informs about id of currently logged in user.|
 |`tgl.on_msg_receive(msg)`| This is called when we receive new `tgl.Msg` object (*may be called before on_binlog_replay_end, than it is old msg*).|
+|`tgl.on_msg_history(msg)`| This is called when we receive a `tgl.Msg` object from a history printing.|
 |`tgl.on_user_update(peer, what_changed)`|updated info about user. peer is a `tgl.Peer` object representing the user, and what_changed is array of strings.|
 |`tgl.on_chat_update(peer, what_changed)`|updated info about chat. peer is a `tgl.Peer` object representing the chat, and what_changed is array of strings.|
 |`tgl.on_secret_chat_update(peer, what_changed)`|updated info about secret chat. peer is a `tgl.Peer` object representing the secret chat, and  what_changed is array of strings.|
