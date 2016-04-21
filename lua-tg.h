@@ -24,7 +24,7 @@
 
 void lua_init (const char *file);
 void lua_new_msg (struct tgl_message *M);
-void lua_our_id (int id);
+void lua_our_id (tgl_peer_id_t id);
 void lua_secret_chat_update (struct tgl_secret_chat *U, unsigned flags);
 void lua_user_update (struct tgl_user *U, unsigned flags);
 void lua_chat_update (struct tgl_chat *C, unsigned flags);
