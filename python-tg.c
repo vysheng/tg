@@ -521,7 +521,7 @@ void py_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, in
   Py_XDECREF(callable);
 }
 
-void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], tgl_message_id_t msgs[], int unread[]) {
+void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], tgl_message_id_t *msgs[], int unread[]) {
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
@@ -537,7 +537,7 @@ void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int
         dialog = PyDict_New();
         PyDict_SetItemString(dialog, "peer", get_peer(peers[i], tgl_peer_get (TLS, peers[i])));
 
-        struct tgl_message *M = tgl_message_get (TLS, &msgs[i]);
+        struct tgl_message *M = tgl_message_get (TLS, msgs[i]);
         if (M && (M->flags & TGLMF_CREATED)) {
           PyDict_SetItemString(dialog, "message", get_message(M));
         }
@@ -758,6 +758,7 @@ void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char 
 }
 
 #define PY_PEER_ID(x) (tgl_peer_id_t)((tgl_Peer*)x)->peer->id
+#define PY_MSG_ID(x) (tgl_message_id_t*)x
 
 void py_do_all (void) {
   int p = 0;
@@ -920,13 +921,13 @@ void py_do_all (void) {
 
     case pq_fwd:
       if(PyArg_ParseTuple(args, "O!l|O", &tgl_PeerType, &peer, &msg_id, &cb_extra))
-        tgl_do_forward_message (TLS, PY_PEER_ID(peer), msg_id, 0, py_msg_cb, cb_extra);
+        tgl_do_forward_message (TLS, PY_PEER_ID(peer), PY_MSG_ID(msg_id), 0, py_msg_cb, cb_extra);
       else
         PyErr_Print();
       break;
     case pq_fwd_media:
       if(PyArg_ParseTuple(args, "O!l|O", &tgl_PeerType, &peer, &msg_id, &cb_extra))
-        tgl_do_forward_media (TLS, PY_PEER_ID(peer), msg_id, 0, py_msg_cb, cb_extra);
+        tgl_do_forward_media (TLS, PY_PEER_ID(peer), PY_MSG_ID(msg_id), 0, py_msg_cb, cb_extra);
       else
         PyErr_Print();
       break;
@@ -1034,7 +1035,7 @@ void py_do_all (void) {
     case pq_delete_msg:
     case pq_restore_msg:
       if(PyArg_ParseTuple(args, "l|O", &msg_id, &cb_extra))
-        tgl_do_delete_msg (TLS, msg_id, py_empty_cb, cb_extra);
+        tgl_do_delete_msg (TLS, PY_MSG_ID(msg_id), py_empty_cb, cb_extra);
       else
         PyErr_Print();
       break;
