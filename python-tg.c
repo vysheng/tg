@@ -82,6 +82,7 @@ extern PyTypeObject tgl_MsgType;
 //#include "interface.h"
 //#include "auto/constants.h"
 #include <tgl/tgl.h>
+#include <tgl/tgl-queries.h>
 #include "interface.h"
 
 #include <assert.h>
