@@ -4,17 +4,6 @@ compiler:
   - gcc
   - clang
 
-<<<<<<< HEAD
-install:
- - sudo apt-get update
- - sudo apt-get install libconfig8-dev
- - sudo apt-get install libreadline6-dev
- - sudo apt-get install libssl-dev
- - sudo apt-get install liblua5.2-dev lua5.2
- - sudo apt-get install python-dev python
- - sudo apt-get install libevent-dev
- - sudo apt-get install libjansson-dev
-=======
 addons:
   apt:
     packages:
@@ -27,7 +16,6 @@ addons:
     - python
     - libevent-dev
     - libjansson-dev
->>>>>>> use travis-ci's apt addon to install packages
 
 sudo: false
 
@@ -38,4 +26,3 @@ script:
   - git submodule update --init --recursive
   - ./configure
   - make
-
