@@ -118,6 +118,7 @@ char *start_command;
 int disable_link_preview;
 int enable_json;
 int alert_sound;
+int auto_mark_read;
 int exit_code;
 int permanent_msg_id_mode;
 int permanent_peer_id_mode;
@@ -470,6 +471,7 @@ void usage (void) {
   printf ("  --disable-colors/-C                  disable color output\n");
   printf ("  --disable-readline/-R                disable readline\n");
   printf ("  --alert/-A                           enable bell notifications\n");
+  printf ("  --auto-mark-read/-M                  mark read conversation after sending a message\n");
   printf ("  --daemonize/-d                       daemon mode\n");
   printf ("  --logname/-L <log-name>              log file name\n");
   printf ("  --username/-U <user-name>            change uid after start\n");
@@ -627,6 +629,7 @@ void args_parse (int argc, char **argv) {
     {"disable-colors", no_argument, 0, 'C'},
     {"disable-readline", no_argument, 0, 'R'},
     {"alert", no_argument, 0, 'A'},
+    {"auto-mark-read", no_argument, 0, 'M'},
     {"daemonize", no_argument, 0, 'd'},
     {"logname", required_argument, 0, 'L'},
     {"username", required_argument, 0, 'U'},
@@ -652,7 +655,7 @@ void args_parse (int argc, char **argv) {
 
 
   int opt = 0;
-  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAdL:DU:G:qP:S:e:I6b"
+  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAMdL:DU:G:qP:S:e:I6b"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -744,6 +747,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'A':
       alert_sound = 1;
+      break;
+    case 'M':
+      auto_mark_read = 1;
       break;
     case 'd':
       daemonize ++;
