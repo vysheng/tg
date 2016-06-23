@@ -233,7 +233,7 @@ void py_binlog_end (void) {
   PyObject *arglist, *result;
 
   if(_py_binlog_end == NULL) {
-    logprintf("Callback not set for on_binlog_end");
+    logprintf("Callback not set for on_binlog_end\n");
     return;
   }
 
@@ -255,7 +255,7 @@ void py_diff_end (void) {
   PyObject *arglist, *result;
 
   if(_py_diff_end == NULL) {
-    logprintf("Callback not set for on_diff_end");
+    logprintf("Callback not set for on_diff_end\n");
     return;
   }
 
@@ -276,7 +276,7 @@ void py_our_id (int id) {
   PyObject *arglist, *result;
 
   if(_py_our_id == NULL) {
-    logprintf("Callback not set for on_our_id");
+    logprintf("Callback not set for on_our_id\n");
     return;
   }
 
@@ -297,7 +297,7 @@ void py_new_msg (struct tgl_message *M) {
   PyObject *arglist, *result;
 
   if(_py_new_msg == NULL) {
-    logprintf("Callback not set for on_new_msg");
+    logprintf("Callback not set for on_new_msg\n");
     return;
   }
 
@@ -321,7 +321,7 @@ void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   PyObject *arglist, *result;
 
   if(_py_secret_chat_update == NULL) {
-    logprintf("Callback not set for on_secret_chat_update");
+    logprintf("Callback not set for on_secret_chat_update\n");
     return;
   }
 
@@ -347,7 +347,7 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
   PyObject *arglist, *result;
 
   if(_py_user_update == NULL) {
-    logprintf("Callback not set for on_user_update");
+    logprintf("Callback not set for on_user_update\n");
     return;
   }
 
@@ -373,7 +373,7 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
   PyObject *arglist, *result;
 
   if(_py_chat_update == NULL) {
-    logprintf("Callback not set for on_chat_update");
+    logprintf("Callback not set for on_chat_update\n");
     return;
   }
 
@@ -398,7 +398,7 @@ void py_on_loop () {
   PyObject *result;
 
   if(_py_on_loop == NULL) {
-    logprintf("Callback not set for on_chat_update");
+    logprintf("Callback not set for on_loop\n");
     return;
   }
 
@@ -1027,7 +1027,7 @@ void py_do_all (void) {
 
           tfree(ids, PyList_GET_SIZE(pyObj1) * sizeof(tgl_user_id_t));
         } else {
-            logprintf("create_group_chat: Argument 1 must be a list of at least 3 peers");
+            logprintf("create_group_chat: Argument 1 must be a list of at least 3 peers\n");
         }
       }
       Py_XDECREF(pyObj1);

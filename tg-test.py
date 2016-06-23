@@ -60,6 +60,9 @@ def on_user_update(peer, what_changed):
 def on_chat_update(peer, what_changed):
     pass
 
+def on_loop():
+    pass
+
 # Set callbacks
 tgl.set_on_binlog_replay_end(on_binlog_replay_end)
 tgl.set_on_get_difference_end(on_get_difference_end)
@@ -68,4 +71,5 @@ tgl.set_on_msg_receive(on_msg_receive)
 tgl.set_on_secret_chat_update(on_secret_chat_update)
 tgl.set_on_user_update(on_user_update)
 tgl.set_on_chat_update(on_chat_update)
+tgl.set_on_loop(on_loop)
 

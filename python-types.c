@@ -84,6 +84,9 @@ tgl_Peer_getname (tgl_Peer *self, void *closure)
     case TGL_PEER_CHAT:
       ret = PyUnicode_FromString(self->peer->chat.print_title);
       break;
+    case TGL_PEER_CHANNEL:
+      ret = PyUnicode_FromString(self->peer->channel.print_title);
+      break;
     case TGL_PEER_ENCR_CHAT:
       ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
       break;
@@ -994,8 +997,12 @@ tgl_Peer_repr(tgl_Peer *self)
                                   self->peer->id.peer_id,  self->peer->encr_chat.print_name,
                                   PyObject_GetAttrString((PyObject*)self, "user"));
       break;
+    case TGL_PEER_CHANNEL:
+      ret = PyUnicode_FromFormat("<tgl.Peer: type=channel, id=%ld, name=%s>",
+                                  self->peer->id.peer_id,  self->peer->channel.print_title);
+      break;
     default:
-      ret = PyUnicode_FromFormat("<tgl.Peer: Type Unknown>");
+      ret = PyUnicode_FromFormat("<tgl.Peer: Type Unknown(type_id: %d)>",self->peer->id.peer_type);
     }
 
   return ret;
