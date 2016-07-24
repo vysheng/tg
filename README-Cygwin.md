@@ -3,9 +3,18 @@ To use telegram-cli in Windows, you should compile with Cygwin which has POSIX A
 
 Install [Cygwin](https://www.cygwin.com/) and cygwin's package manager, [apt-cyg](https://github.com/transcode-open/apt-cyg).
 
-In Cygwin Terminal, install compiler and tools :
+In Cygwin Terminal, install cygwin's package manager, apt-cyg:
 
-     apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip
+     lynx -source rawgit.com/transcode-open/apt-cyg/master/apt-cyg > apt-cyg
+     install apt-cyg /bin
+     
+Then install compiler and tools: if you're on the 32-bit version of cygwin,
+
+     apt-cyg install gcc-core gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip
+     
+Whereas on the 64-bit version,
+
+     apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip zlib-devel
 
 Now you have a compiler, but no libraries. You need readline, openssl, libconfig, liblua, python and libjansson to use telegram-cli's full functionality.
 
@@ -40,8 +49,15 @@ Then, go to tg directory then generate Makefile.
 
      cd tg
      ./configure
-     
-We need to patch Makefile and loop.c to compile in cygwin. Download this [patch](https://gist.github.com/ied206/d774a445f36004d263ab) then untar. Then, patch in tg directory.
+
+In case configure fails, it might be because of the CRLF line endings, so:
+
+     dos2unix -f configure
+
+And again,
+     ./configure
+
+We need to patch Makefile and loop.c to compile in cygwin. The patch is included, so just type:
 
      patch -p1 < telegram-cli-cygwin.patch
 
