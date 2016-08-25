@@ -17,7 +17,7 @@ Then Clone GitHub Repository in Cygwin Terminal
 
 In Cygwin Terminal, type: 
 
-     apt-cyg install libevent-devel openssl-devel libreadline-devel lua-devel python3
+     apt-cyg install libevent-devel openssl-devel libreadline-devel lua-devel python3 zlib-devel
 (Install package 'python' to use Python 2.7, or install package 'python3' to use Python 3)
 
 libconfig and libjansson is not in cygwin's package, so you should compile yourself.
