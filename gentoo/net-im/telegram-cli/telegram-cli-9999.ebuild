@@ -14,7 +14,6 @@ fi
 LICENSE="GPL-2"
 SLOT="0"
 IUSE="lua json python"
-REQUIRED_USE="python? ( lua json )"
 
 DEPEND="
 	sys-libs/zlib
