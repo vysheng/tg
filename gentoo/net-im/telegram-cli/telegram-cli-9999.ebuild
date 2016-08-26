@@ -13,7 +13,7 @@ else
 fi
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="lua json python"
+IUSE="lua json"
 
 DEPEND="
 	sys-libs/zlib
@@ -23,13 +23,11 @@ DEPEND="
 	dev-libs/libevent
 	lua? ( dev-lang/lua )
 	json? ( dev-libs/jansson )
-	python? ( dev-lang/python )
 	"
 RDEPEND="${DEPEND}"
 
 src_configure() {
 	econf $(use_enable lua liblua) \
-	      $(use_enable python) \
 	      $(use_enable json)
 }
 
