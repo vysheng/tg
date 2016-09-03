@@ -229,10 +229,16 @@ json_t *json_pack_media (struct tgl_message_media *M) {
     }
     break;
   case tgl_message_media_document:
-  case tgl_message_media_audio:
-  case tgl_message_media_video:
-  case tgl_message_media_document_encr:
     assert (json_object_set (res, "type", json_string ("document")) >= 0);
+    break;
+  case tgl_message_media_audio:
+    assert (json_object_set (res, "type", json_string ("audio")) >= 0);
+    break;
+  case tgl_message_media_video:
+    assert (json_object_set (res, "type", json_string ("video")) >= 0);
+    break;
+  case tgl_message_media_document_encr:
+    assert (json_object_set (res, "type", json_string ("document_encr")) >= 0);
     break;
   case tgl_message_media_unsupported:
     assert (json_object_set (res, "type", json_string ("unsupported")) >= 0);
@@ -282,7 +288,7 @@ json_t *json_pack_media (struct tgl_message_media *M) {
     }
     break;
   default:
-    assert (json_object_set (res, "type", json_string ("???")) >= 0);
+    assert (json_object_set (res, "type", json_string ("unknown")) >= 0);
   }
   return res;
 }
