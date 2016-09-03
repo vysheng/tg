@@ -269,7 +269,7 @@ json_t *json_pack_media (struct tgl_message_media *M) {
     assert (json_object_set (res, "longitude", json_real (M->venue.geo.longitude)) >= 0);
     assert (json_object_set (res, "latitude", json_real (M->venue.geo.latitude)) >= 0);
     if (M->venue.title) {
-      assert (json_object_set (res, "type", json_string (M->venue.title)) >= 0);
+      assert (json_object_set (res, "title", json_string (M->venue.title)) >= 0);
     }
     if (M->venue.address) {
       assert (json_object_set (res, "address", json_string (M->venue.address)) >= 0);
