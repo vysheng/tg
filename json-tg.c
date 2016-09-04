@@ -330,7 +330,7 @@ json_t *json_pack_typing (enum tgl_typing_status status) {
        assert (json_object_set (res, "status", json_string ("choosing contact")) >= 0);
        break;
     default:
-       assert (json_object_set (res, "status", json_string ("???")) >= 0);
+       assert (json_object_set (res, "status", json_string ("unknown")) >= 0);
        break;
   }
   return res;
@@ -427,7 +427,7 @@ json_t *json_pack_service (struct tgl_message *M) {
     assert (json_object_set (res, "type", json_string ("migrated_from")) >= 0);
     break;
   default:
-    assert (json_object_set (res, "type", json_string ("???")) >= 0);
+    assert (json_object_set (res, "type", json_string ("unknown")) >= 0);
     break;
   }
   return res;
