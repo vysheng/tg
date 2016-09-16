@@ -1,0 +1,33 @@
+name: telegram-cli
+version: master
+summary: Command-line interface for Telegram
+description: |
+  Command-line interface for Telegram, the mssaging app with a focus on
+  security and speed.
+
+grade: devel
+confinement: strict
+
+apps:
+  telegram-cli:
+    command: telegram-cli
+    plugs: [network]
+
+parts:
+  tg:
+    source: .
+    plugin: autotools
+    build-packages:
+      - g++
+      - libreadline-dev
+      - libconfig-dev
+      - libssl-dev
+      - lua5.2
+      - liblua5.2-dev
+      - libevent-dev
+      - libjansson-dev
+      - libpython-dev
+    artifacts:
+      - bin/generate
+      - bin/telegram-cli
+      - bin/tl-parser
