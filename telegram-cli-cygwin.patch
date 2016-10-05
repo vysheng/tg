@@ -1,16 +1,38 @@
-Binary files tg/.git/index and tg-cygwin/.git/index differ
-diff -urN tg/Makefile tg-cygwin/Makefile
---- tg/Makefile	2015-06-16 12:39:34.931053900 +0900
-+++ tg-cygwin/Makefile	2015-06-16 12:44:12.584342300 +0900
+--- tg/Makefile	2016-07-24 18:04:11.022621500 +0200
++++ tg-cygwin/Makefile	2016-07-24 22:55:32.710938800 +0200
 @@ -4,9 +4,9 @@
- LDFLAGS= -L/usr/local/lib -L/usr/lib -L/usr/lib -L/usr/lib
- CPPFLAGS= -I/usr/local/include -I/usr/include -I/usr/include  -I/usr/include/python3.4m -I/usr/include
+ LDFLAGS= -L/usr/local/lib -L/usr/lib -L/usr/lib 
+ CPPFLAGS= -I/usr/local/include -I/usr/include -I/usr/include  
  DEFS=-DHAVE_CONFIG_H
 -COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC
 +COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter
- EXTRA_LIBS=-ljansson -lconfig -lz -levent -lm   -lreadline -llua-5.2  -lpython3.4m -lssl -lcrypto
+ EXTRA_LIBS=-ljansson -lconfig -lz -levent   -lreadline -llua-5.2  -lssl -lcrypto
 -LOCAL_LDFLAGS=-rdynamic -ggdb -levent ${EXTRA_LIBS} -ldl -lpthread -lutil
 +LOCAL_LDFLAGS=-ggdb -levent ${EXTRA_LIBS} -ldl -lpthread -lutil
  LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
  
  DEP=dep
+--- tg\loop.c	Sun Jul 24 15:30:11 2016
++++ tg-cygwin\loop.c	Sat Jul 23 17:51:49 2016
+@@ -489,8 +489,9 @@
+   close (auth_file_fd);
+ }
+ 
+-void write_secret_chat (tgl_peer_t *Peer, void *extra) {
+-  struct tgl_secret_chat *P = (void *)Peer;
++// In Cygwin's Python, _P is marco constant. So change tgl_peer_t *_P -> tgl_peer_t *_Peer
++void write_secret_chat (tgl_peer_t *_Peer, void *extra) {
++  struct tgl_secret_chat *P = (void *)_Peer;
+   if (tgl_get_peer_type (P->id) != TGL_PEER_ENCR_CHAT) { return; }
+   if (P->state != sc_ok) { return; }
+   int *a = extra;
+@@ -737,7 +738,8 @@
+   vlogprintf (E_WARNING, "Accepting incoming connection\n");
+   socklen_t clilen = 0;
+   struct sockaddr_in cli_addr;
+-  int fd = accept (efd, (struct sockaddr *)&cli_addr, &clilen);
++  // In Cygwin, put unsigned int in socklen_t produce warning. Add (socklen_t *) casting
++  int fd = accept (efd, (struct sockaddr *)&cli_addr, (socklen_t *)&clilen);
+ 
+   assert (fd >= 0);
+   struct bufferevent *bev = bufferevent_socket_new (TLS->ev_base, fd, 0);
