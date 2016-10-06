@@ -1,4 +1,4 @@
-## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)
+## Telegram messenger CLI [![Build Status](https://travis-ci.org/rizaumami/tg.png)](https://travis-ci.org/rizaumami/tg)
 
 Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
 
@@ -22,7 +22,7 @@ Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%
 
 Clone GitHub Repository
 
-     git clone --recursive https://github.com/vysheng/tg.git && cd tg
+     git clone --recursive https://github.com/rizaumami/tg.git && cd tg
 
 ### Python Support
 
@@ -83,7 +83,7 @@ If using [Homebrew](http://brew.sh/):
      export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
      ./configure && make
 
-Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
+Thanks to [@jfontan](https://github.com/rizaumami/tg/issues/3#issuecomment-28293731) for this solution.
 
 If using [MacPorts](https://www.macports.org):
      
