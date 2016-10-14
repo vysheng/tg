@@ -476,7 +476,7 @@ void usage (void) {
   printf ("  --groupname/-G <group-name>          change gid after start\n");
   printf ("  --disable-output/-D                  disable output\n");
   printf ("  --tcp-port/-P <port>                 port to listen for input commands\n");
-  printf ("  --udp-socket/-S <socket-name>        unix socket to create\n");
+  printf ("  --unix-socket/-S <socket-name>       unix socket to create\n");
   printf ("  --exec/-e <commands>                 make commands end exit\n");
   printf ("  --disable-names/-I                   use user and chat IDs in updates instead of names\n");
   printf ("  --enable-ipv6/-6                     use ipv6 (may be unstable)\n");
