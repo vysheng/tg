@@ -100,6 +100,7 @@ char *state_file_name;
 char *secret_chat_file_name;
 char *downloads_directory;
 char *config_directory;
+char *config_directory_force;
 char *binlog_file_name;
 char *lua_file;
 char *python_file;
@@ -360,8 +361,16 @@ void parse_config (void) {
     config_lookup_bool (&conf, buf, &msg_num_mode);
   }
 
-  parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
-  config_directory = make_full_path (config_directory);
+  if( config_directory_force ){
+    config_directory = config_directory_force;
+
+    if( !disable_output ){
+        printf( "Config directory force: [%s]\n", config_directory_force );
+    }
+  }else{
+      parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
+      config_directory = make_full_path (config_directory);
+  }
 
   parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
@@ -454,6 +463,7 @@ void usage (void) {
   printf ("  --enable-msg-id/-N                   message num mode\n");
   #ifdef HAVE_LIBCONFIG
   printf ("  --config/-c                          config file name\n");
+  printf ("  --force-config-dir/-x                set force config dir instead of profile\n");
   printf ("  --profile/-p                         use specified profile\n");
   #else
   #if 0
@@ -610,6 +620,7 @@ void args_parse (int argc, char **argv) {
     {"enable-msg-id", no_argument, 0, 'N'},
 #ifdef HAVE_LIBCONFIG
     {"config", required_argument, 0, 'c'},
+    {"force-config-dir", required_argument, 0, 'X'},
     {"profile", required_argument, 0, 'p'},
 #else
     #if 0
@@ -652,7 +663,7 @@ void args_parse (int argc, char **argv) {
 
 
   int opt = 0;
-  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAdL:DU:G:qP:S:e:I6b"
+  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAdL:DU:G:qP:X:S:e:I6b"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -699,6 +710,9 @@ void args_parse (int argc, char **argv) {
 #ifdef HAVE_LIBCONFIG
     case 'c':
       config_filename = tstrdup (optarg);
+      break;
+    case 'X':
+      config_directory_force = tstrdup (optarg);
       break;
     case 'p':
       prefix = optarg;
