@@ -661,9 +661,11 @@ struct lua_arg {
 struct lua_arg lua_ptr[MAX_LUA_COMMANDS];
 static int pos;
 
+#if 0
 static inline tgl_peer_t *get_peer (const char *s) { 
   return tgl_peer_get_by_name (TLS, s);
 }
+#endif
   
 enum lua_query_type {
   lq_contact_list,
