@@ -109,7 +109,7 @@ AC_ARG_ENABLE(liblua,[--enable-liblua/--disable-liblua],
 AC_MSG_CHECKING([for python])
 AC_ARG_ENABLE(python,[--enable-python/--disable-python],
   [
-    if test "x$enableval" = "xyes" ; then
+    if test "x$enableval" = "xno" ; then
       AC_MSG_RESULT([disabled])
     else
       AC_MSG_RESULT([enabled])
