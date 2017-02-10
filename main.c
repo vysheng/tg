@@ -990,7 +990,7 @@ int main (int argc, char **argv) {
   running_for_first_time ();
   parse_config ();
 
-  #ifdef __FreeBSD__
+  #if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__))
   tgl_set_rsa_key (TLS, "/usr/local/etc/" PROG_NAME "/server.pub");
   #else
   tgl_set_rsa_key (TLS, "/etc/" PROG_NAME "/server.pub");
