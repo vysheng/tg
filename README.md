@@ -79,8 +79,8 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 If using [Homebrew](http://brew.sh/):
 
      brew install libconfig readline lua python libevent jansson
-     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
-     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
+     export CPPFLAGS="-I/usr/local/opt/openssl/include -I/usr/local/opt/readline/include"
+     export LDFLAGS="-L/usr/local/opt/openssl/lib -L/usr/local/opt/readline/lib"
      ./configure && make
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
