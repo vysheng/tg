@@ -4446,6 +4446,22 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     }
     print_media (ev, &M->media);
   }
+  if (M->reply_markup) {
+    // row_start is an array of row starts indecies and the last item is a total buttons count!
+    // See: https://github.com/vysheng/tgl/blob/ffb04caca71de0cddf28cd33a4575922900a59ed/structures.c#L1942-L1950
+    int buttons_count = M->reply_markup->row_start[M->reply_markup->rows];
+    int cc = 0; // buttons counter
+    int rr = 0; // rows counter
+    for(; cc < buttons_count; cc++) {
+      // Detect is row start. There is always row_start at 0.
+      int start = M->reply_markup->row_start[rr];
+      if (start == cc) {
+        mprintf(ev, "\n    ");
+        rr++;
+      }
+      mprintf(ev, "[%s]  ", M->reply_markup->buttons[cc]);
+    }
+  }
   mpop_color (ev);
   assert (!color_stack_pos);
   mprintf (ev, "\n");
