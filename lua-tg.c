@@ -464,6 +464,47 @@ void push_service (struct tgl_message *M) {
   }
 }
 
+/**
+ * push reply markup structure.
+ * structure pointer is M->reply_markup
+ * 
+ * structure has flags, rows count
+ * array of row starts and total buttons count
+ * in the last item of row_start (row_start[rows])
+ * https://github.com/vysheng/tgl/blob/ffb04caca71de0cddf28cd33a4575922900a59ed/structures.c#L1942-L1950
+ */
+void push_reply_markup (struct tgl_message *M) {
+  my_lua_checkstack (luaState, 4);
+  lua_newtable (luaState);
+
+  lua_add_num_field("refcnt", M->reply_markup->refcnt);
+  lua_add_num_field("flags", M->reply_markup->flags);
+  lua_add_num_field("rows", M->reply_markup->rows);
+
+  // make row_start array
+  my_lua_checkstack (luaState, 3);
+  lua_pushstring(luaState, "row_start");
+  lua_newtable (luaState);
+  int rs = 0;
+  for(; rs < M->reply_markup->rows; rs++) {
+    my_lua_checkstack (luaState, 3);
+    lua_pushnumber(luaState, rs);
+    lua_pushnumber(luaState, M->reply_markup->row_start[rs]);
+    lua_settable(luaState, -3);
+  }
+  lua_settable(luaState, -3);
+
+  // make buttons array
+  my_lua_checkstack (luaState, 3);
+  lua_pushstring(luaState, "buttons");
+  lua_newtable(luaState);
+  int cc = 0;
+  for(; cc < M->reply_markup->row_start[M->reply_markup->rows]; cc++) {
+    lua_add_string_field_arr(cc, M->reply_markup->buttons[cc]);
+  }
+  lua_settable(luaState, -3);
+}
+
 void push_message (struct tgl_message *M) {  
   assert (M);
   my_lua_checkstack (luaState, 10);
@@ -533,6 +574,13 @@ void push_message (struct tgl_message *M) {
     lua_pushstring (luaState, "action");
     push_service (M);
     lua_settable (luaState, -3); 
+  }
+
+  // markup text
+  if (M->reply_markup) {
+    lua_pushstring (luaState, "reply_markup");
+    push_reply_markup(M);
+    lua_settable (luaState, -3);
   }
 }
 
