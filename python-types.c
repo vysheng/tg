@@ -1465,7 +1465,7 @@ tgl_Msg_repr(tgl_Msg *self)
 {
   PyObject *ret;
 #if PY_VERSION_HEX < 0x02070900
-  ret = PyUnicode_FromFormat("<tgl.Msg id=%ld>", self->msg->id);
+  ret = PyUnicode_FromFormat("<tgl.Msg id=%ld>", self->msg->permanent_id.id);
 #else
   ret = PyUnicode_FromFormat("<tgl.Msg id=%ld, flags=%d, mention=%R, out=%R, unread=%R, service=%R, src=%R, "
                              "dest=%R, text=%R, media=%R, date=%R, fwd_src=%R, fwd_date=%R, reply_id=%R, reply=%R>",
