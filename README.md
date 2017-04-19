@@ -51,7 +51,7 @@ On Archlinux:
 
 On FreeBSD:
 
-     pkg install libconfig libexecinfo lua52 python
+     pkg install libconfig libexecinfo lua52 python libevent jansson
 
 On OpenBSD:
 
