@@ -7,6 +7,8 @@ In Cygwin Terminal, install compiler and tools :
 
      apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip
 
+After installing cygwin and above packages maybe some packages not become installed like (wget and make) to install this files manually rerun cygwin installer choose install from internet do next to the Select package window, there on View tab choose not installed, then in search box type make, find the gnu version of make utility and click the skip to change it to current version, and make sure bin? column is checked for this package, then in search box type gcc to search for gcc compiler and install one of available pure gcc packages or one with some utilities, then click next to packages being installed.
+
 Now you have a compiler, but no libraries. You need readline, openssl, libconfig, liblua, python and libjansson to use telegram-cli's full functionality.
 
 
