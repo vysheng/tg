@@ -107,6 +107,10 @@ Then build:
      env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
      make
 
+#### Docker
+
+The set for dockerizing the app: https://github.com/semenyukdmitry/telegram_cli_docker.
+
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
