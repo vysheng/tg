@@ -165,6 +165,10 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **create_group_chat** \<chat topic\> \<user1\> \<user2\> \<user3\> ... - creates a groupchat with users, use chat_add_user to add more users
 * **chat_set_photo** \<chat\> \<photo-file-name\> - sets group chat photo. Same limits as for profile photos.
 
+#### Channels
+
+* ***channel_info*** \<channel\> - prints info about channel
+
 #### Search
 
 * **search** \<peer\> pattern - searches pattern in messages with peer
