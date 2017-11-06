@@ -33,9 +33,9 @@ Python support is currently limited to Python 2.7 or Python 3.1+. Other versions
 Install libs: readline, openssl and (if you want to use config) libconfig, liblua, python and libjansson.
 If you do not want to use them pass options --disable-libconfig, --disable-liblua, --disable-python and --disable-json respectively.
 
-On Ubuntu/Debian use: 
+On Ubuntu/Debian use:
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make
 
 On gentoo:
 
@@ -86,7 +86,7 @@ If using [Homebrew](http://brew.sh/):
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
 If using [MacPorts](https://www.macports.org):
-     
+
      sudo port install libconfig-hr
      sudo port install readline
      sudo port install lua51
@@ -111,14 +111,14 @@ Then build:
 
 If you manage to launch it on other UNIX, please let me know.
 
-### Contacts 
+### Contacts
 If you would like to ask a question, you can write to my telegram or to the github (or both). To contact me via telegram, you should use import_card method with argument 000653bf:0738ca5d:5521fbac:29246815:a27d0cda
 
 
 ### Usage
 
     bin/telegram-cli -k <public-server-key>
-    
+
 By default, the public key is stored in tg-server.pub in the same folder or in /etc/telegram-cli/server.pub. If not, specify where to find it:
 
     bin/telegram-cli -k tg-server.pub
@@ -128,10 +128,10 @@ Client support TAB completion and command history.
 Peer refers to the name of the contact or dialog and can be accessed by TAB completion.
 For user contacts peer name is Name <underscore> Lastname with all spaces changed to underscores.
 For chats it is it's title with all spaces changed to underscores
-For encrypted chats it is <Exсlamation mark> <underscore> Name <underscore> Lastname with all spaces changed to underscores. 
+For encrypted chats it is <Exсlamation mark> <underscore> Name <underscore> Lastname with all spaces changed to underscores.
 
 If two or more peers have same name, <sharp>number is appended to the name. (for example A_B, A_B#1, A_B#2 and so on)
-  
+
 ### Supported commands
 
 #### Messaging
@@ -144,6 +144,21 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **mark_read** \<peer\> - mark read all received messages with peer
 * **delete_msg** \<msg-seqno\> - deletes message (not completly, though)
 * **restore_msg** \<msg-seqno\> - restores delete message. Impossible for secret chats. Only possible short time (one hour, I think) after deletion
+
+
+#### Channel
+* **channel_get_admins** [channel_username] [limit=100] [offset=0]	Gets channel admins
+* **channel_get_members** [channel_username] [limit=100] [offset=0]	Gets channel members
+* **channel_info** [channel_username]	Prints info about channel (id, members, admin, etc.)
+* **channel_invite** [channel_username] [user]	Invites user to channel
+* **channel_join** [channel_username]	Joins to channel
+* **channel_kick** [channel_username] [user]	Kicks user from channel
+* **channel_leave** [channel_username]	Leaves from channel
+* **channel_list** [limit=100] [offset=0]	List of last channels
+* **channel_set_about** [channel_username] [about]	Sets channel about info.
+* **channel_set_admin** [channel_username] [admin] [type]	Sets channel admin. 0 - not admin, 1 - moderator, 2 - editor
+* **channel_set_username** [channel_username] [username]	Sets channel username info.
+* **channel_set_photo** [channel_username] [filename]	Sets channel photo. Photo will be cropped to square
 
 #### Multimedia
 
