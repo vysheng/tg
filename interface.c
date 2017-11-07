@@ -97,6 +97,9 @@
 
 #include "tgl/tree.h"
 
+//yatao
+#include <execinfo.h>
+
 struct username_peer_pair {
   const char *username;
   tgl_peer_t *peer;
@@ -152,6 +155,7 @@ extern int daemonize;
 
 extern struct tgl_state *TLS;
 int readline_deactivated;
+int ui_dirty = 0;
 
 void fail_interface (struct tgl_state *TLS, struct in_ev *ev, int error_code, const char *format, ...) __attribute__ (( format (printf, 4, 5)));
 void event_incoming (struct bufferevent *bev, short what, void *_arg);
@@ -201,14 +205,17 @@ void socket_answer_end (struct in_ev *ev) {
 }
 
 #define mprintf(ev,...) \
+  ui_dirty = 1; \
   if (ev) { socket_answer_add_printf (__VA_ARGS__); } \
   else { printf (__VA_ARGS__); } 
 
 #define mprint_start(ev,...) \
+  ui_dirty = 1; \
   if (!ev) { print_start (__VA_ARGS__); } \
   else { socket_answer_start (); }
   
 #define mprint_end(ev,...) \
+  ui_dirty = 1; \
   if (!ev) { print_end (__VA_ARGS__); } \
   else { socket_answer_end (ev); }
 
@@ -608,6 +615,7 @@ char *complete_none (const char *text, int state) {
 void set_prompt (const char *s) {
   if (readline_disabled) { return; }
   rl_set_prompt (s);
+  ui_dirty = 1;
 }
 
 void update_prompt (void) {
@@ -616,12 +624,14 @@ void update_prompt (void) {
     return;
   }
   if (read_one_string) { return; }
+  if (!ui_dirty) { return; }
   print_start ();
   set_prompt (get_default_prompt ());
   if (readline_active) {
     rl_redisplay ();
   }
   print_end ();
+  ui_dirty = 0;
 }
 
 char *modifiers[] = {
@@ -797,6 +807,7 @@ void do_chat_with_peer (struct command *command, int arg_num, struct arg args[],
   if (!ev) {
     in_chat_mode = 1;
     chat_mode_id = args[0].peer_id;
+    ui_dirty = 1;
   }
 }
 
@@ -3422,6 +3433,7 @@ struct tgl_update_callback upd_cb = {
 
 
 void interpreter_ex (char *line, void *ex) {  
+  ui_dirty = 1;
   force_end_mode = 1;
   assert (!in_readline);
   in_readline = 1;
@@ -3763,6 +3775,7 @@ void reactivate_readline (void) {
 void print_start (void) {
   if (in_readline) { return; }
   if (readline_disabled) { return; }
+
   assert (!prompt_was);
   if (readline_active) {
     deactivate_readline ();
@@ -3825,6 +3838,7 @@ void push_color (const char *color) {
   if (disable_colors) { return; }
   assert (color_stack_pos < 10);
   color_stack[color_stack_pos ++] = color;
+  ui_dirty = 1;
   printf ("%s", color);
 }
 
@@ -3837,6 +3851,7 @@ void pop_color (void) {
   } else {
     printf ("%s", COLOR_NORMAL);
   }
+  ui_dirty = 1;
 }
 
 void print_media (struct in_ev *ev, struct tgl_message_media *M) {
