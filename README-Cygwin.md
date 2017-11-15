@@ -2,6 +2,7 @@
 To use telegram-cli in Windows, you should compile with Cygwin which has POSIX API functionality.
 
 Install [Cygwin](https://www.cygwin.com/) and cygwin's package manager, [apt-cyg](https://github.com/transcode-open/apt-cyg).
+Note: When installing cygwin, make sure to install all of it's "optional" install portions as some are required for tg.
 
 In Cygwin Terminal, install compiler and tools :
 
@@ -40,7 +41,10 @@ Then, go to tg directory then generate Makefile.
 
      cd tg
      ./configure
-     
+   
+If you get a '\r': command not found error when running configure, open the configure file in Notepad++ -> Edit -> EOL Conversions -> Unix (LF)
+
+
 We need to patch Makefile and loop.c to compile in cygwin. Download this [patch](https://gist.github.com/ied206/d774a445f36004d263ab) then untar. Then, patch in tg directory.
 
      patch -p1 < telegram-cli-cygwin.patch
