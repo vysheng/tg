@@ -5,6 +5,7 @@ compiler:
   - clang
 
 install:
+ - sudo apt-get update
  - sudo apt-get install libconfig8-dev
  - sudo apt-get install libreadline6-dev
  - sudo apt-get install libssl-dev
@@ -17,3 +18,4 @@ script:
   - git submodule update --init --recursive
   - ./configure
   - make
+

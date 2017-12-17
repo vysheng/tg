@@ -36,11 +36,23 @@ void json_pack_peer_type (json_t *res, tgl_peer_id_t id) {
   }
 }
 
+int str_format_time(long when, char* string)
+{
+  struct tm *tm = localtime ((void *)&when);
+  return sprintf (string, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+}
 
 void json_pack_user (json_t *res, tgl_peer_t *P) {
   if (P->user.first_name) {
     assert (json_object_set (res, "first_name", json_string (P->user.first_name)) >= 0);
   }
+
+  if (P->user.status.when) {
+    static char s[20];
+    str_format_time(P->user.status.when, s);
+    assert (json_object_set (res, "when", json_string (s)) >= 0);
+  }
+
   if (P->user.last_name) {
     assert (json_object_set (res, "last_name", json_string (P->user.last_name)) >= 0);
   }
@@ -468,12 +480,6 @@ json_t *json_pack_read (struct tgl_message *M) {
   assert (json_object_set (res, "event", json_string ("read")) >= 0);
   //this will overwrite "event":"message" to "event":"read".
   return res;
-}
-
-int str_format_time(long when, char* string)
-{
-  struct tm *tm = localtime ((void *)&when);
-  return sprintf (string, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
 json_t *json_pack_user_status (struct tgl_user *U) {
