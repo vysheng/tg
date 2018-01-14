@@ -40,7 +40,18 @@ Then, go to tg directory then generate Makefile.
 
      cd tg
      ./configure
-     
+
+NOTE: In case you get an error:
+```
+./configure: line 14: $'\r': command not found
+./configure: line 29: syntax error near unexpected token `newline'
+'/configure: line 29: `     ;;
+```
+You should run the following command to remove trailing `\r` character that causes error:
+```
+sed -i 's/\r$//' configure
+```
+
 We need to patch Makefile and loop.c to compile in cygwin. Download this [patch](https://gist.github.com/ied206/d774a445f36004d263ab) then untar. Then, patch in tg directory.
 
      patch -p1 < telegram-cli-cygwin.patch
