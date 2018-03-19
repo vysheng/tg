@@ -43,7 +43,7 @@ On gentoo:
 
 On Fedora:
 
-     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel
+     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel jansson-devel python-devel
 
 On Archlinux:
 
@@ -59,7 +59,7 @@ On OpenBSD:
 
 On openSUSE:
 
-     sudo zypper in lua-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel libopenssl-devel
+     sudo zypper in lua-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel libopenssl-devel 
 
 Then,
 
