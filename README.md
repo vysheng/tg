@@ -43,7 +43,7 @@ On gentoo:
 
 On Fedora:
 
-     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel
+     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel jansson-devel python-devel libgcrypt-devel
 
 On Archlinux:
 
