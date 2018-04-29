@@ -2,141 +2,194 @@
 
 Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
 
-### API, Protocol documentation
+### Official Docs
 
-Documentation for Telegram API is available here: http://core.telegram.org/api
+> Documentation for the Telegram API is available [here](http://core.telegram.org/api)
 
-Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
+> Documentation for the MTproto protocol is available [here](http://core.telegram.org/mtproto)
 
-### Upgrading to version 1.0
+### Upgrade to the v1.0
 
-First of all, the binary is now in ./bin folder and is named telegram-cli. So be careful, not to use old binary.
+First of all, the main binary is placed in `./bin` folder now and it was renamed to `telegram-cli`. So, be careful, and do not run an old binary.
 
-Second, config folder is now ${HOME}/.telegram-cli
+Second thing is the configuration folder was moved to `${HOME}/.telegram-cli` now.
 
-Third, database is not compatible with older versions, so you'll have to login again.
+At the third, a new database structure is no more compatible with older versions. It means you would need to re-login one more time.
 
-Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%d' in case of two peers having same name).
+Fourth surprise waits you in a peer name. All the `#` symbols there had been substituted with `@` symbols (but it wasn't applied for appending of `#%d` in a case of two peers have the same names).
 
-### Installation
+### Install
 
-Clone GitHub Repository
+Clone this repository
 
-     git clone --recursive https://github.com/vysheng/tg.git && cd tg
+```sh
+git clone --recursive https://github.com/vysheng/tg.git && cd tg
+```
 
 ### Python Support
 
-Python support is currently limited to Python 2.7 or Python 3.1+. Other versions may work but are not tested.
+Python support is currently limited by Python 2.7 or Python 3.1+. Other versions should work too, but hadn't been tested yet.
 
-#### Linux and BSDs
+#### Linux and BSD
 
-Install libs: readline, openssl and (if you want to use config) libconfig, liblua, python and libjansson.
-If you do not want to use them pass options --disable-libconfig, --disable-liblua, --disable-python and --disable-json respectively.
+Install these libs:
 
-On Ubuntu/Debian use: 
+- `readline`
+- `openssl`
+- `libconfig` (if you want to use config)
+- `liblua`
+- `python`
+- `libjansson`
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
+If you don't want to use them, you may skip its install and then you should pass next options to the `./configure` script respectively:
 
-On gentoo:
+- `--disable-libconfig`
+- `--disable-liblua`
+- `--disable-python`
+- `--disable-json`
 
-     sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent dev-libs/jansson dev-lang/python
+For Ubuntu/Debian use:
 
-On Fedora:
+```sh
+sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 \
+    liblua5.2-dev libevent-dev libjansson-dev libpython-dev make
+```
 
-     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel
+For Gentoo:
 
-On Archlinux:
+```sh
+sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl \
+    dev-lang/lua dev-libs/libevent dev-libs/jansson dev-lang/python
+```
 
-     yaourt -S telegram-cli-git
+For Fedora:
 
-On FreeBSD:
+```sh
+sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel \
+    libevent-devel libjansson-devel python-devel
+```
 
-     pkg install libconfig libexecinfo lua52 python
+For Archlinux:
 
-On OpenBSD:
+```sh
+yaourt -S telegram-cli-git
+```
 
-     pkg_add libconfig libexecinfo lua python
+For FreeBSD:
 
-On openSUSE:
+```sh
+pkg install libconfig libexecinfo lua52 python
+```
 
-     sudo zypper in lua-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel libopenssl-devel
+For OpenBSD:
 
-Then,
+```sh
+pkg_add libconfig libexecinfo lua python
+```
 
-     ./configure
-     make
+For OpenSUSE:
 
-#### Other methods to install on linux
+```sh
+sudo zypper in lua-devel libconfig-devel readline-devel libevent-devel \
+    libjansson-devel python-devel libopenssl-devel
+```
 
-On Gentoo: use ebuild provided.
+---
 
-On Arch: https://aur.archlinux.org/packages/telegram-cli-git
+Then run:
+
+```sh
+./configure
+make
+```
+
+#### Other install methods for Linux
+
+On Gentoo: use ebuild provided package.
+
+On Arch: [telegram-cli-git](https://aur.archlinux.org/packages/telegram-cli-git)
 
 #### Mac OS X
 
-The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by default. You have to install these libraries manually.
+The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html) and [libconfig](http://www.hyperrealm.com/libconfig/), which are not included in OS X by the default. You should install these libraries manually.
 
-If using [Homebrew](http://brew.sh/):
+If you are using [Homebrew](http://brew.sh/):
 
-     brew install libconfig readline lua python libevent jansson
-     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
-     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
-     ./configure && make
+```sh
+brew install libconfig readline lua python libevent jansson
+export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
+export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
+./configure
+make
+```
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
-If using [MacPorts](https://www.macports.org):
-     
-     sudo port install libconfig-hr
-     sudo port install readline
-     sudo port install lua51
-     sudo port install python34
-     sudo port install libevent
-     export CFLAGS="-I/usr/local/include -I/opt/local/include -I/opt/local/include/lua-5.1"
-     export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
-     ./configure && make
+If you are using [MacPorts](https://www.macports.org):
+
+```sh
+sudo port install libconfig-hr
+sudo port install readline
+sudo port install lua51
+sudo port install python34
+sudo port install libevent
+export CFLAGS="-I/usr/local/include -I/opt/local/include -I/opt/local/include/lua-5.1"
+export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
+./configure
+make
+```
 
 Install these ports:
 
-* devel/libconfig
-* devel/libexecinfo
-* lang/lua52
+- `devel/libconfig`
+- `devel/libexecinfo`
+- `lang/lua52`
 
 Then build:
 
-     env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
-     make
+```sh
+env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib \
+    LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 \
+    LUA_LIB=-llua-5.2 ./configure
+make
+```
 
 #### Other UNIX
 
-If you manage to launch it on other UNIX, please let me know.
+If you would need to launch it inside any other UNIX environment, please let me know about.
 
-### Contacts 
-If you would like to ask a question, you can write to my telegram or to the github (or both). To contact me via telegram, you should use import_card method with argument 000653bf:0738ca5d:5521fbac:29246815:a27d0cda
+### Contacts
 
+If you would like to ask a question, you can write to my telegram or to the github (or both). For contact with me via telegram, you should use `import_card` method with an argument: `000653bf:0738ca5d:5521fbac:29246815:a27d0cda`
 
 ### Usage
 
-    bin/telegram-cli -k <public-server-key>
-    
-By default, the public key is stored in tg-server.pub in the same folder or in /etc/telegram-cli/server.pub. If not, specify where to find it:
+```sh
+bin/telegram-cli -k PUBLIC_SERVER_KEY
+```
 
-    bin/telegram-cli -k tg-server.pub
+By the default the public key is stored in the `./tg-server.pub` file or either in `/etc/telegram-cli/server.pub`. If not, you should specify a path to your key manually:
 
-Client support TAB completion and command history.
+```sh
+bin/telegram-cli -k tg-server.pub
+```
 
-Peer refers to the name of the contact or dialog and can be accessed by TAB completion.
-For user contacts peer name is Name <underscore> Lastname with all spaces changed to underscores.
-For chats it is it's title with all spaces changed to underscores
-For encrypted chats it is <Exсlamation mark> <underscore> Name <underscore> Lastname with all spaces changed to underscores. 
+The client supports `TAB` completion and the history of commands.
 
-If two or more peers have same name, <sharp>number is appended to the name. (for example A_B, A_B#1, A_B#2 and so on)
-  
+The peer name refers to the name of a chat and can be accessed with `TAB` completion from the cli app.
+
+- For any private chat the peer name should match a pattern `{FIRST_NAME}_{LAST_NAME}`, where all included spaces replaced with underscores.
+- For groups the peer name consists of a chat `{TITLE}` where all spaces replaced with underscores.
+- For encrypted chats the peer name should match `{EXPLANATION_MARK}_{FIRST_NAME}_{LAST_NAME}` where all spaces replaced with underscores.
+
+> If two or more peers would have the same names, then the `#{INDEX}` will be appended to their names. 
+> _For example: if two peer names are the same `A_B`, they will be renamed to `A_B#1` and `A_B#2`._
+
 ### Supported commands
 
 #### Messaging
 
-* **msg** \<peer\> Text - sends message to this peer
+* **`msg PEER_NAME TEXT`**  - sends message to this peer
 * **fwd** \<user\> \<msg-seqno\> - forward message to user. You can see message numbers starting client with -N
 * **chat_with_peer** \<peer\> starts one on one chat session with this peer. /exit or /quit to end this mode.
 * **add_contact** \<phone-number\> \<first-name\> \<last-name\> - tries to add contact to contact-list by phone
