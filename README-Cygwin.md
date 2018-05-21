@@ -5,7 +5,7 @@ Install [Cygwin](https://www.cygwin.com/) and cygwin's package manager, [apt-cyg
 
 In Cygwin Terminal, install compiler and tools :
 
-     apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip
+     apt-cyg install cygwin32-gcc-core cygwin32-gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip autoconf automake libtool git zlib-devel
 
 Now you have a compiler, but no libraries. You need readline, openssl, libconfig, liblua, python and libjansson to use telegram-cli's full functionality.
 
@@ -24,8 +24,10 @@ libconfig and libjansson is not in cygwin's package, so you should compile yours
 
 Compile libconfig
      
-     wget http://www.hyperrealm.com/libconfig/libconfig-1.5.tar.gz
-     tar xvf libconfig-1.5.tar.gz && cd libconfig-1.5
+     wget https://github.com/hyperrealm/libconfig/archive/v1.7.2.tar.gz
+     mv v1.7.2.tar.gz libconfig-1.7.2.tar.gz
+     tar xvf libconfig-1.7.2.tar.gz && cd libconfig-1.7.2
+     autoreconf
      ./configure
      make && make install && cd ..
 
