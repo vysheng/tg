@@ -1,4 +1,4 @@
-## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)
+## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.svg)](https://travis-ci.org/vysheng/tg)
 
 !!!! May be outdated. Please refer to english README as more actual. 
 
