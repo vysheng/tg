@@ -1,0 +1,41 @@
+
+*** These modified files were found in JOE when it aborted on Mon Mar  7 21:37:19 2016
+*** JOE was aborted by UNIX signal 1
+
+*** File '/home/rondoozle/tg/.git/COMMIT_EDITMSG'
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Committer: Garemyah Johnson <rondoozle@ubuntu.domain.ltd>
+#
+# On branch master
+# Your branch is up-to-date with 'origin/master'.
+SuperGroups
+# Changes to be committed:
+#	modified:   Makefile.in
+#	modified:   Makefile.tgl
+#	modified:   Makefile.tl-parser
+#	modified:   README-LUA
+#	modified:   config.h.in
+#	modified:   config.sample
+#	modified:   configure
+#	modified:   configure.ac
+#	modified:   interface.c
+#	modified:   interface.h
+#	modified:   json-tg.c
+#	modified:   loop.c
+#	modified:   lua-tg.c
+#	modified:   lua-tg.h
+#	modified:   main.c
+#	modified:   telegram.h
+#
+
+*** File '(Unnamed)'
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
+/home/rondoozle/tg/.git/COMMIT_EDITMSG
