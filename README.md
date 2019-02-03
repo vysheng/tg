@@ -1,16 +1,21 @@
 ## Telegram messenger CLI
 
-[![Build Status](https://travis-ci.org/kenorb-contrib/tg.png)](https://travis-ci.org/kenorb-contrib/tg)
+Command-line interface for [Telegram](http://telegram.org). Uses readline interface. It is client implementation of TGL library.
 
-Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
+> Note: This is a fork of [`telegram-cli`](https://github.com/vysheng/tg).
 
-**[ This is a fork of [telegram-cli](https://github.com/vysheng/tg) with history callbacks to use in [ibotg](https://github.com/prsai/ibotg) ]**
+Build status:
+
+| Repository                                             | Status|
+| ------------------------------------------------------ | ----- |
+| [vysheng](https://github.com/vysheng/tg) (main)        |[![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)|
+| [kenorb-contrib](https://github.com/kenorb-contrib/tg) |[![Build Status](https://travis-ci.org/kenorb-contrib/tg.png)](https://travis-ci.org/kenorb-contrib/tg)|
 
 ### API, Protocol documentation
 
-Documentation for Telegram API is available here: http://core.telegram.org/api
+Documentation for Telegram API is available here: <http://core.telegram.org/api>
 
-Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
+Documentation for MTproto protocol is available here: <http://core.telegram.org/mtproto>
 
 ### Upgrading to version 1.0
 
@@ -24,9 +29,9 @@ Fourth, in `peer_name` '#' are substitued to '@'. (Not applied to appending of '
 
 ### Installation
 
-Clone GitHub Repository
+Clone this GitHub repository with `--recursive` parameter to clone submodules.
 
-     git clone --recursive https://github.com/kenorb-contrib/tg.git && cd tg
+     git clone --recursive https://github.com/CHANGETHIS/tg.git && cd tg
 
 ### Python Support
 
