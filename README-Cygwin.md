@@ -10,7 +10,7 @@ In Cygwin Terminal, install cygwin's package manager, apt-cyg, as per apt-cyg's 
      
 Then install compiler and tools: if you're on the **32-bit** version of cygwin,
 
-     apt-cyg install gcc-core gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip
+     apt-cyg install gcc-core gcc-g++ gcc-core gcc-g++ make wget patch diffutils grep tar gzip autoconf automake libtool git zlib-devel
      
 Whereas on the **64-bit** version,
 
@@ -32,8 +32,10 @@ libconfig and libjansson are not included in the cygwin package, so you should c
 
 Compile libconfig:
      
-     wget http://www.hyperrealm.com/libconfig/libconfig-1.5.tar.gz
-     tar xvf libconfig-1.5.tar.gz && cd libconfig-1.5
+     wget https://github.com/hyperrealm/libconfig/archive/v1.7.2.tar.gz
+     mv v1.7.2.tar.gz libconfig-1.7.2.tar.gz
+     tar xvf libconfig-1.7.2.tar.gz && cd libconfig-1.7.2
+     autoreconf
      ./configure
      make && make install && cd ..
 
