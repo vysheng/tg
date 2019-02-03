@@ -1,6 +1,5 @@
 Source: telegram-cli
 Section: net
-<<<<<<< HEAD
 Priority: optional
 Maintainer: Cleto Martín <cleto@debian.org>
 Build-Depends: autoconf-archive,
