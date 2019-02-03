@@ -4313,6 +4313,8 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   last_to_id = M->to_id;
 
   //print_start ();
+  
+  // Sending to a USER
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_USER) {
     if (M->flags & TGLMF_OUT) {
       mpush_color (ev, COLOR_GREEN);
@@ -4374,14 +4376,21 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
         mprintf (ev, " »»» ");
       }
     }
-  } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
+  }
+  // Sending to a CHAT
+  else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
+
     mpush_color (ev, COLOR_MAGENTA);
+
     print_msg_id (ev, M->permanent_id, M);
+
     mprintf (ev, " ");
     print_date (ev, M->date);
     mpop_color (ev);
     mprintf (ev, " ");
+    mprintf (ev, "[GROUP:");
     print_chat_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
+    mprintf (ev, "]");
     mprintf (ev, " ");
     print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
     if (!tgl_cmp_peer_id (M->from_id, TLS->our_id)) {
@@ -4394,6 +4403,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     } else {
       mprintf (ev, " »»» ");
     }
+
   } else {
     assert (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL);
 
