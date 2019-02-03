@@ -15,7 +15,7 @@ La documentación del protocolo MTproto está disponible aquí: http://core.tele
 
 Clona el Repositorio GitHub
 
-    $ git clone https://github.com/vysheng/tg.git && cd tg
+    $ git clone --recursive https://github.com/vysheng/tg.git && cd tg
     
 o descarga y descomprime el zip
 
