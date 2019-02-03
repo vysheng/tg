@@ -146,6 +146,13 @@ void push_chat (tgl_peer_t *P) {
       lua_pushnumber (luaState, i);
       tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
       push_peer (id, tgl_peer_get (TLS, id));
+      int inviter_id = P->chat.user_list[i].inviter_id;
+      if (inviter_id) {
+        lua_pushstring (luaState, "inviter");
+        tgl_peer_id_t id = TGL_MK_USER (inviter_id);
+        push_peer (id, tgl_peer_get (TLS, id));
+        lua_settable (luaState, -3);
+      }
       lua_settable (luaState, -3);
     }
     lua_settable (luaState, -3);
@@ -750,7 +757,8 @@ enum lua_query_type {
   lq_channel_set_username,
   lq_channel_set_admin,
   lq_channel_set_mod,
-  lq_channel_demote
+  lq_channel_demote,
+  lq_contact_search
 };
 
 struct lua_query_extra {
@@ -1501,13 +1509,17 @@ void lua_do_all (void) {
       tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 2, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
-	case lq_channel_set_mod:
+    case lq_channel_set_mod:
       tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 1, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
-	case lq_channel_demote:
+    case lq_channel_demote:
       tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, 0, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
+      break;
+    case lq_contact_search:
+      tgl_do_contact_search (TLS, LUA_STR_ARG (p + 1), lua_contact_search_cb, lua_ptr[p].ptr);
+      p += 2;
       break;
   /*
   lq_delete_msg,
@@ -1634,6 +1646,7 @@ struct lua_function functions[] = {
   {"channel_set_admin", lq_channel_set_admin, { lfp_channel, lfp_peer, lfp_none }},
   {"channel_set_mod", lq_channel_set_mod, { lfp_channel, lfp_peer, lfp_none }},
   {"channel_demote", lq_channel_demote, { lfp_channel, lfp_peer, lfp_none }},
+  {"resolve_username", lq_contact_search, { lfp_string, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
