@@ -1,6 +1,10 @@
-## Telegram messenger CLI [![Build Status](https://travis-ci.org/kenorb-contrib/tg.png)](https://travis-ci.org/kenorb-contrib/tg)
+## Telegram messenger CLI
+
+[![Build Status](https://travis-ci.org/kenorb-contrib/tg.png)](https://travis-ci.org/kenorb-contrib/tg)
 
 Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
+
+**[ This is a fork of [telegram-cli](https://github.com/vysheng/tg) with history callbacks to use in [ibotg](https://github.com/prsai/ibotg) ]**
 
 ### API, Protocol documentation
 
@@ -16,7 +20,7 @@ Second, config folder is now ${HOME}/.telegram-cli
 
 Third, database is not compatible with older versions, so you'll have to login again.
 
-Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%d' in case of two peers having same name).
+Fourth, in `peer_name` '#' are substitued to '@'. (Not applied to appending of '#%d' in case of two peers having same name).
 
 ### Installation
 

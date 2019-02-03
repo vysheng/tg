@@ -614,6 +614,21 @@ void lua_new_msg (struct tgl_message *M) {
   }
 }
 
+void lua_list_msg (struct tgl_message *M) {
+  if (!have_file) { return; }
+  lua_settop (luaState, 0);
+  //lua_checkstack (luaState, 20);
+  my_lua_checkstack (luaState, 20);
+  lua_getglobal (luaState, "on_msg_history");
+  push_message (M);
+  assert (lua_gettop (luaState) == 2);
+
+  int r = ps_lua_pcall (luaState, 1, 0, 0);
+  if (r) {
+    logprintf ("lua: %s\n",  lua_tostring (luaState, -1));
+  }
+}
+
 void lua_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   if (!have_file) { return; }
   lua_settop (luaState, 0);

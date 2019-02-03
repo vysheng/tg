@@ -27,6 +27,7 @@
 // Python functions
 void py_init (const char *file);
 void py_new_msg (struct tgl_message *M);
+void py_list_msg (struct tgl_message *M);
 void py_our_id (int id);
 void py_secret_chat_update (struct tgl_secret_chat *U, unsigned flags);
 void py_user_update (struct tgl_user *U, unsigned flags);
