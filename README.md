@@ -55,7 +55,7 @@ On Milislinux:
 
 On FreeBSD:
 
-     pkg install libconfig libexecinfo lua52 python
+     pkg install libconfig libexecinfo lua52 python jansson
 
 On OpenBSD:
 
@@ -69,6 +69,8 @@ Then,
 
      ./configure
      make
+
+If you are going to build tg on OpenBSD or FreeBSD, please use `gmake` instead of `make`.
 
 #### Other methods to install on linux
 
