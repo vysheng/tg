@@ -48,6 +48,10 @@ On Fedora:
 On Archlinux:
 
      yaourt -S telegram-cli-git
+     
+On Milislinux:
+
+     mps kur telegram-cli
 
 On FreeBSD:
 
