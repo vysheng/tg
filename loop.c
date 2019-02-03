@@ -470,6 +470,12 @@ void write_dc (struct tgl_dc *DC, void *extra) {
   int l = strlen (DC->options[0]->ip);
   assert (write (auth_file_fd, &l, 4) == 4);
   assert (write (auth_file_fd, DC->options[0]->ip, l) == l);
+
+  assert (write (auth_file_fd, &DC->options[1]->port, 4) == 4);
+  l = strlen (DC->options[1]->ip);
+  assert (write (auth_file_fd, &l, 4) == 4);
+  assert (write (auth_file_fd, DC->options[1]->ip, l) == l);
+
   assert (write (auth_file_fd, &DC->auth_key_id, 8) == 8);
   assert (write (auth_file_fd, DC->auth_key, 256) == 256);
 }
@@ -549,6 +555,15 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
   assert (read (auth_file_fd, ip, l) == l);
   ip[l] = 0;
 
+  int port_v6 = 0;
+  assert (read (auth_file_fd, &port_v6, 4) == 4);
+  int l_v6 = 0;
+  assert (read (auth_file_fd, &l_v6, 4) == 4);
+  assert (l_v6 >= 0 && l_v6 < 100);
+  char ip_v6[100];
+  assert (read (auth_file_fd, ip_v6, l_v6) == l_v6);
+  ip_v6[l_v6] = 0;
+
   long long auth_key_id;
   static unsigned char auth_key[256];
   assert (read (auth_file_fd, &auth_key_id, 8) == 8);
@@ -556,6 +571,7 @@ void read_dc (int auth_file_fd, int id, unsigned ver) {
 
   //bl_do_add_dc (id, ip, l, port, auth_key_id, auth_key);
   bl_do_dc_option (TLS, 0, id, "DC", 2, ip, l, port);
+  bl_do_dc_option (TLS, 1, id, "DC", 2, ip_v6, l_v6, port_v6);
   bl_do_set_auth_key (TLS, id, auth_key);
   bl_do_dc_signed (TLS, id);
 }
@@ -572,6 +588,13 @@ void empty_auth_file (void) {
     bl_do_dc_option (TLS, 0, 3, "", 0, TG_SERVER_3, strlen (TG_SERVER_3), 443);
     bl_do_dc_option (TLS, 0, 4, "", 0, TG_SERVER_4, strlen (TG_SERVER_4), 443);
     bl_do_dc_option (TLS, 0, 5, "", 0, TG_SERVER_5, strlen (TG_SERVER_5), 443);
+
+    bl_do_dc_option (TLS, 1, 1, "", 0, TG_SERVER_IPV6_1, strlen (TG_SERVER_IPV6_1), 443);
+    bl_do_dc_option (TLS, 1, 2, "", 0, TG_SERVER_IPV6_2, strlen (TG_SERVER_IPV6_2), 443);
+    bl_do_dc_option (TLS, 1, 3, "", 0, TG_SERVER_IPV6_3, strlen (TG_SERVER_IPV6_3), 443);
+    bl_do_dc_option (TLS, 1, 4, "", 0, TG_SERVER_IPV6_4, strlen (TG_SERVER_IPV6_4), 443);
+    bl_do_dc_option (TLS, 1, 5, "", 0, TG_SERVER_IPV6_5, strlen (TG_SERVER_IPV6_5), 443);
+
     bl_do_set_working_dc (TLS, TG_SERVER_DEFAULT);
   }
 }
