@@ -179,8 +179,6 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **channel_set_photo** \<channel\> \<filename\>	- Sets channel photo. Photo will be cropped to square
 * **channel_set_username** \<channel\> \<username\>	 -Sets channel username info.
 
-
-
 #### Search
 
 * **search** \<peer\> pattern - searches pattern in messages with peer
