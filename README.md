@@ -35,9 +35,13 @@ If you do not want to use them pass options --disable-libconfig, --disable-liblu
 
 On Ubuntu/Debian use:
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev libpython3-dev libgcrypt-dev zlib1g-dev make
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev libpython3-dev libgcrypt-dev zlib1g-dev lua-lgi make
 
-On gentoo:
+To build and install the packaege, run:
+     dpkg-buildpackage -b
+     sudo dpkg -i ../telegram-cli_x.x.x-x_amd64.deb
+
+On Gentoo:
 
      sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent dev-libs/jansson dev-lang/python
 
