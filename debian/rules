@@ -9,8 +9,10 @@
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
-VERSION=$(shell dpkg-parsechangelog | sed -n 's/^Version: //p' | cut -f1 -d'-')
-PACKAGE_NAME=$(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
+	VERSION=$(shell dpkg-parsechangelog | sed -n 's/^Version: //p' | cut -f1 -d'-')
+	PACKAGE_NAME=$(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
+override_dh_auto_configure:
+	./configure --disable-openssl
 %:
 			dh $@ --with autotools-dev
 build-orig:
