@@ -106,17 +106,6 @@ If using [MacPorts](https://www.macports.org):
      export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
      ./configure && make
 
-Install these ports:
-
-* devel/libconfig
-* devel/libexecinfo
-* lang/lua52
-
-Then build:
-
-     env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
-     make
-
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
