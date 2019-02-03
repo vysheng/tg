@@ -5,3 +5,4 @@ server.pub etc/telegram-cli
 #start-telegram-daemon /usr/share/telegram-daemon/bin
 test.lua var/lib/telegram-cli/
 #telegram-daemon etc/init.d
+server.pub      etc/telegram

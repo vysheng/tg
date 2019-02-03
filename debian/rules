@@ -14,7 +14,10 @@ export DH_VERBOSE=1
 override_dh_auto_configure:
 	./configure --disable-openssl
 %:
+			cp tg-server.pub server.pub
 			dh $@ --with autotools-dev
+			rm server.pub
+
 build-orig:
 			mkdir -p $(PACKAGE_NAME)-$(VERSION)
 			tar --exclude=ax_lua.m4 --exclude=debian --exclude=\.pc \
