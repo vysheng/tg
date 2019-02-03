@@ -173,6 +173,23 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **create_group_chat** \<chat topic\> \<user1\> \<user2\> \<user3\> ... - creates a groupchat with users, use chat_add_user to add more users
 * **chat_set_photo** \<chat\> \<photo-file-name\> - sets group chat photo. Same limits as for profile photos.
 
+### Channels
+
+* **channel_get_admins** \<channel\> [limit=100] [offset=0]	- Gets channel admins
+* **channel_get_members** \<channel\> [limit=100] [offset=0]	- Gets channel members
+* **channel_info** \<channel\>	- Prints info about channel (id, members, admin, etc.)
+* **channel_invite** \<channel\> \<user\>	- Invites user to channel
+* **channel_join** \<channel\>	- Joins to channel
+* **channel_kick** \<channel\> \<user\>	- Kicks user from channel
+* **channel_leave** \<channel\>	- Leaves from channel
+* **channel_list** [limit=100] [offset=0]	- List of last channels
+* **channel_set_about** \<channel\> \<about\>	- Sets channel about info.
+* **channel_set_admin** \<channel\> \<admin\> \<type\>	- Sets channel admin. 0 - not admin, 1 - moderator, 2 - editor
+* **channel_set_photo** \<channel\> \<filename\>	- Sets channel photo. Photo will be cropped to square
+* **channel_set_username** \<channel\> \<username\>	 -Sets channel username info.
+
+
+
 #### Search
 
 * **search** \<peer\> pattern - searches pattern in messages with peer
