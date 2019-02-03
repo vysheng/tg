@@ -675,7 +675,7 @@ struct lua_arg {
 };
 struct lua_arg lua_ptr[MAX_LUA_COMMANDS];
 static int pos;
-  
+
 enum lua_query_type {
   lq_contact_list,
   lq_dialog_list,
