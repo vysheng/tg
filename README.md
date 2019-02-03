@@ -84,6 +84,11 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
 If using [Homebrew](http://brew.sh/):
 
+     brew tap ivoputzer/tg
+     brew install tg
+
+or manually:
+
      brew install libconfig readline lua python libevent jansson
      export CPPFLAGS="-I/usr/local/opt/openssl/include -I/usr/local/opt/readline/include"
      export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/7.0/include -I/usr/local/opt/openssl/include"
