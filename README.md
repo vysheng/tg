@@ -84,8 +84,12 @@ If using [Homebrew](http://brew.sh/):
 
      brew install libconfig readline lua python libevent jansson
      export CPPFLAGS="-I/usr/local/opt/openssl/include -I/usr/local/opt/readline/include"
-     export LDFLAGS="-L/usr/local/opt/openssl/lib -L/usr/local/opt/readline/lib"
+     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/7.0/include -I/usr/local/opt/openssl/include"
+     export LDFLAGS="-L/usr/local/opt/openssl/lib -L/usr/local/opt/readline/lib -L/usr/local/lib -L/usr/local/Cellar/readline/7.0/lib"
      ./configure && make
+If you get a lua error on Sierra, you can configure & build without lua using
+
+     ./configure --disable-liblua && make
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
