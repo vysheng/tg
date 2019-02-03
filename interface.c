@@ -4044,6 +4044,10 @@ void print_peer_permanent_name (struct in_ev *ev, tgl_peer_id_t id) {
 }
 
 void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
+  if(tgl_get_peer_type (id) == TGL_PEER_CHAT)
+  {
+     return;
+  }
   assert (tgl_get_peer_type (id) == TGL_PEER_USER);
   mpush_color (ev, COLOR_RED);
   if (permanent_peer_id_mode) {
