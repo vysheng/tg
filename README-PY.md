@@ -23,6 +23,7 @@ Assign python fuctions to the following tgl attributes to set callbacks from TG.
 |`tgl.on_user_update(peer, what_changed)`|updated info about user. peer is a `tgl.Peer` object representing the user, and what_changed is array of strings.|
 |`tgl.on_chat_update(peer, what_changed)`|updated info about chat. peer is a `tgl.Peer` object representing the chat, and what_changed is array of strings.|
 |`tgl.on_secret_chat_update(peer, what_changed)`|updated info about secret chat. peer is a `tgl.Peer` object representing the secret chat, and  what_changed is array of strings.|
+|`tgl.on_loop()` | This is called every now and then.|
 
 Python Callback Signatures
 =========================
