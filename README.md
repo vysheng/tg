@@ -115,6 +115,10 @@ If using [MacPorts](https://www.macports.org):
      export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
      ./configure && make
 
+#### Docker
+
+The set for dockerizing the app: https://github.com/semenyukdmitry/telegram_cli_docker.
+
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
