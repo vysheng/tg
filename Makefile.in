@@ -60,7 +60,6 @@ ${EXE}/telegram-cli: ${TG_OBJECTS} ${LIB}/libtgl.a
 	${CC} $^ ${LINK_FLAGS} -o $@
 
 clean:
-<<<<<<< HEAD
 	rm -rf ${DIR_LIST}
 
 distclean:
@@ -69,6 +68,4 @@ distclean:
 install: all
 	@mkdir -p $(INSTALL_BIN)
 	$(INSTALL) telegram $(INSTALL_BIN)
-=======
 	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
->>>>>>> 628abe1e77827eed5c9dfca7bb1e1f5f5c19fa0a
