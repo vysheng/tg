@@ -79,16 +79,25 @@ tgl_Peer_getname (tgl_Peer *self, void *closure)
 
   switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.print_name);
+      if(self->peer->user.print_name)
+        ret = PyUnicode_FromString(self->peer->user.print_name);
+      else
+      	Py_RETURN_NONE;	
       break;
     case TGL_PEER_CHAT:
-      ret = PyUnicode_FromString(self->peer->chat.print_title);
+      if(self->peer->chat.print_title)
+	    ret = PyUnicode_FromString(self->peer->chat.print_title);
+	  else
+      	Py_RETURN_NONE;
       break;
     case TGL_PEER_CHANNEL:
       ret = PyUnicode_FromString(self->peer->channel.print_title);
       break;
     case TGL_PEER_ENCR_CHAT:
-      ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
+      if(self->peer->encr_chat.print_name)
+      	ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
+      else
+      	Py_RETURN_NONE;
       break;
     default:
      PyErr_SetString(PeerError, "peer.type_name not supported!");
