@@ -1,19 +1,15 @@
 /*
     This file is part of telegram-cli.
-
     Telegram-cli is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 2 of the License, or
     (at your option) any later version.
-
     Telegram-cli is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this telegram-cli.  If not, see <http://www.gnu.org/licenses/>.
-
     Copyright Vitaly Valtman 2013-2015
 */
 
@@ -1426,7 +1422,7 @@ void lua_do_all (void) {
       tgl_do_msg_search (TLS, tgl_set_peer_id (TGL_PEER_UNKNOWN, 0), 0, 0, 40, 0, LUA_STR_ARG (p + 1), lua_msg_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
-	case lq_resolve_username:
+    case lq_resolve_username:
       tgl_do_contact_search (TLS, LUA_STR_ARG (p + 1), lua_contact_search_cb, lua_ptr[p].ptr);
       p += 2;
       break;
@@ -1740,7 +1736,6 @@ struct lua_function functions[] = {
   {"block_user", lq_block_user, { lfp_user, lfp_none }},
   {"unblock_user", lq_unblock_user, { lfp_user, lfp_none }},
   {"import_channel_link", lq_import_chat_link, { lfp_string, lfp_none }},
-  {"resolve_username", lq_contact_search, { lfp_string, lfp_none }},
   {"create_channel", lq_create_channel, { lfp_peer, lfp_string, lfp_string, lfp_none }},
   {"channel_set_mod", lq_channel_set_mod, { lfp_channel, lfp_peer, lfp_none }},
   {"channel_del_admin", lq_channel_del_admin, { lfp_channel, lfp_user,lfp_none }},
