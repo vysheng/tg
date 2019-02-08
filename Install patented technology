@@ -1,0 +1,152 @@
+Skip to content
+Your account has been flagged.
+Because of that, your profile is hidden from the public. If you believe this is a mistake, contact support to have your account status reviewed.
+
+telegram
+Repositories33K
+Code4M
+Commits258K
+Issues53K
+Marketplace0
+Topics245
+Wikis4K
+Users1K
+Language
+
+Sort
+
+4,145,116 code results
+@rashgroup
+rashgroup/teletorkifile – ThemingDrawerActivity$3.smali
+Showing the top two matches
+Last indexed on Jul 9, 2018
+Smali
+.class Lorg/telegram/ui/teletorki/Theming/ThemingDrawerActivity$3;
+.super Ljava/lang/Object;
+    value = Lorg/telegram/ui/teletorki/Theming/ThemingDrawerActivity;->createView(Landroid/content/Context;)Landroid/view/View;
+@vitormattos
+vitormattos/bot-VillageGame – process.php
+Showing the top three matches
+Last indexed on Jul 3, 2018
+PHP
+<?php
+require 'config.php';
+do {
+    if(!shell_exec('ps ux | grep "telegram.*json" | grep -v "grep"')) {
+        $cmd = $config['telegram.cli']['path'].
+            (isset($config['telegram.cli']['rsa-key'])
+@MariaYu
+MariaYu/iotsys – WMBusConnector.java
+Showing the top match
+Last indexed on Jul 1, 2018
+Java
+import at.ac.tuwien.auto.iotsys.gateway.connector.wmbus.telegrams.SimpleTelegram;
+import at.ac.tuwien.auto.iotsys.gateway.connector.wmbus.telegrams.Telegram;
+import at.ac.tuwien.auto.iotsys.gateway.connector.wmbus.telegrams.util.Measure_Unit;
+@exileed
+exileed/telegram-bot-api – TelegramServiceProvider.php
+Showing the top four matches
+Last indexed on Aug 31, 2018
+PHP
+<?php
+
+namespace Telegram\Bot\Laravel;
+
+use Illuminate\Contracts\Container\Container as Application;
+use Illuminate\Support\ServiceProvider;
+use Telegram\Bot\Api;
+use Telegram\Bot\BotsManager;
+
+/**
+ * Class TelegramServiceProvider.
+@paulmy
+paulmy/MskInformatics – telegram_pbs.h
+Showing the top three matches
+Last indexed on Jul 12, 2018
+C
+/* -*- c -*- */
+#ifndef __TELEGRAM_PBS_H__
+#define __TELEGRAM_PBS_H__
+
+/* Copyright (C) 2016 Alexander Chernov <cher@ejudge.ru> */
+ * GNU General Public License for more details.
+ */
+
+struct _bson;
+
+/* persistent bot state for telegram bot */
+@thesepehrm
+thesepehrm/EncBot – README.md
+Showing the top two matches
+Last indexed on Jul 3, 2018
+Markdown
+# PHP Telegram Bot
+
+[![Join the chat at https://gitter.im/akalongman/php-telegram-bot](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akalongman/php-telegram-bot?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+@fizruk
+fizruk/telegram-bot-simple – telegram-bot-simple.cabal
+Showing the top match
+Last indexed on Nov 11, 2018
+name:           telegram-bot-simple
+version:        0.2.0
+synopsis:       Easy to use library for building Telegram bots.
+description:    Please see the README on Github at <https://github.com/fizruk/telegram-bot-simple#readme>
+@bajimo
+bajimo/ExperiorToll – BaseDATCOMAUController.cs
+Showing the top two matches
+Last indexed on Jul 7, 2018
+C#
+        protected bool waitingForAck = false;
+        protected string waitingAckTelegram = "";
+        protected List<string> sendList = new List<string>();
+                UpdateConfig();
+            }
+        }
+        #endregion
+
+        #region IDCITelegrams
+        private TelegramTemplate _Template = new TelegramTemplate();
+@souenzzo
+souenzzo/u1F984 – telegram.clj
+Showing the top two matches
+Last indexed on Jul 15, 2018
+Clojure
+(ns u1F984.telegram
+  (:require [clj-http.client :as client]
+            [clojure.data.json :as data.json]
+      :body
+      (data.json/read-str :key-fn keyword)
+      :result))
+
+(defn telegram->http
+  ([token {:keys [method] :as params}]
+@frenchbread
+frenchbread/sn-server – palms.js
+Showing the top six matches
+Last indexed on Jul 10, 2018
+JavaScript
+export const twitterPalm = new Palm({
+  talk: 'telegram',
+  telegram: {
+    url: config.telegram.url,
+    token: config.telegram.socials.twitter_token
+  }
+})
+
+export const instagramPalm = new Palm({
+  talk: 'telegram',
+  telegram: {
+    url: config.telegram.url,
+© 2019 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Help
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Press h to open a hovercard with more details.
