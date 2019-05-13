@@ -2978,7 +2978,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
       default:
         assert (0);
       }
-      mprintf (ev, " marked read %d outbox and %d inbox messages -- [%d/%d/%d %d:%d:%d]\n", c1, c2, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+      mprintf (ev, " marked read %d outbox and %d inbox messages -- [%d/%02d/%02d %02d:%02d:%02d]\n", c1, c2, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
       mpop_color (ev);
     }
   }
@@ -3027,34 +3027,34 @@ void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
     mprintf (ev, "doing nothing");
     break;
   case tgl_typing_typing:
-    mprintf (ev, "typing -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "typing -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_cancel:
-    mprintf (ev, "deleting typed message -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "deleting typed message -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_record_video:
-    mprintf (ev, "recording video -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "recording video -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_upload_video:
-    mprintf (ev, "uploading video -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "uploading video -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_record_audio:
-    mprintf (ev, "recording audio -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "recording audio -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_upload_audio:
-    mprintf (ev, "uploading audio -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "uploading audio -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_upload_photo:
-    mprintf (ev, "uploading photo -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "uploading photo -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_upload_document:
-    mprintf (ev, "uploading document -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "uploading document -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_geo:
-    mprintf (ev, "choosing location -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "choosing location -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   case tgl_typing_choose_contact:
-    mprintf (ev, "choosing contact -- [%d/%d/%d %d:%d:%d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    mprintf (ev, "choosing contact -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     break;
   }
 }
