@@ -2918,6 +2918,8 @@ struct event *unread_message_event;
 
 
 void print_read_list (int num, struct tgl_message *list[]) {
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
   struct in_ev *ev = notify_ev;
   int i;
   mprint_start (ev);
@@ -2976,7 +2978,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
       default:
         assert (0);
       }
-      mprintf (ev, " marked read %d outbox and %d inbox messages\n", c1, c2);
+      mprintf (ev, " marked read %d outbox and %d inbox messages -- [%d:%d] -- [%d/%d/%d]\n", c1, c2, tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
       mpop_color (ev);
     }
   }
@@ -3017,8 +3019,8 @@ void mark_read_upd (struct tgl_state *TLSR, int num, struct tgl_message *list[])
 
 void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
 
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
 
   switch (status) {
   case tgl_typing_none:
