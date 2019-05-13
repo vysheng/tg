@@ -34,6 +34,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef READLINE_GNU
 #include <readline/readline.h>
@@ -3015,39 +3016,43 @@ void mark_read_upd (struct tgl_state *TLSR, int num, struct tgl_message *list[])
 }
 
 void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
+
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
   switch (status) {
   case tgl_typing_none:
     mprintf (ev, "doing nothing");
     break;
   case tgl_typing_typing:
-    mprintf (ev, "typing");
+    mprintf (ev, "typing -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_cancel:
-    mprintf (ev, "deleting typed message");
+    mprintf (ev, "deleting typed message -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_record_video:
-    mprintf (ev, "recording video");
+    mprintf (ev, "recording video -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_upload_video:
-    mprintf (ev, "uploading video");
+    mprintf (ev, "uploading video -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_record_audio:
-    mprintf (ev, "recording audio");
+    mprintf (ev, "recording audio -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_upload_audio:
-    mprintf (ev, "uploading audio");
+    mprintf (ev, "uploading audio -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_upload_photo:
-    mprintf (ev, "uploading photo");
+    mprintf (ev, "uploading photo -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_upload_document:
-    mprintf (ev, "uploading document");
+    mprintf (ev, "uploading document -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_geo:
-    mprintf (ev, "choosing location");
+    mprintf (ev, "choosing location -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   case tgl_typing_choose_contact:
-    mprintf (ev, "choosing contact");
+    mprintf (ev, "choosing contact -- [%d:%d]", tm.tm_hour, tm.tm_min);
     break;
   }
 }
