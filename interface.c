@@ -3025,34 +3025,34 @@ void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
     mprintf (ev, "doing nothing");
     break;
   case tgl_typing_typing:
-    mprintf (ev, "typing -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "typing -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_cancel:
-    mprintf (ev, "deleting typed message -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "deleting typed message -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_record_video:
-    mprintf (ev, "recording video -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "recording video -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_upload_video:
-    mprintf (ev, "uploading video -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "uploading video -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_record_audio:
-    mprintf (ev, "recording audio -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "recording audio -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_upload_audio:
-    mprintf (ev, "uploading audio -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "uploading audio -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_upload_photo:
-    mprintf (ev, "uploading photo -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "uploading photo -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_upload_document:
-    mprintf (ev, "uploading document -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "uploading document -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_geo:
-    mprintf (ev, "choosing location -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "choosing location -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   case tgl_typing_choose_contact:
-    mprintf (ev, "choosing contact -- [%d:%d]", tm.tm_hour, tm.tm_min);
+    mprintf (ev, "choosing contact -- [%d:%d] -- [%d/%d/%d]", tm.tm_hour, tm.tm_min, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     break;
   }
 }
