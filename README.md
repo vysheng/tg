@@ -35,7 +35,11 @@ If you do not want to use them pass options --disable-libconfig, --disable-liblu
 
 On Ubuntu/Debian use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make
+
+On Ubuntu 18.04 use: 
+
+     sudo apt-get install libreadline-dev libconfig-dev libssl1.0-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
 
 On gentoo:
 
