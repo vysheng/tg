@@ -36,6 +36,10 @@ If you do not want to use them pass options --disable-libconfig, --disable-liblu
 On Ubuntu/Debian use: 
 
      sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
+     
+Most likely will not install without libssl1.0-dev and zlib1g-dev
+
+     sudo apt-get install libssl1.0-dev and zlib1g-dev
 
 On gentoo:
 
