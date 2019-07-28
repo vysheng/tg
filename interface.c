@@ -3137,47 +3137,50 @@ void our_id_gw (struct tgl_state *TLSR, tgl_peer_id_t id) {
 }
 
 void print_peer_updates (struct in_ev *ev, int flags) {
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+
   if (flags & TGL_UPDATE_PHONE) {
-    mprintf (ev, " phone");
+    mprintf (ev, " phone -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_CONTACT) {
-    mprintf (ev, " contact");
+    mprintf (ev, " contact -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_PHOTO) {
-    mprintf (ev, " photo");
+    mprintf (ev, " photo -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_BLOCKED) {
-    mprintf (ev, " blocked");
+    mprintf (ev, " blocked -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_REAL_NAME) {
-    mprintf (ev, " name");
+    mprintf (ev, " name -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_NAME) {
-    mprintf (ev, " contact_name");
+    mprintf (ev, " contact_name -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_REQUESTED) {
-    mprintf (ev, " status");
+    mprintf (ev, " status -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_WORKING) {
-    mprintf (ev, " status");
+    mprintf (ev, " status -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_FLAGS) {
-    mprintf (ev, " flags");
+    mprintf (ev, " flags -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_TITLE) {
-    mprintf (ev, " title");
+    mprintf (ev, " title -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_ADMIN) {
-    mprintf (ev, " admin");
+    mprintf (ev, " admin -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_MEMBERS) {
-    mprintf (ev, " members");
+    mprintf (ev, " members -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_ACCESS_HASH) {
-    mprintf (ev, " access_hash");
+    mprintf (ev, " access_hash -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
   if (flags & TGL_UPDATE_USERNAME) {
-    mprintf (ev, " username");
+    mprintf (ev, " username -- [%d/%02d/%02d %02d:%02d:%02d]", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
 }
 
@@ -4360,7 +4363,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   last_to_id = M->to_id;
 
   //print_start ();
-  
+
   // Sending to a USER
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_USER) {
     if (M->flags & TGLMF_OUT) {
