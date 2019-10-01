@@ -233,6 +233,9 @@ json_t *json_pack_media (struct tgl_message_media *M) {
   case tgl_message_media_video:
   case tgl_message_media_document_encr:
     assert (json_object_set (res, "type", json_string ("document")) >= 0);
+    if (M->caption) {
+      assert (json_object_set (res, "caption", json_string (M->caption)) >= 0);
+    }
     break;
   case tgl_message_media_unsupported:
     assert (json_object_set (res, "type", json_string ("unsupported")) >= 0);
