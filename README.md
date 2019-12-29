@@ -259,3 +259,4 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 #### Other
 * **quit** - quit
 * **safe_quit** - wait for all queries to end then quit
+* run `telegram-cli -q` to logout from account
