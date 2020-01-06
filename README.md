@@ -259,3 +259,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 #### Other
 * **quit** - quit
 * **safe_quit** - wait for all queries to end then quit
+* run `telegram-cli -q` to logout from account
+
+#### Troubleshooting
+* if you got error: `get error FAIL: 38: can not parse arg #1` it maybe be unresolved username. You should use `resolve_username channel/group/user_name` before running action with it. [See this issue for more info](https://github.com/vysheng/tg/issues/823)
