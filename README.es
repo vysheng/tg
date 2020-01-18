@@ -27,9 +27,9 @@ o descarga y descomprime el zip
 Librerías requeridas: readline openssl y (si desea usar config) libconfig y liblua.
 Si no deseas usarlo, pasa las siguientes opciones --disable-libconfig y --disable-liblua respectivamente.
 
-En Ubuntu usa:
+En Ubuntu/Debian usa:
 
-    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev
+    $ sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make zlib1g-dev
 
 En gentoo:
     
