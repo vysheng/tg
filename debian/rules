@@ -11,8 +11,13 @@ export DH_VERBOSE=1
 
 	VERSION=$(shell dpkg-parsechangelog | sed -n 's/^Version: //p' | cut -f1 -d'-')
 	PACKAGE_NAME=$(shell dpkg-parsechangelog | sed -n 's/^Source: //p')
+
 override_dh_auto_configure:
-	./configure --disable-openssl
+	./configure --disable-openssl --prefix=/usr
+
+override_dh_usrlocal:
+	
+
 %:
 			cp tg-server.pub server.pub
 			dh $@ --with autotools-dev

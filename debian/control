@@ -12,6 +12,7 @@ Build-Depends: autoconf-archive,
                libjansson-dev,
                libpython-dev,
                liblua5.2-dev,
+               libgcrypt-dev,
                lua-lgi,
                lua5.2
 Standards-Version: 3.9.5

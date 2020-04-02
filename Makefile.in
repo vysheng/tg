@@ -66,6 +66,6 @@ distclean:
 	rm -rf ${DIR_LIST} config.h config.log config.status
 
 install: all
-	@mkdir -p $(INSTALL_BIN)
-	$(INSTALL) telegram $(INSTALL_BIN)
+	@mkdir -p $(DESTDIR)/$(INSTALL_BIN)
+	$(INSTALL) bin/telegram-cli $(DESTDIR)/$(INSTALL_BIN)
 	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
