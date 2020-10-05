@@ -72,7 +72,7 @@ On Milislinux:
 
 On FreeBSD:
 
-     pkg install libconfig libexecinfo lua52 python jansson
+     pkg install telegram-cli
 
 On OpenBSD:
 
