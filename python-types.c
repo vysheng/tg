@@ -58,9 +58,9 @@ tgl_Peer_init(tgl_Peer *self, PyObject *args, PyObject *kwds)
 {
   static char *kwlist[] = {"type", "id", NULL};
   tgl_peer_id_t peer_id;
-  if(!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, 
-                                  &peer_id.type,
-                                  &peer_id.id))
+  if(!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist,
+                                  &peer_id.peer_type,
+                                  &peer_id.peer_id))
   {
     PyErr_Format(PeerError, "Peer must specify type and id");
     return -1;
@@ -77,15 +77,27 @@ tgl_Peer_getname (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
-      ret = PyUnicode_FromString(self->peer->user.print_name);
+      if(self->peer->user.print_name)
+        ret = PyUnicode_FromString(self->peer->user.print_name);
+      else
+      	Py_RETURN_NONE;	
       break;
     case TGL_PEER_CHAT:
-      ret = PyUnicode_FromString(self->peer->chat.print_title);
+      if(self->peer->chat.print_title)
+	    ret = PyUnicode_FromString(self->peer->chat.print_title);
+	  else
+      	Py_RETURN_NONE;
+      break;
+    case TGL_PEER_CHANNEL:
+      ret = PyUnicode_FromString(self->peer->channel.print_title);
       break;
     case TGL_PEER_ENCR_CHAT:
-      ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
+      if(self->peer->encr_chat.print_name)
+      	ret = PyUnicode_FromString(self->peer->encr_chat.print_name);
+      else
+      	Py_RETURN_NONE;
       break;
     default:
      PyErr_SetString(PeerError, "peer.type_name not supported!");
@@ -102,14 +114,14 @@ tgl_Peer_getuser_id (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
-      ret = PyLong_FromLong(self->peer->id.id);
+      ret = PyLong_FromLong(self->peer->id.peer_id);
       break;
     case TGL_PEER_CHAT:
       PyErr_SetString(PeerError, "peer.type_name == 'chat' has no user_id");
       Py_RETURN_NONE;
- 
+
       break;
     case TGL_PEER_ENCR_CHAT:
       ret = PyLong_FromLong(self->peer->encr_chat.user_id);
@@ -130,7 +142,7 @@ tgl_Peer_getuser_list (tgl_Peer *self, void *closure)
   int i;
   struct tgl_chat_user *user_list;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_CHAT:
       ret = PyList_New(0);
         for(i = 0; i < self->peer->chat.user_list_size; i++) {
@@ -158,10 +170,10 @@ tgl_Peer_getuser_status(tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
       ret = PyDict_New();
-      PyDict_SetItemString(ret, "online", self->peer->user.status.online? Py_True : Py_False);
+      PyDict_SetItemString(ret, "online", self->peer->user.status.online > 0 ? Py_True : Py_False);
       PyDict_SetItemString(ret, "when", get_datetime(self->peer->user.status.when));
 
       break;
@@ -184,7 +196,7 @@ tgl_Peer_getphone (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
       if(self->peer->user.phone)
         ret = PyUnicode_FromString(self->peer->user.phone);
@@ -210,7 +222,7 @@ tgl_Peer_getusername (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
       if(self->peer->user.username)
         ret = PyUnicode_FromString(self->peer->user.username);
@@ -236,7 +248,7 @@ tgl_Peer_getfirst_name (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
       if(self->peer->user.first_name)
         ret = PyUnicode_FromString(self->peer->user.first_name);
@@ -262,7 +274,7 @@ tgl_Peer_getlast_name (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
       if(self->peer->user.last_name)
         ret = PyUnicode_FromString(self->peer->user.last_name);
@@ -288,7 +300,7 @@ tgl_Peer_getuser (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_ENCR_CHAT:
       ret = tgl_Peer_FromTglPeer(tgl_peer_get(TLS, TGL_MK_USER (self->peer->encr_chat.user_id)));
       break;
@@ -313,7 +325,7 @@ tgl_Peer_gettype_name(tgl_Peer* self)
 {
   PyObject *name;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
       name = PyUnicode_FromString("user");
       break;
@@ -334,7 +346,7 @@ tgl_Peer_getid (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  ret = PyLong_FromLong(self->peer->id.id);
+  ret = PyLong_FromLong(self->peer->id.peer_id);
 
   Py_XINCREF(ret);
   return ret;
@@ -345,7 +357,7 @@ tgl_Peer_gettype (tgl_Peer *self, void *closure)
 {
   PyObject *ret;
 
-  ret = PyLong_FromLong(self->peer->id.type); 
+  ret = PyLong_FromLong(self->peer->id.peer_type);
 
   Py_XINCREF(ret);
   return ret;
@@ -496,7 +508,7 @@ tgl_Peer_rename_chat (tgl_Peer *self, PyObject *args, PyObject *kwargs)
   char * title;
   PyObject *callback = NULL;
 
-  if(self->peer->id.type != TGL_PEER_CHAT) {
+  if(self->peer->id.peer_type != TGL_PEER_CHAT) {
     PyErr_SetString(PeerError, "Only a chat peer can be renamed");
     Py_XINCREF(Py_False);
     return Py_False;
@@ -698,7 +710,7 @@ tgl_Peer_chat_set_photo (tgl_Peer *self, PyObject *args, PyObject *kwargs)
   char * filename;
   PyObject *callback = NULL;
 
-  if(self->peer->id.type != TGL_PEER_CHAT) {
+  if(self->peer->id.peer_type != TGL_PEER_CHAT) {
     PyErr_SetString(PeerError, "Only a chat peer can have a chat photo set.");
     Py_XINCREF(Py_False);
     return Py_False;
@@ -732,7 +744,7 @@ tgl_Peer_chat_add_user (tgl_Peer *self, PyObject *args, PyObject *kwargs)
   PyObject *peer;
   PyObject *callback = NULL;
 
-  if(self->peer->id.type != TGL_PEER_CHAT) {
+  if(self->peer->id.peer_type != TGL_PEER_CHAT) {
     PyErr_SetString(PeerError, "Only a chat peer can have a user added.");
     Py_XINCREF(Py_False);
     return Py_False;
@@ -766,7 +778,7 @@ tgl_Peer_chat_del_user (tgl_Peer *self, PyObject *args, PyObject *kwargs)
   PyObject *peer;
   PyObject *callback = NULL;
 
-  if(self->peer->id.type != TGL_PEER_CHAT) {
+  if(self->peer->id.peer_type != TGL_PEER_CHAT) {
     PyErr_SetString(PeerError, "Only a chat peer can have a user deleted.");
     Py_XINCREF(Py_False);
     return Py_False;
@@ -827,7 +839,7 @@ tgl_Peer_info (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 
   PyObject *callback = NULL;
 
-  if(self->peer->id.type == TGL_PEER_ENCR_CHAT) {
+  if(self->peer->id.peer_type == TGL_PEER_ENCR_CHAT) {
     PyErr_SetString(PeerError, "Secret chats currently have no info.");
     Py_XINCREF(Py_False);
     return Py_False;
@@ -843,7 +855,7 @@ tgl_Peer_info (tgl_Peer *self, PyObject *args, PyObject *kwargs)
 
     Py_INCREF(Py_None);
     Py_XINCREF(api_call);
-    if(self->peer->id.type == TGL_PEER_USER)
+    if(self->peer->id.peer_type == TGL_PEER_USER)
       return py_user_info(Py_None, api_call);
     else
       return py_chat_info(Py_None, api_call);
@@ -970,13 +982,13 @@ tgl_Peer_repr(tgl_Peer *self)
 {
   PyObject *ret;
 
-  switch(self->peer->id.type) {
+  switch(self->peer->id.peer_type) {
     case TGL_PEER_USER:
 #if PY_VERSION_HEX < 0x02070900
-       ret = PyUnicode_FromFormat("<tgl.Peer: id=%ld>", self->peer->id.id);
+       ret = PyUnicode_FromFormat("<tgl.Peer: id=%ld>", self->peer->id.peer_id);
 #else
        ret = PyUnicode_FromFormat("<tgl.Peer: type=user, id=%ld, username=%R, name=%R, first_name=%R, last_name=%R, phone=%R>",
-                                  self->peer->id.id,
+                                  self->peer->id.peer_id,
                                   PyObject_GetAttrString((PyObject*)self, "username"),
                                   PyObject_GetAttrString((PyObject*)self, "name"),
                                   PyObject_GetAttrString((PyObject*)self, "first_name"),
@@ -987,15 +999,19 @@ tgl_Peer_repr(tgl_Peer *self)
       break;
     case TGL_PEER_CHAT:
       ret = PyUnicode_FromFormat("<tgl.Peer: type=chat, id=%ld, name=%s>",
-                                  self->peer->id.id,  self->peer->chat.print_title);
+                                  self->peer->id.peer_id,  self->peer->chat.print_title);
       break;
     case TGL_PEER_ENCR_CHAT:
       ret = PyUnicode_FromFormat("<tgl.Peer: type=secret_chat, id=%ld, name=%s, user=%R>",
-                                  self->peer->id.id,  self->peer->encr_chat.print_name,
+                                  self->peer->id.peer_id,  self->peer->encr_chat.print_name,
                                   PyObject_GetAttrString((PyObject*)self, "user"));
       break;
+    case TGL_PEER_CHANNEL:
+      ret = PyUnicode_FromFormat("<tgl.Peer: type=channel, id=%ld, name=%s>",
+                                  self->peer->id.peer_id,  self->peer->channel.print_title);
+      break;
     default:
-      ret = PyUnicode_FromFormat("<tgl.Peer: Type Unknown>");
+      ret = PyUnicode_FromFormat("<tgl.Peer: Type Unknown(type_id: %d)>",self->peer->id.peer_type);
     }
 
   return ret;
@@ -1021,10 +1037,10 @@ tgl_Peer_RichCompare(PyObject *self, PyObject *other, int cmp)
     } else {
       switch (cmp) {
       case Py_EQ:
-        result = ((tgl_Peer*)self)->peer->id.id == ((tgl_Peer*)other)->peer->id.id ? Py_True : Py_False;
+        result = ((tgl_Peer*)self)->peer->id.peer_id == ((tgl_Peer*)other)->peer->id.peer_id ? Py_True : Py_False;
         break;
       case Py_NE:
-        result = ((tgl_Peer*)self)->peer->id.id == ((tgl_Peer*)other)->peer->id.id ? Py_False : Py_True;
+        result = ((tgl_Peer*)self)->peer->id.peer_id == ((tgl_Peer*)other)->peer->id.peer_id ? Py_False : Py_True;
         break;
       case Py_LE:
       case Py_GE:
@@ -1122,7 +1138,7 @@ tgl_Msg_getid (tgl_Msg *self, void *closure)
 {
   PyObject *ret;
 
-  ret = PyLong_FromLong(self->msg->id);
+  ret = PyLong_FromLong(self->msg->permanent_id.id);
 
   Py_XINCREF(ret);
   return ret;
@@ -1259,10 +1275,10 @@ static PyObject *
 tgl_Msg_getmedia (tgl_Msg *self, void *closure)
 {
   PyObject *ret;
-  
+
   // TODO probably want a custom class for media, but it's not too important right now.
   if(self->msg->media.type && self->msg->media.type != tgl_message_media_none && !(self->msg->flags & TGLMF_SERVICE)) {
-    
+
     ret = PyDict_New();
     switch (self->msg->media.type) {
     case tgl_message_media_photo:
@@ -1370,21 +1386,23 @@ tgl_Msg_getfwd_date (tgl_Msg *self, void *closure)
 static PyObject *
 tgl_Msg_getreply (tgl_Msg *self, void *closure)
 {
-  PyObject *ret;
-
-  if(self->msg->reply_id) {
-    struct tgl_message *MR = tgl_message_get (TLS, self->msg->reply_id);
-    if(MR) {
-      ret = tgl_Msg_FromTglMsg(MR);
-    } else {
-      Py_RETURN_NONE;
-    }
-  } else {
-    Py_RETURN_NONE;
-  }
-
-  Py_XINCREF(ret);
-  return ret;
+//  PyObject *ret;
+//
+//  if(self->msg->reply_id) {
+//    struct tgl_message *MR = tgl_message_get (TLS, self->msg->reply_id); //I don't know how to fix this line(reply_id type error), so I have disabled this function.
+//    if(MR) {
+//      ret = tgl_Msg_FromTglMsg(MR);
+//    } else {
+//      Py_RETURN_NONE;
+//    }
+//  } else {
+//    Py_RETURN_NONE;
+//  }
+//
+//  Py_XINCREF(ret);
+//  return ret;
+//
+  Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -1456,11 +1474,11 @@ tgl_Msg_repr(tgl_Msg *self)
 {
   PyObject *ret;
 #if PY_VERSION_HEX < 0x02070900
-  ret = PyUnicode_FromFormat("<tgl.Msg id=%ld>", self->msg->id);
+  ret = PyUnicode_FromFormat("<tgl.Msg id=%ld>", self->msg->permanent_id.id);
 #else
   ret = PyUnicode_FromFormat("<tgl.Msg id=%ld, flags=%d, mention=%R, out=%R, unread=%R, service=%R, src=%R, "
                              "dest=%R, text=%R, media=%R, date=%R, fwd_src=%R, fwd_date=%R, reply_id=%R, reply=%R>",
-                             self->msg->id, self->msg->flags,
+                             self->msg->permanent_id.id, self->msg->flags,
                              PyObject_GetAttrString((PyObject*)self, "mention"),
                              PyObject_GetAttrString((PyObject*)self, "out"),
                              PyObject_GetAttrString((PyObject*)self, "unread"),
@@ -1484,7 +1502,7 @@ static PyGetSetDef tgl_Msg_getseters[] = {
   {"id", (getter)tgl_Msg_getid, NULL, "", NULL},
   {"flags", (getter)tgl_Msg_getflags, NULL, "", NULL},
   {"mention", (getter)tgl_Msg_getmention, NULL, "", NULL},
-  {"out", (getter)tgl_Msg_getout, NULL, "", NULL}, 
+  {"out", (getter)tgl_Msg_getout, NULL, "", NULL},
   {"unread", (getter)tgl_Msg_getunread, NULL, "", NULL},
   {"service", (getter)tgl_Msg_getservice, NULL, "", NULL},
   {"src", (getter)tgl_Msg_getsrc, NULL, "", NULL},

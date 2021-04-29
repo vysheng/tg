@@ -1,0 +1,16 @@
+#!/bin/bash
+VERSION='latest'
+BASE_DIR=$(realpath $(dirname ${0}))
+cd ${BASE_DIR}
+./clean
+if [ $? -ne 0 ]; then
+  echo 'Could not clean rpmbuild build directories. Check log!'
+fi
+rpmbuild --define "_topdir `pwd`" -ba 'SPECS/telegram-cli.spec'
+if [ $? -eq 0 ]; then
+  echo "Your packages are available at $PWD/RPMS."
+  exit 0
+else
+  echo 'There are errors. Check log!'
+  exit 1
+fi

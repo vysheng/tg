@@ -19,3 +19,8 @@ debian/telegram-cli/*
 debian/telegram-cli.debhelper.log
 debian/telegram-cli.substvars
 __pycache__
+rpm/BUILD
+rpm/BUILDROOT
+rpm/RPMS
+rpm/SRPMS
+rpm/SOURCES

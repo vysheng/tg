@@ -1,43 +1,38 @@
-# Copyright 1999-2013 Gentoo Foundation
-# Distributed under the terms of the GNU General Public License v2
-# $Header: $
+EAPI=6
 
-EAPI=5
+inherit git-r3
 
-EGIT_REPO_URI="https://github.com/vysheng/tg.git"
-EGIT_BRANCH="master"
-EGIT_HAS_SUBMODULES=1
-inherit git-2
-IUSE="+lua +json +python"
-DESCRIPTION="Command line interface client for Telegram"
 HOMEPAGE="https://github.com/vysheng/tg"
+DESCRIPTION="Command line interface client for Telegram"
+EGIT_REPO_URI="https://github.com/vysheng/tg.git"
+if [[ "${PV}" -ne "9999" ]]; then
+	EGIT_COMMIT="refs/tags/${PV}"
+	KEYWORDS="~amd64 ~x86"
+else
+	KEYWORDS=""
+fi
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~amd64 ~x86"
+IUSE="lua json"
 
-DEPEND="sys-libs/zlib
+DEPEND="
+	sys-libs/zlib
 	sys-libs/readline
 	dev-libs/libconfig
 	dev-libs/openssl
 	dev-libs/libevent
 	lua? ( dev-lang/lua )
 	json? ( dev-libs/jansson )
-	python? ( dev-lang/python )"
-
-src_unpack() {
-	git-2_src_unpack
-	cd $EGIT_SOURCEDIR
-	git submodule update --init --recursive
-}
+	"
+RDEPEND="${DEPEND}"
 
 src_configure() {
-	econf $(use_enable lua liblua )
-	econf $(use_enable python python )
-	econf $(use_enable json json )
+	econf $(use_enable lua liblua) \
+	      $(use_enable json)
 }
 
 src_install() {
-	newbin bin/telegram-cli telegram-cli
+	dobin bin/telegram-cli
 
 	insinto /etc/telegram-cli/
 	newins tg-server.pub server.pub

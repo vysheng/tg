@@ -6108,7 +6108,7 @@ $as_echo_n "checking for python... " >&6; }
 # Check whether --enable-python was given.
 if test "${enable_python+set}" = set; then :
   enableval=$enable_python;
-    if test "x$enableval" = "xyes" ; then
+    if test "x$enableval" = "xno" ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5
 $as_echo "disabled" >&6; }
     else

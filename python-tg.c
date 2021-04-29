@@ -82,6 +82,7 @@ extern PyTypeObject tgl_MsgType;
 //#include "interface.h"
 //#include "auto/constants.h"
 #include <tgl/tgl.h>
+#include <tgl/tgl-queries.h>
 #include "interface.h"
 
 #include <assert.h>
@@ -102,6 +103,7 @@ PyObject *_py_binlog_end;
 PyObject *_py_diff_end;
 PyObject *_py_our_id;
 PyObject *_py_new_msg;
+PyObject *_py_list_msg;
 PyObject *_py_secret_chat_update;
 PyObject *_py_user_update;
 PyObject *_py_chat_update;
@@ -156,16 +158,16 @@ PyObject* get_tgl_peer_type (int x) {
 
 PyObject* get_update_types (unsigned flags) {
   PyObject* types;
-  types = PyList_New(0); 
+  types = PyList_New(0);
   if(types == NULL)
     assert(0); // TODO handle python exception
-  
+
   if (flags & TGL_UPDATE_CREATED) {
     py_add_string_field_arr(types, -1, "created");
-  }  
+  }
   if (flags & TGL_UPDATE_DELETED) {
     py_add_string_field_arr(types, -1, "deleted");
-  }  
+  }
   if (flags & TGL_UPDATE_PHONE) {
     py_add_string_field_arr(types, -1, "phone");
   }
@@ -218,10 +220,10 @@ PyObject* get_peer (tgl_peer_id_t id, tgl_peer_t *P) {
   return peer;
 }
 
-PyObject* get_message (struct tgl_message *M) {  
+PyObject* get_message (struct tgl_message *M) {
   assert (M);
   PyObject *msg;
-  
+
   msg = tgl_Msg_FromTglMsg(M);
   return msg;
 }
@@ -232,14 +234,14 @@ void py_binlog_end (void) {
   PyObject *arglist, *result;
 
   if(_py_binlog_end == NULL) {
-    logprintf("Callback not set for on_binlog_end");
+    logprintf("Callback not set for on_binlog_end\n");
     return;
   }
- 
+
   arglist = Py_BuildValue("()");
   result = PyEval_CallObject(_py_binlog_end, arglist);
   Py_DECREF(arglist);
-  
+
   if(result == NULL)
     PyErr_Print();
   else if(PyUnicode_Check(result))
@@ -254,10 +256,10 @@ void py_diff_end (void) {
   PyObject *arglist, *result;
 
   if(_py_diff_end == NULL) {
-    logprintf("Callback not set for on_diff_end");
+    logprintf("Callback not set for on_diff_end\n");
     return;
   }
- 
+
   arglist = Py_BuildValue("()");
   result = PyEval_CallObject(_py_diff_end, arglist);
   Py_DECREF(arglist);
@@ -275,7 +277,7 @@ void py_our_id (int id) {
   PyObject *arglist, *result;
 
   if(_py_our_id == NULL) {
-    logprintf("Callback not set for on_our_id");
+    logprintf("Callback not set for on_our_id\n");
     return;
   }
 
@@ -296,7 +298,7 @@ void py_new_msg (struct tgl_message *M) {
   PyObject *arglist, *result;
 
   if(_py_new_msg == NULL) {
-    logprintf("Callback not set for on_new_msg");
+    logprintf("Callback not set for on_new_msg\n");
     return;
   }
 
@@ -304,6 +306,30 @@ void py_new_msg (struct tgl_message *M) {
 
   arglist = Py_BuildValue("(O)", msg);
   result = PyEval_CallObject(_py_new_msg, arglist);
+  Py_DECREF(arglist);
+
+  if(result == NULL)
+    PyErr_Print();
+  else if(PyUnicode_Check(result))
+    logprintf ("python: %s\n", PyBytes_AsString(PyUnicode_AsASCIIString(result)));
+
+  Py_XDECREF(result);
+}
+
+void py_list_msg (struct tgl_message *M) {
+  if (!python_loaded) { return; }
+  PyObject *msg;
+  PyObject *arglist, *result;
+
+  if(_py_list_msg == NULL) {
+    logprintf("Callback not set for on_msg_history");
+    return;
+  }
+
+  msg = get_message (M);
+
+  arglist = Py_BuildValue("(O)", msg);
+  result = PyEval_CallObject(_py_list_msg, arglist);
   Py_DECREF(arglist);
 
   if(result == NULL)  
@@ -317,10 +343,10 @@ void py_new_msg (struct tgl_message *M) {
 void py_secret_chat_update (struct tgl_secret_chat *C, unsigned flags) {
   if (!python_loaded) { return; }
   PyObject *peer, *types;
-  PyObject *arglist, *result; 
+  PyObject *arglist, *result;
 
   if(_py_secret_chat_update == NULL) {
-    logprintf("Callback not set for on_secret_chat_update");
+    logprintf("Callback not set for on_secret_chat_update\n");
     return;
   }
 
@@ -346,7 +372,7 @@ void py_user_update (struct tgl_user *U, unsigned flags) {
   PyObject *arglist, *result;
 
   if(_py_user_update == NULL) {
-    logprintf("Callback not set for on_user_update");
+    logprintf("Callback not set for on_user_update\n");
     return;
   }
 
@@ -372,7 +398,7 @@ void py_chat_update (struct tgl_chat *C, unsigned flags) {
   PyObject *arglist, *result;
 
   if(_py_chat_update == NULL) {
-    logprintf("Callback not set for on_chat_update");
+    logprintf("Callback not set for on_chat_update\n");
     return;
   }
 
@@ -397,7 +423,7 @@ void py_on_loop () {
   PyObject *result;
 
   if(_py_on_loop == NULL) {
-    logprintf("Callback not set for on_chat_update");
+    logprintf("Callback not set for on_loop\n");
     return;
   }
 
@@ -419,10 +445,10 @@ void py_on_loop () {
 void *py_ptr[MAX_PY_COMMANDS];
 static int pos;
 //
-//static inline tgl_peer_t *get_peer (const char *s) { 
+//static inline tgl_peer_t *get_peer (const char *s) {
 //  return tgl_peer_get_by_name (TLS, s);
 //}
-  
+
 enum py_query_type {
   pq_contact_list,
   pq_dialog_list,
@@ -481,13 +507,13 @@ void py_empty_cb (struct tgl_state *TLSR, void *cb_extra, int success) {
     arglist = Py_BuildValue("(O)", success ? Py_True : Py_False);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
-  
+
   Py_XDECREF(callable);
 }
 
@@ -495,9 +521,9 @@ void py_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, in
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *peers = NULL; 
+  PyObject *peers = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     peers = PyList_New(0);
     if (success) {
@@ -510,24 +536,24 @@ void py_contact_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, in
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peers);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
   Py_XDECREF(callable);
 }
 
-void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], int msgs[], int unread[]) {
+void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int num, tgl_peer_id_t peers[], tgl_message_id_t *msgs[], int unread[]) {
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *dialog_list = NULL; 
+  PyObject *dialog_list = NULL;
   PyObject *dialog = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     dialog_list = PyList_New(0);
     if (success) {
@@ -535,7 +561,7 @@ void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int
       for (i = 0; i < num; i++) {
         dialog = PyDict_New();
         PyDict_SetItemString(dialog, "peer", get_peer(peers[i], tgl_peer_get (TLS, peers[i])));
-                
+
         struct tgl_message *M = tgl_message_get (TLS, msgs[i]);
         if (M && (M->flags & TGLMF_CREATED)) {
           PyDict_SetItemString(dialog, "message", get_message(M));
@@ -549,10 +575,10 @@ void py_dialog_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, dialog_list);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -563,9 +589,9 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *msg = NULL; 
+  PyObject *msg = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     if (success && M && (M->flags & TGLMF_CREATED)) {
       msg = get_message(M);
@@ -577,10 +603,10 @@ void py_msg_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl_
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, msg);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -591,9 +617,9 @@ void py_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int nu
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *msgs = NULL; 
+  PyObject *msgs = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     msgs = PyList_New(0);
     if (success) {
@@ -606,10 +632,10 @@ void py_msg_list_cb (struct tgl_state *TLSR, void *cb_extra, int success, int nu
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, msgs);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -620,9 +646,9 @@ void py_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *filename = NULL; 
+  PyObject *filename = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     if(success)
       filename = PyUnicode_FromString(file_name);
@@ -634,10 +660,10 @@ void py_file_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, filename);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -648,9 +674,9 @@ void py_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *peer = NULL; 
+  PyObject *peer = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     if (success) {
       peer = get_peer(C->id, (void *)C);
@@ -662,10 +688,10 @@ void py_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peer);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -676,9 +702,9 @@ void py_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, str
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *peer = NULL; 
+  PyObject *peer = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     if (success) {
       peer = get_peer(C->id, (void *)C);
@@ -690,10 +716,10 @@ void py_secret_chat_cb (struct tgl_state *TLSR, void *cb_extra, int success, str
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peer);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -704,9 +730,9 @@ void py_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *peer = NULL; 
+  PyObject *peer = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     if (success) {
       peer = get_peer(C->id, (void *)C);
@@ -718,10 +744,10 @@ void py_user_cb (struct tgl_state *TLSR, void *cb_extra, int success, struct tgl
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, peer);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -732,9 +758,9 @@ void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char 
   assert (TLSR == TLS);
   PyObject *callable = cb_extra;
   PyObject *arglist = NULL;
-  PyObject *str = NULL; 
+  PyObject *str = NULL;
   PyObject *result = NULL;
-   
+
   if(PyCallable_Check(callable)) {
     if(success)
       str = PyUnicode_FromString(data);
@@ -746,10 +772,10 @@ void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char 
     arglist = Py_BuildValue("(OO)", success ? Py_True : Py_False, str);
     result = PyEval_CallObject(callable, arglist);
     Py_DECREF(arglist);
-    
+
     if(result == NULL)
       PyErr_Print();
-    
+
     Py_XDECREF(result);
   }
 
@@ -757,6 +783,7 @@ void py_str_cb (struct tgl_state *TLSR, void *cb_extra, int success, const char 
 }
 
 #define PY_PEER_ID(x) (tgl_peer_id_t)((tgl_Peer*)x)->peer->id
+#define PY_MSG_ID(x) (tgl_message_id_t*)x
 
 void py_do_all (void) {
   int p = 0;
@@ -919,13 +946,13 @@ void py_do_all (void) {
 
     case pq_fwd:
       if(PyArg_ParseTuple(args, "O!l|O", &tgl_PeerType, &peer, &msg_id, &cb_extra))
-        tgl_do_forward_message (TLS, PY_PEER_ID(peer), msg_id, 0, py_msg_cb, cb_extra);
+        tgl_do_forward_message (TLS, PY_PEER_ID(peer), PY_MSG_ID(msg_id), 0, py_msg_cb, cb_extra);
       else
         PyErr_Print();
       break;
     case pq_fwd_media:
       if(PyArg_ParseTuple(args, "O!l|O", &tgl_PeerType, &peer, &msg_id, &cb_extra))
-        tgl_do_forward_media (TLS, PY_PEER_ID(peer), msg_id, 0, py_msg_cb, cb_extra);
+        tgl_do_forward_media (TLS, PY_PEER_ID(peer), PY_MSG_ID(msg_id), 0, py_msg_cb, cb_extra);
       else
         PyErr_Print();
       break;
@@ -1025,7 +1052,7 @@ void py_do_all (void) {
 
           tfree(ids, PyList_GET_SIZE(pyObj1) * sizeof(tgl_user_id_t));
         } else {
-            logprintf("create_group_chat: Argument 1 must be a list of at least 3 peers");
+            logprintf("create_group_chat: Argument 1 must be a list of at least 3 peers\n");
         }
       }
       Py_XDECREF(pyObj1);
@@ -1033,7 +1060,7 @@ void py_do_all (void) {
     case pq_delete_msg:
     case pq_restore_msg:
       if(PyArg_ParseTuple(args, "l|O", &msg_id, &cb_extra))
-        tgl_do_delete_msg (TLS, msg_id, py_empty_cb, cb_extra);
+        tgl_do_delete_msg (TLS, PY_MSG_ID(msg_id), py_empty_cb, cb_extra);
       else
         PyErr_Print();
       break;
@@ -1043,7 +1070,7 @@ void py_do_all (void) {
       break;
 */
     case pq_send_contact:
-      if(PyArg_ParseTuple(args, "O!s#s#s#|O",  &tgl_PeerType, &peer, &str1, &len1, &str2, &len2, 
+      if(PyArg_ParseTuple(args, "O!s#s#s#|O",  &tgl_PeerType, &peer, &str1, &len1, &str2, &len2,
                                                &str3, &len3, &cb_extra))
         tgl_do_send_contact (TLS, PY_PEER_ID(peer), str1, len1, str2, len2, str3, len3, 0, py_msg_cb, cb_extra);
       else
@@ -1075,7 +1102,7 @@ void py_do_all (void) {
       break;
     case pq_send_location:
       if(PyArg_ParseTuple(args, "O!O!O!|O", &tgl_PeerType, &peer, &PyFloat_Type, &pyObj1, &PyFloat_Type, &pyObj2, &cb_extra)){
-        tgl_do_send_location (TLS, PY_PEER_ID(peer), 
+        tgl_do_send_location (TLS, PY_PEER_ID(peer),
                               PyFloat_AsDouble(pyObj1), PyFloat_AsDouble(pyObj2), 0, py_msg_cb, cb_extra);
         Py_XDECREF(pyObj1);
         Py_XDECREF(pyObj2);
@@ -1088,7 +1115,7 @@ void py_do_all (void) {
 
     // Increment reference on cb_extra as it is passed on to the callback to use
     Py_XINCREF(cb_extra);
-    
+
     // Clean up any arg variables we could have used.
     //Py_XDECREF(args); // TODO: this is going negative ref and causing segfaults
     Py_XDECREF(peer);
@@ -1190,6 +1217,7 @@ TGL_PYTHON_CALLBACK("on_binlog_replay_end", _py_binlog_end);
 TGL_PYTHON_CALLBACK("on_get_difference_end", _py_diff_end);
 TGL_PYTHON_CALLBACK("on_our_id", _py_our_id);
 TGL_PYTHON_CALLBACK("on_msg_receive", _py_new_msg);
+TGL_PYTHON_CALLBACK("on_msg_history", _py_list_msg);
 TGL_PYTHON_CALLBACK("on_secret_chat_update", _py_secret_chat_update);
 TGL_PYTHON_CALLBACK("on_user_update", _py_user_update);
 TGL_PYTHON_CALLBACK("on_chat_update", _py_chat_update);
@@ -1238,13 +1266,14 @@ static PyMethodDef py_tgl_methods[] = {
   {"send_contact", py_send_contact, METH_VARARGS, ""},
   {"status_online", py_status_online, METH_VARARGS, ""},
   {"status_offline", py_status_offline, METH_VARARGS, ""},
-  {"send_location", py_send_location, METH_VARARGS, ""},  
+  {"send_location", py_send_location, METH_VARARGS, ""},
   {"ext_function", py_extf, METH_VARARGS, ""},
   {"import_chat_link", py_import_chat_link, METH_VARARGS, ""},
   {"set_on_binlog_replay_end", set_py_binlog_end, METH_VARARGS, ""},
   {"set_on_get_difference_end", set_py_diff_end, METH_VARARGS, ""},
   {"set_on_our_id", set_py_our_id, METH_VARARGS, ""},
   {"set_on_msg_receive", set_py_new_msg, METH_VARARGS, ""},
+  {"set_on_msg_history", set_py_list_msg, METH_VARARGS, ""},
   {"set_on_secret_chat_update", set_py_secret_chat_update, METH_VARARGS, ""},
   {"set_on_user_update", set_py_user_update, METH_VARARGS, ""},
   {"set_on_chat_update", set_py_chat_update, METH_VARARGS, ""},
@@ -1264,7 +1293,7 @@ void py_add_action_enums(PyObject *m)
   PyModule_AddIntConstant(m, "ACTION_CHAT_EDIT_TITLE", tgl_message_action_chat_edit_title);
   PyModule_AddIntConstant(m, "ACTION_CHAT_EDIT_PHOTO", tgl_message_action_chat_edit_photo);
   PyModule_AddIntConstant(m, "ACTION_CHAT_DELETE_PHOTO", tgl_message_action_chat_delete_photo);
-  PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER", tgl_message_action_chat_add_user);
+  PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER", tgl_message_action_chat_add_users);
   PyModule_AddIntConstant(m, "ACTION_CHAT_ADD_USER_BY_LINK", tgl_message_action_chat_add_user_by_link);
   PyModule_AddIntConstant(m, "ACTION_CHAT_DELETE_USER", tgl_message_action_chat_delete_user);
   PyModule_AddIntConstant(m, "ACTION_SET_MESSAGE_TTL", tgl_message_action_set_message_ttl);
@@ -1310,30 +1339,30 @@ MOD_INIT(tgl)
 
   if (PyType_Ready(&tgl_MsgType) < 0)
     return MOD_ERROR_VAL;
-  
+
   Py_INCREF(&tgl_MsgType);
   PyModule_AddObject(m, "Msg", (PyObject *)&tgl_MsgType);
 
   TglError = PyErr_NewException("tgl.Error", NULL, NULL);
   Py_INCREF(TglError);
   PyModule_AddObject(m, "TglError", TglError);
-  
+
   PeerError = PyErr_NewException("tgl.PeerError", NULL, NULL);
   Py_INCREF(PeerError);
   PyModule_AddObject(m, "PeerError", PeerError);
-  
+
   MsgError = PyErr_NewException("tgl.MsgError", NULL, NULL);
   Py_INCREF(MsgError);
   PyModule_AddObject(m, "MsgError", MsgError);
-  
-  return MOD_SUCCESS_VAL(m);  
+
+  return MOD_SUCCESS_VAL(m);
 }
 
 
 void py_init (const char *file) {
   if (!file) { return; }
   python_loaded = 0;
-  
+
   PyObject *pModule;
 
   // Get a copy of the filename for dirname/basename, which may modify the string, and break const correctness
@@ -1341,7 +1370,7 @@ void py_init (const char *file) {
   strncpy(filename, file, 1024);
 
 
-   
+
 #if PY_MAJOR_VERSION >= 3
   PyImport_AppendInittab("tgl", &PyInit_tgl);
   Py_Initialize();
@@ -1353,16 +1382,16 @@ void py_init (const char *file) {
 
   PyObject* sysPath = PySys_GetObject((char*)"path");
   PyList_Append(sysPath, PyUnicode_FromString(dirname(filename)));
-  
+
   // Recopy the string in, since dirname modified it.
   strncpy(filename, file, 1024);
-  
+
   // remove .py extension from file, if any
   char* dot = strrchr(filename, '.');
-  if (dot && strcmp(dot, ".py") == 0) 
+  if (dot && strcmp(dot, ".py") == 0)
     *dot = 0;
   pModule = PyImport_Import(PyUnicode_FromString(basename(filename)));
-  
+
   if(pModule == NULL || PyErr_Occurred()) { // Error loading script
     logprintf("Failed to load python script\n");
     PyErr_Print();

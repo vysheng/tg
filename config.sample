@@ -1,7 +1,13 @@
 # This is an empty config file
 # Feel free to put something here
 
-default_profile = "binlog";
+default_profile = "production";
+
+production = {
+  config_directory = ".telegram/production";
+  test = false;
+  msg_num = true;
+};
 
 test_dc1 = {
   config_directory = ".telegram/test_dc1";
@@ -32,12 +38,6 @@ mega = {
 
 new = {
   config_directory = ".telegram/new";
-  test = false;
-  msg_num = true;
-};
-
-production = {
-  config_directory = ".telegram/production";
   test = false;
   msg_num = true;
 };

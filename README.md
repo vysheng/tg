@@ -1,12 +1,21 @@
-## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)
+## Telegram messenger CLI
 
-Command-line interface for [Telegram](http://telegram.org). Uses readline interface.
+Command-line interface for [Telegram](http://telegram.org). Uses readline interface. It is client implementation of TGL library.
+
+> Note: This is a fork of [`telegram-cli`](https://github.com/vysheng/tg).
+
+Build status:
+
+| Repository                                             | Status|
+| ------------------------------------------------------ | ----- |
+| [vysheng](https://github.com/vysheng/tg) (main)        |[![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)|
+| [kenorb-contrib](https://github.com/kenorb-contrib/tg) |[![Build Status](https://travis-ci.org/kenorb-contrib/tg.png)](https://travis-ci.org/kenorb-contrib/tg)|
 
 ### API, Protocol documentation
 
-Documentation for Telegram API is available here: http://core.telegram.org/api
+Documentation for Telegram API is available here: <http://core.telegram.org/api>
 
-Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
+Documentation for MTproto protocol is available here: <http://core.telegram.org/mtproto>
 
 ### Upgrading to version 1.0
 
@@ -16,13 +25,13 @@ Second, config folder is now ${HOME}/.telegram-cli
 
 Third, database is not compatible with older versions, so you'll have to login again.
 
-Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%d' in case of two peers having same name).
+Fourth, in `peer_name` '#' are substitued to '@'. (Not applied to appending of '#%d' in case of two peers having same name).
 
 ### Installation
 
-Clone GitHub Repository
+Clone this GitHub repository with `--recursive` parameter to clone submodules.
 
-     git clone --recursive https://github.com/vysheng/tg.git && cd tg
+     git clone --recursive https://github.com/kenorb-contrib/tg.git && cd tg
 
 ### Python Support
 
@@ -33,25 +42,38 @@ Python support is currently limited to Python 2.7 or Python 3.1+. Other versions
 Install libs: readline, openssl and (if you want to use config) libconfig, liblua, python and libjansson.
 If you do not want to use them pass options --disable-libconfig, --disable-liblua, --disable-python and --disable-json respectively.
 
-On Ubuntu/Debian use: 
+On Ubuntu/Debian use:
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev make 
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev libpython3-dev libgcrypt-dev zlib1g-dev lua-lgi make
 
-On gentoo:
+To build and install the packaege, run:
+     
+     dpkg-buildpackage -b
+     sudo dpkg -i ../telegram-cli_x.x.x-x_amd64.deb
+
+On Gentoo:
 
      sudo emerge -av sys-libs/readline dev-libs/libconfig dev-libs/openssl dev-lang/lua dev-libs/libevent dev-libs/jansson dev-lang/python
 
 On Fedora:
 
-     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel libjansson-devel python-devel
+     sudo dnf install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel jansson-devel python-devel libgcrypt-devel
+
+On CentOS:
+
+     sudo yum install lua-devel openssl-devel libconfig-devel readline-devel libevent-devel jansson-devel python-devel
 
 On Archlinux:
 
-     yaourt -S telegram-cli-git
+     yay -S telegram-cli-git
+     
+On Milislinux:
+
+     mps kur telegram-cli
 
 On FreeBSD:
 
-     pkg install libconfig libexecinfo lua52 python
+     pkg install telegram-cli
 
 On OpenBSD:
 
@@ -66,6 +88,8 @@ Then,
      ./configure
      make
 
+If you are going to build tg on OpenBSD or FreeBSD, please use `gmake` instead of `make`.
+
 #### Other methods to install on linux
 
 On Gentoo: use ebuild provided.
@@ -78,15 +102,46 @@ The client depends on [readline library](http://cnswww.cns.cwru.edu/php/chet/rea
 
 If using [Homebrew](http://brew.sh/):
 
+     brew tap ivoputzer/tg
+     brew install tg
+
+or manually:
+
      brew install libconfig readline lua python libevent jansson
-     export CFLAGS="-I/usr/local/include -I/usr/local/Cellar/readline/6.3.8/include"
-     export LDFLAGS="-L/usr/local/lib -L/usr/local/Cellar/readline/6.3.8/lib"
-     ./configure && make
+     export READLINEPATH=$(brew --prefix readline)
+     export OPENSSLPATH=$(brew --prefix openssl)
+     export CPPFLAGS="-I/usr/local/opt/openssl/include -I$READLINEPATH/include -W"
+     export CFLAGS="-I/usr/local/include -I$READLINEPATH/include -I$OPENSSLPATH/include"
+     export LDFLAGS="-L/usr/local/lib -L$READLINEPATH/lib -L$OPENSSLPATH/lib"
+
+     ./configure
+
+You might have to manually pass the location of OpenSSL to `configure`:
+
+    $ brew info openssl
+    openssl: stable 1.0.2e (bottled) [keg-only]
+    Poured from bottle /usr/local/Cellar/openssl/1.0.2e_1 (465 files, 11.9M)
+
+so in this case the configure should be run as:
+
+     ./configure --with-openssl=/usr/local/Cellar/openssl/1.0.2e_1
+
+in other cases OpenSSL could be found in `/usr/local/opt`, e.g.:
+
+     ./configure --with-openssl=/usr/local/opt/openssl
+
+If you get a LUA error on Sierra, you can configure without LUA using
+
+     ./configure --disable-liblua
+
+After configuration run build:
+
+    make
 
 Thanks to [@jfontan](https://github.com/vysheng/tg/issues/3#issuecomment-28293731) for this solution.
 
 If using [MacPorts](https://www.macports.org):
-     
+
      sudo port install libconfig-hr
      sudo port install readline
      sudo port install lua51
@@ -96,29 +151,22 @@ If using [MacPorts](https://www.macports.org):
      export LDFLAGS="-L/usr/local/lib -L/opt/local/lib -L/opt/local/lib/lua-5.1"
      ./configure && make
 
-Install these ports:
+#### Docker
 
-* devel/libconfig
-* devel/libexecinfo
-* lang/lua52
-
-Then build:
-
-     env CC=clang CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib LUA=/usr/local/bin/lua52 LUA_INCLUDE=-I/usr/local/include/lua52 LUA_LIB=-llua-5.2 ./configure
-     make
+The set for dockerizing the app: https://github.com/semenyukdmitry/telegram_cli_docker.
 
 #### Other UNIX
 
 If you manage to launch it on other UNIX, please let me know.
 
-### Contacts 
+### Contacts
 If you would like to ask a question, you can write to my telegram or to the github (or both). To contact me via telegram, you should use import_card method with argument 000653bf:0738ca5d:5521fbac:29246815:a27d0cda
 
 
 ### Usage
 
     bin/telegram-cli -k <public-server-key>
-    
+
 By default, the public key is stored in tg-server.pub in the same folder or in /etc/telegram-cli/server.pub. If not, specify where to find it:
 
     bin/telegram-cli -k tg-server.pub
@@ -128,10 +176,10 @@ Client support TAB completion and command history.
 Peer refers to the name of the contact or dialog and can be accessed by TAB completion.
 For user contacts peer name is Name <underscore> Lastname with all spaces changed to underscores.
 For chats it is it's title with all spaces changed to underscores
-For encrypted chats it is <Exсlamation mark> <underscore> Name <underscore> Lastname with all spaces changed to underscores. 
+For encrypted chats it is <Exсlamation mark> <underscore> Name <underscore> Lastname with all spaces changed to underscores.
 
 If two or more peers have same name, <sharp>number is appended to the name. (for example A_B, A_B#1, A_B#2 and so on)
-  
+
 ### Supported commands
 
 #### Messaging
@@ -150,6 +198,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **send_photo** \<peer\> \<photo-file-name\> - sends photo to peer
 * **send_video** \<peer\> \<video-file-name\> - sends video to peer
 * **send_text** \<peer\> \<text-file-name> - sends text file as plain messages
+* **send_document** \<peer\> \<document-file-name\> - sends document to peer
 * **load_photo**/load_video/load_video_thumb/load_audio/load_document/load_document_thumb \<msg-seqno\> - loads photo/video/audio/document to download dir
 * **view_photo**/view_video/view_video_thumb/view_audio/view_document/view_document_thumb \<msg-seqno\> - loads photo/video to download dir and starts system default viewer
 * **fwd_media** \<msg-seqno\> send media in your message. Use this to prevent sharing info about author of media (though, it is possible to determine user_id from media itself, it is not possible get access_hash of this user)
@@ -164,6 +213,21 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 * **rename_chat** \<chat\> \<new-name\>
 * **create_group_chat** \<chat topic\> \<user1\> \<user2\> \<user3\> ... - creates a groupchat with users, use chat_add_user to add more users
 * **chat_set_photo** \<chat\> \<photo-file-name\> - sets group chat photo. Same limits as for profile photos.
+
+### Channels
+
+* **channel_get_admins** \<channel\> [limit=100] [offset=0]	- Gets channel admins
+* **channel_get_members** \<channel\> [limit=100] [offset=0]	- Gets channel members
+* **channel_info** \<channel\>	- Prints info about channel (id, members, admin, etc.)
+* **channel_invite** \<channel\> \<user\>	- Invites user to channel
+* **channel_join** \<channel\>	- Joins to channel
+* **channel_kick** \<channel\> \<user\>	- Kicks user from channel
+* **channel_leave** \<channel\>	- Leaves from channel
+* **channel_list** [limit=100] [offset=0]	- List of last channels
+* **channel_set_about** \<channel\> \<about\>	- Sets channel about info.
+* **channel_set_admin** \<channel\> \<admin\> \<type\>	- Sets channel admin. 0 - not admin, 1 - moderator, 2 - editor
+* **channel_set_photo** \<channel\> \<filename\>	- Sets channel photo. Photo will be cropped to square
+* **channel_set_username** \<channel\> \<username\>	 -Sets channel username info.
 
 #### Search
 
@@ -196,3 +260,7 @@ If two or more peers have same name, <sharp>number is appended to the name. (for
 #### Other
 * **quit** - quit
 * **safe_quit** - wait for all queries to end then quit
+* run `telegram-cli -q` to logout from account
+
+#### Troubleshooting
+* if you got error: `get error FAIL: 38: can not parse arg #1` it maybe be unresolved username. You should use `resolve_username channel/group/user_name` before running action with it. [See this issue for more info](https://github.com/vysheng/tg/issues/823)

@@ -1,4 +1,4 @@
-## Telegram messenger CLI [![Build Status](https://travis-ci.org/vysheng/tg.png)](https://travis-ci.org/vysheng/tg)
+## Telegram messenger CLI [![Build Status](https://travis-ci.org/kenorb-contrig/tg.png)](https://travis-ci.org/kenorb-contrig/tg)
 
 !!!! May be outdated. Please refer to english README as more actual. 
 
@@ -15,11 +15,11 @@ La documentación del protocolo MTproto está disponible aquí: http://core.tele
 
 Clona el Repositorio GitHub
 
-    $ git clone https://github.com/vysheng/tg.git && cd tg
+    $ git clone --recursive https://github.com/kenorb-contrig/tg.git && cd tg
     
 o descarga y descomprime el zip
 
-    $ wget https://github.com/vysheng/tg/archive/master.zip -O tg-master.zip
+    $ wget https://github.com/kenorb-contrig/tg/archive/master.zip -O tg-master.zip
     $ unzip tg-master.zip && cd tg-master
     
 #### Linux
