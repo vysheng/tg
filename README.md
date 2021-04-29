@@ -64,7 +64,7 @@ On CentOS:
 
 On Archlinux:
 
-     yaourt -S telegram-cli-git
+     yay -S telegram-cli-git
      
 On Milislinux:
 
