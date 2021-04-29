@@ -31,7 +31,7 @@ Fourth, in `peer_name` '#' are substitued to '@'. (Not applied to appending of '
 
 Clone this GitHub repository with `--recursive` parameter to clone submodules.
 
-     git clone --recursive https://github.com/CHANGETHIS/tg.git && cd tg
+     git clone --recursive https://github.com/kenorb-contrib/tg.git && cd tg
 
 ### Python Support
 
@@ -47,6 +47,7 @@ On Ubuntu/Debian use:
      sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev libjansson-dev libpython-dev libpython3-dev libgcrypt-dev zlib1g-dev lua-lgi make
 
 To build and install the packaege, run:
+     
      dpkg-buildpackage -b
      sudo dpkg -i ../telegram-cli_x.x.x-x_amd64.deb
 
