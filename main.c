@@ -990,8 +990,10 @@ int main (int argc, char **argv) {
   running_for_first_time ();
   parse_config ();
 
-  #ifdef __FreeBSD__
-  tgl_set_rsa_key (TLS, "/usr/local/etc/" PROG_NAME "/server.pub");
+  #if defined(SYSCONFDIR)
+  /* if --sysconfdir was provided to configure use it, not touching FreeBSD as I'm not sure if
+     the default is correct there */
+  tgl_set_rsa_key (TLS, SYSCONFDIR PROG_NAME "/server.pub");
   #else
   tgl_set_rsa_key (TLS, "/etc/" PROG_NAME "/server.pub");
   #endif
