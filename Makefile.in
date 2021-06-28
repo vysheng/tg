@@ -2,7 +2,7 @@ srcdir=@srcdir@
 
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@ @OPENSSL_LDFLAGS@
-CPPFLAGS=@CPPFLAGS@ @OPENSSL_INCLUDES@
+CPPFLAGS=@CPPFLAGS@ @OPENSSL_INCLUDES@  -DSYSCONFDIR='"@sysconfdir@"'
 DEFS=@DEFS@
 COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC
 EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@ @OPENSSL_LIBS@
