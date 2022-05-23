@@ -100,6 +100,7 @@ char *state_file_name;
 char *secret_chat_file_name;
 char *downloads_directory;
 char *config_directory;
+char *config_directory_force;
 char *binlog_file_name;
 char *lua_file;
 char *python_file;
@@ -118,6 +119,7 @@ char *start_command;
 int disable_link_preview;
 int enable_json;
 int alert_sound;
+int auto_mark_read;
 int exit_code;
 int permanent_msg_id_mode;
 int permanent_peer_id_mode;
@@ -360,8 +362,16 @@ void parse_config (void) {
     config_lookup_bool (&conf, buf, &msg_num_mode);
   }
 
-  parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
-  config_directory = make_full_path (config_directory);
+  if( config_directory_force ){
+    config_directory = config_directory_force;
+
+    if( !disable_output ){
+        printf( "Config directory force: [%s]\n", config_directory_force );
+    }
+  }else{
+      parse_config_val (&conf, &config_directory, "config_directory", CONFIG_DIRECTORY, 0);
+      config_directory = make_full_path (config_directory);
+  }
 
   parse_config_val (&conf, &auth_file_name, "auth_file", AUTH_KEY_FILE, config_directory);
   parse_config_val (&conf, &downloads_directory, "downloads", DOWNLOADS_DIRECTORY, config_directory);
@@ -454,6 +464,7 @@ void usage (void) {
   printf ("  --enable-msg-id/-N                   message num mode\n");
   #ifdef HAVE_LIBCONFIG
   printf ("  --config/-c                          config file name\n");
+  printf ("  --force-config-dir/-x                set force config dir instead of profile\n");
   printf ("  --profile/-p                         use specified profile\n");
   #else
   #if 0
@@ -470,14 +481,15 @@ void usage (void) {
   printf ("  --disable-colors/-C                  disable color output\n");
   printf ("  --disable-readline/-R                disable readline\n");
   printf ("  --alert/-A                           enable bell notifications\n");
+  printf ("  --auto-mark-read/-M                  mark read conversation after sending a message\n");
   printf ("  --daemonize/-d                       daemon mode\n");
   printf ("  --logname/-L <log-name>              log file name\n");
   printf ("  --username/-U <user-name>            change uid after start\n");
   printf ("  --groupname/-G <group-name>          change gid after start\n");
   printf ("  --disable-output/-D                  disable output\n");
   printf ("  --tcp-port/-P <port>                 port to listen for input commands\n");
-  printf ("  --udp-socket/-S <socket-name>        unix socket to create\n");
-  printf ("  --exec/-e <commands>                 make commands end exit\n");
+  printf ("  --unix-socket/-S <socket-name>       unix socket to create\n");
+  printf ("  --exec/-e <command>                  make a single command end then exit safely\n");
   printf ("  --disable-names/-I                   use user and chat IDs in updates instead of names\n");
   printf ("  --enable-ipv6/-6                     use ipv6 (may be unstable)\n");
   printf ("  --help/-h                            prints this help\n");
@@ -610,6 +622,7 @@ void args_parse (int argc, char **argv) {
     {"enable-msg-id", no_argument, 0, 'N'},
 #ifdef HAVE_LIBCONFIG
     {"config", required_argument, 0, 'c'},
+    {"force-config-dir", required_argument, 0, 'X'},
     {"profile", required_argument, 0, 'p'},
 #else
     #if 0
@@ -627,6 +640,7 @@ void args_parse (int argc, char **argv) {
     {"disable-colors", no_argument, 0, 'C'},
     {"disable-readline", no_argument, 0, 'R'},
     {"alert", no_argument, 0, 'A'},
+    {"auto-mark-read", no_argument, 0, 'M'},
     {"daemonize", no_argument, 0, 'd'},
     {"logname", required_argument, 0, 'L'},
     {"username", required_argument, 0, 'U'},
@@ -652,7 +666,7 @@ void args_parse (int argc, char **argv) {
 
 
   int opt = 0;
-  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAdL:DU:G:qP:S:e:I6b"
+  while ((opt = getopt_long (argc, argv, "u:hk:vNl:fEwWCRAMdL:DU:G:qP:X:S:e:I6b"
 #ifdef HAVE_LIBCONFIG
   "c:p:"
 #else
@@ -700,6 +714,9 @@ void args_parse (int argc, char **argv) {
     case 'c':
       config_filename = tstrdup (optarg);
       break;
+    case 'X':
+      config_directory_force = tstrdup (optarg);
+      break;
     case 'p':
       prefix = optarg;
       assert (strlen (prefix) <= 100);
@@ -744,6 +761,9 @@ void args_parse (int argc, char **argv) {
       break;
     case 'A':
       alert_sound = 1;
+      break;
+    case 'M':
+      auto_mark_read = 1;
       break;
     case 'd':
       daemonize ++;
@@ -990,7 +1010,7 @@ int main (int argc, char **argv) {
   running_for_first_time ();
   parse_config ();
 
-  #ifdef __FreeBSD__
+  #if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__))
   tgl_set_rsa_key (TLS, "/usr/local/etc/" PROG_NAME "/server.pub");
   #else
   tgl_set_rsa_key (TLS, "/etc/" PROG_NAME "/server.pub");

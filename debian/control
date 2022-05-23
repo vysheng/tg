@@ -1,17 +1,20 @@
 Source: telegram-cli
 Section: net
-Priority: extra
-Maintainer: Steve Illichevsky <still.ru@gmail.com>
-Build-Depends: 	debhelper (>= 8.0.0),
-		autotools-dev,
-		autoconf-archive,
-		libreadline-dev,
-		libconfig-dev,
-		libssl-dev,
-		lua5.1,
-		liblua5.1-dev,
-		lua-lgi,
-		libevent-dev
+Priority: optional
+Maintainer: Cleto Martín <cleto@debian.org>
+Build-Depends: autoconf-archive,
+               autotools-dev,
+               debhelper (>= 8.0.0),
+               libconfig-dev,
+               libreadline-dev,
+               libssl-dev,
+               libevent-dev,
+               libjansson-dev,
+               libpython-dev,
+               liblua5.2-dev,
+               libgcrypt-dev,
+               lua-lgi,
+               lua5.2
 Standards-Version: 3.9.5
 Homepage: https://github.com/vysheng/tg
 Vcs-Git: git://github.com/vysheng/tg.git
@@ -19,7 +22,7 @@ Vcs-Browser: https://github.com/vysheng/tg
 
 Package: telegram-cli
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Command-line interface for Telegram messenger
  Telegram messenger is a cloud-based instant messaging designed for
  smart phones and similar to Whatsapp but more flexible, and
