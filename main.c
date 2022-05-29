@@ -90,8 +90,8 @@
   "# Feel free to put something here\n"
 
 int bot_mode;
-int verbosity;
-int msg_num_mode;
+extern int verbosity;
+extern int msg_num_mode;
 char *default_username;
 char *config_filename;
 char *prefix;
@@ -108,7 +108,7 @@ int binlog_enabled;
 extern int log_level;
 int sync_from_start;
 int allow_weak_random;
-int disable_colors;
+extern int disable_colors;
 int readline_disabled;
 int disable_output;
 int reset_authorization;
@@ -121,8 +121,8 @@ int enable_json;
 int alert_sound;
 int auto_mark_read;
 int exit_code;
-int permanent_msg_id_mode;
-int permanent_peer_id_mode;
+extern int permanent_msg_id_mode;
+extern int permanent_peer_id_mode;
 char *home_directory;
 
 struct tgl_state *TLS;
@@ -517,9 +517,8 @@ void usage (void) {
 char *log_net_file;
 FILE *log_net_f;
 
-int register_mode;
-int disable_auto_accept;
-int wait_dialog_list;
+extern int disable_auto_accept;
+extern int wait_dialog_list;
 
 char *logname;
 int daemonize=0;

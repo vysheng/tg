@@ -132,7 +132,7 @@ int do_html;
 int safe_quit;
 
 int in_readline;
-int readline_active;
+static int readline_active;
 
 int log_level;
 
@@ -3759,7 +3759,6 @@ void interpreter (char *line) {
   interpreter_ex (line, 0);
 }
 
-int readline_active;
 /*void rprintf (const char *format, ...) {
   mprint_start (ev);
   va_list ap;

@@ -87,7 +87,6 @@ extern int binlog_enabled;
 
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
-int register_mode;
 extern int safe_quit;
 extern int sync_from_start;
 
@@ -387,7 +386,6 @@ int all_authorized (void) {
 int zero[512];
 
 
-int readline_active;
 int new_dc_num;
 int wait_dialog_list;
 
