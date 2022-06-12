@@ -1,0 +1,17 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "" # See documentation for possible values
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: "daily"
+Start{run}="boolean"
+{1}"Create pathway"="true <OPEN>=[GATEWAY]+{OPERATE}&"DELIVERBOTS"<?.://equal_OP_OP1 <SEND>{Directory}to[platform]
+{RUN}+[START]<1>,<2>,<3>,{ACTIONS}
+{{.://https://coinbase.com/accoounnt/@shaynebacik<Equal Shares>,"profit gains",Profit margins","Shared profits","Rewards"="true"
+[SUPPLY]=$1,000,000.00(USD),://https://coinbase.com/@shaynebacik {Deposits},{transfers},{rewards},{profits},{gains},{shared income}="true">
+{open},[START],{COMMITS}="APPROVED"
