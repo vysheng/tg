@@ -1,0 +1,236 @@
+.TH telegram 1 "Jun 10, 2014" "" ""
+.SH NAME
+telegram \- Command-line interface for http://telegram.org. Uses readline interface.
+.SH SYNOPSIS
+\fBtelegram\fR [\fB-hvNRfBEwW\fR]  [\fB-k\fR \fIpublic-key\fR]  [\fB-l\fR \fIlog-level\fR]  [\fB-L\fR \fIlog-file\fR]  [\fB-c\fR \fIconfig-file\fR]  [\fB-p\fR \fIprefix\fR] [\fB-s\fR \fIlua-script\fR]   
+
+.SH DESCRIPTION
+.B telegram\fP is a CLI for telegram (http://telegram.org) with an embedded lua interpreter.
+.PP
+Documentation for Telegram API is available here: http://core.telegram.org/api
+.PP
+Documentation for MTproto protocol is available here: http://core.telegram.org/mtproto
+
+.SH OPTIONS
+.TP
+.B \-h
+prints a help message.
+.TP
+.B \-u username
+specify username.
+.TP
+.B \-k public-key 
+specify server public key.
+By default public key is stored in the same folder named tg-server.pub or in /etc/telegram/server.pub, if it's not, specify where to find it:
+.TP
+.B \-v
+verbose.
+.TP
+.B \-l [1-3]
+log level.
+.TP
+.B \-L log-file        
+log net file.
+.TP
+.B \-N                 
+message num mode.
+.TP
+.B \-c config-file     
+specify config file.
+.TP
+.B \-p prefix          
+specify prefix.
+.TP
+.B \-R        
+register mode.
+.TP
+.B \-f
+sync from start.
+.TP
+.B \-B       
+enable binlog.
+.TP
+.B \-E                 
+disable auto accept
+.TP
+.B \-w                 
+allow weak random
+.TP
+.B \-s                 
+specify lua script. Refer to the \fBSCRIPT\fR section for more information about scripting.
+.TP
+.B \-W                 
+wait dialog list
+.PP
+All those options can be set automatically using the config file (\fI~/.telegram/config\fR). You can refer to the config.sample file that comes with the source.
+
+Example:
+
+log_level = 0;
+.sp
+msg_num = TRUE;
+
+.SH COMMANDS
+Client support \fBTAB\fR completion and command history.
+
+Peer refers to the name of the contact or dialog and can be accessed by \fBTAB\fR completion.
+For user contacts peer name is Name <\fIunderscore\fR> Lastname with all spaces changed to underscores.
+For chats it is it's title with all spaces changed to underscores
+For encrypted chats it is <\fIExсlamation mark\fR> <\fIunderscore\fR> Name <\fIunderscore\fR> Lastname with all spaces changed to underscores. 
+
+If two or more peers have same name, <\fIsharp\fR>number is appended to the name. (for example \fBA_B\fR, \fBA_B#1\fR, \fBA_B#2\fR and so on)
+
+You can see message numbers (\fImsg-seqno\fR) starting client with \fB-N\fR
+
+The default download dir is \fB~/.telegram/downloads\fR.
+
+The download dir can be set in the main.c line 68
+
+#define DOWNLOADS_DIRECTORY "downloads"
+
+.SS SUPPORTED COMMANDS
+.PP
+Messaging
+.RS
+.IP \(bu 2
+.B msg <\fIpeer\fR>  Text - sends message to this peer 
+.IP \(bu 2
+.B fwd <\fIuser\fR> <\fImsg-seqno\fR> forward message to user.
+.IP \(bu 2
+.B chat_with_peer <\fIpeer\fR> starts one on one chat session with this peer. /exit or /quit to end this mode.  /history to show history and /read to mark as read the messages.
+.IP \(bu 2
+.B add_contact <\fIphone_number\fR>  <\fIfirst_name\fR> <\fIlast_name\fR> tries to add contact to contact-list by phone
+.IP \(bu 2
+.B rename_contact <\fIuser\fR>  <\fIfirst-name\fR>  <\fIlast-name\fR> tries to rename contact. If you have another device it will be a fight
+.IP \(bu 2
+.B mark_read <\fIpeer\fR> mark read all received messages with peer
+.IP \(bu 2
+.B delete_msg <\fImsg-seqno\fR> remove a message
+.IP \(bu 2
+.B status_online/status_offline \fR appear online to others or not
+.IP \(bu 2
+.B fwd <\fIpeer\fR> <\fImsg-seqno\fR> forward a message to the peer specified
+.RE
+.PP
+Multimedia
+.RS
+.IP \(bu 2
+.B send_photo <\fIpeer\fR> <\fIphoto-file-name\fR> sends photo to peer 
+.IP \(bu 2
+.B send_video <\fIpeer\fR> <\fIvideo-file-name\fR> sends video to peer 
+.IP \(bu 2
+.B send_text <\fIpeer\fR> <\fItext-file-name\fR> sends text file as plain messages
+.IP \(bu 2
+.B load_photo/load_video/load_video_thumb/load_document/load_document_thumb/load_audio <\fImsg-seqno\fR> loads photo/video to download dir
+.IP \(bu 2
+.B view_photo/view_video/view_video_thumbnail/view_document/view_document_thumb/view_audio <\fImsg-seqno\fR> loads photo/video to download dir and starts system default viewer (xdg-open on some system)
+.RE
+Group chat options
+.RS
+.IP \(bu 2
+.B chat_info <\fIchat\fR> prints info about chat
+.IP \(bu 2
+.B chat_add_user <\fIchat\fR> <\fIuser\fR> add user to chat 
+.IP \(bu 2
+.B chat_del_user <\fIchat\fR> <\fIuser\fR> remove user from chat 
+.IP \(bu 2
+.B rename_chat <\fIchat\fR> <\fInew-name\fR> 
+.IP \(bu 2
+.B creacte_group_chat <\fIuser\fR> <\fIchat-topic\fR> creates a groupchat with user, use \fBchar_add_user\fR to add more users
+.RE
+Search
+.RS
+.IP \(bu 2
+.B search <\fIpeer\fR> pattern - searches pattern in messages with peer
+.IP \(bu 2
+.B global_search\fR pattern - searches pattern in all messages
+.RE
+Secret chat
+.RS
+.IP \(bu 2
+.B create_secret_chat <\fIuser\fR> creates secret chat with this user
+.IP \(bu 2
+.B visualize_key <\fIsecret_chat\fR> prints visualization of encryption key. You should compare it to your partner's one
+.RE
+Stats and various info
+.RS
+.IP \(bu 2
+.B user_info <\fIuser\fR> prints info about user
+.IP \(bu 2
+.B history <\fIpeer\fR> [\fIlimit\fR] prints history (and marks it as read). Default limit = 40 
+.IP \(bu 2
+.B dialog_list\fR prints info about your dialogs
+.IP \(bu 2
+.B contact_list\fR prints info about users in your contact list
+.IP \(bu 2
+.B suggested_contact\fR prints info about contacts, you have max common friends
+.IP \(bu 2
+.B stats\fR just for debugging
+.IP \(bu 2
+.B show_license\fR prints contents of GPLv2
+.IP \(bu 2
+.B help\fR prints a help page
+.RE
+Options
+.RS
+.IP \(bu 2
+.B set <\fIparam\fR> <\fIparam-value\fR> Possible <\fIparam\fR> values are:
+.Ps
+.RS
+.IP \(bu 2 
+\fIdebug_verbosity\fR - just as it sounds. Debug verbosity
+.IP \(bu 2 
+\fIlog_level\fR - level of logging of new events. Lower is less verbose:
+.RS
+.RS
+.IP \(bu 2 
+\fILevel 1\fR: prints info about read messages
+.IP \(bu 2 
+\fILevel 2\fR: prints line, when somebody is typing in chat
+.IP \(bu 2 
+\fILevel 3\fR: prints line, when somebody changes online status
+.RE
+.RE
+.IP \(bu 2 
+\fImsg_num\fR - enables/disables numeration of messages
+.IP \(bu 2 
+\fIalert\fR - enables/disables alert sound notifications
+.RE
+.RE
+
+.RS
+.IP \(bu 2
+.B quit/safe_quit \fR exit the program
+.RE
+
+.SH SCRIPTS
+You can extend the program by writting a lua script. An example script come with the source (test.lua).
+
+The callbacks available are:
+.IP \(bu 2
+on_msg_receive (msg)
+.IP \(bu 2
+on_our_id (id)
+.IP \(bu 2
+on_secret_chat_created (peer)
+.IP \(bu 2
+on_user_update (user)
+.IP \(bu 2
+on_chat_update (user)
+.IP \(bu 2
+on_get_difference_end ()
+.IP \(bu 2
+on_binlog_replay_end ()
+
+To get more info about the parameters of those functions you can use the \fBvardump()\fR function in the test.lua.
+
+.SH ERRORS AND TROUBLESHOOTING
+Report or check the Github issues (https://github.com/vysheng/tg/issues)
+.SH SEE ALSO
+.B lua(1)
+.B xdg-open(1)
+.SH AUTHOR
+vysheng  (https://github.com/vysheng)
+.PP
+Big thanks for the help of all the people contributing on Github.
+.PP

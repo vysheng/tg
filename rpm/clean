@@ -1,0 +1,9 @@
+#!/bin/bash
+rm -rf BUILD BUILDROOT RPMS SRPMS SOURCES
+if [ $? -eq 0 ]; then
+  echo "Directory cleaned up."
+  exit 0
+else
+  echo "There are errors. Check log!"
+  exit 1
+fi

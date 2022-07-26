@@ -4,18 +4,25 @@ compiler:
   - gcc
   - clang
 
-install:
- - sudo apt-get update
- - sudo apt-get install libconfig8-dev
- - sudo apt-get install libreadline6-dev
- - sudo apt-get install libssl-dev
- - sudo apt-get install liblua5.2-dev lua5.2
- - sudo apt-get install python-dev python
- - sudo apt-get install libevent-dev
- - sudo apt-get install libjansson-dev
+addons:
+  apt:
+    packages:
+    - libconfig8-dev
+    - libreadline6-dev
+    - libssl-dev
+    - liblua5.2-dev
+    - lua5.2
+    - python-dev
+    - python
+    - libevent-dev
+    - libjansson-dev
+
+sudo: false
+
+git:
+  depth: 10
 
 script:
   - git submodule update --init --recursive
   - ./configure
   - make
-

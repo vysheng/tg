@@ -9,12 +9,14 @@ pp = pprint.PrettyPrinter(indent=4)
 binlog_done = False;
 
 def on_binlog_replay_end():
+    global binlog_done
     binlog_done = True;
 
 def on_get_difference_end():
     pass
 
 def on_our_id(id):
+    global our_id
     our_id = id
     return "Set ID: " + str(our_id)
 
@@ -45,17 +47,20 @@ def on_msg_receive(msg):
       peer = msg.dest
 
     pp.pprint(msg)
-    if msg.text.startswith("!ping"):
+    if msg.text is not None and msg.text.startswith("!ping"):
       peer.send_msg("PONG! google.com", preview=False, reply=msg.id)
 
 
 def on_secret_chat_update(peer, types):
     return "on_secret_chat_update"
 
-def on_user_update():
+def on_user_update(peer, what_changed):
     pass
 
-def on_chat_update():
+def on_chat_update(peer, what_changed):
+    pass
+
+def on_loop():
     pass
 
 # Set callbacks
@@ -66,4 +71,5 @@ tgl.set_on_msg_receive(on_msg_receive)
 tgl.set_on_secret_chat_update(on_secret_chat_update)
 tgl.set_on_user_update(on_user_update)
 tgl.set_on_chat_update(on_chat_update)
+tgl.set_on_loop(on_loop)
 

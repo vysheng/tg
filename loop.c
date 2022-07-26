@@ -87,7 +87,6 @@ extern int binlog_enabled;
 
 extern int unknown_user_list_pos;
 extern int unknown_user_list[];
-int register_mode;
 extern int safe_quit;
 extern int sync_from_start;
 
@@ -387,7 +386,6 @@ int all_authorized (void) {
 int zero[512];
 
 
-int readline_active;
 int new_dc_num;
 int wait_dialog_list;
 
@@ -572,6 +570,13 @@ void empty_auth_file (void) {
     bl_do_dc_option (TLS, 0, 3, "", 0, TG_SERVER_3, strlen (TG_SERVER_3), 443);
     bl_do_dc_option (TLS, 0, 4, "", 0, TG_SERVER_4, strlen (TG_SERVER_4), 443);
     bl_do_dc_option (TLS, 0, 5, "", 0, TG_SERVER_5, strlen (TG_SERVER_5), 443);
+
+    bl_do_dc_option (TLS, 1, 1, "", 0, TG_SERVER_IPV6_1, strlen (TG_SERVER_IPV6_1), 443);
+    bl_do_dc_option (TLS, 1, 2, "", 0, TG_SERVER_IPV6_2, strlen (TG_SERVER_IPV6_2), 443);
+    bl_do_dc_option (TLS, 1, 3, "", 0, TG_SERVER_IPV6_3, strlen (TG_SERVER_IPV6_3), 443);
+    bl_do_dc_option (TLS, 1, 4, "", 0, TG_SERVER_IPV6_4, strlen (TG_SERVER_IPV6_4), 443);
+    bl_do_dc_option (TLS, 1, 5, "", 0, TG_SERVER_IPV6_5, strlen (TG_SERVER_IPV6_5), 443);
+
     bl_do_set_working_dc (TLS, TG_SERVER_DEFAULT);
   }
 }
