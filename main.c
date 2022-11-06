@@ -821,7 +821,7 @@ void termination_signal_handler (int signum) {
     rl_cleanup_after_signal ();
   }
   
-  if (write (1, "SIGNAL received\n", 18) < 0) { 
+  if (write (1, "SIGNAL received\n", 17) < 0) {
     // Sad thing
   }
  
