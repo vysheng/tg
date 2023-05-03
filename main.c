@@ -820,9 +820,10 @@ void termination_signal_handler (int signum) {
     rl_free_line_state ();
     rl_cleanup_after_signal ();
   }
-  
-  if (write (1, "SIGNAL received\n", 18) < 0) { 
-    // Sad thing
+
+  if (write (1, "SIGNAL received\n", 17) < 0) {
+
+        // Sad thing
   }
  
   if (unix_socket) {
